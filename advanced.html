@@ -1,0 +1,69 @@
+<html>
+	<head>
+		<title>advanced</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>using flash in fullscreen view</h3>
+			<p>Flash files are sometimes interested in inputs (like spacebar or mouse-scrollwheel) that mean something to hydrus's fullscreen view, and the libraries I have to use to show flash don't handle these events like normal windows. I now have it set so if your mouse is inside the flash window, the input will go to the flash, and if it is outside, it goes to the fullscreen window. Unless the flash is set otherwise, your mouse cursor should show up when it moves into the flash window.</p>
+			<p>So, if you want to play a flash game in fullscreen, keep your mouse inside the window. If you want to filter some flash files real quick, keep your cursor at the edge of your screen.</p>
+			<h3>exclude deleted files</h3>
+			<p>In the client's options is a checkbox to exclude deleted files. It occurs again pretty much anywhere you can import, under 'advanced import options'. If you select this, any file you ever deleted will be excluded from all future remote searches and import operations. This can stop you from importing/downloading and filtering out the same bad files several times over. The default is off. You may wish to have it set one way most of the time, but switch it the other just for one specific import or search.</p>
+			<h3>importing and adding tags at the same time</h3>
+			<p><i>Add tags before importing</i> on <i>file->import files</i> lets you give tags to the files you import <i>en masse</i>, and intelligently, using regexes that parse filename:</p>
+			<p><img src="gunnerkrigg_import.png"/></p>
+			<p>This should be somewhat self-explanatory to anyone familiar with regexes. I hate them, personally, but I recognise they are powerful and exactly the right tool to use in this case. <a href="http://www.aivosto.com/vbtips/regex.html">This</a> is a good introduction, if you are not certain about regexes.</p>
+			<p>Once you are done, you'll get something neat like this:</p>
+			<p><img src="gunnerkrigg_page.png"/></p>
+			<p>Which you can more easily manage by collecting:</p>
+			<p><img src="gunnerkrigg_chapter.png"/></p>
+			<p>Collections have a small icon in the bottom left corner. Selecting them actually selects many files (see the status bar), and performing an action on them (like archiving, uploading) will do so to every file in the collection. Viewing collections fullscreen pages through their contents just like an uncollected search.</p>
+			<p>Here is a particularly zoomed out view, after importing volume 2:</p>
+			<p><img src="gunnerkrigg_volume.png"/></p>
+			<p>Importing with tags is great for long-running series with well-formatted filenames, and will save you literally hours' finicky tagging.</p>
+			<h3>custom filter</h3>
+			<p>Once you are comfortable with the client's tagging and rating, you may be interested in performing a <i>custom filter</i>, which is essentially the fullscreen browser with custom shortcuts. You select it from the regular thumbnail right-click menu. First, it will show you a dialog:</p>
+			<p><img src="custom_filter_parent.png" /></p>
+			<p>Which has a sub-dialog to add and edit actions:</p>
+			<p><img src="custom_filter_child.png" /></p>
+			<p>You can reassign the default shortcuts for regular things, like archive/delete and opening tag/ratings dialogs, and also add shortcuts for adding/removing a tag or setting/unsetting a rating. Shortcuts do not yet combine; they overwrite.</p>
+			<p>Once you hit ok on the parent dialog, the fullscreen browser will launch. Navigation and zooming happens as normal with the mouse and keyboard, unless you have overwritten a shortcut! Hitting any of the shortcuts you declared should carry out the action. Tags will pend/rescind pend or petition/rescind petition or add/delete as appropriate to the type of tag service and the tag's status for the particular file.</p>
+			<p>The shortcuts you set will be active only for that session; they will be forgotten as soon as you close the browser. This behaviour may change, if people desire it. <span class="warning">(remembering the last settings, or having favourites, maybe? send me your thoughts.)</span></p>
+			<h3>finding duplicates</h3>
+			<p>system:similar_to takes two arguments: a hash and an integer representing max hamming distance (0 means exactly the same, 64 means everything. 5 is good for finding dupes). You can quick-select it from a file's right-click menu. It returns all images that are <i>very</i> similar to the hash. For example:</p>
+			<p>Here are a couple of duplicates, found despite their different resolution.</p>
+			<p><img src="similar_gununu.png" /></p>
+			<p>And some images of similar shape but not colour.</p>
+			<p><img src="similar_icons.png" /></p>
+			<p>If you are careful, you can find images that look only <i>somewhat</i> like your hash. You get a lot of false positives with hamming distance of much more than 12, though.</p>
+			<p><img src="similar_gununus.png" /></p>
+			<h3>PIL errors</h3>
+			<p>At some point, you will probably encounter a PIL error when importing a file. PIL is the Python Image Library, the code I use to manipulate image files. Some files are kooky, and just won't load with it. I can't fix these errors, since PIL is not mine. It would take me thousands of hours to write my own image library, and even then it would have its own odd errors. Just gotta deal with it.</p>
+			<p>If the PIL error'ing file is one you particularly care about, I suggest you import it into photoshop or similar and save it again. Photoshop should be clever enough to parse the file's weirdness, and then it'll hopefully save again to a simpler format which PIL, and hence the client, will be able to understand.</p>
+			<h3>busted up gifs</h3>
+			<p>Animated gifs are a real pain in the neck. There are several loopholes in the standard that permit odd palettes and colourspaces, and PIL has a hard time parsing it all.</p>
+			<p>So, some gifs will have a coloured first frame but grey frames thereafter; or they will have odd washy noise all over; or they will just be black. The file isn't broken, but lib is looking at it wrong. Every ten versions or so, I gather enough enthusiasm to fix a few more.</p>
+			<h3>setting a password</h3>
+			<p>the client offers a very simple password system, enough to keep out noobs. You can set it at <i>database->set a password</i>. It will thereafter ask for the password every time you start the program, and will not open without it. However none of the database is encrypted, and someone with enough enthusiasm or a tool and access to your computer can still very easily see what files you have. The password is mainly to stop idle snoops checking your images if you are away from your machine.</p>
+			<h3>backing up</h3>
+			<p>All of the client's files, mappings, service credentials, options, everything, are stored in the /db folder beneath the main install directory. If you want to back your data up, just turn off the client and copy the directory somewhere. Copy it back to restore.</p>
+			<p>The same is true of a server. Turn it off and copy the db folder, or send a backup command via the server admin menu and copy the resultant .db.backup files and relevant subdirectories.</p>
+			<h3>the client's server</h3>
+			<p>The client runs a very simple http server. I want to do much more with it in future.</p>
+			<p>When you boot the client, it will try to host a service on port 45865, which will respond to /file and /thumbnail requests just like a file repository, but without needing an access key, and only to localhost (127.0.0.1).</p>
+			<p>For instance, the following image (6c0ae65894c7a5ffd686f54cc052326b8ea188a691a1895b2f88b7c60a07f13f.jpg, in the help dir) is served here from disk:</p>
+			<p><img src="6c0ae65894c7a5ffd686f54cc052326b8ea188a691a1895b2f88b7c60a07f13f.jpg" /></p>
+			<p>And here it will attempt to load from the client:</p>
+			<p><img src="http://127.0.0.1:45865/file?hash=6c0ae65894c7a5ffd686f54cc052326b8ea188a691a1895b2f88b7c60a07f13f" /></p>
+			<p>For more information, check the image's two urls. It will of course only display in the second case if you import it to the client and have it running when you load this page. You can copy the second image's url and replace the hash with that of any other image or swf in your collection and it should work.</p>
+			<p>Needless to say, this starts to break if you try to run several different copies of the client at once.</p>
+			<h3>a note concerning memory usage</h3>
+			<p>the client does a lot of caching. It eats plenty of memory, and if you go crazy you can crash the program. A default-sized 4000-strong thumbnail pane is really just a scrollable 250MB-ish bitmap, so opening up a dozen large searches will start pushing your OS's 32-bit upper memory limits. If you find the client crashing, slow down a little or reduce the max cache sizes and thumbnail dimensions in the options.</p>
+			<h3>vacuum</h3>
+			<p>After a lot of use, pretty much all of the client's database's pages will be fragged and inefficiently packed. If you think the client is running sluggish, going <i>database->vacuum</i> will rebuild the database entirely, making it as efficient as it can possibly be. It takes a minute or so.</p>
+			<p>If the db is sluggish even after a vacuum, please send me an email with your rough details. I am always interested in speeding up bad code.</p>
+		</div>
+	</body>
+</html>

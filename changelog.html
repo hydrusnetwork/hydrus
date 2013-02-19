@@ -1,0 +1,835 @@
+<html>
+	<head>
+		<title>changelog</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>changelog</h3>
+			<ul>
+				<li><h3>version 57</h3></li>
+				<ul>
+					<li>added quick vs accurate slider for numerical ratings filter</li>
+					<li>new slider will remember where you left it last</li>
+					<li>ratings filter internal comparison logic is more sane</li>
+					<li>'already rated' will now show the specific rating beside it</li>
+					<li>ratings filter (hopefully!) chooses better comparisons, in about four different and new ways</li>
+					<li>you can now ratings filter just one file</li>
+					<li>ratings filter code is neatened a whole lot, especially on my horrible variable names</li>
+					<li>I may have fixed an equality ratings filter bug</li>
+					<li>internal rating data -> pretty text for display is more flexible and accurate</li>
+					<li>going back several steps on ratings filter will no longer forget to re-rate already rated files</li>
+					<li>delete from dumper no longer screws with the indices</li>
+					<li>dumper is more stable, less likely to bail on the whole dump if something odd happens</li>
+					<li>dumper should recognise duplicate file errors and recover the fail</li>
+					<li>if the user has idled for the last twenty minutes, the db checks to see whether it can optimise itself</li>
+					<li>fixed flickering on fullscreen drag</li>
+					<li>fixed flickering onn fullscreen image init, meaning smoother mousewheel/whatever scrolling</li>
+					<li>fixed a graphical glitch in manage boorus dialog, and a bunch of others (removed all staticboxsizers)</li>
+					<li>fixed a similar glitch in manage ratings dialog - it now has dropdowns; I'll probably make it radio buttons again soon</li>
+					<li>fullscreen page navigation (previous, next, first, last) shortcuts are now customisable</li>
+					<li>custom filter now supports these new page nav shortcuts</li>
+					<li>can now do home/end and page up/down in shortcuts</li>
+					<li>shortcuts listctrls now sort by action by default</li>
+					<li>I improved the my custom listctrl's code generally</li>
+					<li>little less ugly code, here and there</li>
+					<li>fixed a whole ton of regular little bugs</li>
+				</ul>
+				<li><h3>version 56</h3></li>
+				<ul>
+					<li>new existing tag sort dropdown</li>
+					<li>an option to set default existing tag sort</li>
+					<li>dumper error logic improved</li>
+					<li>dumper now does random sort properly!</li>
+					<li>double buffering hilariousness</li>
+					<li>some reordering of the local options dialog</li>
+					<li>made a 'shortcut' entry object</li>
+					<li>made a parent frame object</li>
+					<li>collection thumbnails will redraw if the sort changes</li>
+					<li>add media and add thumbnail data and graphics logic is improved</li>
+					<li>4chan pass now authenticates for an entire year</li>
+					<li>bit more in help about the autocomplete tag entry</li>
+					<li>tag petition processing speed is a loooot faster</li>
+				</ul>
+				<li><h3>version 55</h3></li>
+				<ul>
+					<li>custom filter prototype ready!</li>
+					<li>added some info on custom filter to help (in advanced.html)</li>
+					<li>you can now set a default tag service in options</li>
+					<li>tag rexeg dialog's listctrl refreshes without scrolling up to the top every time</li>
+					<li>tag for this file in tag regex dialog applies to all selected, not just the first</li>
+					<li>scrolling in autocomplete entry will scroll services in manage tags and tags regex dialog</li>
+					<li>ctrl+scrolling in autocomplete entry will scroll through results</li>
+					<li>complete rewrite of image prefetch calculation</li>
+					<li>couple of content-update display bugs in ratings filter fixed</li>
+					<li>in manage ratings dialog, sliders will preset to best guess at current score</li>
+					<li>dumper should be fixed</li>
+					<li>resized active predicates box (much smaller)</li>
+					<li>a deprecated call updated</li>
+					<li>added some forum extensions</li>
+				</ul>
+				<li><h3>version 54</h3></li>
+				<ul>
+					<li>several new flash key and mouse event bugs fixed - now: mouse in = to flash | mouse out = to frame</li>
+					<li>the problem with scrollable management windows not drawing things on scroll is fixed; staticboxsizers now replaced with "- title -"</li>
+					<li>ratings filter now accepts several shortcut keys, directing to whichever window the mouse is over</li>
+					<li>the ratings filter windows will redraw themselves appropriately on content and service updates, e.g. changing tags with F3</li>
+					<li>ratings filter will choose the files to compare to more intelligently, both from the db and the currently-rated pool</li>
+					<li>the way services are identified behind the scenes is entirely overhauled and improved</li>
+					<li>the review service dialog is better as a result</li>
+					<li>all dialogs will now cancel-exit on pressing escape</li>
+					<li>started fade in and out for thumbnails</li>
+					<li>up cursor arrow in filter now skips</li>
+					<li>the tags regex dialog is refitted so it will refit on small screens better</li>
+					<li>dumper now dumps in its own thread (no longer locks up the gui while uploading)</li>
+					<li>the calculation of num_frames for flvs was off by a thousand, lol</li>
+					<li>synchro/wait shortcut typo fixed</li>
+					<li>inbox and other icons moved to background in fullscreen</li>
+					<li>fullscreen makes less db queries r.e. ratings</li>
+					<li>a couple managementpanel resize issues corrected</li>
+					<li>a couple drawing/flickering issues corrected</li>
+					<li>some updates to help</li>
+					<li>I made a forum to my site, and added links in the client and help</li>
+				</ul>
+				<li><h3>version 53</h3></li>
+				<ul>
+					<li>several terrible ratings filter bugs fixed</li>
+					<li>ratings filter can now rate files internally</li>
+					<li>ratings filter frame now has a statusbar</li>
+					<li>system:rating:service=uncertain added</li>
+					<li>upgraded to wx2.9, which included a ton of bug fixes</li>
+					<li>sort by namespace wasn't working due to an odd typo</li>
+					<li>collect by logic changed a little so that 'none' values are collected</li>
+					<li>the shutdown lag from v52 is corrected</li>
+				</ul>
+				<li><h3>version 52</h3></li>
+				<ul>
+					<li>ratings filter prototype is done</li>
+					<li>bit of help docs</li>
+					<li>more intelligent cpu burn on shutdown</li>
+					<li>dumper can manage flood time error, and recover from it</li>
+					<li>whole load of work done on mappings optimisation, meaning mappings updates, uploading mappings and approving petitions work about 100x faster!</li>
+					<li>forgetting pending uploads now throws up an ok/cancel dialog</li>
+					<li>had another look at overwriting deleted tags</li>
+				</ul>
+				<li><h3>version 51</h3></li>
+				<ul>
+					<li>dumper deals with failed uploads better, although there is more work to do.</li>
+					<li>flv support for client and file repo!</li>
+					<li>reworked tag services' permissions calculations on thumbnail menu</li>
+					<li>new fatten A/C cache on shutdown</li>
+					<li>system:untagged works again for null tag repo ('all known tags')</li>
+					<li>advanced import options now default no limit for size and resolution</li>
+					<li>ratings service now have a little info on the review services frame</li>
+					<li>new shortcut keys (ctrl-b and -n) for animated gif previous/next frame in fullscreen</li>
+					<li>added thoughts on plurals to tag schema help page</li>
+					<li>hentai foundry downloads now interleave pictures and scraps</li>
+					<li>removed db locks on file/thumbnail reads</li>
+					<li>you can open the page picker frame with the mouse by going view->pick a new page</li>
+					<li>the copy->whatever thumbnail menu is more concise</li>
+					<li>system:hash now works for null file repos ('all known files')</li>
+					<li>there is now a title: regex on the tag regex dialog</li>
+					<li>servers now store updates in a folder, not inside their dbs.</li>
+					<li>couple misc changes to help pages</li>
+				</ul>
+				<li><h3>version 50</h3></li>
+				<ul>
+					<li>4chan pass added</li>
+					<li>captcha timings in dump are better</li>
+					<li>dumper's file ordering is less insane</li>
+					<li>some general updates to regex tag dialog</li>
+					<li>new box on regex tag dialog for tags for single files</li>
+					<li>regex tag dialog now supports arrow key up and down to change repo</li>
+					<li>entirely new and vastly improved listctrl class</li>
+					<li>collect by is now a thousand times more complicated, but also much more powerful</li>
+					<li>the top-left media-flicker display bug in fullscreen is fixed</li>
+					<li>some logging improvements</li>
+					<li>some tag cleaning improvements</li>
+					<li>thumbnails have less cluttered tag headers</li>
+					<li>some small changes to help</li>
+					<li>fullscreen precache doesn't do gifs any more, which should make things smoother</li>
+					<li>got rid of the awful view pending uploads dialog. I'll improve it later</li>
+					<li>started remote ratings, but its not done yet</li>
+				</ul>
+				<li><h3>version 49</h3></li>
+				<ul>
+					<li>local rating like service</li>
+					<li>local rating numerical service</li>
+					<li>ratings dialog</li>
+					<li>ratings drawn on preview and fullscreen canvas</li>
+					<li>search by rating</li>
+					<li>system:rating in options</li>
+					<li>sort by rating</li>
+					<li>a ratings help page added</li>
+					<li>custom shortcuts</li>
+					<li>overhauled shortcuts code</li>
+					<li>a new, comprehensive regex menu in the regex tag dialog</li>
+					<li>extensive new hentai foundry search and sort options</li>
+					<li>a new option regarding the search style of tag A/C entries</li>
+					<li>thu dumper can now dump with tags</li>
+					<li>regex tag dialog selects tag A/C on page change</li>
+					<li>regex tag dialog's button now now shows in import dialog even if there are no remote tag dialogs with POST privilege</li>
+					<li>A/C is slightly faster in all cases</li>
+					<li>preview canvas now updates on a content update</li>
+					<li>numtags = 0 and numtags > 0 now work for pending tags</li>
+					<li>shift- or Ctrl-Click no longer deselects</li>
+					<li>listbook renaming and resizing bug fixed</li>
+					<li>collections thumbnail is fixed</li>
+					<li>sometimes, an empty tag, '', could be entered into pending and screw a lot up</li>
+					<li>sometimes, a null tag could be entered into pending and screw a lot up</li>
+					<li>advanced tag options has better checkbox defaults</li>
+					<li>some help screenshots updated</li>
+					<li>the db's processing is slightly rebalanced</li>
+					<li>the db's startup is slightly rebalanced</li>
+					<li>a misc gui bug was fixed</li>
+					<li>a misc gui typo was fixed</li>
+				</ul>
+				<li><h3>version 48</h3></li>
+				<ul>
+					<li>New copy path and copy url menu entries on thumbnail right-click menu</li>
+					<li>Gif scrollbar</li>
+					<li>Hentai Foundry parsing errors fixed</li>
+					<li>Hentai Foundry 404 errors fixed</li>
+					<li>All the html parsers are rewritten using BeautifulSoap</li>
+					<li>Flash now zooms full, but not fit</li>
+					<li>Filter is now F12</li>
+					<li>Help is updated in a number of ways</li>
+					<li>Up/Down on empty input to change repository in manage tags dialog is fixed</li>
+					<li>The servers now support OPTIONS requests</li>
+					<li>Several status typos fixed</li>
+					<li>I started local ratings services</li>
+				</ul>
+				<li><h3>version 47</h3></li>
+				<ul>
+					<li>Hentai Foundry interface is done, for both artist and tag searches</li>
+					<li>A/C gui reorganisation</li>
+					<li>A/C file and repo buttons added</li>
+					<li>A/C cache count alterations to match those buttons</li>
+					<li>A/C tag processing is cleaned up</li>
+					<li>Search and thumbnail-action improved to support null file service or non-null tag service</li>
+					<li>system:numtags=0 and system:numtags>0 optimised to be much faster</li>
+					<li>Ctrl+I now switches searching immediately/waiting</li>
+					<li>z now switches between zoom full and zoom fit in fullscreen view</li>
+					<li>advanced import options now has exclude already deleted files checkbox</li>
+					<li>Thumbnails choose the way they access the db more intelligently</li>
+					<li>ManagementPanel colour is changed, hmmm</li>
+					<li>Some DB cleanup</li>
+					<li>Some general code cleanup</li>
+					<li>Some download logic improved, including timer</li>
+					<li>Some download status improved</li>
+					<li>Download 404 notices better</li>
+					<li>DeviantArt now initially shows 'artist username' in its searchbox</li>
+					<li>Some code nomenclature improved</li>
+					<li class="dealwithit">I've made a changelog.html, compling all changes together.</li>
+				</ul>
+				<li><h3>version 46</h3></li>
+				<ul>
+					<li>DA parsing CLEAR</li>
+					<li>rule34@paheal parsing CLEAR</li>
+					<li>tbib (another booru) parsing CLEAR</li>
+					<li>Canvas rearranging</li>
+					<li>Preview now shows tags</li>
+					<li>The autocomplete tag write dialog will promote existing exact matches to the top of the list, even if it is not the most popular.</li>
+					<li>Autocomplete lists now scroll with the mouse.</li>
+					<li>A/C scrolling is a little more accurate.</li>
+					<li>Pressing up or down on an empty A/C entry will change tag repository.</li>
+					<li>A sledgehammer has been applied to the python garbage collector.</li>
+					<li>The code that navigates boorus is better.</li>
+					<li>The import queuing/pausing/cancelling system is better.</li>
+					<li>Booru tag-processing is better.</li>
+					<li>The import-queue gui is slightly better sized on small screens.</li>
+					<li>The new local tags service now shows up in advanced tag options.</li>
+					<li>Even more flicker is removed from the main thumbnail view, this time when clicking on whitespace. (it was a stupid bug)</li>
+					<li>Serverside db-backup now includes the WAL file.</li>
+					<li>Manually adding an admin service is fixed.</li>
+				</ul>
+				<li><h3>version 45</h3></li>
+				<ul>
+					<li>Local tags: DONE</li>
+					<li>Thread watcher: DONE</li>
+					<li>Fullscreen now shows tags</li>
+					<li>Preview shows some more file + tag info</li>
+					<li>Listbooks load their panels on demand.</li>
+					<li>Local options dialog is now a listbook.</li>
+					<li>Some incorrect ‘sample image’ downloads from danbooru are fixed. Danbooru’s inner workings remain a 404-cluttered mess though.</li>
+					<li>Some remaining utf-8 html parse errors (where a limited content-type header is given) are cleared up.</li>
+					<li>Another connection problem (a certain case of the server closing the connection) is now properly recovered from.</li>
+					<li>Some flicker in the thumbnail view is reduced, but my slow laptop still shows some, so I need to revisit this.</li>
+					<li>Autocomplete tag boxes now have little tooltips better describing their search domains.</li>
+				</ul>
+				<li><h3>version 44</h3></li>
+				<ul>
+					<li>All database triggers are removed and replaced with more efficient inline code.</li>
+					<li>Cached number of files, namespaces and tags for a tag repo are kept updated, so review services should rarely take very long to load.</li>
+					<li>Cached number of A/C counts (current and pending) are kept updated, so A/C results should rarely take very long to load.</li>
+					<li>The way A/C cache searches are done is improved.</li>
+					<li>The way A/C cache entries are calculated is vastly improved.</li>
+					<li>The way several db SELECT DISTINCT * and SELECT COUNT( DISTINCT * ) queries are performed is improved.</li>
+					<li>The custom httpconnection object is improved to better deal with server-side connection closes. (Cannot connect to server problem)</li>
+					<li>The custom httpconnection object does http redirections more intelligently.</li>
+					<li>The custom httpconnection object now parses non-ascii content-type (e.g. utf-8) properly, according to server-side header. The tag “pokémon” will now parse correctly.</li>
+					<li>e621 and rule34@booru.org are fixed. (just a couple parsing-variable changes)</li>
+					<li>If some tag parsing entries are checked on a booru download page, the tags will be downloaded, parsed and applied even to files already in the database.</li>
+					<li>The mouse cursor will remain visible in the fullscreen browser while the right click menu is open.</li>
+					<li>I corrected some which->that grammar in a couple dialogs.</li>
+					<li>Auto-repo-setup (from the help menu) was broken in a very stupid way, but I fixed it. I apologise for not noticing.</li>
+					<li>Thumbnails now show creator and title up top. They are a bit crushed, so I may rearrange them.</li>
+				</ul>
+				<li><h3>version 43</h3></li>
+				<ul>
+					<li>Updated import + booru code</li>
+					<li>New booru buttons</li>
+					<li>Cut tag parse bug fixed</li>
+					<li>Download preview instead of real file bug fixed (I think)</li>
+					<li>Fixed the ‘thumbnails not appearing on import’ bug</li>
+					<li>Import flickers less</li>
+					<li>Media Classes rewrite is done, although I’m not totally happy. Have to think about it.</li>
+					<li>A problem with pending tags applying over existing tags no flushing correctly is fixed.</li>
+					<li>A/C cache is better, but still a little slow on slow computers.</li>
+					<li>system:duration=0 is fixed.</li>
+				</ul>
+				<li><h3>version 42</h3></li>
+				<ul>
+					<li>Autocomplete tag cache DONE. Please tell me if you encounter excessive slowdown or incorrect counts.</li>
+					<li>Autocomplete tag logic improved in about five ways. Tags should appear more intuitively and with more accurate counts.</li>
+					<li>Copy and paste buttons in manage tag dialog to facilitate spamming many tags from one file to another.</li>
+					<li>Imageboard dump is fixed!</li>
+					<li>URL download got fixed last week and I forgot to say!</li>
+					<li>A peculiar pseudo-foreign-key bug with the active_pending_mappings table is sorted. (leading to more accurate queries and counts)</li>
+					<li>Since display of large queries is so much faster, the ‘woah! 12,000 query results’ warning is gone.</li>
+					<li>Fullscreen precache timings are rebalanced, hopefully for the better!</li>
+					<li>The importing gui classes are a little smoother, and thumbs should load one by one, not row by row, once the page height is exceeded. The scrollbars should be less janky.</li>
+					<li>Page transitions are smoother.</li>
+					<li>Importing from URL will now load those urls that are already inside the db (hella fast, too), just like importing from hdd.</li>
+					<li>The double-update-download bug is finally fixed! Now you’ll download update number 258 only once, and not twice in a row. (I hope!) It never mattered much, beyond a little CPU, but it annoyed the hell out of me. Working out what was wrong took ages. (Long story short: Python’s Priority Queues are not parallel FIFOs!)</li>
+					<li>There was a weird bug in pending tags sometimes going to higher tag-precedence services, rather than the one chosen in the manage tags dialog.</li>
+					<li>There was a typo in reset service.</li>
+					<li>More content update unification in the db, making things much neater behind the scenes.</li>
+					<li>I found a potential hang in the db-shutdown code.</li>
+					<li>I found another potential hang in the db-shutdown code!</li>
+					<li>The number of messages in your inbox is now displayed on the statusbar.</li>
+					<li>Bold, Italic and Underline now work with Ctrl+B/I/U in the message compose panel.</li>
+					<li>The ‘don’t receive messages from Anonymous’ checkbox in Add, Remove and Edit Services for message depots now does something.</li>
+					<li>system:unread in message search now has a count.</li>
+					<li>A draft will remember its saved changes when you click on another conversation and back again.</li>
+					<li>You can now save a draft with zero recipients.</li>
+				</ul>
+				<li><h3>version 41</h3></li>
+				<ul>
+					<li>Rich Text Control with Toolbar in messaging.</li>
+					<li>Message unread/read status now syncs to message depot.</li>
+					<li>Can set defaults for file system predicates.</li>
+					<li>Animated Text class written.</li>
+					<li>system:unread tag in messaging.</li>
+					<li>Import bug fixed.</li>
+					<li>Messaging search logic improved.</li>
+					<li>Message depot default check time down to 180, and daemon thread improved to manage with that.</li>
+					<li>Application startup is more stable.</li>
+					<li>Some AddMessage logic improved.</li>
+					<li>Drag+Drop service fixed and improved.</li>
+					<li>Tags added while importing will now turn up in autocomplete.</li>
+					<li>I unified more of the client’s content-update db calls. Just making stuff neater.</li>
+					<li>I massively simplified the autocomplete tag code in preparation for another bash at doing autocomplete cache. A/C is far too slow atm, imo.</li>
+					<li>Some A/C counts are still off, particularly when there are a mix of current and pending. I couldn’t figure out what is causing it, but I’ll look at it more as I do the cache.</li>
+					<li>In add, remove and edit serivces, you can now specify if you want to receive messages from Anonymous or not. Unfortunately, because I forgot to implement it in DoMessageQuery, this checkbox doesn’t actually do anything yet! Whoops!</li>
+				</ul>
+				<li><h3>version 40</h3></li>
+				<ul>
+					<li>Inbox/Archive for messaging works. The inbox icon is back, and F7 to archive as usual.</li>
+					<li>Unread/Read for messaging works. Click on your status next to a message panel to change.</li>
+					<li>All message participants are shown in the conversation listctrl.</li>
+					<li>The message page will open with ‘system:inbox’ active, ordered by newest message.</li>
+					<li>I fixed conversation listctrl sorting in a couple ways.</li>
+					<li>Some bugs in the db->gui update reporting system are fixed, so the compose window and draft panel will close properly on a message-send, and the conversation listctrl will swiftly update unread counts and inbox status and so on.</li>
+					<li>The draft panel’s save button wasn’t updating sometimes when it should have been.</li>
+					<li>html links in messages will show in the main frame’s statusbar and launch in your browser when clicked.</li>
+					<li>I reworked how many system tags are searched in file queries to make them muuuuch faster. Now, any time you go system:hash, :size, :mime, :age, :width, :height, :duration, it (should) be significantly faster than before.</li>
+					<li>Ever have a png file that had an ok thumbnail but a black preview/fullscreen? It was probably an ‘LA’ image, or ‘greyscale with an alpha channel’. Display of LA images is now fixed.</li>
+					<li>Streamlined the way file ‘archive’ and ‘delete’ commands are sent throughout the application, with an eye to eventually adding all other user-commands to the same system (to make it simpler, and also to do undo-redo).</li>
+					<li>I’ve updated the help docs, including the section on how messaging actually works.</li>
+					<li>You can now enter system tags with enter/return from the keyboard, not just double-clicking with the mouse.</li>
+				</ul>
+				<li><h3>version 39</h3></li>
+				<ul>
+					<li>A whole bunch of stuff I didn’t write down that generally made messages work beyond sending “Hello World”.</li>
+					<li>Unicode messages now work.</li>
+					<li>Newlines in messages now display properly.</li>
+					<li>Fixed contact saving and drag-and-drop to the manage contacts dialog.</li>
+					<li>You can now add a contact using a contact address (assuming their service is v39).</li>
+					<li>A bug in contact renaming is fixed.</li>
+					<li>My contact (hydrus admin) is now added automatically.</li>
+					<li>Messages are orphan-deleted properly server-side.</li>
+					<li>Message depots you control now get an entry under the admin menu.</li>
+					<li>The conversation listctrl is now properly sorted.</li>
+					<li>The HtmlWindow that shows message body is now resized to its minimum needed height via magic that I ain’t gotta explain.</li>
+					<li>Messages that fail to send can be retried by clicking on the failed.</li>
+					<li>Some draft save/send button enable/disable logic was updated.</li>
+					<li>I switched around some server-side account logic.</li>
+					<li>You can’t zoom a flash window bigger than the screen.</li>
+					<li>I’ve made the mouse appear in fullscreen when you move it, and this includes while you drag. See how you feel about it. I’ll make options to change behaviour if people care.</li>
+					<li>Better zip structure. (No more CWD rubbish)</li>
+					<li>New tar.gz release with only the code and help. Code is 1.2MB, help is 14MB lol. I’ll improve the structure of this release next week. I threw it together by hand today, but I’ll improve its structure next week.</li>
+				</ul>
+				<li><h3>version 38</h3></li>
+				<ul>
+					<li>messaging v1.0</li>
+				</ul>
+				<li><h3>version 37</h3></li>
+				<ul>
+					<li>messaging prototype</li>
+				</ul>
+				<li><h3>version 36</h3></li>
+				<ul>
+					<li>animated gif fixes</li>
+					<li>new page chooser</li>
+					<li>svcp->cstvcp in fullscreen too</li>
+					<li>new import progress</li>
+					<li>just start the server on this computer, please</li>
+					<li>I think I have scrolling to the current selection after an archive fixed now.</li>
+					<li>Started an experimental simpler way to send commands to the db, which may open the way for undo-redo.</li>
+					<li>Capitalisation option in file->options->gui. It only does the menubar for now, but I will expand it.</li>
+					<li>Custom sorts/collects. Under file->options. Check it out, play with it if you care about it.</li>
+					<li>Some program initialisation error handling is cleaned up.</li>
+					<li>Can now no longer start a server if the admin port it wants to use is occupied. (can’t run two servers at once on the same port)</li>
+					<li>I broke dump with a typo in a previous release, I think! It is fixed now.</li>
+				</ul>
+				<li><h3>version 35</h3></li>
+				<ul>
+					<li>Slight speedup of review services frame loadtime.</li>
+					<li>SVCP now replaced with SCTVCP and CSTVCP for now, with more planned next week.</li>
+					<li>Repo sync daemon adds db jobs less manically, now, locking up the gui less.</li>
+					<li>Repo sync daemon reports successful updates to the log.</li>
+					<li>Tag petition review page has a visual bug fixed.</li>
+					<li>ThumbnailMediaPanel manages its underlying bmp canvas more intelligently.</li>
+					<li>Some ugly page-closing code was cleaned up.</li>
+					<li>There is a ‘regex examples’ popout window on the regex-filename-tag import dialog, with copy-pastable examples of python regexes that’ll work for common filename-parsing situations.</li>
+					<li>Home and End keys now select the first/last thumbnail as well as scrolling.</li>
+				</ul>
+				<li><h3>version 34</h3></li>
+				<ul>
+					<li>DB consolidation, and foreign keys and triggers with it. The db is less prone to orphan ids and miscounts.</li>
+					<li>For long-time users, all orphan ids should have all been deleted, reducing weirdness.</li>
+					<li>Total size of local service is now tracked accurately.</li>
+					<li>Archive while importing should work a bit better now.</li>
+					<li>Update logic should be more reliable, as should all service_updates.</li>
+					<li>Archive count for file repos should be less wrong.</li>
+					<li>Fixed two (!) typos in system:age predicate code.</li>
+					<li>File upload is fixed (not sure if it was ever broken in release, but I fixed the stupid thing I did anyway)</li>
+					<li>DB (and server) errors should report better now, revealing inner-db code in the traceback. (and printing it to the appropriate log)</li>
+					<li>Improved the mime_to_enum object for image/jpeg, image/jpg, image/jpe, image/wtfaretheygoingtocalljpegnow.</li>
+					<li>HTTP connections can deal with some esoteric commands, like 301, without throwing a fit. All http goes through the same code.</li>
+					<li>Danbooru should now be in your booru list, and it _should_ work.</li>
+					<li>Pausing/Cancelling a booru gallery parse should now work.</li>
+					<li>4chan dumper now understands captchas being wrong and the thread not existing; in the former case it’ll let you put in a new captcha and try again, in the latter it’ll stop the whole dump.</li>
+					<li>Some general code neatness improvements.</li>
+				</ul>
+				<li><h3>version 33</h3></li>
+				<ul>
+					<li>Boorus are working for users who started last week</li>
+					<li>The server can now manage many more simultaneous requests without bugging out.</li>
+					<li>The early freeze/import freeze due to simultaneous access in the client is fixed.</li>
+					<li>The client’s file+thumbnail server (details in help’s advanced.html) works again.</li>
+					<li>Client DB now stores md5 and sha1 for all local files.</li>
+					<li>Client DB has a larger cache size.</li>
+					<li>The freeze caused when importing thousands of files at once with tags is fixed.</li>
+					<li>The yaml imageboard import (when you drag and drop a .yaml file onto the imageboards dialog) now adds form fields correctly! If you had problems here, check out install_path/static/default_imageboards.yaml to reset them!</li>
+					<li>The autocomplete counts should be more accurate, particularly when there are a mix of current and pending tags in the db.</li>
+					<li>The autocomplete in the regex-path dialog will now search the db correctly (it was misconfigured).</li>
+					<li>Autocomplete is also just a _little_ faster</li>
+					<li>File imports are now low priority, so gui activity should still happen nice and quick even while an import is occurring.</li>
+					<li>The review services frame will now show how long until the next update will be checked (see picture above). In case of error, it will show how long until it tries again.</li>
+					<li>The review services panel and manage services panel are of a better default size, and they use my new listbook class exclusively, rather than the old notebook.</li>
+					<li>I’ve added some tooltips on not-obvious widgets.</li>
+					<li>Content Updates have vastly improved processing speed on a thumbnail view (x100 in some cases!). Tag updates particularly will not be so slow to process if you have a large search open.</li>
+					<li>The import gauge will now show the correct range according to the current queue size, not always the default 100.</li>
+					<li>Active Import Pages will throw up a yes/no dialog if you try to close them.</li>
+					<li>Some beautifying of code syntax. ‘\n’ is now os.linesep, which means exported stuff should show up better in notepad.</li>
+					<li>Some changes in network protocol, although now I think of them, I realise I forgot to update the network version. They aren’t important for most users, so w/e.</li>
+				</ul>
+				<li><h3>version 32</h3></li>
+				<ul>
+					<li>client db serialisation DONE</li>
+					<li>Cleaned up a dirty-bmp canvas init issue.</li>
+					<li>Resized some dlg stuff that was too tall</li>
+					<li>Cleaned up a bunch of unrelated db code</li>
+					<li>Tightened the pubsub system so it integrates better with wx.</li>
+				</ul>
+				<li><h3>version 31</h3></li>
+				<ul>
+					<li>booru prototype</li>
+					<li>Fixed some problem with last error timestamp </li>
+					<li>Fixed a bug in repo bandwidth tracking</li>
+					<li>Fixed URL registration with the client db.</li>
+					<li>Made downloading URLs asynchronous again</li>
+					<li>Made repo synchronisations not block so much, and not for nearly as long. You should be able to do queries and click on thumbs (albeit at a slower rate) while the client is downloading and processing updates.</li>
+				</ul>
+				<li><h3>version 30</h3></li>
+				<ul>
+					<li>Thumbs are exported, and, along with perceptual hashes, now treated as a global pool, reducing downloads and speeding queries.</li>
+					<li>Thumbnail resize is now asynchronous, done as each thumbnail is requested. Changing the thumbnail size in the options dialog happens real quick, and if you don’t like a particular size, you can change it back just as fast.</li>
+					<li>Temporary DB locking mechanisms ensure serialisation, less inefficient locking.</li>
+					<li>ImportPage superclass works a lot better, in a lot less code. DB import code is now even simpler, and much faster, especially for redundant files. The new import page will also tell you how many files were successful/failed/already deleted/already in the db.</li>
+					<li>Fetching images for fullscreen or preview is fully asynchronous, and will no longer block the gui thread.</li>
+					<li>Some query logic is improved.</li>
+					<li>You can now import and export sites/imageboards from the manage imageboards dialog. It’ll export to a .yaml file, which is easy to understand with a decent text editor. Just drag and drop onto the dialog to import.</li>
+					<li>Selecting thumbs has a little less preview-flicker now.</li>
+					<li>The new tagboxes now render numbers prettily, so 4123 -> 4,123.</li>
+					<li>(+) namespace:tag now colours properly.</li>
+					<li>The background for selected tags is now an appropriate colour.</li>
+					<li>You can now choose the colours of any namespace you like in the normal options dialog.</li>
+					<li>Clicking in whitespace in the new tagbox deselects, rather than select( 0 )s.</li>
+					<li>Spacebar, PageDown, Return and all the other special command characters are now propagated to flash in fullscreen view, just as long as the mouse is over the canvas.</li>
+				</ul>
+				<li><h3>version 29</h3></li>
+				<ul>
+					<li>Big changes to the db’s file storage, as above.</li>
+					<li>database->vacuum is reinstated, database->reindex is retired. I recommend you run a vacuum once you are updated; it’ll only take a minute now.</li>
+					<li>Rollback and initialisation bugs are fixed.</li>
+					<li>There’s a splash window now that can offer client-boot feedback.</li>
+					<li>The way scrolling-to-focus is calculated is improved.</li>
+					<li>Pretty much everywhere you see tags will now show coloured tags! I finished up my own tagbox class, which for now will show tags coloured in the default booru scheme. It also loads in a few milliseconds, rather than the ~0.5s of the default listbox. It scrolls faster, too. I’ll have user-customisable colours next release.</li>
+					<li>Files with invalid resolution, size and mime are now filtered out before dumping to an imageboard.</li>
+					<li>A number of misc other bugs were fixed.</li>
+				</ul>
+				<li><h3>version 28</h3></li>
+				<ul>
+					<li>I fixed the ‘searching immediately’ bug. It was a stupid typo as usual.</li>
+					<li>Post-Filter scrolling should be a bit more reliable.</li>
+					<li>Some more log events.</li>
+					<li>I did a lot of work on my new tags box, although the actualy gui elements will have to be finished for v29.</li>
+					<li>Manage Imageboards wasn’t saving properly. It is now.</li>
+					<li>My new progressdialog happens in several places. It is a little neater than the one in wx; just better for my purposes.</li>
+					<li>I reworked some of the transaction stuff in the db so that I can atomically queue pubsub events. (this means file import are less juddery)</li>
+					<li>After becoming very annoyed with wx’s listbook/labelbook/whateverbook, I wrote my own. It’s all over the place in my dialogs now. It is tighter, more reliable, and can scroll.</li>
+					<li>I reworked some of the way sets interacted.</li>
+					<li>There was an infinite recursion bug sometimes, when uploading files to a file repo.</li>
+				</ul>
+				<li><h3>version 27</h3></li>
+				<ul>
+					<li>Cleared out some old unused library imports, so the client is slightly smaller.</li>
+					<li>Had a cyclical import (!). Luckily, python is forgiving, but I have still fixed it.</li>
+					<li>Collection thumbnails will now update with their new pending tags correctly.</li>
+					<li>Some wx.Panel vs wx.Window issues and nomenclature resolved.</li>
+					<li>Full Page decouple. Now the window to the left is a seperate, much neater class. It and the media/preview windows talk to each other in a clever way that means I can make new kinds of page much faster. It scrolls, too.</li>
+					<li>Thumbnails resize will tell the thumbnail window just to redraw itself, not refresh the entire query.</li>
+					<li>‘system:local’ and ‘system:not local’ are now mutually exclusive (will swap each other out, rather than overlap), like inbox and archive.</li>
+					<li>A little neatening of the system predicate code.</li>
+					<li>‘system:similar_to’ RMB menu entry fixed for some cases.</li>
+					<li>There is a new log window. Go view->new log page to see it. It doesn’t show much right now, but you can see synchro successes and errors pop up as they happen.</li>
+					<li>There is now a popup button on the import dialog and the URL downloader page that does ‘advanced import options’. You can now tell these import processes to archive everything and/or ignore files below a certain size or resolution. By default, the client will not import anything <5KB or <50x50px. You can set no limit.</li>
+					<li>Flash windows will now own all keystrokes as long as the mouse cursor is over the flash. If you are browsing/filtering, just move your mouse over or off the flash window to make sure your return/page down/spacebar/escape/whatever is interpreted as you want.</li>
+					<li>The URL downloader will not download the same file twice in a row, so you can add a thread URL several times in a row, and it’ll only download the newest files. The behaviour of this is affected by the ‘exclude deleted files’ checkbox in the client’s options. I’ll implement thread watching a bit later.</li>
+				</ul>
+				<li><h3>version 26</h3></li>
+				<ul>
+					<li>The double unnamespaced count bug ( ‘system:blah (70)’, ‘blah (140)’ ) in autocomplete should be gone.</li>
+					<li>Some rejiggering of how the statusbar updates means active import windows can’t spam the statusbar when they don’t have focus.</li>
+					<li>The count of pending tags is more accurate and uniform. When it says (+3), it means for three files, not in three cases.</li>
+					<li>Tag counts overall are better. When it says ‘diaper vore (17)’, you should be getting 17 files if you enter that search.</li>
+					<li>GUI tag repo precedence is slightly more accurate, compared to what the db thinks it should be.</li>
+					<li>I nailed down why system:mime wasn’t working sometimes, and now it should work all the time.</li>
+					<li>I discovered some problems with repo-side bandwidth tracking. I fixed a couple bits, but have notes to look at it more.</li>
+					<li>In v25, if system:limit was greater than the search population, it threw an error! Whoops! Fixed now.</li>
+					<li>The post-filtering thumbnail problem is totally fixed, as are a couple other instances when thumbs would sometimes not draw.</li>
+					<li>The fullscreen change-image-jittering-around problem is fixed, I think.</li>
+					<li>Fullscreen archive works again. Not sure why/when it broke.</li>
+					<li>Importing with archive checkbox ticked sometimes didn’t archive, lol.</li>
+					<li>A bunch of decoupling of gui elements, making for much neater code and less gui blocking.</li>
+					<li>Decoupling of import from hdd as well.</li>
+					<li>Query is now asynchronous! If you do a massive query on a slow computer, you won’t lose the gui! You can go check other tabs, whatever, and the query will process in the background, rendering on the page you started it when it is done.</li>
+					<li>A number of cpu-heavy numbers are now cleverly cached, so system predicate fetch happens much faster, especially on 100,000+ image dbs.</li>
+					<li>Some ‘collect’ code is sped up and made generally less bonkers.</li>
+					<li>I wrote a couple new classes for my most common gui elements.</li>
+					<li>There is now an option in file->options to change the number of characters before autocomplete will go search the db for tags! If you have a slow computer and a huge db, you can set it to 2, 3 or even more chars. Default is 1.</li>
+					<li>Dialogs that ask you questions will now usually center on their parent window.</li>
+					<li>The current selection tagsbox won’t show ( ‘blah (12)’, ‘blah (+3)’ ), it’ll combine into ‘blah (12) (+3) (-1)’. With the + meaning pending and the - meaning petitioned.</li>
+					<li>Autocomplete now respects which of the include_current and include_pending buttons are green! It’ll only search current/pending as you wish! And the numbers will now be accurate!</li>
+					<li>My new question dialog with the yes/no buttons hooks the Escape key to mean no.</li>
+					<li>I don’t use it much yet, but I have a new message dialog too.</li>
+				</ul>
+				<li><h3>version 25</h3></li>
+				<ul>
+					<li>Thumbnails should load just a bit quicker.</li>
+					<li>Made some dict + set code neater</li>
+					<li>A new end-of-filtering dialog makes the choices a bit more obvious</li>
+					<li>When you exit from fullscreen/filter view, the main thumbnail view it was based on should select (and scroll to!) where you were. But filtering is less reliable, since you may have just deleted the last thing you were looking at!</li>
+					<li>Better scrolling in thumbnail view</li>
+					<li>Scrolling in thumbnail view will follow the current selection, so the focussed media will always be visible.</li>
+					<li>Double right-clicking in filter now deletes instead of keeps (typo)</li>
+					<li>Slightly less flickering when processing repo updates</li>
+					<li>Made some form code neater</li>
+					<li>A lot of the thumbnail gui code has been decoupled and pubsub’d. It is all neater behind the scenes, meaning I’ll be able to extend it easier in future.</li>
+					<li>I completely overhauled how my pubsub works. (pubsub is a messaging system inside the code). It is more flexible and easier for me to work with.</li>
+					<li>system:mime was not working in v23, not sure why. It’s fixed now.</li>
+					<li>Some small speedup + neatening in db queries.</li>
+					<li>You can now scroll to the end of a thumbnail page by pressing End. WARNING: If you have like 10,000 thumbs in the current pane, it is going to have to load all those.</li>
+					<li>In the AutocompleteTagWrite object, which is the tag entry box in the manage tags dialog, there was a stupid bug that made many requests more expensive. It’s fixed.</li>
+					<li>Autocomplete now works off one character’s input.</li>
+					<li>I’ve swapped a bunch of expensive objects with easier staticbitmaps for now</li>
+					<li>some A/C ordering changes</li>
+				</ul>
+				<li><h3>version 24</h3></li>
+				<ul>
+					<li>imageboard dumper prototype</li>
+					<li>some db update stuff</li>
+				</ul>
+				<li><h3>version 23</h3></li>
+				<ul>
+					<li>A typo was disallowing petition rescinds in certain cases.</li>
+					<li>I’ve rearranged some of the RMB menu separators to reduce filter/archive misclicks.</li>
+					<li>Tag pending upload has more accurate GUI response.</li>
+					<li>You can now find similar images from RMB menu.</li>
+					<li>Petition approvals are mirrored on an admin’s client.</li>
+					<li>The gui now accepts that admins can overrule deleted content.</li>
+					<li>Couple tiny URL downloader gui bugs fixed</li>
+				</ul>
+				<li><h3>version 22</h3></li>
+				<ul>
+					<li>system:similar_to</li>
+					<li>Some backend namespace stuff</li>
+					<li>Couple of gui presentation fixes</li>
+					<li>I removed the clunky inbox and archive buttons, see how you feel about it.</li>
+					<li>I tried to do ultimatelistctrl to have coloured tags (like a *booru), but it was too buggy and slow for the client’s purposes, so I’ll probably have to write my own control.</li>
+					<li>system:mime exists, now. Not many mimes, yet, but have a play with it, see if you like it.</li>
+				</ul>
+				<li><h3>version 21</h3></li>
+				<ul>
+					<li>On opening the URL downloader, the textbox input focuses.</li>
+					<li>The URL downloader has some better update texts. It pauses nicely, etc…</li>
+					<li>The URL downloader now orders urls in the order they are parsed. I forgot I was throwing the links in a set, losing all order!</li>
+					<li>You won’t see dupes in the URL downloaders’ mediaresultswindow.</li>
+					<li>Accounts should now correctly refresh on version update.</li>
+					<li>When accounts fail to sync, it dumps the error in the log.</li>
+				</ul>
+				<li><h3>version 20</h3></li>
+				<ul>
+					<li>The preview pane should be a little less schizophrenic.</li>
+					<li>Some code cleaning up behind the scenes.</li>
+					<li>Thumbnail download optimisation if they already exist locally.</li>
+					<li>Icons will show/hide in fullscreen with mouse movement, just like 21/123.</li>
+					<li>Weird archiving bug on import is fixed. It was display only.</li>
+					<li>Manage tags dialog now works in fullscreen, lol.</li>
+					<li>system:not_uploaded_to: now works</li>
+					<li>services->review services now loads muuuuuch faster (after the first time)</li>
+					<li>There was a typo in setting up initial server’s accounts. Email me if you can’t make new admins.</li>
+					<li>Importing is more streamlined, with more shared code.</li>
+					<li>Importing with tags dialog happens more naturally in the import process. You can now do it from drag and drop imports!</li>
+					<li>I reordered the default collection dropdown. Your default may be changed, so check your options.</li>
+					<li>You can now fetch an account by a deleted file (hash).</li>
+					<li>Thumbnails’ tags now obey tag precedence for deleted stuff. I hope.</li>
+					<li>Modify Account Dialog now does its stuff.</li>
+					<li>Collections thumbnails now show how many files are in the collection, just next to the icon.</li>
+					<li>I’ve added to and edited the help extensively, replacing screenshots and updating the text.</li>
+				</ul>
+				<li><h3>version 19</h3></li>
+				<ul>
+					<li>drop librarium nomenclature</li>
+					<li>More intelligent prefetch in fullscreen - things should load muuuuuch faster</li>
+					<li>A little more intelligent sum() calcs in autocomplete - non-namespaced tags now sum all their namespaced versions as well</li>
+					<li>More rigorous client db transactions, just to make things more pretty and reliable.</li>
+					<li>Moved db files to /db, logs to /logs</li>
+					<li>Made inroads to getting review services to load faster, but version 20 will have more here.</li>
+					<li>I’ve updated the frame view so the file info is draw on top of the image. It’s a hack for now, inside the image-frame, but it is the only solution for wx’s annoying ‘no overlapping’ policy.</li>
+				</ul>
+				<li><h3>version 18</h3></li>
+				<ul>
+					<li>Some misc gui image info bugs fixed</li>
+					<li>Review services dialog is less pubsub buggy</li>
+					<li>Fullscreen image prefetch does more and hopefully more intelligently</li>
+					<li>Entering a blank tag to quit tag dialog was broke when I updated autocomplete textctrls. I’ve fixed it.</li>
+					<li>Petition page is fixed, so I can finally clear out the tag petitions!</li>
+					<li>F10 was broke when the lib had deleted files lol! Fixed it.</li>
+					<li>Review services is more responsive to repo permissions updates.</li>
+					<li>Flash files are now correctly put in the inbox on import.</li>
+					<li>Synchronise Repositories daemon no longer takes ten gui-blocking seconds to process every update! This was an annoying slowdown, but I figured out what it was and reduced it to <1s with a quick patch. The problem will return with private tag repos, but I’ll deal with that when I come to it.</li>
+					<li>Synchronise Accounts daemon has some better pubsub so it fires more intelligently. This in turn affects several other daemons, which should all be more responsive; e.g. when your permissions change, your pending thumbs/files should start downloading.</li>
+					<li>Improved delete orphans logic for the fiftieth time! It is great now, and won’t ever bug you in the gui; it runs invisibly on shutdown and usually only takes a few secs to do its job.</li>
+					<li>Some of the gui updates triggered by the daemons are optimised so they block the gui less. Multiple stuff is bundled into single updates, those updates are less buggy, and the gui catches them better. Resetting the public tag repo will no longer lock up a slow system.</li>
+					<li>A few versions ago I changed the way repos were registered with the gui, and I’ve fixed some of the resultant daemon-related errors. This mostly affects admins, which mostly means me!</li>
+					<li>Download Thumbnails daemon was getting pretty slow for large dbs (100k+ files) because of an inefficient db query. This has been cleared up.</li>
+					<li>I banged my head against the wall for a couple of hours getting nested notebooks to work, and I am now a better person for it. Review and Manage Services dialogs feature better panel management as a result. Their panels are also much richer, reporting loads more data about the respective service. You can now see how many mappings the public tag repo has without having to delve into sqlite db browser.</li>
+					<li>I have unified panel and frame background colouring away from wx’s bonkers idea of what things should be coloured. It should mean that everything is properly grey, but please tell me if your gui turns all black or transparent or whatever.</li>
+					<li>21457 is now 21,457 in pretty much all cases where it is appropriate.</li>
+					<li>Fixed a bug with wx gauges not liking large ranges because of signed short or whatever underlying var the C code was using to store it. (That should have been done at the wx-python level, but whatever.)</li>
+					<li>‘localhost’ resolves to 127.0.0.1 when editing a service, mainly because windows freaks out at the former, deciding to take a couple seconds longer to make any raw connection.</li>
+					<li>Dialogs and frames have better, multi-monitor-friendly positioning.</li>
+					<li>Flash files are loaded from a temp folder beneath the install dir, rather than lib’s server, for various reasons. This temp dir also manages file copy/paste operations. I may move this back to the OS’s approved temp folder, but we’ll see.</li>
+				</ul>
+				<li><h3>version 17</h3></li>
+				<ul>
+					<li>Tag negation “-tag” works again</li>
+					<li>You can now cancel a filter on the first image</li>
+					<li>Some weird filenames that were breaking the new import page no longer do</li>
+					<li>Autocomplete (either when searching for tags or adding new ones in) will now show the number of files tagged with that tag after the tag e.g. here</li>
+					<li>Manage tag dialog now pops up slightly to the upper left, rather than the center (default) of the screen, so you can see what you are tagging. I may make this more intelligent in future, so it remembers where you last left it.</li>
+					<li>I changed a couple small things in help regarding the new import.</li>
+				</ul>
+				<li><h3>version 16</h3></li>
+				<ul>
+					<li>Numtags system predicate now takes into account which of current/pending tags buttons you have active.</li>
+					<li>Thumbnail downloads fire more reliably.</li>
+					<li>Downloading a file was causing funky thumbnail draw, which seems to be fixed.</li>
+					<li>Delete Orphans daemon only fires on application close now, so post-filter db lag is gone.</li>
+					<li>Daemons now use events, not conditions! lololol, I’m an idiot who can’t scroll down a library doc. For the longest time I was like “I wish ‘threading’ had events!” and it does.</li>
+					<li>Some account checks were missing in tag upload, but are now there.</li>
+					<li>A gigantic db rewrite that altered pretty much every table and query.</li>
+					<li>Calculation of tags for current selection now support collections, and is fast.</li>
+					<li>Was deleting a repo broke in 15? If it was, sorry! Didn’t catch it, but it’s fixed with the new system now.</li>
+					<li>Pubsub can do more, and is a little less ‘argh, I think it works like that’, and more OOP</li>
+					<li>The way tags are held by a thumb can support multiple tag servers (but only does public tag repo for now)</li>
+					<li>Repos are now a subclass of ‘service’. I’ll do more on this in the next version, including some nomenclature changes in the gui.</li>
+					<li>Imports are now asynchronous! There’s a new import page that’ll open on any import. It’s a little jittery, but it all works. If you import 3000 tiny files, your gui may lock up for a few secs since it’ll be able to import faster than it updates the gui.</li>
+				</ul>
+				<li><h3>version 15</h3></li>
+				<ul>
+					<li>manage tags dialog focus bug hotfix</li>
+				</ul>
+				<li><h3>version 14</h3></li>
+				<ul>
+					<li>Selection’s tags box now shows collections’ singletons’ tags</li>
+					<li>Autocomplete now sources from the current thumbnails whenever it can (faster than db), and does so intelligently</li>
+					<li>Couple of small display bugs fixed</li>
+					<li>Some delete logic approved</li>
+					<li>Repos do some more efficient inserts on POST content</li>
+					<li>Petition optimisation, for auto-soft-approval before update gen</li>
+					<li>Dialog parents, dialog parents everywhere</li>
+					<li>DB cleanup of a couple of old methods</li>
+					<li>Autocomplete Write (when adding tags in manage tags dialog) now sources from the entire network’s tags (not just for the files on your hard drive) when you type enough letters to stump it. i.e. If you have no files tagged ‘evangelion’, but you do have a file tagged ‘eve’, it’ll show ‘eve’ if you type ‘ev’, but if you type ‘eva’, it’ll requery the db more widely, and give you ‘evangelion’.</li>
+					<li>system:ratio for searching for wallpapers or whatever. Combine with system:width>x for extra utility!</li>
+					<li>You can now hit F3 (manage tags) in fullscreen, whether browsing or filtering.</li>
+				</ul>
+				<li><h3>version 13</h3></li>
+				<ul>
+					<li>a couple of cpu-intensive DAEMONS schedule themselves better. (less slowdown after a big filter)</li>
+					<li>image rendering prefetch improved</li>
+					<li>smoother image rendering to screen (especially when zooming), less flickering</li>
+					<li>petition approval has smoother, less buggy workflow</li>
+					<li>new hashes and tags are added to the db muuuuuuuuch more efficiently. most public tag repo updates happen in a second or two, rather than 30+</li>
+					<li>some of the internal commands are streamlined together into a single class</li>
+					<li>ctrl-s fixed</li>
+					<li>clear pending file repos pubsub fixed</li>
+					<li>ctrl-r now shows/hides splitters</li>
+					<li>thumbnail delete logic is better</li>
+					<li>select logic is better</li>
+					<li>deleted_remote_files bug fixed</li>
+					<li>headache-inducing weakref repositories __eq__ bug in pubsub fixed</li>
+					<li>‘with’ keyword all over the place now. turns out wx has a bunch of objects with support it (including dialogs!)</li>
+					<li>gridsizers are now all flexgridsizers</li>
+					<li>the list of tags on the current selection now has a weight attached like ‘flower (23)’ to show how many of the current selection have that tag. it doesn’t support collections’ weight yet.</li>
+					<li>revised some ambiguous repo error messages</li>
+					<li>you can now have a main window with no pages open</li>
+					<li>right click menus on a selection are vastly improved (lots more info), but still a way to go.</li>
+					<li>on the import files dialog, you can now specify to auto-archive rather than send to inbox</li>
+					<li>thumbnails now know where they are uploaded/pending/petitioned to and will show that info with different icons</li>
+					<li>escape key now deselects</li>
+					<li>manage repos dialog is completely revised. comments appreciated.</li>
+				</ul>
+				<li><h3>version 12</h3></li>
+				<ul>
+					<li>You can now tell lib to search ‘current tags’ only, ‘pending tags’ only, or both.</li>
+					<li>Tag search is more efficient.</li>
+					<li>Search in general is more efficient.</li>
+					<li>Search code is more beautiful and decoupled.</li>
+					<li>Tags are stored in memory more beautifully, and a similar class holds repositories for thumbs also.</li>
+					<li>Age predicate is fixed (twice!)</li>
+					<li>Server code is more beautiful. DB-Server interface is decoupled into a mixin class to make it easier to understand and manage.</li>
+					<li>Icons for pending and petitioned files, and for ‘currently downloading’.</li>
+					<li>Prefetch fixed, so nearby fullscreen images load just in case you want to see them.</li>
+					<li>Fixed a redundant pending tags bug</li>
+					<li>Fixed a swf tag petitions bug</li>
+					<li>On boot, temp folder is cleared.</li>
+					<li>The ‘current tags’ window is now union on the current selection, not intersect. If nothing is selected, it shows all the tags of the current selection. In a later version, I’ll order this list by count-weight.</li>
+					<li>All (I think) tag updates are synchronous-ish with the gui. As updates come in from the public repo, thumbs will update themselves appropriately. Same goes for repositories.</li>
+					<li>Gui-code tidy-up</li>
+					<li>On deleting a local file, preview clears.</li>
+				</ul>
+				<li><h3>version 11</h3></li>
+				<ul>
+					<li>swf support, lol</li>
+					<li>You can now backup repositories from the admin menu. Info in help.</li>
+					<li>Under the help menu, a quick way to set up the beta repositories’ credentials.</li>
+					<li>Account sync was full of bugs, and is now less so.</li>
+					<li>When you go fullscreen, the preview window should go blank, which should save a little cpu time when you are looking at gifs and your ears when you are looking at swfs.</li>
+					<li>Auto-complete is muuuuuch faster than it was. Also more correct. Still more work to do, though.</li>
+					<li>Librarium hosts an http server on 45874, which supports GET /file and /thumbnail just like a file repo. Utterly prototype, but you can test it right in your browser if you like. Go http://127.0.0.1:45874/file?hash=whatever when lib is running.</li>
+					<li>Ctrl-T opens a new local page/tab, Ctrl-W closes the currently active</li>
+					<li>Image display in preview and fullscreen has been revamped, and is now both a little buggy and much better.</li>
+					<li>Bandwidth tracking both server- and client-side should be more reliable.</li>
+					<li>Delete lag (the slowdown after you boot/delete something) should be reduced.</li>
+					<li>Query lag is significantly reduced, and new operators for predicates have been added. You can now go ˜ on a bunch of values like size and width and duration to get ‘approximately equal to’, which actually means plus or minus about five percent.</li>
+					<li>A stupid error on file upload is fixed. If you’ve been having problems seeing the files you uploaded in preview, try resetting the respective file repository.</li>
+					<li>A few daemon bug fixes.</li>
+				</ul>
+				<li><h3>version 10</h3></li>
+				<ul>
+					<li>hotfix for tag updates</li>
+				</ul>
+				<li><h3>version 9</h3></li>
+				<ul>
+					<li>Pressing a cursor key when no thumb is focussed no longer throws an exception.</li>
+					<li>Hitting enter on a blank input in the manage tags dialog now quickly oks the dialog.</li>
+					<li>Annoying splitter exception on import is gone. It was a one-line fix, because I was being stupid.</li>
+					<li>All searches should be a little faster. Mostly effects searches with 1000+ results.</li>
+					<li>Modal dialogs (in particular) should be just a little more responsive now. Less stuff is being dumped on the wx gui thread, and all db handling is more parallel.</li>
+					<li>Slow petition approval fixed, made almost instant.</li>
+					<li>Image rendering has been revamped. It should be less stuttery now, but there is still more work to do.</li>
+					<li>Some pending tag update logic was fixed.</li>
+					<li>If the focused thumb goes from ‘not local’ to ‘local’, its preview will load. (its on my to-do to do the opposite: clearing preview on delete in remote search.</li>
+					<li>DB daemons rewritten completely, so now a whole bunch of stuff flushes more efficiently, more reliably, and with less gui-blocking. Things happen smoother now.</li>
+					<li>Can now create repository database backups via librarium. Sending the command (via the admin menu) tells the repo to lock and copy its .db files to .db.backup. I’ll update help to explain this more.</li>
+					<li>Can now copy files from within librarium to the clipboard! Just select from the right-click menu or press Ctrl-C, and your selection will be copied to clipboard. You can then paste to any directory, for quick export to anywhere. The export command remains for exporting thousands of files.</li>
+				</ul>
+				<li><h3>version 8</h3></li>
+				<ul>
+					<li>Fixed a missing transaction on repo db update.</li>
+					<li>Export path can now be on other hard drives. You’ll probably want to keep it on the same drive if you have lib on a usb stick, though.</li>
+					<li>Fixed a really stupid ‘&lt;’ for ‘&gt;’ typo that was causing a ton of gui blocking and repository slowdown.</li>
+					<li>File and thumbnail downloads are much snappier.</li>
+					<li>One person had a very odd error while trying to open manage repos. I don’t understand what actually caused the traceback to happen, but I think I fixed it nonetheless.</li>
+					<li>inbox/archive buttons above the searchbox are now mutually exclusive.</li>
+					<li>Fixed the version number in lib’s about window.</li>
+					<li>Fixed the preview window so it remembers its last size properly. Also reduced its min size so you can make it tiny.</li>
+					<li>Fixed the problem people were having with admin rights. See this post if you were having problems.</li>
+					<li>The RegisterRepoRequest that was filling people’s logs on upload should be fixed now. Turns out I didn’t understand how wx.CallAfter works during modal dialogs! I threw in a horrible fix, but it works. I’ll revisit it.</li>
+				</ul>
+				<li><h3>version 7</h3></li>
+				<ul>
+					<li>db changes are done</li>
+					<li>fixed a bug with posting tag petitions</li>
+					<li>when typing tags in, autocomplete now harvests from pending tags as well as current</li>
+					<li>the regex dialog’s tag entry is now autocomplete</li>
+					<li>leading/following whitespace removal for tags, and multi-whitespace -> single</li>
+					<li>a little server-side pubsub neatening up</li>
+					<li>when importing via dialog, there is now a checkbox to ignore subdirectories</li>
+					<li>Added a quick readme.txt in the base_dir for people who choose to extract rather than install. (Everyone should check out the help at least once)</li>
+				</ul>
+				<li><h3>version 3->6 (never released)</h3></li>
+				<ul>
+					<li>after much feedback, completely rewrite db</li>
+					<li>general improvements to gui</li>
+				</ul>
+				<li><h3>version 2</h3></li>
+				<ul>
+					<li>general fixes and improvements</li>
+				</ul>
+				<li><h3>version 1</h3></li>
+				<ul>
+					<li>first true metadata beta</li>
+					<li>shit actually works</li>
+				</ul>
+				<li><h3>versions 0.91 -> 0.99</h3></li>
+				<ul>
+					<li>move to python and wx, and an application- rather than browser-based model</li>
+					<li>building on concepts</li>
+					<li>scrapping p2p, turning to client-server</li>
+				</ul>
+				<li><h3>early versions of beta</h3></li>
+				<ul>
+					<li>made db, playing around with LAMP</li>
+					<li>an initial p2p framework started</li>
+				</ul>
+			</ul>
+		</div>
+	</body>
+</html>

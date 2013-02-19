@@ -1,0 +1,47 @@
+<html>
+	<head>
+		<title>updates</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>how the hydrus network synchronises</h3>
+			<p>The hydrus network does not work like regular client-server architectures.</p>
+			<p>The most important difference is its decentralisation of processing; rather than make an expensive http request every time it wants something, the client makes an all-inclusive synchronisation request about once a day and performs all searches on its local cache.</p>
+			<h3>so, how does the client make sure it has what it needs to do its searches?</h3>
+			<p>When the client contacts a repository, it downloads every single change that has occured since the last time it checked. It keeps all this data, and searches over whatever is appropriate to its own circumstances. If its local circumstances change (e.g. you import a thousand new files), it doesn't need to download anything more. A repository does not know anything about any particular client's circumstances.</p>
+			<h3>tell me more! use diagrams!</h3>
+			<p>These diagrams are a little old! 'librarium' is the old name for the client, and now there are multiple tag update caches, which are combined into a new table called 'active mappings'. I'll update them sooooometime.</p>
+			<p>tags:</p>
+			<p><a href="tag_sync_1.png"><img src="tag_sync_1.png" width="960" height="443" /></a></p>
+			<p><a href="tag_sync_2.png"><img src="tag_sync_2.png" width="960" height="443" /></a></p>
+			<p><a href="tag_sync_3.png"><img src="tag_sync_3.png" width="960" height="443" /></a></p>
+			<p><a href="tag_sync_4.png"><img src="tag_sync_4.png" width="960" height="443" /></a></p>
+			<p>files:</p>
+			<p><a href="file_sync_1.png"><img src="file_sync_1.png" width="960" height="443" /></a></p>
+			<p><a href="file_sync_2.png"><img src="file_sync_2.png" width="960" height="443" /></a></p>
+			<p><a href="file_sync_3.png"><img src="file_sync_3.png" width="960" height="443" /></a></p>
+			<p><a href="file_sync_4.png"><img src="file_sync_4.png" width="960" height="443" /></a></p>
+			<p><a href="file_sync_5.png"><img src="file_sync_5.png" width="960" height="443" /></a></p>
+			<p><a href="file_sync_6.png"><img src="file_sync_6.png" width="960" height="443" /></a></p>
+			<h3>the update request</h3>
+			<p>The main request looks like this:</p>
+			<ul>
+				<li>GET /update?begin=1298778949 HTTP/1.1</li>
+			</ul>
+			<p>Which is a standard http query. 'begin' is a timestamp telling the repository "please give me the update which starts with this timestamp" (begin=0 initialises). The repository answers in YAML, which you can review in include/HydrusConstants.py.</p>
+			<p>The update duration is currently 100,000 seconds.</p>
+			<h3>headers</h3>
+			<p>All requests (other than '/' and '/favicon'), should have something like the following:</p>
+			<ul>
+				<li>Authorization: hydrus_network 7ce4dbf18f7af8b420ee942bae42030aab344e91dc0e839260fcd71a4c9879e3</li>
+				<li>User-Agent: hydrus/6</p>
+			</ul>
+			<p>The user-agent doesn't have to be 'hydrus', but the network version afterwards has to match up, or you'll get an error.</p>
+			<h3>what about the other requests?</h3>
+			<p>I suggest you review the code for information on the other requests. HydrusServer.py does the parsing, and ProcessRequest in the databases does most of the actual magic. ConnectionToService in ClientConstants.py does the client-side request-bundling and response parsing. If you have detailed questions, you can always email me!</p>
+			<p>YAML is very important in the hydrus network. I love it. Just do some googling if you want to learn more, and play around with yaml.safe_dump and yaml.safe_load in the python console to get some hands-on experience.</p>
+		</div>
+	</body>
+</html>
