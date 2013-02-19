@@ -13,7 +13,6 @@
 		<a class="screenshot" href="http://hydrus.x10.mx/lib_party_hard.png" title="now with swf support!"><img src="hydrus%20network_files/lib_party_hard_small.png"></a>
 		<a class="screenshot" href="http://hydrus.x10.mx/client_auto.png" title="an example of tag-autocomplete, which only displays results applicable to the current query"><img src="hydrus%20network_files/client_auto_small.png"></a>
 		<h3>hydrus network - client and server</h3>
-		<p>Note: This is a mirror of the original site owned by the author at <a href="http://hydrus.x10.mx/">Hydrus.x10.mx</a>. Because us anons are suspicious of free webhosts, we've moved the code to a Github page for archival and version control.</p>
 		<p>The hydrus network client is an application written for anon and 
 other internet-fluent media nerds who have large image/swf collections. 
 It browses with tags instead of folders, a little like a *booru on your 
@@ -27,12 +26,11 @@ code <i title="with a bit of work, maybe!">should</i> work for linux or osx.</p>
 who might like it. I put out a new release every Wednesday at 8pm 
 Eastern.</p>
 		<p>Currently supported filetypes are: bmp, gif, png, jpg, swf and flv.</p>
-		<p>If you would like to try the program, or would just like to know more, it is <i><b>highly</b></i> recommended to check out the <a href="help.html">help</a>. A copy is included with the release as well. It explains the basics of the network, and how to get connected.</p>
+		<p>If you would like to try the program, or would just like to know more, it is <i><b>highly</b></i> recommended to check out the <a href="http://hydrus.x10.mx/help/index.html">help</a>. A copy is included with the release as well. It explains the basics of the network, and how to get connected.</p>
 		<p>So:</p>
 		<ul>
-			<li><span class="warning">Check dat <a href="help.html">help</a>.</span></li>
+			<li><span class="warning">Check dat <a href="http://hydrus.x10.mx/help/index.html">help</a>.</span></li>
 			<li>Check dat <a href="http://www.mediafire.com/hydrus">downloads</a>.</li>
-			<li>Check dat <a href="http://www.mediafire.com/hydrus">source code on Github</a>.</li>
 			<li>Check dat <a href="http://hydrus.x10.mx/forum/">forum</a>.</li>
 			<li>Check dat <a href="http://hydrus.tumblr.com/">tumblr</a>. (<a href="http://hydrus.tumblr.com/rss">rss</a>)</li>
 			<li>Check dat <a href="http://twitter.com/#%21/hydrusnetwork">twitter</a>. (<a href="http://api.twitter.com/1/statuses/user_timeline.rss?screen_name=hydrusnetwork">rss</a>)</li>
