@@ -1,3 +1,5 @@
+## Hydrus Image Tagging Network (Client and Server)
+
 An application designed to create a personal *booru-style image tagger, that can be viewed locally or shared anonymously using a custom server. 
 
 [Download the program here.](http://www.mediafire.com/hydrus) This repository contains the source code.
