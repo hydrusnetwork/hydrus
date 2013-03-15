@@ -8,6 +8,105 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 61</h3></li>
+				<ul>
+					<li>session db tables</li>
+					<li>session manager objects</li>
+					<li>session net code done</li>
+					<li>session failure recovery</li>
+					<li>registration key table</li>
+					<li>registration key requests</li>
+					<li>some registration help added</li>
+					<li>harmonisation of many http request names</li>
+					<li>extracted uploadpending code from db transaction, making it a lot more polite and architecturally correct</li>
+					<li>pixiv now parses the ascii creator name as well as the japanese counterpart. No option to choose between them yet!</li>
+					<li>improved processcontentupdate to support more actions, making db a little more serial</li>
+					<li>home and end now scroll to focussed media</li>
+					<li>some http timeout tweaks, to stop the 'can't connect to server' problems on complicated queries</li>
+					<li>a typo in modify account types was fixed</li>
+					<li>manage tags dialog shouldn't fritz out quite so much when a service doesn't have post_data permisisons</li>
+				</ul>
+				<li><h3>version 60</h3></li>
+				<ul>
+					<li>pixiv account management dialog</li>
+					<li>pixiv gallery parse</li>
+					<li>pixiv page tag parse, including creator and title</li>
+					<li>pixiv user download</li>
+					<li>pixiv tag download</li>
+					<li>collapsed the page chooser a little to fit pixiv in comfortably</li>
+					<li>pdf support!</li>
+					<li>pdf launching via preview/fullscreen button</li>
+					<li>pdf header parsing with num_words rough estimate</li>
+					<li>system:mime=application/pdf</li>
+					<li>system:mime=application</li>
+					<li>custom filter favourites done! with default, previous, save, save as and delete</li>
+					<li>some small changes to temp folder logic</li>
+					<li>vastly improved scroll-thumbnail-prefetch logic. important bits all rewritten and made sane. data and gui rows line up better, with fewer bugs</li>
+					<li>vastly improved thumbnail fade. now attempts to render at 60fps, and calculates alpha much more efficiently</li>
+					<li>thumbnails won't fade if they are off-screen; they'll just draw in one frame</li>
+					<li>fixed thumbnail last row drawing problem (again!)</li>
+					<li>due to daemon-db-spam, db maintenance check was only firing on pc wake from sleep, now it fires properly every twenty idle mins</li>
+					<li>maintenance timer won't fire directly after waking from a sleep</li>
+					<li>deleteorphans copes with alien files a bit more gracefully</li>
+					<li>A/C appearing on top is mostly fixed</li>
+					<li>some general A/C weirdness is fixed/made better</li>
+					<li>reworked some of the thumbnail selection and scrolling code to line up better</li>
+					<li>thumbnail window will stop spamming 'scroll to focus' every time something small changes. it should only do it on fullscreen close and non-ctrl or -shift mouse/key events now</li>
+					<li>some general focus code was looked at</li>
+					<li>ratings filter now supports the fullscreen_switch shortcut</li>
+					<li>just a couple changes to help to include the new 'f' fullscreen_switch shortcut</li>
+					<li>10s timeout on http queries</li>
+					<li>http redirect code is improved</li>
+					<li>http cookie handling code is improved</li>
+					<li>made hf session establishment a bit cleverer</li>
+				</ul>
+				<li><h3>version 59</h3></li>
+				<ul>
+					<li>new vastly improved 'collect by' dropdown</li>
+					<li>fullscreen 'f' shortcut</li>
+					<li>fullscreen default option</li>
+					<li>added tumblr prototype parser, with tags</li>
+					<li>server init and repository init typos are fixed</li>
+					<li>a misaligned sizer was fixed</li>
+					<li>a bunch of spinctrls no longer init at <= 100</li>
+					<li>the problem with the last thumbnail rows sometimes not drawing properly should be fixed</li>
+					<li>A/C lag calculates a little more intelligently</li>
+					<li>manage ratings for collections now works</li>
+				</ul>
+				<li><h3>version 58</h3></li>
+				<ul>
+					<li>new custom staticbox sizer/panel put in about fifty places</li>
+					<li>big layout changes in management panels</li>
+					<li>I made a new, better set of sizer flags for nested sizers</li>
+					<li>testing out several new borders</li>
+					<li>several other small layout changes, lining things up</li>
+					<li>a few colour changes with the new classes</li>
+					<li>advanced options class is better, more streamlined</li>
+					<li>advanced options class is less flickery, I think</li>
+					<li>A/C spazzes out less when dragged about</li>
+					<li>A/C queries db less annoyingly, especially when you type fast</li>
+					<li>the thumbnail display draws its whitespace a little better, filling in the right-hand and bottom-end gaps</li>
+					<li>importing thumbnails now add to the last row one thumb at a time (rather than at one row at a time) once the scrollbar appears</li>
+					<li>shift + f7 now sends things back to inbox, like a reverse archive.</li>
+					<li>this works from thumbnail menu</li>
+					<li>and in fullscreen</li>
+					<li>new menu item 'remove these' for thumbnails, anywhere, including dumper!</li>
+					<li>'tags just for this file' now works a looooot better! it unions all selected tags, and detects deselections better</li>
+					<li>giphy downloader added</li>
+					<li>giphy tags added, thanks to @fluffy_cub</li>
+					<li>copying file now _also_ copies paths to clipboard; depending on where you paste, you'll get the files or the text appropriately</li>
+					<li>new shortcut (default ctrl+m) for 'focus media'</li>
+					<li>focus search now works for manage tags and tags regex dialogs</li>
+					<li>think I worked out the last of the up/down arrow cursor shortcut problems</li>
+					<li>a ton more code cleaning</li>
+					<li>hentai foundry artist not found 404 error detected</li>
+					<li>in regex dialog, tags are cleaned before display on screen</li>
+					<li>4chan ban is now recognised, and thread dumps are hence suspended</li>
+					<li>when ordering tags by incidence, disputes are now resolved by lexicographic</li>
+					<li>fullscreen init is a little faster for the first image</li>
+					<li>select imageboard dialog now toggles tree with double click</li>
+					<li>select imageboard dialog is also taller</li>
+				</ul>
 				<li><h3>version 57</h3></li>
 				<ul>
 					<li>added quick vs accurate slider for numerical ratings filter</li>

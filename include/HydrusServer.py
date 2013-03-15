@@ -1,7 +1,9 @@
 import BaseHTTPServer
+import Cookie
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusDocumentHandling
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusVideoHandling
@@ -217,9 +219,9 @@ ROOT_MESSAGE_END = '''</p>
     </body>
 </html>'''
 
-def ParseAccountIdentifier( authorisation_text ):
+def ParseAccessKey( authorisation_text ):
     
-    if authorisation_text is None: access_key = ''
+    if authorisation_text is None: access_key = None
     else:
         
         ( format, access_key_encoded ) = authorisation_text.split( ' ' )
@@ -230,9 +232,8 @@ def ParseAccountIdentifier( authorisation_text ):
         except: raise HC.ForbiddenException( 'Attempted to parse access key, but could not understand it.' )
         
     
-    return HC.AccountIdentifier( access_key = access_key )
+    return access_key
     
-
 def ParseFileArguments( file ):
     
     args = {}
@@ -297,6 +298,12 @@ def ParseFileArguments( file ):
         args[ 'duration' ] = duration
         args[ 'num_frames' ] = num_frames
         
+    elif mime == HC.APPLICATION_PDF:
+        
+        num_words = HydrusDocumentHandling.GetPDFNumWords( file )
+        
+        args[ 'num_words' ] = num_words
+        
     
     return args
     
@@ -357,6 +364,23 @@ def ParseHTTPRequest( path ):
     after_slash = path.split( '/', 1 )[1]
     
     return after_slash.split( '?', 1 )[0]
+    
+def ParseSessionKey( cookie_text ):
+    
+    if cookie_text is None: session_key = None
+    else:
+        
+        try:
+            
+            cookies = Cookie.SimpleCookie( cookie_text )
+            
+            if 'session_key' not in cookies: session_key = None
+            else: session_key = cookies[ 'session_key' ].value.decode( 'hex' )
+            
+        except: raise Exception( 'Problem parsing cookie!' )
+        
+    
+    return session_key
     
 class HydrusHTTPServer( SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer ):
     
@@ -476,9 +500,10 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                     if service_type == HC.LOCAL_FILE: response_context = wx.GetApp().ProcessServerRequest( request_type, request, request_args )
                     else:
                         
-                        account_identifier = ParseAccountIdentifier( self.headers.getheader( 'Authorization' ) )
+                        session_key = ParseSessionKey( self.headers.getheader( 'Cookie' ) )
+                        access_key = ParseAccessKey( self.headers.getheader( 'Authorization' ) )
                         
-                        response_context = wx.GetApp().GetDB().AddJobServer( self._service_identifier, account_identifier, ip, request_type, request, request_args, request_length )
+                        response_context = wx.GetApp().GetDB().AddJobServer( self._service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length )
                         
                     
                 
@@ -494,6 +519,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         except HC.ForbiddenException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( e ) )
         except HC.NotFoundException as e: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
         except HC.NetworkVersionException as e: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( e ) )
+        except HC.SessionException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
         except Exception as e:
             
             self.log_string( traceback.format_exc() )
@@ -510,6 +536,8 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         status_code = response_context.GetStatusCode()
         
         self.send_response( status_code )
+        
+        for cookie in response_context.GetCookies(): self.send_header( 'Set-Cookie', cookie )
         
         if response_context.HasBody():
             

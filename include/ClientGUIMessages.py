@@ -29,6 +29,9 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
 
+FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
+FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
@@ -348,8 +351,8 @@ class ConversationPanel( wx.Panel ):
         self._messages_vbox = wx.BoxSizer( wx.VERTICAL )
         self._drafts_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._window_vbox.AddF( self._messages_vbox, FLAGS_EXPAND_PERPENDICULAR )
-        self._window_vbox.AddF( self._drafts_vbox, FLAGS_EXPAND_PERPENDICULAR )
+        self._window_vbox.AddF( self._messages_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._window_vbox.AddF( self._drafts_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._DrawConversation()
         
@@ -1078,19 +1081,23 @@ class DraftPanel( wx.Panel ):
         
         if not self._draft_message.IsReply():
             
-            self._subject = wx.TextCtrl( self, value = subject )
-            self._subject.Bind( wx.EVT_KEY_DOWN, self.EventChanged )
+            self._to_panel = ClientGUICommon.StaticBox( self, 'to' )
             
-            self._recipients_list = wx.ListCtrl( self, style = wx.LC_LIST | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL )
+            self._recipients_list = wx.ListCtrl( self._to_panel, style = wx.LC_LIST | wx.LC_NO_HEADER | wx.LC_SINGLE_SEL )
             self._recipients_list.InsertColumn( 0, 'contacts' )
             for name in contacts_to: self._recipients_list.Append( ( name, ) )
             self._recipients_list.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventRemove )
             
-            self._new_recipient = ClientGUICommon.AutoCompleteDropdownContacts( self, self._compose_key, self._contact_from )
+            self._new_recipient = ClientGUICommon.AutoCompleteDropdownContacts( self._to_panel, self._compose_key, self._contact_from )
             
-            self._recipients_visible = wx.CheckBox( self )
+            self._recipients_visible = wx.CheckBox( self._to_panel )
             self._recipients_visible.SetValue( recipients_visible )
             self._recipients_visible.Bind( wx.EVT_CHECKBOX, self.EventChanged )
+            
+            self._subject_panel = ClientGUICommon.StaticBox( self, 'subject' )
+            
+            self._subject = wx.TextCtrl( self._subject_panel, value = subject )
+            self._subject.Bind( wx.EVT_KEY_DOWN, self.EventChanged )
             
         
         if body == '': xml = ''
@@ -1137,24 +1144,18 @@ class DraftPanel( wx.Panel ):
         if not self._draft_message.IsReply():
             
             recipients_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            recipients_hbox.AddF( wx.StaticText( self, label = 'recipients can see each other' ), FLAGS_MIXED )
+            
+            recipients_hbox.AddF( wx.StaticText( self._to_panel, label = 'recipients can see each other' ), FLAGS_MIXED )
             recipients_hbox.AddF( self._recipients_visible, FLAGS_MIXED )
             
-            to_vbox = wx.BoxSizer( wx.VERTICAL )
+            self._to_panel.AddF( self._recipients_list, FLAGS_EXPAND_PERPENDICULAR )
+            self._to_panel.AddF( self._new_recipient, FLAGS_LONE_BUTTON )
+            self._to_panel.AddF( recipients_hbox, FLAGS_BUTTON_SIZERS )
             
-            to_vbox.AddF( wx.StaticText( self, label = '- to -' ), FLAGS_SMALL_INDENT )
-            to_vbox.AddF( self._recipients_list, FLAGS_EXPAND_PERPENDICULAR )
-            to_vbox.AddF( self._new_recipient, FLAGS_LONE_BUTTON )
-            to_vbox.AddF( recipients_hbox, FLAGS_BUTTON_SIZERS )
+            self._subject_panel.AddF( self._subject, FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.AddF( to_vbox, FLAGS_EXPAND_PERPENDICULAR )
-            
-            subject_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            subject_hbox.AddF( wx.StaticText( self, label = 'subject: ' ), FLAGS_MIXED )
-            subject_hbox.AddF( self._subject, FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox.AddF( subject_hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._to_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._subject_panel, FLAGS_EXPAND_PERPENDICULAR )
             
         
         vbox.AddF( self._body, FLAGS_EXPAND_BOTH_WAYS )
@@ -1398,7 +1399,7 @@ class MessagePanel( wx.Panel ):
         self._hbox.AddF( self._body_panel, FLAGS_EXPAND_BOTH_WAYS )
         self._hbox.AddF( self._destinations_panel, FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( self._hbox, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         # vbox.AddF( some kind of attachment window! )
         

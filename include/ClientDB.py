@@ -4,6 +4,7 @@ import hashlib
 import httplib
 import itertools
 import HydrusConstants as HC
+import HydrusDocumentHandling
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusMessageHandling
@@ -1377,12 +1378,25 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         service_identifier = self._GetServiceIdentifier( c, service_id )
         
         if len( new_hashes ) > 0:
+            
             self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
             self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
+            
+        
         if len( deleted_hashes ) > 0:
+            
             self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
             self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
+            
+        
         if len( new_hashes ) > 0 or len( deleted_hashes ) > 0: self.pub( 'notify_new_thumbnails' )
+        
+    
+    def _AddHydrusSession( self, c, service_identifier, session_key, expiry ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expiry ) )
         
     
     def _AddService( self, c, service_identifier, credentials, extra_info ):
@@ -1669,6 +1683,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub( 'notify_new_pending' )
         
     
+    def _DeleteHydrusSessionKey( self, c, service_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        c.execute( 'DELETE FROM hydrus_sessions WHERE service_id = ?;', ( service_id, ) )
+        
+    
     def _DeleteOrphans( self, c ):
         
         # careful of the .encode( 'hex' ) business here!
@@ -1685,6 +1706,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         deletee_hashes = set( self._GetHashes( c, deletee_hash_ids ) )
         
+        cached_filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
+        
+        local_files_hashes = set()
+        
+        for filename in cached_filenames:
+            
+            try: local_files_hashes.add( filename.decode( 'hex' ) ) # this try ... except is for weird files that might have got into the directory by accident
+            except: pass
+            
+        
         local_files_hashes = { hash.decode( 'hex' ) for hash in dircache.listdir( HC.CLIENT_FILES_DIR ) }
         
         for hash in local_files_hashes & deletee_hashes: os.remove( HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) )
@@ -1699,9 +1730,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HC.SplayListForDB( perceptual_deletees ) + ';' )
         
-        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+        all_thumbnail_filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
         
-        thumbnails_i_have = { path.decode( 'hex' ) for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
+        thumbnails_i_have = set()
+        
+        for filename in all_thumbnail_filenames:
+            
+            if not filename.endswith( '_resized' ):
+                
+                try: thumbnails_i_have.add( filename.decode( 'hex' ) ) # this try ... except is for weird files that might have got into the directory by accident
+                except: pass
+                
+            
         
         hashes = set( self._GetHashes( c, hash_ids ) )
         
@@ -2078,6 +2118,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return matches
         
     
+    def _GetFavouriteCustomFilterActions( self, c ): return dict( c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' ).fetchall() )
+    
     def _GetHashIdsFromTag( self, c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ):
         
         hash_ids = set()
@@ -2166,6 +2208,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if shared_namespace_ids_tag_ids is None: return set()
         
         return shared_namespace_ids_tag_ids
+        
+    
+    def _GetHydrusSessions( self, c ):
+        
+        now = int( time.time() )
+        
+        c.execute( 'DELETE FROM hydrus_sessions WHERE ? > expiry;', ( now, ) )
+        
+        sessions = []
+        
+        results = c.execute( 'SELECT service_id, session_key, expiry FROM hydrus_sessions;' ).fetchall()
+        
+        for ( service_id, session_key, expiry ) in results:
+            
+            service_identifier = self._GetServiceIdentifier( c, service_id )
+            
+            sessions.append( ( service_identifier, session_key, expiry ) )
+            
+        
+        return sessions
         
     
     def _GetMD5Status( self, c, md5 ):
@@ -2466,18 +2528,73 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
-        if service_identifier.GetType() == HC.TAG_REPOSITORY:
+        service_type = service_identifier.GetType()
+        
+        repository = self._GetService( c, service_id )
+        
+        account = repository.GetAccount()
+        
+        if service_type == HC.TAG_REPOSITORY:
             
-            uploads = [ ( namespace + ':' + tag, hash ) if namespace != '' else ( tag, hash ) for ( namespace, tag, hash ) in c.execute( 'SELECT namespace, tag, hash FROM hashes, ( tags, ( namespaces, pending_mappings USING ( namespace_id ) ) USING ( tag_id ) ) USING ( hash_id )  WHERE service_id = ? ORDER BY namespace DESC, tag ASC;', ( service_id, ) ) ]
-            petitions = [ ( namespace + ':' + tag, hash, reason ) if namespace != '' else ( tag, hash, reason ) for ( namespace, tag, hash, reason ) in c.execute( 'SELECT namespace, tag, hash, reason FROM hashes, ( reasons, ( tags, ( namespaces, mapping_petitions USING ( namespace_id ) ) USING ( tag_id ) ) USING ( reason_id ) ) USING ( hash_id ) WHERE service_id = ? ORDER BY namespace DESC, tag ASC;', ( service_id, ) ) ]
+            mappings_dict = {}
+            mappings_hash_ids = set()
             
-        elif service_identifier.GetType() == HC.FILE_REPOSITORY:
+            if account.HasPermission( HC.POST_DATA ):
+                
+                mappings_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM pending_mappings WHERE service_id = ?;', ( service_id, ) ) ] )
+                
             
-            uploads = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id_to = ?;', ( service_id, ) ) ]
-            petitions = c.execute( 'SELECT hash, reason FROM reasons, ( hashes, file_petitions USING ( hash_id ) ) USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ).fetchall()
+            mappings = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in mappings_dict.items() ]
+            
+            mappings_hash_ids = HC.IntelligentMassUnion( mappings_dict.values() )
+            
+            mappings_hash_ids_to_hashes = self._GetHashIdsToHashes( c, mappings_hash_ids )
+            
+            petitions_dict = {}
+            petitions_hash_ids = set()
+            
+            if account.HasPermission( HC.POST_PETITIONS ):
+                
+                petitions_dict = HC.BuildKeyToListDict( [ ( ( reason_id, namespace_id, tag_id ), hash_id ) for ( reason_id, namespace_id, tag_id, hash_id ) in c.execute( 'SELECT reason_id, namespace_id, tag_id, hash_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
+                
+            
+            petitions = [ ( self._GetReason( c, reason_id ), self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( reason_id, namespace_id, tag_id ), hash_ids ) in petitions_dict.items() ]
+            
+            petitions_hash_ids = HC.IntelligentMassUnion( petitions_dict.values() )
+            
+            petitions_hash_ids_to_hashes = self._GetHashIdsToHashes( c, petitions_hash_ids )
+            
+            mappings_object = HC.ClientMappings( mappings, mappings_hash_ids_to_hashes )
+            
+            petitions_object = HC.ClientMappingPetitions( petitions, petitions_hash_ids_to_hashes )
+            
+            return ( mappings_object, petitions_object )
+            
+        elif service_type == HC.FILE_REPOSITORY:
+            
+            uploads = []
+            
+            petitions = []
+            
+            if account.HasPermission( HC.POST_DATA ): uploads = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id_to = ?;', ( service_id, ) ) ]
+            
+            if account.HasPermission( HC.POST_PETITIONS ):
+                
+                petitions = HC.BuildKeyToListDict( c.execute( 'SELECT reason, hash FROM reasons, ( hashes, file_petitions USING ( hash_id ) ) USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items()
+                
+                petitions_object = HC.ClientFilePetitions( petitions )
+                
+            
+            return ( uploads, petitions_object )
             
         
-        return ( uploads, petitions )
+    
+    def _GetPixivAccount( self, c ):
+        
+        result = c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
+        
+        if result is None: return ( '', '' )
+        else: return result
         
     
     def _GetReason( self, c, reason_id ):
@@ -3038,6 +3155,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             mime = HC.GetMimeFromString( file[:256] )
             
+            width = None
+            height = None
+            duration = None
+            num_frames = None
+            num_words = None
+            
             if mime in HC.IMAGES:
                 
                 image_container = HydrusImageHandling.RenderImageFromFile( file, hash )
@@ -3053,32 +3176,25 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     duration = image_container.GetTotalDuration()
                     num_frames = image_container.GetNumFrames()
                     
-                else:
-                    
-                    duration = None
-                    num_frames = None
-                    
-                
-                num_words = None
                 
             elif mime == HC.APPLICATION_FLASH:
                 
                 ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( file )
                 
-                num_words = None
-                
             elif mime == HC.VIDEO_FLV:
                 
                 ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( file )
                 
-                num_words = None
-                
+            elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( file )
             
-            if 'min_resolution' in advanced_import_options:
+            if width is not None and height is not None:
                 
-                ( min_x, min_y ) = advanced_import_options[ 'min_resolution' ]
-                
-                if width < min_x or height < min_y: raise Exception( 'Resolution too small' )
+                if 'min_resolution' in advanced_import_options:
+                    
+                    ( min_x, min_y ) = advanced_import_options[ 'min_resolution' ]
+                    
+                    if width < min_x or height < min_y: raise Exception( 'Resolution too small' )
+                    
                 
             
         
@@ -3235,7 +3351,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 hash_ids = self._GetHashIds( c, hashes )
                 
                 if action == CC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( c, hash_ids )
+                elif action == CC.CONTENT_UPDATE_INBOX: self._InboxFiles( c, hash_ids )
                 elif action == CC.CONTENT_UPDATE_DELETE: self._DeleteFiles( c, service_id, hash_ids )
+                elif action == CC.CONTENT_UPDATE_ADD:
+                    
+                    # this is really 'uploaded' rather than a strict add, so may need to improve it in future!
+                    
+                    files_info_rows = c.execute( 'SELECT ?, hash_id, size, mime, ?, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, int( time.time() ), self._local_file_service_id ) ).fetchall()
+                    
+                    self._AddFiles( c, files_info_rows )
+                    
                 
             elif service_type == HC.LOCAL_TAG:
                 
@@ -3291,7 +3416,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 info = content_update.GetInfo()
                 
-                if action == CC.CONTENT_UPDATE_DELETE:
+                if action == CC.CONTENT_UPDATE_ADD:
+                    
+                    tag = info
+                    
+                    ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                    
+                    self._UpdateMappings( c, service_id, [ ( namespace_id, tag_id, hash_ids ) ], [] )
+                    
+                elif action == CC.CONTENT_UPDATE_DELETE:
                     
                     tag = info
                     
@@ -3534,6 +3667,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.execute( 'DELETE FROM fourchan_pass;' )
         
         c.execute( 'INSERT INTO fourchan_pass ( token, pin, timeout ) VALUES ( ?, ?, ? );', ( token, pin, timeout ) )
+        
+    
+    def _SetFavouriteCustomFilterActions( self, c, favourites ):
+        
+        c.execute( 'DELETE FROM favourite_custom_filter_actions;' )
+        
+        c.executemany( 'INSERT INTO favourite_custom_filter_actions ( name, actions ) VALUES ( ?, ? );', [ ( name, actions ) for ( name, actions ) in favourites.items() ] )
+        
+    
+    def _SetPixivAccount( self, c, pixiv_id, password ):
+        
+        c.execute( 'DELETE FROM pixiv_account;' )
+        
+        c.execute( 'INSERT INTO pixiv_account ( pixiv_id, password ) VALUES ( ?, ? );', ( pixiv_id, password ) )
         
     
     def _SetTagServicePrecedence( self, c, service_identifiers ):
@@ -3798,7 +3945,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 credentials = CC.Credentials( host, service_port, access_key )
                 
-                if service_type == HC.MESSAGE_DEPOT: extra_info = ( 'identity@' + service_name, 180, HydrusMessageHandling.GenerateNewPrivateKey() )
+                if service_type == HC.MESSAGE_DEPOT: extra_info = ( 'identity@' + service_name, 180, HydrusMessageHandling.GenerateNewPrivateKey(), True )
                 else: extra_info = None
                 
                 self._AddService( c, client_service_identifier, credentials, extra_info )
@@ -4161,9 +4308,13 @@ class DB( ServiceDB ):
         
         temp_dir = HC.TEMP_DIR
         
-        if os.path.exists( temp_dir ): shutil.rmtree( temp_dir, ignore_errors = True )
+        try:
+            if os.path.exists( temp_dir ): shutil.rmtree( temp_dir, ignore_errors = True )
+        except: pass
         
-        os.mkdir( temp_dir )
+        try:
+            if not os.path.exists( temp_dir ): os.mkdir( temp_dir )
+        except: pass
         
         ( db, c ) = self._GetDBCursor()
         
@@ -4335,6 +4486,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
             
+            c.execute( 'CREATE TABLE favourite_custom_filter_actions ( name TEXT, actions TEXT_YAML );' )
+            
             c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
             
             c.execute( 'CREATE TABLE files_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, size INTEGER, mime INTEGER, timestamp INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
@@ -4349,6 +4502,8 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
             c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
+            
+            c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
             
             c.execute( 'CREATE TABLE imageboard_sites ( site_id INTEGER PRIMARY KEY, name TEXT );', )
             
@@ -4412,6 +4567,8 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
             
+            c.execute( 'CREATE TABLE pixiv_account ( pixiv_id TEXT, password TEXT );' )
+            
             c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
             
             c.execute( 'CREATE TABLE ratings_numerical ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, lower INTEGER, upper INTEGER );' )
@@ -4471,7 +4628,7 @@ class DB( ServiceDB ):
             CLIENT_DEFAULT_OPTIONS = {}
             
             CLIENT_DEFAULT_OPTIONS[ 'default_sort' ] = 0
-            CLIENT_DEFAULT_OPTIONS[ 'default_collect' ] = 0
+            CLIENT_DEFAULT_OPTIONS[ 'default_collect' ] = None
             CLIENT_DEFAULT_OPTIONS[ 'export_path' ] = 'export'
             CLIENT_DEFAULT_OPTIONS[ 'hpos' ] = 400
             CLIENT_DEFAULT_OPTIONS[ 'vpos' ] = 700
@@ -4518,6 +4675,7 @@ class DB( ServiceDB ):
             
             CLIENT_DEFAULT_OPTIONS[ 'sort_by' ] = default_sort_by_choices
             CLIENT_DEFAULT_OPTIONS[ 'show_all_tags_in_autocomplete' ] = True
+            CLIENT_DEFAULT_OPTIONS[ 'fullscreen_borderless' ] = True
             
             shortcuts = {}
             
@@ -4533,12 +4691,15 @@ class DB( ServiceDB ):
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F11 ] = 'ratings_filter'
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F12 ] = 'filter'
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F9 ] = 'new_page'
+            shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_F7 ] = 'inbox'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'B' ) ] = 'frame_back'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'N' ) ] = 'frame_next'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'T' ) ] = 'new_page'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'W' ) ] = 'close_page'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'R' ) ] = 'show_hide_splitters'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'S' ) ] = 'set_search_focus'
+            shortcuts[ wx.ACCEL_CTRL ][ ord( 'M' ) ] = 'set_media_focus'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'I' ) ] = 'synchronised_wait_switch'
             
             shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_UP ] = 'previous'
@@ -4707,109 +4868,30 @@ class DB( ServiceDB ):
                 
                 self._UpdateDBOld( c, version )
                 
-                if version < 51:
+                if version < 59:
                     
                     ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
                     
                     shortcuts = self._options[ 'shortcuts' ]
                     
-                    shortcuts[ wx.ACCEL_CTRL ][ ord( 'B' ) ] = 'frame_back'
-                    shortcuts[ wx.ACCEL_CTRL ][ ord( 'N' ) ] = 'frame_next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F11 ] = 'ratings_filter'
+                    shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
                     
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
-                    
-                    c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
-                    
-                
-                if version < 52:
-                    
-                    wx.GetApp().SetSplashText( 'making new indices' )
-                    
-                    c.execute( 'DROP INDEX mappings_namespace_id_index;' )
-                    c.execute( 'DROP INDEX mappings_tag_id_index;' )
-                    
-                    c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
-                    c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
-                    
-                    wx.GetApp().SetSplashText( 'making some more new indices' )
-                    
-                    c.execute( 'DROP INDEX pending_mappings_namespace_id_index;' )
-                    c.execute( 'DROP INDEX pending_mappings_tag_id_index;' )
-                    
-                    c.execute( 'CREATE INDEX pending_mappings_service_id_tag_id_index ON pending_mappings ( service_id, tag_id );' )
-                    c.execute( 'CREATE INDEX pending_mappings_service_id_hash_id_index ON pending_mappings ( service_id, hash_id );' )
-                    
-                    c.execute( 'CREATE TABLE shutdown_timestamps ( shutdown_type INTEGER PRIMARY KEY, timestamp INTEGER );' )
-                    
-                
-                if version < 54:
-                    
-                    c.execute( 'DROP INDEX services_type_name_index;' )
-                    
-                    c.execute( 'ALTER TABLE services ADD COLUMN service_key BLOB_BYTES;' )
-                    c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
-                    
-                    service_info = c.execute( 'SELECT service_id, type FROM services;' ).fetchall()
-                    
-                    updates = []
-                    
-                    for ( service_id, service_type ) in service_info:
-                        
-                        if service_type == HC.LOCAL_FILE: service_key = 'local files'
-                        elif service_type == HC.LOCAL_TAG: service_key = 'local tags'
-                        else: service_key = os.urandom( 32 )
-                        
-                        updates.append( ( sqlite3.Binary( service_key ), service_id ) )
-                        
-                    
-                    c.executemany( 'UPDATE services SET service_key = ? WHERE service_id = ?;', updates )
-                    
-                    c.execute( 'UPDATE files_info SET num_frames = num_frames / 1000 WHERE mime = ?;', ( HC.VIDEO_FLV, ) )
-                    
-                
-                if version < 55:
-                    
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    self._options[ 'default_tag_repository' ] = CC.LOCAL_TAG_SERVICE_IDENTIFIER
+                    self._options[ 'fullscreen_borderless' ] = True
+                    self._options[ 'default_collect' ] = None
                     
                     c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
                     
                 
-                if version < 56:
+                if version < 60:
                     
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    c.execute( 'CREATE TABLE pixiv_account ( pixiv_id TEXT, password TEXT );' )
                     
-                    self._options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    c.execute( 'CREATE TABLE favourite_custom_filter_actions ( name TEXT, actions TEXT_YAML );' )
                     
                 
-                if version < 57:
+                if version < 61:
                     
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    shortcuts = self._options[ 'shortcuts' ]
-                    
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_UP ] = 'previous'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_LEFT ] = 'previous'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_UP ] = 'previous'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_LEFT ] = 'previous'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_PAGEUP ] = 'previous'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_PAGEUP ] = 'previous'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_DOWN ] = 'next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_RIGHT ] = 'next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_DOWN ] = 'next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_RIGHT ] = 'next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_PAGEDOWN ] = 'next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_PAGEDOWN ] = 'next'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_HOME ] = 'first'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_HOME ] = 'first'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_END ] = 'last'
-                    shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_END ] = 'last'
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -5654,6 +5736,123 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE fourchan_pass ( token TEXT, pin TEXT, timeout INTEGER );' )
             
         
+        if version < 51:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            shortcuts = self._options[ 'shortcuts' ]
+            
+            shortcuts[ wx.ACCEL_CTRL ][ ord( 'B' ) ] = 'frame_back'
+            shortcuts[ wx.ACCEL_CTRL ][ ord( 'N' ) ] = 'frame_next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F11 ] = 'ratings_filter'
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+            c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
+            
+        
+        if version < 52:
+            
+            wx.GetApp().SetSplashText( 'making new indices' )
+            
+            c.execute( 'DROP INDEX mappings_namespace_id_index;' )
+            c.execute( 'DROP INDEX mappings_tag_id_index;' )
+            
+            c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
+            c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
+            
+            wx.GetApp().SetSplashText( 'making some more new indices' )
+            
+            c.execute( 'DROP INDEX pending_mappings_namespace_id_index;' )
+            c.execute( 'DROP INDEX pending_mappings_tag_id_index;' )
+            
+            c.execute( 'CREATE INDEX pending_mappings_service_id_tag_id_index ON pending_mappings ( service_id, tag_id );' )
+            c.execute( 'CREATE INDEX pending_mappings_service_id_hash_id_index ON pending_mappings ( service_id, hash_id );' )
+            
+            c.execute( 'CREATE TABLE shutdown_timestamps ( shutdown_type INTEGER PRIMARY KEY, timestamp INTEGER );' )
+            
+        
+        if version < 54:
+            
+            c.execute( 'DROP INDEX services_type_name_index;' )
+            
+            c.execute( 'ALTER TABLE services ADD COLUMN service_key BLOB_BYTES;' )
+            c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
+            
+            service_info = c.execute( 'SELECT service_id, type FROM services;' ).fetchall()
+            
+            updates = []
+            
+            for ( service_id, service_type ) in service_info:
+                
+                if service_type == HC.LOCAL_FILE: service_key = 'local files'
+                elif service_type == HC.LOCAL_TAG: service_key = 'local tags'
+                else: service_key = os.urandom( 32 )
+                
+                updates.append( ( sqlite3.Binary( service_key ), service_id ) )
+                
+            
+            c.executemany( 'UPDATE services SET service_key = ? WHERE service_id = ?;', updates )
+            
+            c.execute( 'UPDATE files_info SET num_frames = num_frames / 1000 WHERE mime = ?;', ( HC.VIDEO_FLV, ) )
+            
+        
+        if version < 55:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            self._options[ 'default_tag_repository' ] = CC.LOCAL_TAG_SERVICE_IDENTIFIER
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 56:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            self._options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 57:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            shortcuts = self._options[ 'shortcuts' ]
+            
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_UP ] = 'previous'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_LEFT ] = 'previous'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_UP ] = 'previous'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_LEFT ] = 'previous'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_PAGEUP ] = 'previous'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_PAGEUP ] = 'previous'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_DOWN ] = 'next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_RIGHT ] = 'next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_DOWN ] = 'next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_RIGHT ] = 'next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_PAGEDOWN ] = 'next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_PAGEDOWN ] = 'next'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_HOME ] = 'first'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_HOME ] = 'first'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_END ] = 'last'
+            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_END ] = 'last'
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 58:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            shortcuts = self._options[ 'shortcuts' ]
+            
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_F7 ] = 'inbox'
+            shortcuts[ wx.ACCEL_CTRL ][ ord( 'M' ) ] = 'set_media_focus'
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
     
     def _UpdateDBOldPost( self, c, version ):
         
@@ -5889,6 +6088,8 @@ class DB( ServiceDB ):
         
         services = self.Read( 'services', HC.LOW_PRIORITY, HC.RESTRICTED_SERVICES )
         
+        do_notify = False
+        
         for service in services:
             
             account = service.GetAccount()
@@ -5905,6 +6106,8 @@ class DB( ServiceDB ):
                     
                     HC.pubsub.pub( 'log_message', 'synchronise accounts daemon', 'successfully refreshed account for ' + service_identifier.GetName() )
                     
+                    do_notify = True
+                    
                 except Exception as e:
                     
                     name = service_identifier.GetName()
@@ -5918,7 +6121,7 @@ class DB( ServiceDB ):
                 
             
         
-        HC.pubsub.pub( 'notify_new_permissions' )
+        if do_notify: HC.pubsub.pub( 'notify_new_permissions' )
         
     
     def DAEMONSynchroniseMessages( self ):
@@ -5972,7 +6175,7 @@ class DB( ServiceDB ):
                     
                     last_check = service.GetLastCheck()
                     
-                    ( message_keys, statuses ) = connection.Get( 'messageinfosince', since = last_check )
+                    ( message_keys, statuses ) = connection.Get( 'message_info_since', since = last_check )
                     
                     decrypted_statuses = []
                     
@@ -6309,8 +6512,10 @@ class DB( ServiceDB ):
         elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
         elif action == 'do_file_query': result = self._DoFileQuery( c, *args, **kwargs )
         elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
+        elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
         elif action == 'file': result = self._GetFile( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
+        elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
         elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
         elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
         elif action == 'imageboards': result = self._GetImageboards( c, *args, **kwargs )
@@ -6323,6 +6528,7 @@ class DB( ServiceDB ):
         elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
         elif action == 'options': result = self._options
         elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
+        elif action == 'pixiv_account': result = self._GetPixivAccount( c, *args, **kwargs )
         elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
         elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
         elif action == 'resolution': result = self._GetResolution( c, *args, **kwargs )
@@ -6356,11 +6562,14 @@ class DB( ServiceDB ):
         elif action == 'delete_draft': self._DeleteDraft( c, *args, **kwargs )
         elif action == 'delete_orphans': self._DeleteOrphans( c, *args, **kwargs )
         elif action == 'delete_pending': self._DeletePending( c, *args, **kwargs )
+        elif action == 'delete_hydrus_session_key': self._DeleteHydrusSessionKey( c, *args, **kwargs )
         elif action == 'draft_message': self._DraftMessage( c, *args, **kwargs )
         elif action == 'export_files': self._ExportFiles( *args, **kwargs )
         elif action == 'fatten_autocomplete_cache': self._FattenAutocompleteCache( c, *args, **kwargs )
+        elif action == 'favourite_custom_filter_actions': self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
         elif action == 'flush_message_statuses': self._FlushMessageStatuses( c, *args, **kwargs )
         elif action == 'generate_tag_ids': self._GenerateTagIdsEfficiently( c, *args, **kwargs )
+        elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
         elif action == 'import_file': self._ImportFile( c, *args, **kwargs )
         elif action == 'import_file_from_page': self._ImportFilePage( c, *args, **kwargs )
         elif action == 'inbox_conversation': self._InboxConversation( c, *args, **kwargs )
@@ -6368,9 +6577,11 @@ class DB( ServiceDB ):
         elif action == 'message_info_since': self._AddMessageInfoSince( c, *args, **kwargs )
         elif action == 'message_statuses': self._UpdateMessageStatuses( c, *args, **kwargs )
         elif action == 'petition_files': self._PetitionFiles( c, *args, **kwargs )
+        elif action == 'pixiv_account': self._SetPixivAccount( c, *args, **kwargs )
         elif action == 'reset_service': self._ResetService( c, *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( c, *args, **kwargs )
         elif action == 'service_updates': self._AddServiceUpdates( c, *args, **kwargs )
+        elif action == 'session': self._AddSession( c, *args, **kwargs )
         elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
         elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
         elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )

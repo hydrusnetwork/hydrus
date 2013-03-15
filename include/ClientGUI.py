@@ -29,6 +29,9 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
 
+FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
+FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
@@ -100,6 +103,146 @@ class FrameGUI( ClientGUICommon.Frame ):
         self.Show( True )
         
     
+    def _THREADUploadPending( self, service_identifier, job_key, cancel_event ):
+        
+        # old:
+        
+        #wx.GetApp().Write( 'upload_pending', service_identifier, job_key, cancel_event )
+        
+        #return
+        
+        # new
+        
+        try:
+            
+            HC.pubsub.pub( 'progress_update', job_key, 0, 4, u'gathering pending and petitioned' )
+            
+            result = wx.GetApp().Read( 'pending', service_identifier )
+            
+            service_type = service_identifier.GetType()
+            
+            service = wx.GetApp().Read( 'service', service_identifier )
+            
+            if service_type == HC.TAG_REPOSITORY:
+                
+                ( mappings_object, petitions_object ) = result
+                
+                if len( mappings_object ) > 0 or len( petitions_object ) > 0:
+                    
+                    HC.pubsub.pub( 'progress_update', job_key, 1, 4, u'connecting to repository' )
+                    
+                    connection = service.GetConnection()
+                    
+                    if len( mappings_object ) > 0:
+                        
+                        HC.pubsub.pub( 'progress_update', job_key, 2, 4, u'posting new mappings' )
+                        
+                        try: connection.Post( 'mappings', mappings = mappings_object )
+                        except Exception as e: raise Exception( 'Encountered an error while uploading public_mappings:' + os.linesep + unicode( e ) )
+                        
+                    
+                    if len( petitions_object ) > 0:
+                        
+                        HC.pubsub.pub( 'progress_update', job_key, 3, 4, u'posting new petitions' )
+                        
+                        try: connection.Post( 'petitions', petitions = petitions_object )
+                        except Exception as e: raise Exception( 'Encountered an error while uploading petitions:' + os.linesep + unicode( e ) )
+                        
+                    
+                    num_mappings = sum( [ len( hashes ) for ( tag, hashes ) in mappings_object ] )
+                    num_deleted_mappings = sum( [ len( hashes ) for ( reason, tag, hashes ) in petitions_object ] )
+                    
+                    HC.pubsub.pub( 'log_message', 'upload mappings', 'uploaded ' + HC.ConvertIntToPrettyString( num_mappings ) + ' mappings to and deleted ' + HC.ConvertIntToPrettyString( num_deleted_mappings ) + ' mappings from ' + service_identifier.GetName() )
+                    
+                    content_updates = []
+                    
+                    content_updates += [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings_object ]
+                    content_updates += [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( reason, tag, hashes ) in petitions_object ]
+                    
+                    wx.GetApp().Write( 'content_updates', content_updates )
+                    
+                
+            elif service_type == HC.FILE_REPOSITORY:
+                
+                ( uploads, petitions_object ) = result
+                
+                ( num_uploads, num_petitions ) = ( len( uploads ), len( petitions_object ) )
+                
+                if num_uploads > 0 or num_petitions > 0:
+                    
+                    HC.pubsub.pub( 'progress_update', job_key, 1, num_uploads + 3, u'connecting to repository' )
+                    
+                    connection = service.GetConnection()
+                    
+                    good_hashes = []
+                    
+                    if num_uploads > 0:
+                        
+                        error_messages = set()
+                        
+                        for ( index, hash ) in enumerate( uploads ):
+                            
+                            HC.pubsub.pub( 'progress_update', job_key, index + 2, num_uploads + 3, u'Uploading file ' + HC.ConvertIntToPrettyString( index + 1 ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
+                            
+                            if cancel_event.isSet(): break
+                            
+                            try:
+                                
+                                file = wx.GetApp().Read( 'file', hash )
+                                
+                                connection.Post( 'file', file = file )
+                                
+                                good_hashes.append( hash )
+                                
+                            except Exception as e:
+                                
+                                message = 'Error: ' + unicode( e )
+                                
+                                HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, message )
+                                
+                                print( message )
+                                
+                                time.sleep( 1 )
+                                
+                            
+                        
+                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, u'saving changes to local database' )
+                        
+                    
+                    if num_petitions > 0:
+                        
+                        try:
+                            
+                            HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 3, u'uploading petitions' )
+                            
+                            connection.Post( 'petitions', petitions = petitions_object )
+                            
+                        except Exception as e: raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_name + ':' + os.linesep + unicode( e ) )
+                        
+                    
+                    HC.pubsub.pub( 'log_message', 'upload files', 'uploaded ' + HC.ConvertIntToPrettyString( num_uploads ) + ' files to and deleted ' + HC.ConvertIntToPrettyString( num_petitions ) + ' files from ' + service_identifier.GetName() )
+                    
+                    content_updates = []
+                    
+                    content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, good_hashes ) )
+                    content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, petitions_object.GetHashes() ) )
+                    
+                    wx.GetApp().Write( 'content_updates', content_updates )
+                    
+                
+            
+        except Exception as e:
+            
+            print( traceback.format_exc() )
+            
+            HC.pubsub.pub( 'exception', unicode( e ) )
+            
+        
+        HC.pubsub.pub( 'progress_update', job_key, 4, 4, u'done!' )
+        
+        HC.pubsub.pub( 'notify_new_pending' )
+        
+    
     def _AboutWindow( self ):
         
         aboutinfo = wx.AboutDialogInfo()
@@ -133,7 +276,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     connection = service.GetConnection()
                     
-                    account_info = connection.Get( 'accountinfo', subject_access_key = subject_access_key.encode( 'hex' ) )
+                    account_info = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
                     
                     wx.MessageBox( str( account_info ) )
                     
@@ -276,7 +419,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     edit_log.append( ( HC.ADD, tag_service_identifier ) )
                     edit_log.append( ( HC.ADD, file_service_identifier ) )
                     
-                    connection.Post( 'servicesmodification', edit_log = edit_log )
+                    connection.Post( 'services_modification', edit_log = edit_log )
                     
                     wx.GetApp().Write( 'update_server_services', admin_service_identifier, edit_log )
                     
@@ -483,6 +626,15 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
     
+    def _ManagePixivAccount( self ):
+        
+        try:
+            
+            with ClientGUIDialogs.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
+            
+        except Exception as e: wx.MessageBox( unicode( e ) )
+        
+    
     def _ManageServices( self, service_identifier ):
         
         try:
@@ -569,6 +721,10 @@ class FrameGUI( ClientGUICommon.Frame ):
             if name == 'deviant art by artist': new_page = ClientGUIPages.PageImportDeviantArt( self._notebook )
             elif name == 'hentai foundry by artist': new_page = ClientGUIPages.PageImportHentaiFoundryArtist( self._notebook )
             elif name == 'hentai foundry by tags': new_page = ClientGUIPages.PageImportHentaiFoundryTags( self._notebook )
+            elif name == 'giphy': new_page = ClientGUIPages.PageImportGiphy( self._notebook )
+            elif name == 'pixiv by artist': new_page = ClientGUIPages.PageImportPixivArtist( self._notebook )
+            elif name == 'pixiv by tags': new_page = ClientGUIPages.PageImportPixivTags( self._notebook )
+            elif name == 'tumblr': new_page = ClientGUIPages.PageImportTumblr( self._notebook )
             
             self._notebook.AddPage( new_page, name, select = True )
             
@@ -738,6 +894,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def _SetMediaFocus( self ):
+        
+        page = self._notebook.GetCurrentPage()
+        
+        if page is not None: page.SetMediaFocus()
+        
+    
     def _SetSearchFocus( self ):
         
         page = self._notebook.GetCurrentPage()
@@ -761,7 +924,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with ClientGUIDialogs.DialogProgress( self, job_key, cancel_event ) as dlg:
             
-            wx.GetApp().Write( 'upload_pending', service_identifier, job_key, cancel_event )
+            threading.Thread( target = self._THREADUploadPending, args = ( service_identifier, job_key, cancel_event ) ).start()
             
             dlg.ShowModal()
             
@@ -842,6 +1005,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'manage_boorus': self._ManageBoorus()
                 elif command == 'manage_contacts': self._ManageContacts()
                 elif command == 'manage_imageboards': self._ManageImageboards()
+                elif command == 'manage_pixiv_account': self._ManagePixivAccount()
                 elif command == 'manage_services': self._ManageServices( data )
                 elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
                 elif command == 'modify_account': self._ModifyAccount( data )
@@ -872,6 +1036,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     if page is not None: page.ShowHideSplit()
                     
                 elif command == 'set_password': self._SetPassword()
+                elif command == 'set_media_focus': self._SetMediaFocus()
                 elif command == 'set_search_focus': self._SetSearchFocus()
                 elif command == 'site': webbrowser.open( 'http://hydrus.x10.mx/' )
                 elif command == 'stats': self._Stats( data )
@@ -978,7 +1143,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshAcceleratorTable( self ):
         
-        interested_actions = [ 'archive', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch' ]
+        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch' ]
         
         entries = []
         
@@ -1101,6 +1266,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_contacts' ), p( 'Manage &Contacts and Identities' ), p( 'Change the names and addresses of the people you talk to.' ) )
         services.AppendSeparator()
@@ -1411,7 +1577,10 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
             entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
             
-        elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_booru', None ), ( 'page_import_thread_watcher', None ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'page_import_gallery', 'hentai foundry by artist' ), ( 'page_import_gallery', 'hentai foundry by tags' ) ]
+        elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
+        elif menu_keyword == 'gallery': entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'menu', 'pixiv' ), ( 'page_import_gallery', 'tumblr' ) ]
+        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', 'hentai foundry by artist' ), ( 'page_import_gallery', 'hentai foundry by tags' ) ]
+        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', 'pixiv by artist' ), ( 'page_import_gallery', 'pixiv by tags' ) ]
         elif menu_keyword == 'messages': entries = [ ( 'page_messages', identity ) for identity in self._identities ]
         elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
         
@@ -1619,67 +1788,71 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
             
             if service_type in HC.RESTRICTED_SERVICES:
                 
-                self._account_type = wx.StaticText( self )
+                self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
                 
-                self._age = ClientGUICommon.Gauge( self )
+                self._account_type = wx.StaticText( self._permissions_panel )
                 
+                self._age = ClientGUICommon.Gauge( self._permissions_panel )
+                
+                self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                
+                self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
+                
+                self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+                self._requests = ClientGUICommon.Gauge( self._permissions_panel )
+                
+                self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+                if max_num_bytes is None: self._bytes.Hide()
                 if expires is None: self._age.Hide()
-                
-                self._age_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                
-                if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    if service_type in HC.REPOSITORIES:
-                        
-                        self._updates = ClientGUICommon.Gauge( self )
-                        
-                        self._updates_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
-                    
-                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                    
-                    self._bytes = ClientGUICommon.Gauge( self )
-                    
-                    if max_num_bytes is None: self._bytes.Hide()
-                    
-                    self._bytes_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                    self._requests = ClientGUICommon.Gauge( self )
-                    
-                    if max_num_requests is None: self._requests.Hide()
-                    
-                    self._requests_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
+                if max_num_requests is None: self._requests.Hide()
                 
             
-            if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+            if service_type in HC.REPOSITORIES:
                 
-                self._files_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
                 
-                self._deleted_files_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                self._updates = ClientGUICommon.Gauge( self._synchro_panel )
                 
-                if service_type == HC.FILE_REPOSITORY:
+                self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                
+            
+            if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+                
+                self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
+                
+                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                     
-                    self._num_thumbs = 0
-                    self._num_local_thumbs = 0
+                    self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    self._thumbnails = ClientGUICommon.Gauge( self )
+                    self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    self._thumbnails_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    if service_type == HC.FILE_REPOSITORY:
+                        
+                        self._num_thumbs = 0
+                        self._num_local_thumbs = 0
+                        
+                        self._thumbnails = ClientGUICommon.Gauge( self._info_panel )
+                        
+                        self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
                     
-                
-            elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                
-                self._tags_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                
-                if service_type == HC.TAG_REPOSITORY:
+                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
-                    self._deleted_tags_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                
-            elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                
-                self._ratings_text = wx.StaticText( self, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    if service_type == HC.TAG_REPOSITORY:
+                        
+                        self._deleted_tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                    
+                elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                    
+                    self._ratings_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
                 
             
             if service_type in HC.RESTRICTED_SERVICES:
@@ -1707,70 +1880,55 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = '- service -' ), FLAGS_SMALL_INDENT )
-            
             if service_type in HC.RESTRICTED_SERVICES:
                 
-                perm_vbox = wx.BoxSizer( wx.VERTICAL )
+                self._permissions_panel.AddF( self._account_type, FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._age, FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._age_text, FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._requests, FLAGS_EXPAND_PERPENDICULAR )
+                self._permissions_panel.AddF( self._requests_text, FLAGS_EXPAND_PERPENDICULAR )
                 
-                perm_vbox.AddF( wx.StaticText( self, label = '- service permissions -' ), FLAGS_SMALL_INDENT )
-                perm_vbox.AddF( self._account_type, FLAGS_EXPAND_PERPENDICULAR )
-                perm_vbox.AddF( self._age, FLAGS_EXPAND_PERPENDICULAR )
-                perm_vbox.AddF( self._age_text, FLAGS_EXPAND_PERPENDICULAR )
-                perm_vbox.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
-                perm_vbox.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
-                perm_vbox.AddF( self._requests, FLAGS_EXPAND_PERPENDICULAR )
-                perm_vbox.AddF( self._requests_text, FLAGS_EXPAND_PERPENDICULAR )
-                
-                vbox.AddF( perm_vbox, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
                 
             
             if service_type in HC.REPOSITORIES:
                 
-                repo_vbox = wx.BoxSizer( wx.VERTICAL )
+                self._synchro_panel.AddF( self._updates, FLAGS_EXPAND_PERPENDICULAR )
+                self._synchro_panel.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
                 
-                repo_vbox.AddF( wx.StaticText( self, label = '- repository synchronisation -' ), FLAGS_SMALL_INDENT )
-                
-                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                
-                repo_vbox.AddF( self._updates, FLAGS_EXPAND_PERPENDICULAR )
-                repo_vbox.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
-                
-                vbox.AddF( repo_vbox, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._synchro_panel, FLAGS_EXPAND_PERPENDICULAR )
                 
             
             if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
                 
-                info_vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                info_vbox.AddF( wx.StaticText( self, label = '- service information -' ), FLAGS_SMALL_INDENT )
-                
                 if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
                     
-                    info_vbox.AddF( self._files_text, FLAGS_EXPAND_PERPENDICULAR )
-                    info_vbox.AddF( self._deleted_files_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._info_panel.AddF( self._files_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._info_panel.AddF( self._deleted_files_text, FLAGS_EXPAND_PERPENDICULAR )
                     
                     if service_type == HC.FILE_REPOSITORY:
                         
-                        info_vbox.AddF( self._thumbnails, FLAGS_EXPAND_PERPENDICULAR )
-                        info_vbox.AddF( self._thumbnails_text, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._thumbnails, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._thumbnails_text, FLAGS_EXPAND_PERPENDICULAR )
                         
                     
                 elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
-                    info_vbox.AddF( self._tags_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._info_panel.AddF( self._tags_text, FLAGS_EXPAND_PERPENDICULAR )
                     
                     if service_type == HC.TAG_REPOSITORY:
                         
-                        info_vbox.AddF( self._deleted_tags_text, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._deleted_tags_text, FLAGS_EXPAND_PERPENDICULAR )
                         
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    info_vbox.AddF( self._ratings_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._info_panel.AddF( self._ratings_text, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
-                vbox.AddF( info_vbox, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._info_panel, FLAGS_EXPAND_PERPENDICULAR )
                 
             
             if service_type in HC.RESTRICTED_SERVICES:
@@ -1998,7 +2156,12 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
             
             connection.Get( 'account' )
             
-        except Exception as e: wx.MessageBox( unicode( e ) )
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            print( traceback.format_exc() )
+            
         
     
     def EventServiceReset( self, event ):

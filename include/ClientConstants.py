@@ -17,6 +17,7 @@ import time
 import threading
 import traceback
 import urlparse
+import urllib
 import yaml
 import wx
 import zlib
@@ -86,6 +87,7 @@ CONTENT_UPDATE_RATINGS_FILTER = 10
 DISCRIMINANT_INBOX = 0
 DISCRIMINANT_LOCAL = 1
 DISCRIMINANT_NOT_LOCAL = 2
+DISCRIMINANT_ARCHIVE = 3
 
 DUMPER_NOT_DUMPED = 0
 DUMPER_DUMPED_OK = 1
@@ -434,7 +436,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     
 class AdvancedHTTPConnection():
     
-    def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, is_redirect = False, accept_cookies = False ):
+    def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
         
         if len( url ) > 0:
             
@@ -442,8 +444,6 @@ class AdvancedHTTPConnection():
             
             ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
             
-        
-        self._is_redirect = is_redirect
         
         self._scheme = scheme
         self._host = host
@@ -453,8 +453,11 @@ class AdvancedHTTPConnection():
         
         self._cookies = {}
         
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
-        else: self._connection = httplib.HTTPSConnection( self._host, self._port )
+        if service_identifier is None: timeout = 30
+        else: timeout = 300
+        
+        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
+        else: self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
         
     
     def close( self ): self._connection.close()
@@ -463,7 +466,7 @@ class AdvancedHTTPConnection():
     
     def GetCookies( self ): return self._cookies
     
-    def geturl( self, url, headers = {} ):
+    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True ):
         
         parse_result = urlparse.urlparse( url )
         
@@ -473,12 +476,12 @@ class AdvancedHTTPConnection():
         
         if query != '': request += '?' + query
         
-        return self.request( 'GET', request, headers = headers )
+        return self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects )
         
     
-    def request( self, request_type, request, headers = {}, body = None ):
+    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True ):
         
-        headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
+        if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
         
         if len( self._cookies ) > 0: headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in self._cookies.items() ] )
         
@@ -513,25 +516,25 @@ class AdvancedHTTPConnection():
             print( traceback.format_exc() )
             raise Exception( 'Could not connect to server' )
         
-        if len( raw_response ) > 0:
+        if self._accept_cookies:
             
-            if self._accept_cookies:
+            for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
                 
-                for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
+                try:
                     
-                    try:
-                        
-                        cookie = cookie.replace( 'Set-Cookie: ', '' )
-                        
-                        if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
-                        
-                        ( k, v ) = cookie.split( '=' )
-                        
-                        self._cookies[ k ] = v
-                        
-                    except: pass
+                    cookie = cookie.replace( 'Set-Cookie: ', '' )
                     
+                    if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
+                    
+                    ( k, v ) = cookie.split( '=' )
+                    
+                    self._cookies[ k ] = v
+                    
+                except: pass
                 
+            
+        
+        if len( raw_response ) > 0:
             
             content_type = response.getheader( 'Content-Type' )
             
@@ -609,7 +612,9 @@ class AdvancedHTTPConnection():
             if location is None: raise Exception( data )
             else:
                 
-                if self._is_redirect: raise Exception( 'Too many redirects!' )
+                if not follow_redirects: return ''
+                
+                if is_redirect: raise Exception( 'Too many redirects!' )
                 
                 url = location
                 
@@ -627,9 +632,22 @@ class AdvancedHTTPConnection():
                 else:
                     
                     if host is None or ( host == self._host and port == self._port ): connection = self
-                    else: connection = AdvancedHTTPConnection( url, is_redirect = True )
+                    else: connection = AdvancedHTTPConnection( url )
                     
-                    return connection.request( request_type, redirected_request, headers = headers, body = body )
+                    if response.status in ( 301, 307 ):
+                        
+                        # 301: moved permanently, repeat request
+                        # 307: moved temporarily, repeat request
+                        
+                        return connection.request( request_type, redirected_request, headers = headers, body = body, is_redirect = True )
+                        
+                    elif response.status in ( 302, 303 ):
+                        
+                        # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
+                        # 303: thanks, now go here with GET
+                        
+                        return connection.request( 'GET', redirected_request, is_redirect = True )
+                        
                     
                 
             
@@ -657,6 +675,8 @@ class AdvancedHTTPConnection():
             else: raise Exception( parsed_response )
            
         
+    
+    def SetCookie( self, key, value ): self._cookies[ key ] = value
     
 class AutocompleteMatches():
     
@@ -1162,7 +1182,7 @@ class ConnectionToService():
             
             ( host, port ) = self._credentials.GetAddress()
             
-            self._connection = AdvancedHTTPConnection( host = host, port = port, service_identifier = self._service_identifier )
+            self._connection = AdvancedHTTPConnection( host = host, port = port, service_identifier = self._service_identifier, accept_cookies = True )
             
             self._connection.connect()
             
@@ -1176,15 +1196,26 @@ class ConnectionToService():
             
         
     
-    def _GetHeaders( self ):
+    def _GetHeaders( self, request ):
         
         headers = {}
         
-        if self._credentials.HasAccessKey():
+        if request == 'init': pass
+        elif request == 'session_key':
             
-            access_key = self._credentials.GetAccessKey()
+            if self._credentials.HasAccessKey():
+                
+                access_key = self._credentials.GetAccessKey()
+                
+                if access_key != '': headers[ 'Authorization' ] = 'hydrus_network ' + access_key.encode( 'hex' )
+                
+            else: raise Exception( 'No access key!' )
             
-            if access_key != '': headers[ 'Authorization' ] = 'hydrus_network ' + access_key.encode( 'hex' )
+        elif self._service_identifier.GetType() in HC.RESTRICTED_SERVICES:
+            
+            session_key = wx.GetApp().GetSessionKey( self._service_identifier )
+            
+            headers[ 'Cookie' ] = 'session_key=' + session_key.encode( 'hex' )
             
         
         return headers
@@ -1252,11 +1283,21 @@ class ConnectionToService():
             else: body = yaml.safe_dump( request_args )
             
         
-        headers = self._GetHeaders()
+        headers = self._GetHeaders( request )
         
         # send
         
-        response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
+        try: response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
+        except HC.ForbiddenException as e:
+            
+            if unicode( e ) == 'Session not found!':
+                
+                wx.GetApp().DeleteSessionKey( self._service_identifier )
+                
+                response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
+                
+            else: raise e
+            
         
         return response
         
@@ -1271,29 +1312,36 @@ class ConnectionToService():
         
         response = self._SendRequest( HC.GET, request, kwargs )
         
-        if request in ( 'accesskeys', 'init' ):
+        if request in ( 'registration_keys', 'init' ):
             
-            if request == 'accesskeys': access_keys = response
+            if request == 'registration_keys':
+                
+                body = os.linesep.join( [ 'r' + key.encode( 'hex' ) for key in response ] )
+                
+                filename = 'registration keys.txt'
+                
             elif request == 'init':
+                
+                filename = 'admin access key.txt'
                 
                 access_key = response
                 
-                access_keys = ( access_key, )
+                body = access_key.encode( 'hex' )
                 
                 ( host, port ) = self._credentials.GetAddress()
                 
                 self._credentials = Credentials( host, port, access_key )
                 
-                edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, self._credentials ) ) ) ]
+                edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, self._credentials, None ) ) ) ]
                 
                 wx.GetApp().Write( 'update_services', edit_log )
                 
             
-            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = 'access keys.txt' ) as dlg:
+            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( os.linesep.join( [ access_key.encode( 'hex' ) for access_key in access_keys ] ) )
+                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
                     
                 
             
@@ -1314,6 +1362,8 @@ class ConnectionToService():
         
         return response
         
+    
+    def GetCookies( self ): return self._connection.GetCookies()
     
     def Post( self, request, **kwargs ): response = self._SendRequest( HC.POST, request, kwargs )
     
@@ -1556,6 +1606,10 @@ class FileQueryResult():
                 
                 if 'system:inbox' in self._predicates: self._Remove( hashes )
                 
+            elif action == CONTENT_UPDATE_INBOX:
+                
+                if 'system:archive' in self._predicates: self._Remove( hashes )
+                
             elif action == CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier: self._Remove( hashes )
             
             for hash in self._hashes.intersection( hashes ):
@@ -1756,6 +1810,7 @@ class FileSystemPredicates():
                     mime = predicate[12:]
                     
                     if mime == 'image': self._mimes = HC.IMAGES
+                    elif mime == 'application': self._mimes = HC.APPLICATIONS
                     else: self._mimes = ( HC.mime_enum_lookup[ mime ], )
                     
                 except: raise Exception( 'I could not parse the mime predicate.' )
@@ -2291,6 +2346,7 @@ class MediaResult():
                 
                 if action == CONTENT_UPDATE_ADD and not file_service_identifiers_cdpp.HasLocal(): inbox = True
                 elif action == CONTENT_UPDATE_ARCHIVE: inbox = False
+                elif action == CONTENT_UPDATE_INBOX: inbox = True
                 elif action == CONTENT_UPDATE_DELETE: inbox = False
                 
                 self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings )
@@ -2759,10 +2815,12 @@ class ThumbnailCache():
         with open( HC.STATIC_DIR + os.path.sep + 'hydrus.png', 'rb' ) as f: self._not_found_file = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'flash.png', 'rb' ) as f: self._flash_file = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'flv.png', 'rb' ) as f: self._flv_file = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'pdf.png', 'rb' ) as f: self._pdf_file = f.read()
         
         self._not_found = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._not_found_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flash = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flash_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flv = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flv_file, self._options[ 'thumbnail_dimensions' ] ) )
+        self._pdf = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._pdf_file, self._options[ 'thumbnail_dimensions' ] ) )
         
         HC.pubsub.sub( self, 'Clear', 'thumbnail_resize' )
         
@@ -2774,11 +2832,13 @@ class ThumbnailCache():
         self._not_found = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._not_found_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flash = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flash_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flv = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flv_file, self._options[ 'thumbnail_dimensions' ] ) )
+        self._pdf = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._pdf_file, self._options[ 'thumbnail_dimensions' ] ) )
         
     
     def GetFlashThumbnail( self ): return self._flash
     def GetFLVThumbnail( self ): return self._flv
     def GetNotFoundThumbnail( self ): return self._not_found
+    def GetPDFThumbnail( self ): return self._pdf
     
     def GetThumbnail( self, service_identifier, hash ):
         

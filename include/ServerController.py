@@ -1,5 +1,6 @@
 import httplib
 import HydrusConstants as HC
+import HydrusSessions
 import ServerDB
 import os
 import random
@@ -24,6 +25,8 @@ class Controller( wx.App ):
             
         except: return False
         
+    
+    def AddSession( self, session_key, service_identifier, account_identifier, expiry ): self._session_manager.AddSession( session_key, service_identifier, account_identifier, expiry )
     
     def ChangePort( self, port ):
         
@@ -51,6 +54,8 @@ class Controller( wx.App ):
         
         self._server = new_server
         
+    
+    def GetAccountIdentifier( self, session_key, service_identifier ): return self._session_manager.GetAccountIdentifier( session_key, service_identifier )
     
     def EventExit( self, event ): self._tbicon.Destroy()
     
@@ -82,6 +87,8 @@ class Controller( wx.App ):
             
             return False
             
+        
+        self._session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
         

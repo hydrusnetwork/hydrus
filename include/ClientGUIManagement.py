@@ -34,6 +34,9 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
 
+FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
+FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
@@ -54,18 +57,20 @@ class CaptchaControl( wx.Panel ):
         self._timer = wx.Timer( self, ID_TIMER_CAPTCHA )
         self.Bind( wx.EVT_TIMER, self.EventTimer, id = ID_TIMER_CAPTCHA )
         
-        self._captcha_panel = ClientGUICommon.BufferedWindow( self, size = ( 300, 57 ) )
+        self._captcha_box_panel = ClientGUICommon.StaticBox( self, 'recaptcha' )
         
-        self._refresh_button = wx.Button( self, label = '' )
+        self._captcha_panel = ClientGUICommon.BufferedWindow( self._captcha_box_panel, size = ( 300, 57 ) )
+        
+        self._refresh_button = wx.Button( self._captcha_box_panel, label = '' )
         self._refresh_button.Bind( wx.EVT_BUTTON, self.EventRefreshCaptcha )
         self._refresh_button.Disable()
         
-        self._captcha_time_left = wx.StaticText( self )
+        self._captcha_time_left = wx.StaticText( self._captcha_box_panel )
         
-        self._captcha_entry = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._captcha_entry = wx.TextCtrl( self._captcha_box_panel, style = wx.TE_PROCESS_ENTER )
         self._captcha_entry.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._ready_button = wx.Button( self, label = '' )
+        self._ready_button = wx.Button( self._captcha_box_panel, label = '' )
         self._ready_button.Bind( wx.EVT_BUTTON, self.EventReady )
         
         sub_vbox = wx.BoxSizer( wx.VERTICAL )
@@ -76,19 +81,19 @@ class CaptchaControl( wx.Panel ):
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( self._captcha_panel, FLAGS_NONE )
-        hbox.AddF( sub_vbox, FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( sub_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         hbox2 = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox2.AddF( self._captcha_entry, FLAGS_EXPAND_BOTH_WAYS )
         hbox2.AddF( self._ready_button, FLAGS_MIXED )
         
+        self._captcha_box_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._captcha_box_panel.AddF( hbox2, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( wx.StaticText( self, label = '- recaptcha -' ), FLAGS_SMALL_INDENT )
-        
-        vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox2, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._captcha_box_panel, FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -282,18 +287,20 @@ class Comment( wx.Panel ):
         
         self._initial_comment = ''
         
-        self._comment = wx.TextCtrl( self, value = '', style = wx.TE_MULTILINE | wx.TE_READONLY, size = ( -1, 120 ) )
+        self._comment_panel = ClientGUICommon.StaticBox( self, 'comment' )
+        
+        self._comment = wx.TextCtrl( self._comment_panel, value = '', style = wx.TE_MULTILINE | wx.TE_READONLY, size = ( -1, 120 ) )
         self._comment.Disable()
         
-        self._comment_append = wx.TextCtrl( self, value = '', style = wx.TE_MULTILINE | wx.TE_PROCESS_ENTER, size = ( -1, 120 ) )
+        self._comment_append = wx.TextCtrl( self._comment_panel, value = '', style = wx.TE_MULTILINE | wx.TE_PROCESS_ENTER, size = ( -1, 120 ) )
         self._comment_append.Bind( wx.EVT_KEY_UP, self.EventKeyDown )
+        
+        self._comment_panel.AddF( self._comment, FLAGS_EXPAND_PERPENDICULAR )
+        self._comment_panel.AddF( self._comment_append, FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( wx.StaticText( self, label = '- comment -' ), FLAGS_SMALL_INDENT )
-        
-        vbox.AddF( self._comment, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._comment_append, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._comment_panel, FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -345,7 +352,8 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self.SetupScrolling()
         
-        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        #self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        self.SetBackgroundColour( wx.WHITE )
         
         self._page = page
         self._page_key = page_key
@@ -357,7 +365,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def _MakeCollect( self, sizer ):
         
-        self._collect_by = ClientGUICommon.ChoiceCollect( self, self._page_key )
+        self._collect_by = ClientGUICommon.CheckboxCollect( self, self._page_key )
         
         sizer.AddF( self._collect_by, FLAGS_EXPAND_PERPENDICULAR )
         
@@ -416,23 +424,25 @@ class ManagementPanelDumper( ManagementPanel ):
         self._post_port = o.port
         self._post_request = o.path
         
-        self._progress_info = wx.StaticText( self )
+        # progress
         
-        self._progress_gauge = ClientGUICommon.Gauge( self )
+        self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
+        
+        self._progress_info = wx.StaticText( self._processing_panel )
+        
+        self._progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
         self._progress_gauge.SetRange( len( media_results ) )
         
-        self._start_button = wx.Button( self, label = 'start' )
+        self._start_button = wx.Button( self._processing_panel, label = 'start' )
         self._start_button.Bind( wx.EVT_BUTTON, self.EventStartButton )
         
-        prog_vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        prog_vbox.AddF( wx.StaticText( self, label = '- progress -' ), FLAGS_SMALL_INDENT )
-        
-        prog_vbox.AddF( self._progress_info, FLAGS_EXPAND_PERPENDICULAR )
-        prog_vbox.AddF( self._progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        prog_vbox.AddF( self._start_button, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._progress_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._start_button, FLAGS_EXPAND_PERPENDICULAR )
         
         # thread options
+        
+        self._thread_panel = ClientGUICommon.StaticBox( self, 'thread options' )
         
         self._thread_fields = {}
         
@@ -442,37 +452,31 @@ class ManagementPanelDumper( ManagementPanel ):
         
         for ( name, type, default, editable ) in self._form_fields:
             
-            if type in ( CC.FIELD_TEXT, CC.FIELD_THREAD_ID ): field = wx.TextCtrl( self, value = default )
-            elif type == CC.FIELD_PASSWORD: field = wx.TextCtrl( self, value = default, style = wx.TE_PASSWORD )
+            if type in ( CC.FIELD_TEXT, CC.FIELD_THREAD_ID ): field = wx.TextCtrl( self._thread_panel, value = default )
+            elif type == CC.FIELD_PASSWORD: field = wx.TextCtrl( self._thread_panel, value = default, style = wx.TE_PASSWORD )
             else: continue
             
             self._thread_fields[ name ] = ( type, field )
             
             if editable:
                 
-                gridbox.AddF( wx.StaticText( self, label = name + ':' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._thread_panel, label = name + ':' ), FLAGS_MIXED )
                 gridbox.AddF( field, FLAGS_EXPAND_BOTH_WAYS )
                 
             else: field.Hide()
             
         
-        thread_options = wx.BoxSizer( wx.VERTICAL )
-        
-        thread_options.AddF( wx.StaticText( self, label = '- thread options -' ), FLAGS_SMALL_INDENT )
-        
-        thread_options.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         # post options
+        
+        self._post_panel = ClientGUICommon.StaticBox( self, 'post options' )
         
         self._post_fields = {}
         
         postbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._post_info = wx.StaticText( self, label = 'no file selected', style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-        
-        gridbox = wx.FlexGridSizer( 0, 2 )
-        
-        gridbox.AddGrowableCol( 1, 1 )
+        self._post_info = wx.StaticText( self._post_panel, label = 'no file selected', style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
         
         for ( name, type, default, editable ) in self._form_fields:
             
@@ -480,10 +484,10 @@ class ManagementPanelDumper( ManagementPanel ):
                 
                 if self._have_4chan_pass: continue
                 
-                field = CaptchaControl( self, type, default )
+                field = CaptchaControl( self._post_panel, type, default )
                 field.Bind( CAPTCHA_FETCH_EVENT, self.EventCaptchaRefresh )
                 
-            elif type == CC.FIELD_COMMENT: field = Comment( self )
+            elif type == CC.FIELD_COMMENT: field = Comment( self._post_panel )
             else: continue
             
             self._post_fields[ name ] = ( type, field, default )
@@ -491,11 +495,15 @@ class ManagementPanelDumper( ManagementPanel ):
             postbox.AddF( field, FLAGS_EXPAND_PERPENDICULAR )
             
         
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
         for ( name, type, default, editable ) in self._form_fields:
             
             if type == CC.FIELD_CHECKBOX:
                 
-                field = wx.CheckBox( self )
+                field = wx.CheckBox( self._post_panel )
                 
                 field.SetValue( default == 'True' )
                 
@@ -503,7 +511,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._post_fields[ name ] = ( type, field, default )
             
-            gridbox.AddF( wx.StaticText( self, label = name + ':' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._post_panel, label = name + ':' ), FLAGS_MIXED )
             gridbox.AddF( field, FLAGS_EXPAND_BOTH_WAYS )
             
         
@@ -512,21 +520,13 @@ class ManagementPanelDumper( ManagementPanel ):
             if type == CC.FIELD_FILE: self._file_post_name = name
             
         
-        post_options = wx.BoxSizer( wx.VERTICAL )
+        self._post_panel.AddF( self._post_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._post_panel.AddF( postbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._post_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        post_options.AddF( wx.StaticText( self, label = '- post options -' ), FLAGS_SMALL_INDENT )
-        
-        post_options.AddF( self._post_info, FLAGS_EXPAND_PERPENDICULAR )
-        post_options.AddF( postbox, FLAGS_EXPAND_PERPENDICULAR )
-        post_options.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
-        
-        advanced_tag_options = wx.BoxSizer( wx.VERTICAL )
-        
-        advanced_tag_options.AddF( wx.StaticText( self, label = '- advanced tag options -' ), FLAGS_SMALL_INDENT )
+        # misc
         
         self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'include tags from', namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
-        
-        advanced_tag_options.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         
         # arrange stuff
         
@@ -534,10 +534,10 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( prog_vbox, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( thread_options, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( post_options, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._thread_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._post_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1084,11 +1084,13 @@ class ManagementPanelImport( ManagementPanel ):
         self._currently_processing_import_queue = False
         self._currently_processing_outer_queue = False
         
-        self._import_overall_info = wx.StaticText( self )
-        self._import_current_info = wx.StaticText( self )
-        self._import_gauge = ClientGUICommon.Gauge( self )
+        self._processing_panel = ClientGUICommon.StaticBox( self, 'progress' )
         
-        self._import_pause_button = wx.Button( self, label = 'pause' )
+        self._import_overall_info = wx.StaticText( self._processing_panel )
+        self._import_current_info = wx.StaticText( self._processing_panel )
+        self._import_gauge = ClientGUICommon.Gauge( self._processing_panel )
+        
+        self._import_pause_button = wx.Button( self._processing_panel, label = 'pause' )
         self._import_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImport )
         self._import_pause_button.Disable()
         
@@ -1300,10 +1302,12 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1345,24 +1349,27 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         
         self._connections = {}
         
-        self._import_cancel_button = wx.Button( self, label = 'that\'s enough' )
+        self._import_cancel_button = wx.Button( self._processing_panel, label = 'that\'s enough' )
         self._import_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImport )
         self._import_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
         self._import_cancel_button.Disable()
         
-        self._outer_queue_info = wx.StaticText( self )
-        self._outer_queue = wx.ListBox( self, size = ( -1, 200 ) )
+        self._outer_queue_panel = ClientGUICommon.StaticBox( self, 'queue' )
         
-        self._new_queue_input = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
+        self._outer_queue_info = wx.StaticText( self._outer_queue_panel )
+        
+        self._outer_queue = wx.ListBox( self._outer_queue_panel, size = ( -1, 200 ) )
+        
+        self._new_queue_input = wx.TextCtrl( self._outer_queue_panel, style=wx.TE_PROCESS_ENTER )
         self._new_queue_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._up = wx.Button( self, label = u'\u2191' )
+        self._up = wx.Button( self._outer_queue_panel, label = u'\u2191' )
         self._up.Bind( wx.EVT_BUTTON, self.EventUp )
         
-        self._remove = wx.Button( self, label = 'X' )
+        self._remove = wx.Button( self._outer_queue_panel, label = 'X' )
         self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
         
-        self._down = wx.Button( self, label = u'\u2193' )
+        self._down = wx.Button( self._outer_queue_panel, label = u'\u2193' )
         self._down.Bind( wx.EVT_BUTTON, self.EventDown )
         
         self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
@@ -1514,11 +1521,11 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         
         self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send ' + name + ' tags to ', namespaces )
         
-        self._outer_queue_pause_button = wx.Button( self, label = 'pause' )
+        self._outer_queue_pause_button = wx.Button( self._outer_queue_panel, label = 'pause' )
         self._outer_queue_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseOuterQueue )
         self._outer_queue_pause_button.Disable()
         
-        self._outer_queue_cancel_button = wx.Button( self, label = 'that\'s enough' )
+        self._outer_queue_cancel_button = wx.Button( self._outer_queue_panel, label = 'that\'s enough' )
         self._outer_queue_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelOuterQueue )
         self._outer_queue_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
         self._outer_queue_cancel_button.Disable()
@@ -1528,14 +1535,10 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         c_p_hbox.AddF( self._import_pause_button, FLAGS_EXPAND_BOTH_WAYS )
         c_p_hbox.AddF( self._import_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
         
-        processing = wx.BoxSizer( wx.VERTICAL )
-        
-        processing.AddF( wx.StaticText( self, label = '- processing -' ), FLAGS_SMALL_INDENT )
-        
-        processing.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        processing.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        processing.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        processing.AddF( c_p_hbox, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1553,36 +1556,20 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         queue_hbox.AddF( self._outer_queue, FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, FLAGS_MIXED )
         
-        queue_vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        queue_vbox.AddF( wx.StaticText( self, label = '- queue -' ), FLAGS_SMALL_INDENT )
-        
-        queue_vbox.AddF( queue_pause_buttons_hbox, FLAGS_EXPAND_PERPENDICULAR )
-        queue_vbox.AddF( self._outer_queue_info, FLAGS_EXPAND_PERPENDICULAR )
-        queue_vbox.AddF( queue_hbox, FLAGS_EXPAND_BOTH_WAYS )
-        queue_vbox.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
-        
-        advanced_import_options = wx.BoxSizer( wx.VERTICAL )
-        
-        advanced_import_options.AddF( wx.StaticText( self, label = '- advanced import options -' ), FLAGS_SMALL_INDENT )
-        
-        advanced_import_options.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-        advanced_tag_options = wx.BoxSizer( wx.VERTICAL )
-        
-        advanced_tag_options.AddF( wx.StaticText( self, label = '- advanced tag options -' ), FLAGS_SMALL_INDENT )
-        
-        advanced_tag_options.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
+        self._outer_queue_panel.AddF( queue_pause_buttons_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._outer_queue_panel.AddF( self._outer_queue_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._outer_queue_panel.AddF( queue_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._outer_queue_panel.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._MakeSort( vbox )
         
-        vbox.AddF( processing, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( queue_vbox, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._outer_queue_panel, FLAGS_EXPAND_BOTH_WAYS )
         self._InitExtraVboxElements( vbox )
-        vbox.AddF( advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1969,6 +1956,169 @@ class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWit
         HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
         
     
+class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueueAdvanced ):
+    
+    def __init__( self, parent, page, page_key ):
+        
+        name = 'giphy'
+        namespaces = [ '' ]
+        
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        
+        self._new_queue_input.SetValue( 'tag' )
+        
+    
+    def _GetAndParseTags( self, id, timestamp ):
+        
+        url = 'http://giphy.com/api/gifs/' + str( id ) + '?ds=' + str( timestamp )
+        
+        parse_result = urlparse.urlparse( url )
+        
+        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+        
+        if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+        
+        connection = self._connections[ ( scheme, host, port ) ]
+        
+        try:
+            
+            raw_json = connection.geturl( url )
+            
+            json_dict = json.loads( raw_json )
+            
+            tags_data = json_dict[ 'data' ][ 'tags' ]
+            
+            tags = [ tag_data[ 'name' ] for tag_data in tags_data ]
+            
+        except:
+            
+            print( traceback.format_exc() )
+            
+            tags = []
+            
+        
+        return tags
+        
+    
+    def _THREADGetImportArgs( self, queue_object ):
+        
+        try:
+            
+            ( url, id, timestamp ) = queue_object
+            
+            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+            
+            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+            
+            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
+            elif status == 'redundant':
+                
+                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                
+                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+                
+                tag_import_info = self._advanced_tag_options.GetInfo()
+                
+                if len( tag_import_info ) > 0:
+                    
+                    try:
+                        
+                        tags = self._GetAndParseTags( id, timestamp )
+                        
+                        self._DoRedundantTagContentUpdates( hash, tags )
+                        
+                    except: pass
+                    
+                
+                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
+                
+            else:
+                
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                
+                parse_result = urlparse.urlparse( url )
+                
+                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+                
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                
+                connection = self._connections[ ( scheme, host, port ) ]
+                
+                file = connection.geturl( url )
+                
+                tags = self._GetAndParseTags( id, timestamp )
+                
+                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
+                
+                advanced_import_options = self._advanced_import_options.GetInfo()
+                
+                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
+                
+            
+        except HC.NotFoundException: wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = Exception( 'Cannot download full image.' ) )
+        except Exception as e:
+            print( traceback.format_exc() )
+            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
+        
+    
+    def _THREADDownloadImportItems( self, tag ):
+        
+        # this is important, because we'll instantiate new objects in the eventcancel
+        
+        cancel_import = self._cancel_import_queue
+        cancel_download = self._cancel_outer_queue
+        
+        try:
+            
+            gallery_url = 'http://giphy.com/api/gifs?tag=' + tag.replace( ' ', '+' ) + '&page='
+            
+            example_url = gallery_url + '0'
+            
+            connection = CC.AdvancedHTTPConnection( url = example_url )
+            
+            i = 0
+            
+            total_results_found = 0
+            
+            while True:
+                
+                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
+                
+                while self._pause_outer_queue: time.sleep( 1 )
+                
+                if cancel_import.is_set(): break
+                if cancel_download.is_set(): break
+                
+                current_url = gallery_url + str( i )
+                
+                raw_json = connection.geturl( current_url )
+                
+                json_dict = json.loads( raw_json )
+                
+                if 'data' in json_dict:
+                    
+                    json_data = json_dict[ 'data' ]
+                    
+                    results = [ ( d[ 'original_url' ], d[ 'id' ], d[ 'timestamp' ] ) for d in json_data ]
+                    
+                    total_results_found += len( results )
+                    
+                    wx.CallAfter( self.CALLBACKAddToImportQueue, results )
+                    
+                else: break
+                
+                i += 1
+                
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
+            
+        except Exception as e:
+            print( traceback.format_exc() )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        
+        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        
+    
 class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImportWithQueueAdvanced ):
     
     def __init__( self, parent, page, page_key ):
@@ -1991,13 +2141,7 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
         
         self._advanced_hentai_foundry_options = ClientGUICommon.AdvancedHentaiFoundryOptions( self )
         
-        advanced_hentai_foundry_options = wx.BoxSizer( wx.VERTICAL )
-        
-        advanced_hentai_foundry_options.AddF( wx.StaticText( self, label = '- advanced hentai foundry options -' ), FLAGS_SMALL_INDENT )
-        
-        advanced_hentai_foundry_options.AddF( self._advanced_hentai_foundry_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.AddF( advanced_hentai_foundry_options, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._advanced_hentai_foundry_options, FLAGS_EXPAND_PERPENDICULAR )
         
     
     def _SetFilter( self ):
@@ -2094,11 +2238,14 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
             
             # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
             self._search_connection.request( 'GET', '/?enterAgree=1' )
-            self._page_connection.request( 'GET', '/?enterAgree=1' )
+            
+            cookies = self._search_connection.GetCookies()
+            
+            for ( key, value ) in cookies.items(): self._page_connection.SetCookie( key, value )
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established' )
             
-            time.sleep( 1 )
+            time.sleep( 0.5 )
             
             HC.pubsub.pub( 'import_session_established', self._page_key )
             
@@ -2190,6 +2337,10 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( ManagementPanel
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
             
+        except HC.NotFoundException:
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '404 - artist not found!' )
+            
         except Exception as e:
             print( traceback.format_exc() )
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
@@ -2260,6 +2411,427 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelIm
         HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
         
     
+class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueueAdvanced ):
+    
+    def __init__( self, parent, page, page_key ):
+        
+        name = 'pixiv'
+        namespaces = [ 'creator', 'title', '' ]
+        
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        
+        self._session_established = False
+        
+        self._new_queue_input.Disable()
+        
+        HC.pubsub.sub( self, 'SessionEstablished', 'import_session_established' )
+        
+        threading.Thread( target = self._THREADEstablishSession, name = 'Pixiv Session Thread' ).start()
+        
+    
+    def _THREADGetImportArgs( self, queue_object ):
+        
+        try:
+            
+            ( url, image_url_reference_url, image_url ) = queue_object
+            
+            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+            
+            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+            
+            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
+            elif status == 'redundant':
+                
+                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                
+                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+                
+                tag_import_info = self._advanced_tag_options.GetInfo()
+                
+                if len( tag_import_info ) > 0:
+                    
+                    html = self._page_connection.geturl( url )
+                    
+                    tags = ClientParsers.ParsePixivPage( image_url, html )
+                    
+                    self._DoRedundantTagContentUpdates( hash, tags )
+                    
+                
+                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
+                
+            else:
+                
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                
+                tag_import_info = self._advanced_tag_options.GetInfo()
+                
+                if len( tag_import_info ) > 0:
+                    
+                    html = self._page_connection.geturl( url )
+                    
+                    tags = ClientParsers.ParsePixivPage( image_url, html )
+                    
+                else: tags = []
+                
+                parse_result = urlparse.urlparse( image_url )
+                
+                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+                
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                
+                connection = self._connections[ ( scheme, host, port ) ]
+                
+                headers = { 'Referer' : image_url_reference_url }
+                
+                file = connection.geturl( image_url, headers = headers )
+                
+                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
+                
+                advanced_import_options = self._advanced_import_options.GetInfo()
+                
+                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
+                
+            
+        except HC.NotFoundException:
+            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = Exception( 'Cannot download full image - it is probably a manga collection.' ) )
+        except Exception as e:
+            print( traceback.format_exc() )
+            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
+        
+    
+    def _THREADEstablishSession( self ):
+        
+        try:
+            
+            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+            
+            if id == '' and password == '':
+                
+                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                
+                return
+                
+            
+            self._search_connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+            self._page_connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with pixiv' )
+            
+            form_fields = {}
+            
+            form_fields[ 'mode' ] = 'login'
+            form_fields[ 'pixiv_id' ] = id
+            form_fields[ 'pass' ] = password
+            
+            body = urllib.urlencode( form_fields )
+            
+            headers = {}
+            headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+            
+            # this logs in and establishes the php session cookie
+            response = self._search_connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
+            
+            cookies = self._search_connection.GetCookies()
+            
+            # _ only given to logged in php sessions
+            if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Login credentials not accepted!' )
+            
+            for ( key, value ) in cookies.items(): self._page_connection.SetCookie( key, value )
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established' )
+            
+            time.sleep( 0.5 )
+            
+            HC.pubsub.pub( 'import_session_established', self._page_key )
+            
+        except Exception as e:
+            print( traceback.format_exc() )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        
+    
+    def SessionEstablished( self, page_key ):
+        
+        self._new_queue_input.Enable()
+        
+        self._session_established = True
+        
+        HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established - ready to download' )
+        
+    
+class ManagementPanelImportWithQueueAdvancedPixivArtist( ManagementPanelImportWithQueueAdvancedPixiv ):
+    
+    def __init__( self, parent, page, page_key ):
+        
+        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key )
+        
+        self._new_queue_input.SetValue( 'artist id number' )
+        
+    
+    def _THREADDownloadImportItems( self, artist_id ):
+        
+        # this is important, because we'll instantiate new objects in the eventcancel
+        
+        cancel_import = self._cancel_import_queue
+        cancel_download = self._cancel_outer_queue
+        
+        try:
+            
+            total_results_found = 0
+            
+            i = 1
+            
+            while True:
+                
+                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
+                
+                while self._pause_outer_queue: time.sleep( 1 )
+                
+                if cancel_import.is_set(): break
+                if cancel_download.is_set(): break
+                
+                gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + str( artist_id )
+                
+                current_url = gallery_url + '&p=' + str( i )
+                
+                html = self._search_connection.geturl( current_url )
+                
+                results = ClientParsers.ParsePixivGallery( html, current_url )
+                
+                total_results_found += len( results )
+                
+                wx.CallAfter( self.CALLBACKAddToImportQueue, results )
+                
+                if len( results ) == 0: break
+                
+                i += 1
+                
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
+            
+        except HC.NotFoundException:
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '404 - artist not found!' )
+            
+        except Exception as e:
+            print( traceback.format_exc() )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        
+        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        
+    
+class ManagementPanelImportWithQueueAdvancedPixivTags( ManagementPanelImportWithQueueAdvancedPixiv ):
+    
+    def __init__( self, parent, page, page_key ):
+        
+        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key )
+        
+        self._new_queue_input.SetValue( 'search tag' )
+        
+    
+    def _THREADDownloadImportItems( self, tag ):
+        
+        # this is important, because we'll instantiate new objects in the eventcancel
+        
+        cancel_import = self._cancel_import_queue
+        cancel_download = self._cancel_outer_queue
+        
+        try:
+            
+            tag = urllib.quote( tag.encode( 'utf-8' ) )
+            
+            gallery_url = 'http://www.pixiv.net/search.php?word=' + tag + '&s_mode=s_tag_full&order=date_d'
+            
+            total_results_found = 0
+            
+            i = 1
+            
+            while True:
+                
+                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
+                
+                while self._pause_outer_queue: time.sleep( 1 )
+                
+                if cancel_import.is_set(): break
+                if cancel_download.is_set(): break
+                
+                current_url = gallery_url + '&p=' + str( i )
+                
+                html = self._search_connection.geturl( current_url )
+                
+                results = ClientParsers.ParsePixivGallery( html, current_url )
+                
+                total_results_found += len( results )
+                
+                wx.CallAfter( self.CALLBACKAddToImportQueue, results )
+                
+                if len( results ) == 0: break
+                
+                i += 1
+                
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
+            
+        except Exception as e:
+            print( traceback.format_exc() )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        
+        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        
+    
+class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQueueAdvanced ):
+    
+    def __init__( self, parent, page, page_key ):
+        
+        name = 'tumblr'
+        namespaces = [ '' ]
+        
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        
+        self._new_queue_input.SetValue( 'username' )
+        
+    
+    def _ParseJSON( self, raw_json ):
+        
+        processed_raw_json = raw_json.split( 'var tumblr_api_read = ' )[1][:-2] # -2 takes a couple newline chars off at the end
+        
+        json_object = json.loads( processed_raw_json )
+        
+        results = []
+        
+        if 'posts' in json_object:
+            
+            for post in json_object[ 'posts' ]:
+                
+                if 'tags' in post: tags = post[ 'tags' ]
+                else: tags = []
+                
+                post_type = post[ 'type' ]
+                
+                if post_type == 'photo':
+                    
+                    if len( post[ 'photos' ] ) == 0:
+                        
+                        try: results.append( ( post[ 'photo-url-1280' ], tags ) )
+                        except: pass
+                        
+                    else:
+                        
+                        for photo in post[ 'photos' ]:
+                            
+                            try: results.append( ( photo[ 'photo-url-1280' ], tags ) )
+                            except: pass
+                            
+                        
+                    
+                
+            
+        
+        return results
+        
+    
+    def _THREADGetImportArgs( self, queue_object ):
+        
+        try:
+            
+            ( url, tags ) = queue_object
+            
+            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+            
+            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+            
+            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
+            elif status == 'redundant':
+                
+                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                
+                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+                
+                tag_import_info = self._advanced_tag_options.GetInfo()
+                
+                if len( tag_import_info ) > 0: self._DoRedundantTagContentUpdates( hash, tags )
+                
+                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
+                
+            else:
+                
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                
+                parse_result = urlparse.urlparse( url )
+                
+                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+                
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                
+                connection = self._connections[ ( scheme, host, port ) ]
+                
+                file = connection.geturl( url )
+                
+                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
+                
+                advanced_import_options = self._advanced_import_options.GetInfo()
+                
+                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
+                
+            
+        except Exception as e:
+            print( traceback.format_exc() )
+            wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
+        
+    
+    def _THREADDownloadImportItems( self, username ):
+        
+        # this is important, because we'll instantiate new objects in the eventcancel
+        
+        cancel_import = self._cancel_import_queue
+        cancel_download = self._cancel_outer_queue
+        
+        try:
+            
+            search_url = 'http://' + username + '.tumblr.com/api/read/json?start=%start%&num=50'
+            
+            results = []
+            
+            example_url = search_url.replace( '%start%', '0' )
+            
+            connection = CC.AdvancedHTTPConnection( url = example_url )
+            
+            i = 0
+            
+            total_results_found = 0
+            
+            while True:
+                
+                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
+                
+                while self._pause_outer_queue: time.sleep( 1 )
+                
+                if cancel_import.is_set(): break
+                if cancel_download.is_set(): break
+                
+                current_url = search_url.replace( '%start%', str( i ) )
+                
+                raw_json = connection.geturl( current_url )
+                
+                results = self._ParseJSON( raw_json )
+                
+                total_results_found += len( results )
+                
+                if len( results ) == 0: break
+                else: wx.CallAfter( self.CALLBACKAddToImportQueue, results )
+                
+                i += 50
+                
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
+            
+        except HC.NotFoundException: pass
+        except Exception as e:
+            print( traceback.format_exc() )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        
+        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        
+    
 class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
     
     def __init__( self, parent, page, page_key ):
@@ -2271,14 +2843,10 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
         c_p_hbox.AddF( self._import_pause_button, FLAGS_EXPAND_BOTH_WAYS )
         c_p_hbox.AddF( self._import_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
         
-        processing = wx.BoxSizer( wx.VERTICAL )
-        
-        processing.AddF( wx.StaticText( self, label = '- processing -' ), FLAGS_SMALL_INDENT )
-        
-        processing.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        processing.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        processing.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        processing.AddF( c_p_hbox, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2291,27 +2859,17 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
         queue_hbox.AddF( self._outer_queue, FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, FLAGS_MIXED )
         
-        queue_vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        queue_vbox.AddF( wx.StaticText( self, label = '- queue -' ), FLAGS_SMALL_INDENT )
-        
-        queue_vbox.AddF( self._outer_queue_info, FLAGS_EXPAND_PERPENDICULAR )
-        queue_vbox.AddF( queue_hbox, FLAGS_EXPAND_BOTH_WAYS )
-        queue_vbox.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
-        
-        advanced_import_options = wx.BoxSizer( wx.VERTICAL )
-        
-        advanced_import_options.AddF( wx.StaticText( self, label = '- advanced import options -' ), FLAGS_SMALL_INDENT )
-        
-        advanced_import_options.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+        self._outer_queue_panel.AddF( self._outer_queue_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._outer_queue_panel.AddF( queue_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._outer_queue_panel.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._MakeSort( vbox )
         
-        vbox.AddF( processing, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( queue_vbox, FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._outer_queue_panel, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2408,49 +2966,42 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
         
-        thread_vbox = wx.BoxSizer( wx.VERTICAL )
+        self._thread_panel = ClientGUICommon.StaticBox( self, 'thread checker' )
         
-        thread_vbox.AddF( wx.StaticText( self, label = '- thread checker -' ), FLAGS_SMALL_INDENT )
+        self._thread_info = wx.StaticText( self._thread_panel, label = '' )
         
-        self._thread_info = wx.StaticText( self, label = '' )
+        self._thread_time = wx.SpinCtrl( self._thread_panel, min = 30, max = 1800 )
+        self._thread_time.SetValue( 180 )
         
-        self._thread_time = wx.SpinCtrl( self, initial = 180, min = 30, max = 1800 )
-        
-        self._thread_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._thread_input = wx.TextCtrl( self._thread_panel, style = wx.TE_PROCESS_ENTER )
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._thread_pause_button = wx.Button( self, label = 'pause' )
+        self._thread_pause_button = wx.Button( self._thread_panel, label = 'pause' )
         self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecker )
         self._thread_pause_button.SetForegroundColour( ( 128, 0, 0 ) )
         self._thread_pause_button.Disable()
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( wx.StaticText( self, label = 'check every ' ), FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self._thread_panel, label = 'check every ' ), FLAGS_MIXED )
         hbox.AddF( self._thread_time, FLAGS_MIXED )
-        hbox.AddF( wx.StaticText( self, label = ' seconds' ), FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self._thread_panel, label = ' seconds' ), FLAGS_MIXED )
         
-        thread_vbox.AddF( self._thread_info, FLAGS_EXPAND_PERPENDICULAR )
-        thread_vbox.AddF( self._thread_input, FLAGS_EXPAND_PERPENDICULAR )
-        thread_vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
-        thread_vbox.AddF( self._thread_pause_button, FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.AddF( thread_vbox, FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( self._thread_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( self._thread_input, FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._thread_panel.AddF( self._thread_pause_button, FLAGS_EXPAND_PERPENDICULAR )
         
         self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
         
-        advanced_import_options = wx.BoxSizer( wx.VERTICAL )
-        
-        advanced_import_options.AddF( wx.StaticText( self, label = '- advanced import options -' ), FLAGS_SMALL_INDENT )
-        
-        advanced_import_options.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.AddF( advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._thread_panel, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2695,58 +3246,60 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._num_petitions = None
         self._current_petition = None
         
-        self._num_petitions_text = wx.StaticText( self )
+        self._petitions_info_panel = ClientGUICommon.StaticBox( self, 'petitions info' )
         
-        refresh_num_petitions = wx.Button( self, label = 'refresh' )
+        self._num_petitions_text = wx.StaticText( self._petitions_info_panel )
+        
+        refresh_num_petitions = wx.Button( self._petitions_info_panel, label = 'refresh' )
         refresh_num_petitions.Bind( wx.EVT_BUTTON, self.EventRefreshNumPetitions )
         
-        self._get_petition = wx.Button( self, label = 'get petition' )
+        self._get_petition = wx.Button( self._petitions_info_panel, label = 'get petition' )
         self._get_petition.Bind( wx.EVT_BUTTON, self.EventGetPetition )
         self._get_petition.Disable()
         
-        self._petition_info_text_ctrl = wx.TextCtrl( self, style = wx.TE_READONLY | wx.TE_MULTILINE )
+        self._petition_panel = ClientGUICommon.StaticBox( self, 'petition' )
         
-        self._approve = wx.Button( self, label = 'approve' )
+        self._petition_info_text_ctrl = wx.TextCtrl( self._petition_panel, style = wx.TE_READONLY | wx.TE_MULTILINE )
+        
+        self._approve = wx.Button( self._petition_panel, label = 'approve' )
         self._approve.Bind( wx.EVT_BUTTON, self.EventApprove )
         self._approve.SetForegroundColour( ( 0, 128, 0 ) )
         self._approve.Disable()
         
-        self._deny = wx.Button( self, label = 'deny' )
+        self._deny = wx.Button( self._petition_panel, label = 'deny' )
         self._deny.Bind( wx.EVT_BUTTON, self.EventDeny )
         self._deny.SetForegroundColour( ( 128, 0, 0 ) )
         self._deny.Disable()
         
-        self._modify_petitioner = wx.Button( self, label = 'modify petitioner' )
+        self._modify_petitioner = wx.Button( self._petition_panel, label = 'modify petitioner' )
         self._modify_petitioner.Bind( wx.EVT_BUTTON, self.EventModifyPetitioner )
         self._modify_petitioner.Disable()
         if not self._can_ban: self._modify_petitioner.Hide()
-        
-        p_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        p_hbox.AddF( self._approve, FLAGS_EXPAND_BOTH_WAYS )
-        p_hbox.AddF( self._deny, FLAGS_EXPAND_BOTH_WAYS )
-        
-        petition_sizer = wx.BoxSizer( wx.VERTICAL )
-        
-        petition_sizer.AddF( wx.StaticText( self, label = '- petition -' ), FLAGS_SMALL_INDENT )
-        
-        petition_sizer.AddF( self._petition_info_text_ctrl, FLAGS_EXPAND_BOTH_WAYS )
-        petition_sizer.AddF( p_hbox, FLAGS_EXPAND_PERPENDICULAR )
-        petition_sizer.AddF( self._modify_petitioner, FLAGS_EXPAND_PERPENDICULAR )
         
         num_petitions_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         num_petitions_hbox.AddF( self._num_petitions_text, FLAGS_EXPAND_BOTH_WAYS )
         num_petitions_hbox.AddF( refresh_num_petitions, FLAGS_MIXED )
         
+        self._petitions_info_panel.AddF( num_petitions_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._petitions_info_panel.AddF( self._get_petition, FLAGS_EXPAND_PERPENDICULAR )
+        
+        p_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        p_hbox.AddF( self._approve, FLAGS_EXPAND_BOTH_WAYS )
+        p_hbox.AddF( self._deny, FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._petition_panel.AddF( self._petition_info_text_ctrl, FLAGS_EXPAND_BOTH_WAYS )
+        self._petition_panel.AddF( p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._petition_panel.AddF( self._modify_petitioner, FLAGS_EXPAND_PERPENDICULAR )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._MakeSort( vbox )
         self._MakeCollect( vbox )
         
-        vbox.AddF( num_petitions_hbox, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._get_petition, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( petition_sizer, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._petitions_info_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._petition_panel, FLAGS_EXPAND_BOTH_WAYS )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2836,7 +3389,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         petition_object = self._current_petition.GetClientPetitionDenial()
         
         # needs work
-        connection.Post( 'petitiondenial', petition_denial = petition_object )
+        connection.Post( 'petition_denial', petition_denial = petition_object )
         
         self._current_petition = None
         
@@ -2878,7 +3431,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             connection = self._service.GetConnection()
             
-            self._num_petitions = connection.Get( 'numpetitions' )
+            self._num_petitions = connection.Get( 'num_petitions' )
             
             self._DrawNumPetitions()
             
@@ -2903,17 +3456,21 @@ class ManagementPanelQuery( ManagementPanel ):
         self._include_current_tags = True
         self._include_pending_tags = True
         
-        self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self, self._page_key, initial_predicates )
+        self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
         
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self, self._page_key, self._file_service_identifier, CC.NULL_SERVICE_IDENTIFIER, self._page.GetMedia )
+        self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
+        
+        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, CC.NULL_SERVICE_IDENTIFIER, self._page.GetMedia )
+        
+        self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._MakeSort( vbox )
         self._MakeCollect( vbox )
         
-        vbox.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -3117,36 +3674,32 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         #self._refresh_inbox.Bind( wx.EVT_BUTTON, self.EventRefreshInbox )
         #self._refresh_inbox.SetForegroundColour( ( 0, 128, 0 ) )
         
-        actions = wx.BoxSizer( wx.VERTICAL )
+        self._actions_panel = ClientGUICommon.StaticBox( self, 'actions' )
         
-        actions.AddF( wx.StaticText( self, label = '- actions -' ), FLAGS_SMALL_INDENT )
-        
-        self._compose = wx.Button( self, label = 'compose' )
+        self._compose = wx.Button( self._actions_panel, label = 'compose' )
         self._compose.Bind( wx.EVT_BUTTON, self.EventCompose )
         self._compose.SetForegroundColour( ( 0, 128, 0 ) )
         
-        actions.AddF( self._compose, FLAGS_EXPAND_PERPENDICULAR )
+        self._actions_panel.AddF( self._compose, FLAGS_EXPAND_PERPENDICULAR )
         #vbox.AddF( self._refresh_inbox, FLAGS_EXPAND_PERPENDICULAR )
         
-        search = wx.BoxSizer( wx.VERTICAL )
+        self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
         
-        search.AddF( wx.StaticText( self, label = '- search -' ), FLAGS_SMALL_INDENT )
+        self._current_predicates_box = ClientGUICommon.ListBoxMessagesPredicates( self._search_panel, self._page_key, [ 'system:inbox' ] )
         
-        self._current_predicates_box = ClientGUICommon.ListBoxMessagesPredicates( self, self._page_key, [ 'system:inbox' ] )
-        
-        self._synchronised = ClientGUICommon.OnOffButton( self, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting' )
+        self._synchronised = ClientGUICommon.OnOffButton( self._search_panel, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting' )
         self._synchronised.SetToolTipString( 'select whether to renew the search as soon as a new predicate is entered' )
         
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownMessageTerms( self, self._page_key, self._identity )
+        self._searchbox = ClientGUICommon.AutoCompleteDropdownMessageTerms( self._search_panel, self._page_key, self._identity )
         
-        search.AddF( self._current_predicates_box, FLAGS_EXPAND_BOTH_WAYS )
-        search.AddF( self._synchronised, FLAGS_EXPAND_PERPENDICULAR )
-        search.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_BOTH_WAYS )
+        self._search_panel.AddF( self._synchronised, FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( actions, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( search, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._actions_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._search_panel, FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         

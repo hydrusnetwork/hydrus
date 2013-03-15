@@ -10,6 +10,12 @@ def Parse4chanPostScreen( html ):
     title_tag = soup.find( 'title' )
     
     if title_tag.string == 'Post successful!': return ( 'success', None )
+    elif title_tag.string == '4chan - Banned':
+        
+        print( soup )
+        
+        return ( 'big error', 'you are banned from this board! html written to log' )
+        
     else:
         
         try:
@@ -164,20 +170,6 @@ def ParseDeviantArtGallery( html ):
     
     return results
     
-def ParsePage( html, url ):
-    
-    soup = bs4.BeautifulSoup( html )
-    
-    all_links = soup.find_all( 'a' )
-    
-    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
-    
-    urls = [ urlparse.urljoin( url, link[ 'href' ] ) for link in links_with_images ]
-    
-    # old version included (images that don't have a link wrapped around them)'s src
-    
-    return urls
-    
 def ParseHentaiFoundryGallery( html ):
     
     urls_set = set()
@@ -262,4 +254,66 @@ def ParseHentaiFoundryPage( html ):
     for tag_link in tag_links: tags.append( tag_link.string )
     
     return ( image_url, tags )
+    
+def ParsePage( html, starting_url ):
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    all_links = soup.find_all( 'a' )
+    
+    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
+    
+    urls = [ urlparse.urljoin( starting_url, link[ 'href' ] ) for link in links_with_images ]
+    
+    # old version included (images that don't have a link wrapped around them)'s src
+    
+    return urls
+    
+def ParsePixivGallery( html, starting_url ):
+    
+    results = []
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    thumbnail_links = soup.find_all( class_ = 'work' )
+    
+    for thumbnail_link in thumbnail_links:
+        
+        url = urlparse.urljoin( starting_url, thumbnail_link[ 'href' ] ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
+        
+        image_url_reference_url = url.replace( 'medium', 'big' ) # http://www.pixiv.net/member_illust.php?mode=big&illust_id=33500690
+        
+        thumbnail_img = thumbnail_link.find( class_ = '_thumbnail' )
+        
+        thumbnail_image_url = thumbnail_img[ 'src' ] # http://i2.pixiv.net/img02/img/dnosuke/462657_s.jpg
+        
+        image_url = thumbnail_image_url.replace( '_s', '' ) # http://i2.pixiv.net/img02/img/dnosuke/462657.jpg
+        
+        results.append( ( url, image_url_reference_url, image_url ) )
+        
+    
+    return results
+    
+def ParsePixivPage( image_url, html ):
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    tags = soup.find( 'ul', class_ = 'tags' )
+    
+    tags = [ a_item.string for a_item in tags.find_all( 'a', class_ = 'text' ) ]
+    
+    user = soup.find( 'h1', class_ = 'user' )
+    
+    tags.append( 'creator:' + user.string )
+    
+    title_parent = soup.find( 'section', class_ = 'work-info' )
+    
+    title = title_parent.find( 'h1', class_ = 'title' )
+    
+    tags.append( 'title:' + title.string )
+    
+    try: tags.append( 'creator:' + image_url.split( '/' )[ -2 ] ) # http://i2.pixiv.net/img02/img/dnosuke/462657.jpg -> dnosuke
+    except: pass
+    
+    return tags
     

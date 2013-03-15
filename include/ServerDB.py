@@ -621,6 +621,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _AddNews( self, c, service_id, news ): c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, int( time.time() ) ) )
     
+    def _AddSession( self, c, session_key, service_identifier, account_identifier, expiry ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        account_id = account_identifier.GetAccountId()
+        
+        c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expiry ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expiry ) )
+        
+    
     def _AddToExpires( self, c, service_id, account_ids, increase ): c.execute( 'UPDATE account_map SET expires = expires + ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( increase, service_id ) )
     
     def _Ban( self, c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiration = None ):
@@ -790,6 +799,20 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         for message_key in deletees: os.remove( HC.SERVER_MESSAGES_DIR + os.path.sep + message_key.encode( 'hex' ) )
         
     
+    def _FlushRequestsMade( self, c, all_services_requests ):
+        
+        all_services_request_dict = HC.BuildKeyToListDict( [ ( service_identifier, ( account, num_bytes ) ) for ( service_identifier, account, num_bytes ) in all_services_requests ] )
+        
+        for ( service_identifier, requests ) in all_services_request_dict.items():
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            requests_dict = HC.BuildKeyToListDict( requests )
+            
+            c.executemany( 'UPDATE account_map SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE service_id = ? AND account_id = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), service_id, account.GetAccountId() ) for ( account, num_bytes_list ) in requests_dict.items() ] )
+            
+        
+    
     def _GenerateAccessKeys( self, c, service_id, num, account_type_id, expiration ):
         
         access_keys = [ os.urandom( HC.HYDRUS_KEY_LENGTH ) for i in range( num ) ]
@@ -808,18 +831,26 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return access_keys
         
     
-    def _FlushRequestsMade( self, c, all_services_requests ):
+    def _GenerateRegistrationKeys( self, c, service_id, num, account_type_id, expiration ):
         
-        all_services_request_dict = HC.BuildKeyToListDict( [ ( service_identifier, ( account, num_bytes ) ) for ( service_identifier, account, num_bytes ) in all_services_requests ] )
+        now = int( time.time() )
         
-        for ( service_identifier, requests ) in all_services_request_dict.items():
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            requests_dict = HC.BuildKeyToListDict( requests )
-            
-            c.executemany( 'UPDATE account_map SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE service_id = ? AND account_id = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), service_id, account.GetAccountId() ) for ( account, num_bytes_list ) in requests_dict.items() ] )
-            
+        if expiration is not None: expiry = expiration + int( time.time() )
+        else: expiry = None
+        
+        keys = [ ( os.urandom( HC.HYDRUS_KEY_LENGTH ), os.urandom( HC.HYDRUS_KEY_LENGTH ) ) for i in range( num ) ]
+        
+        c.executemany( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, access_key, expiry ) VALUES ( ?, ?, ?, ?, ? );', [ ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), service_id, account_type_id, sqlite3.Binary( access_key ), expiry ) for ( registration_key, access_key ) in keys ] )
+        
+        return [ registration_key for ( registration_key, access_key ) in keys ]
+        
+    
+    def _GetAccessKey( self, c, registration_key ):
+        
+        try: ( access_key, ) = c.execute( 'SELECT access_key FROM registration_keys WHERE registration_key = ?;', ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), ) ).fetchone()
+        except: raise HC.ForbiddenException( 'The service could not find that registration key in its database.' )
+        
+        return access_key
         
     
     def _GetAccount( self, c, service_id, account_identifier ):
@@ -897,6 +928,14 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         account_info[ 'num_petitions' ] = num_petitions
         
         return account_info
+        
+    
+    def _GetAccountIdentifier( self, c, access_key ):
+        
+        try: ( account_id, ) = c.execute( 'SELECT account_id FROM accounts WHERE access_key = ?;', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
+        except: raise HC.ForbiddenException( 'The service could not find that account in its database.' )
+        
+        return HC.AccountIdentifier( account_id = account_id )
         
     
     def _GetAccountIdFromContactKey( self, c, service_id, contact_key ):
@@ -1048,6 +1087,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetServiceIds( self, c, limited_types = HC.ALL_SERVICES ): return [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services WHERE type IN ' + HC.SplayListForDB( limited_types ) + ';' ) ]
     
+    def _GetServiceIdentifier( self, c, service_id ):
+        
+        ( service_type, port ) = c.execute( 'SELECT type, port FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        
+        return HC.ServerServiceIdentifier( service_type, port )
+        
+    
     def _GetServiceIdentifiers( self, c, limited_types = HC.ALL_SERVICES ): return [ HC.ServerServiceIdentifier( service_type, port ) for ( service_type, port ) in c.execute( 'SELECT type, port FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ) ]
     
     def _GetServiceType( self, c, service_id ):
@@ -1059,6 +1105,32 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         ( service_type, ) = result
         
         return service_type
+        
+    
+    def _GetSessions( self, c ):
+        
+        now = int( time.time() )
+        
+        c.execute( 'DELETE FROM sessions WHERE ? > expiry;', ( now, ) )
+        
+        sessions = []
+        
+        results = c.execute( 'SELECT session_key, service_id, account_id, expiry FROM sessions;' ).fetchall()
+        
+        service_ids_to_service_identifiers = {}
+        
+        for ( session_key, service_id, account_id, expiry ) in results:
+            
+            if service_id not in service_ids_to_service_identifiers: service_ids_to_service_identifiers[ service_id ] = self._GetServiceIdentifier( c, service_id )
+            
+            service_identifier = service_ids_to_service_identifiers[ service_id ]
+            
+            account_identifier = HC.AccountIdentifier( account_id = account_id )
+            
+            sessions.append( ( session_key, service_identifier, account_identifier, expiry ) )
+            
+        
+        return sessions
         
     
     def _GetUpdateEnds( self, c ):
@@ -1092,11 +1164,12 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 ( title, new_title ) = details
                 
-                account_type_id = self._GetAccountId( c, service_id, title )
+                account_type_id = self._GetAccountTypeId( c, service_id, title )
                 
-                new_account_type_id = self._GetAccountId( c, service_id, new_title )
+                new_account_type_id = self._GetAccountTypeId( c, service_id, new_title )
                 
                 c.execute( 'UPDATE account_map SET account_type_id = ? WHERE service_id = ? AND account_type_id = ?;', ( new_account_type_id, service_id, account_type_id ) )
+                c.execute( 'UPDATE registration_keys SET account_type_id = ? WHERE service_id = ? AND account_type_id = ?;', ( new_account_type_id, service_id, account_type_id ) )
                 
                 c.execute( 'DELETE FROM account_types WHERE account_type_id = ?;', ( account_type_id, ) )
                 
@@ -1155,7 +1228,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                     elif service_type == HC.TAG_REPOSITORY: update = self._GenerateMappingUpdate( c, service_id, begin, end )
                     elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): update = self._GenerateRatingUpdate( c, service_id, begin, end )
                     
-                    update_key = os.urandom( 32 )
+                    update_key_bytes = os.urandom( 32 )
+                    
+                    update_key = update_key_bytes.encode( 'hex' )
                     
                     with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( yaml.safe_dump( update )  )
                     
@@ -1239,6 +1314,26 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             self._servers[ service_identifier ].SetMessage( message )
             
+        
+    
+    def _TryToRegisterAccount( self, c, service_id, access_key ):
+        
+        try: ( account_type_id, expiry ) = c.execute( 'SELECT account_type_id, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
+        except: raise HC.ForbiddenException( 'Could not register that account.' )
+        
+        c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
+        
+        #
+        
+        c.execute( 'INSERT INTO accounts ( access_key ) VALUES ( ? );', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) )
+        
+        account_id = c.lastrowid
+        
+        now = int( time.time() )
+        
+        c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, account_type_id, now, expiry, 0, 0 ) )
+        
+        return HC.AccountIdentifier( account_id = account_id )
         
     
     def _UnbanKey( self, c, service_id, account_id ): c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
@@ -1357,7 +1452,7 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE account_scores ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, score_type INTEGER, score INTEGER, PRIMARY KEY( service_id, account_id, score_type ) );' )
             
-            c.execute( 'CREATE TABLE account_type_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id, PRIMARY KEY ( service_id, account_type_id ) );' )
+            c.execute( 'CREATE TABLE account_type_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, PRIMARY KEY ( service_id, account_type_id ) );' )
             
             c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, title TEXT, account_type TEXT_YAML );' )
             
@@ -1409,6 +1504,11 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX reasons_reason_index ON reasons ( reason );' )
+            
+            c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, access_key BLOB_BYTES, expiry INTEGER );' )
+            c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
+            
+            c.execute( 'CREATE TABLE sessions ( session_key BLOB_BYTES, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, expiry INTEGER );' )
             
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
@@ -1564,6 +1664,14 @@ class DB( ServiceDB ):
                     
                     c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
                     c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
+                    
+                
+                if version < 61:
+                    
+                    c.execute( 'CREATE TABLE sessions ( session_key BLOB_BYTES, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, expiry INTEGER );' )
+                    
+                    c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, access_key BLOB_BYTES, expiry INTEGER );' )
+                    c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
                     
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
@@ -1764,11 +1872,11 @@ class DB( ServiceDB ):
             
         
     
-    def AddJobServer( self, service_identifier, account_identifier, ip, request_type, request, request_args, request_length ):
+    def AddJobServer( self, service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length ):
         
         priority = HC.HIGH_PRIORITY
         
-        job = HC.JobServer( service_identifier, account_identifier, ip, request_type, request, request_args, request_length )
+        job = HC.JobServer( service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length )
         
         self._jobs.put( ( priority, job ) )
         
@@ -1879,7 +1987,7 @@ class DB( ServiceDB ):
     
     def _MainLoop_JobServer( self, c, job ):
         
-        ( service_identifier, account_identifier, ip, request_type, request, request_args, request_length ) = job.GetInfo()
+        ( service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length ) = job.GetArgs()
         
         service_type = service_identifier.GetType()
         
@@ -1893,22 +2001,59 @@ class DB( ServiceDB ):
                 
                 service_id = self._GetServiceId( c, service_identifier )
                 
-                permissions = HC.REQUESTS_TO_PERMISSIONS[ ( service_type, request_type, request ) ]
-                
-                if permissions is not None or request == 'account':
+                if request == 'session_key':
                     
-                    account = self._GetAccount( c, service_id, account_identifier )
+                    try: account_identifier = self._GetAccountIdentifier( c, access_key )
+                    except Exception as e:
+                        
+                        try:
+                            
+                            account_identifier = self._TryToRegisterAccount( c, service_id, access_key )
+                            
+                        except: raise e
+                        
                     
-                    if permissions is not None: account.CheckPermissions( permissions )
+                    session_key = os.urandom( 32 )
                     
-                else: account = None
-                
-                if request_type == HC.GET: response_context = self._MainLoop_Get( c, request, service_type, service_id, account, request_args )
+                    max_age = 30 * 86400
+                    
+                    expiry = int( time.time() ) + max_age
+                    
+                    wx.GetApp().AddSession( session_key, service_identifier, account_identifier, expiry )
+                    
+                    cookies = [ 'session_key=' + session_key.encode( 'hex' ) + '; Max-Age=' + str( max_age ) + '; Path=/' ]
+                    
+                    response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = '', cookies = cookies )
+                    
+                elif request == 'access_key':
+                    
+                    registration_key = access_key
+                    
+                    access_key = self._GetAccessKey( c, registration_key )
+                    
+                    response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( access_key ) )
+                    
                 else:
+                   
+                    permissions = HC.REQUESTS_TO_PERMISSIONS[ ( service_type, request_type, request ) ]
                     
-                    self._MainLoop_Post( c, request, service_type, service_id, account, ip, request_args )
+                    if permissions is not None or request == 'account':
+                        
+                        account_identifier = wx.GetApp().GetAccountIdentifier( session_key, service_identifier )
+                        
+                        account = self._GetAccount( c, service_id, account_identifier )
+                        
+                        if permissions is not None: account.CheckPermissions( permissions )
+                        
+                    else: account = None
                     
-                    response_context = HC.ResponseContext( 200 )
+                    if request_type == HC.GET: response_context = self._MainLoop_Get( c, request, service_type, service_id, account, request_args )
+                    else:
+                        
+                        self._MainLoop_Post( c, request, service_type, service_id, account, ip, request_args )
+                        
+                        response_context = HC.ResponseContext( 200 )
+                        
                     
                 
                 c.execute( 'COMMIT' )
@@ -1941,7 +2086,7 @@ class DB( ServiceDB ):
         try: account_id = account.GetAccountId()
         except: pass
         
-        if request == 'accesskeys':
+        if request == 'registration_keys':
             
             num = request_args[ 'num' ]
             title = request_args[ 'title' ]
@@ -1949,12 +2094,14 @@ class DB( ServiceDB ):
             
             account_type_id = self._GetAccountTypeId( c, service_id, title )
             
-            access_keys = self._GenerateAccessKeys( c, service_id, num, account_type_id, expiration )
+            registration_keys = self._GenerateRegistrationKeys( c, service_id, num, account_type_id, expiration )
             
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( access_keys ) )
+            #access_keys = self._GenerateAccessKeys( c, service_id, num, account_type_id, expiration )
+            
+            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( registration_keys ) )
             
         elif request == 'account': response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( account ) )
-        elif request == 'accountinfo':
+        elif request == 'account_info':
             
             subject_identifier = request_args[ 'subject_identifier' ]
             
@@ -1970,7 +2117,7 @@ class DB( ServiceDB ):
             
             response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( subject_info ) )
             
-        elif request == 'accounttypes':
+        elif request == 'account_types':
             
             account_types = self._GetAccountTypes( c, service_id )
             
@@ -2014,7 +2161,7 @@ class DB( ServiceDB ):
             
             response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, body = message )
             
-        elif request == 'messageinfosince':
+        elif request == 'message_info_since':
             
             timestamp = request_args[ 'since' ]
             
@@ -2022,7 +2169,7 @@ class DB( ServiceDB ):
             
             response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( ( message_keys, statuses ) ) )
             
-        elif request == 'numpetitions':
+        elif request == 'num_petitions':
             
             if service_type == HC.FILE_REPOSITORY: num_petitions = self._GetNumFilePetitions( c, service_id )
             elif service_type == HC.TAG_REPOSITORY: num_petitions = self._GetNumMappingPetitions( c, service_id )
@@ -2042,7 +2189,7 @@ class DB( ServiceDB ):
             
             response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( petition ) )
             
-        elif request == 'publickey':
+        elif request == 'public_key':
             
             contact_key = request_args[ 'contact_key' ]
             
@@ -2089,7 +2236,7 @@ class DB( ServiceDB ):
         try: account_id = account.GetAccountId()
         except: pass
         
-        if request == 'accountmodification':
+        if request == 'account_modification':
             
             action = request_args[ 'action' ]
             subject_identifiers = request_args[ 'subject_identifiers' ]
@@ -2137,7 +2284,7 @@ class DB( ServiceDB ):
                     
                 
             
-        elif request == 'accounttypesmodification':
+        elif request == 'account_types_modification':
             
             edit_log = request_args[ 'edit_log' ]
             
@@ -2205,7 +2352,7 @@ class DB( ServiceDB ):
             
             self._SetOptions( c, service_id, service_identifier, options )
             
-        elif request == 'petitiondenial':
+        elif request == 'petition_denial':
             
             petition_denial = request_args[ 'petition_denial' ]
             
@@ -2263,7 +2410,7 @@ class DB( ServiceDB ):
                     
                 
             
-        elif request == 'servicesmodification':
+        elif request == 'services_modification':
             
             edit_log = request_args[ 'edit_log' ]
             
@@ -2274,6 +2421,7 @@ class DB( ServiceDB ):
     def _MainLoop_Read( self, c, action ):
         
         if action == 'dirty_updates': return self._GetDirtyUpdates( c )
+        elif action == 'sessions': return self._GetSessions( c )
         elif action == 'update_ends': return self._GetUpdateEnds( c )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
@@ -2287,6 +2435,7 @@ class DB( ServiceDB ):
         elif action == 'flush_requests_made': self._FlushRequestsMade( c, *args )
         elif action == 'clean_update': self._CleanUpdate( c, *args )
         elif action == 'create_update': self._CreateUpdate( c, *args )
+        elif action == 'session': self._AddSession( c, *args )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
     

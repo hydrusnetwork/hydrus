@@ -10,6 +10,7 @@ import random
 import re
 import time
 import traceback
+import urllib
 import wx
 import yaml
 
@@ -35,6 +36,10 @@ FLAGS_BIG_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 8 )
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+
+FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
+FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
@@ -101,6 +106,57 @@ class Dialog( wx.Dialog ):
         if position == 'center': wx.CallAfter( self.Center )
         
     
+class DialogChooseNewServiceMethod( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            register_message = 'I want to set up a new account. I have a registration key (a key starting with \'r\').'
+            
+            self._register = wx.Button( self, id = wx.ID_OK, label = register_message )
+            self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
+            
+            setup_message = 'The account is already set up; I just want to add it to this client. I have a normal access key.'
+            
+            self._setup = wx.Button( self, id = wx.ID_OK, label = setup_message )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel', size = ( 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._register, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._setup, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'how to set up the account?', position = 'center' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+        self._register = False
+        
+    
+    def EventRegister( self, event ):
+        
+        self._register = True
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def GetRegister( self ): return self._register
+    
 class DialogFinishFiltering( Dialog ):
     
     def __init__( self, parent, num_kept, num_deleted ):
@@ -131,7 +187,7 @@ class DialogFinishFiltering( Dialog ):
             label = 'Keep ' + HC.ConvertIntToPrettyString( num_kept ) + ' and delete ' + HC.ConvertIntToPrettyString( num_deleted ) + ' files?'
             
             vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._back, FLAGS_EXPAND_PERPENDICULAR )
             
@@ -190,7 +246,7 @@ class DialogFinishRatingFiltering( Dialog ):
             label = 'Apply ' + ' and '.join( info_strings ) + '?'
             
             vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._back, FLAGS_EXPAND_PERPENDICULAR )
             
@@ -228,38 +284,48 @@ class DialogInputCustomFilterAction( Dialog ):
             
             service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
-            self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
+            self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
             
-            self._none_actions = wx.Choice( self, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'delete', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last' ] )
+            self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel, modifier, key )
             
-            self._ok_none = wx.Button( self, label = 'ok' )
+            self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
+            
+            self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last' ] )
+            
+            self._ok_none = wx.Button( self._none_panel, label = 'ok' )
             self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
             self._ok_none.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._tag_service_identifiers = wx.Choice( self )
-            self._tag_value = wx.TextCtrl( self, style = wx.TE_READONLY )
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, CC.NULL_SERVICE_IDENTIFIER )
+            self._tag_panel = ClientGUICommon.StaticBox( self, 'tag service actions' )
             
-            self._ok_tag = wx.Button( self, label = 'ok' )
+            self._tag_service_identifiers = wx.Choice( self._tag_panel )
+            self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, CC.NULL_SERVICE_IDENTIFIER )
+            
+            self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
             self._ok_tag.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._ratings_like_service_identifiers = wx.Choice( self )
-            self._ratings_like_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
-            self._ratings_like_like = wx.RadioButton( self, style = wx.RB_GROUP, label = 'like' )
-            self._ratings_like_dislike = wx.RadioButton( self, label = 'dislike' )
-            self._ratings_like_remove = wx.RadioButton( self, label = 'remove rating' )
+            self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'ratings like service actions' )
             
-            self._ok_ratings_like = wx.Button( self, label = 'ok' )
+            self._ratings_like_service_identifiers = wx.Choice( self._ratings_like_panel )
+            self._ratings_like_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+            self._ratings_like_like = wx.RadioButton( self._ratings_like_panel, style = wx.RB_GROUP, label = 'like' )
+            self._ratings_like_dislike = wx.RadioButton( self._ratings_like_panel, label = 'dislike' )
+            self._ratings_like_remove = wx.RadioButton( self._ratings_like_panel, label = 'remove rating' )
+            
+            self._ok_ratings_like = wx.Button( self._ratings_like_panel, label = 'ok' )
             self._ok_ratings_like.Bind( wx.EVT_BUTTON, self.EventOKRatingsLike )
             self._ok_ratings_like.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._ratings_numerical_service_identifiers = wx.Choice( self )
-            self._ratings_numerical_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
-            self._ratings_numerical_slider = wx.Slider( self, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
-            self._ratings_numerical_remove = wx.CheckBox( self, label = 'remove rating' )
+            self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'ratings numerical service actions' )
             
-            self._ok_ratings_numerical = wx.Button( self, label = 'ok' )
+            self._ratings_numerical_service_identifiers = wx.Choice( self._ratings_numerical_panel )
+            self._ratings_numerical_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+            self._ratings_numerical_slider = wx.Slider( self._ratings_numerical_panel, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
+            self._ratings_numerical_remove = wx.CheckBox( self._ratings_numerical_panel, label = 'remove rating' )
+            
+            self._ok_ratings_numerical = wx.Button( self._ratings_numerical_panel, label = 'ok' )
             self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
             self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -326,20 +392,14 @@ class DialogInputCustomFilterAction( Dialog ):
         
         def InitialisePanel():
             
-            shortcut_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            shortcut_vbox.AddF( wx.StaticText( self, label = '- shortcut -' ), FLAGS_EXPAND_PERPENDICULAR )
-            shortcut_vbox.AddF( self._shortcut, FLAGS_EXPAND_PERPENDICULAR )
+            self._shortcut_panel.AddF( self._shortcut, FLAGS_EXPAND_PERPENDICULAR )
             
             none_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             none_hbox.AddF( self._none_actions, FLAGS_EXPAND_DEPTH_ONLY )
             none_hbox.AddF( self._ok_none, FLAGS_MIXED )
             
-            none_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            none_vbox.AddF( wx.StaticText( self, label = '- non-service actions -' ), FLAGS_EXPAND_PERPENDICULAR )
-            none_vbox.AddF( none_hbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._none_panel.AddF( none_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -349,13 +409,10 @@ class DialogInputCustomFilterAction( Dialog ):
             tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             tag_hbox.AddF( self._tag_service_identifiers, FLAGS_EXPAND_DEPTH_ONLY )
-            tag_hbox.AddF( tag_sub_vbox, FLAGS_EXPAND_BOTH_WAYS )
+            tag_hbox.AddF( tag_sub_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             tag_hbox.AddF( self._ok_tag, FLAGS_MIXED )
             
-            tag_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            tag_vbox.AddF( wx.StaticText( self, label = '- tag service actions -' ), FLAGS_EXPAND_PERPENDICULAR )
-            tag_vbox.AddF( tag_hbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._tag_panel.AddF( tag_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -365,10 +422,7 @@ class DialogInputCustomFilterAction( Dialog ):
             ratings_like_hbox.AddF( self._ratings_like_remove, FLAGS_MIXED )
             ratings_like_hbox.AddF( self._ok_ratings_like, FLAGS_MIXED )
             
-            ratings_like_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            ratings_like_vbox.AddF( wx.StaticText( self, label = '- ratings like service actions -' ), FLAGS_EXPAND_PERPENDICULAR )
-            ratings_like_vbox.AddF( ratings_like_hbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._ratings_like_panel.AddF( ratings_like_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -377,22 +431,20 @@ class DialogInputCustomFilterAction( Dialog ):
             ratings_numerical_hbox.AddF( self._ratings_numerical_remove, FLAGS_MIXED )
             ratings_numerical_hbox.AddF( self._ok_ratings_numerical, FLAGS_MIXED )
             
-            ratings_numerical_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            ratings_numerical_vbox.AddF( wx.StaticText( self, label = '- ratings numerical service actions -' ), FLAGS_EXPAND_PERPENDICULAR )
-            ratings_numerical_vbox.AddF( ratings_numerical_hbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._ratings_numerical_panel.AddF( ratings_numerical_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( none_vbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( tag_vbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( ratings_like_vbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( ratings_numerical_vbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._none_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ratings_like_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ratings_numerical_panel, FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( shortcut_vbox, FLAGS_MIXED )
-            hbox.AddF( vbox, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._shortcut_panel, FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = u'\u2192' ), FLAGS_MIXED )
+            hbox.AddF( vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
@@ -567,13 +619,14 @@ class DialogInputNewAccounts( Dialog ):
         
         def InitialiseControls():
             
-            self._num = wx.SpinCtrl( self, min=1, max=10000, initial=1 )
+            self._num = wx.SpinCtrl( self, min=1, max=10000 )
+            self._num.SetValue( 1 )
             
             service = wx.GetApp().Read( 'service', service_identifier )
             
             connection = service.GetConnection()
             
-            account_types = connection.Get( 'accounttypes' )
+            account_types = connection.Get( 'account_types' )
             
             self._account_types = wx.Choice( self, size = ( 400, -1 ) )
             
@@ -607,7 +660,7 @@ class DialogInputNewAccounts( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( ctrl_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( ctrl_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -644,8 +697,8 @@ class DialogInputNewAccounts( Dialog ):
             
             connection = service.GetConnection()
             
-            if expiration is None: access_keys = connection.Get( 'accesskeys', num = num, title = title )
-            else: access_keys = connection.Get( 'accesskeys', num = num, title = title, expiration = expiration )
+            if expiration is None: access_keys = connection.Get( 'registration_keys', num = num, title = title )
+            else: access_keys = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
             
         except Exception as e: wx.MessageBox( unicode( e ) )
         
@@ -660,20 +713,22 @@ class DialogInputNewAccountType( Dialog ):
             
             self._title = wx.TextCtrl( self, value = title )
             
-            self._permissions = wx.ListBox( self )
+            self._permissions_panel = ClientGUICommon.StaticBox( self, 'permissions' )
+            
+            self._permissions = wx.ListBox( self._permissions_panel )
             
             for permission in permissions: self._permissions.Append( HC.permissions_string_lookup[ permission ], permission )
             
-            self._permission_choice = wx.Choice( self )
+            self._permission_choice = wx.Choice( self._permissions_panel )
             
             for permission in HC.CREATABLE_PERMISSIONS: self._permission_choice.Append( HC.permissions_string_lookup[ permission ], permission )
             
             self._permission_choice.SetSelection( 0 )
             
-            self._add_permission = wx.Button( self, label = 'add' )
+            self._add_permission = wx.Button( self._permissions_panel, label = 'add' )
             self._add_permission.Bind( wx.EVT_BUTTON, self.EventAddPermission )
             
-            self._remove_permission = wx.Button( self, label = 'remove' )
+            self._remove_permission = wx.Button( self._permissions_panel, label = 'remove' )
             self._remove_permission.Bind( wx.EVT_BUTTON, self.EventRemovePermission )
             
             self._max_num_mb = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', max_num_bytes, multiplier = 1048576 )
@@ -691,19 +746,18 @@ class DialogInputNewAccountType( Dialog ):
         def InitialisePanel():
             
             t_box = wx.BoxSizer( wx.HORIZONTAL )
-            t_box.AddF( wx.StaticText( self, label='title: ' ), FLAGS_SMALL_INDENT )
+            
+            t_box.AddF( wx.StaticText( self, label = 'title: ' ), FLAGS_SMALL_INDENT )
             t_box.AddF( self._title, FLAGS_EXPAND_BOTH_WAYS )
             
             perm_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
+            
             perm_buttons_box.AddF( self._permission_choice, FLAGS_MIXED )
             perm_buttons_box.AddF( self._add_permission, FLAGS_MIXED )
             perm_buttons_box.AddF( self._remove_permission, FLAGS_MIXED )
             
-            p_box = wx.BoxSizer( wx.VERTICAL )
-            
-            p_box.AddF( wx.StaticText( self, label = '- permissions -' ), FLAGS_SMALL_INDENT )
-            p_box.AddF( self._permissions, FLAGS_EXPAND_BOTH_WAYS )
-            p_box.AddF( perm_buttons_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._permissions_panel.AddF( self._permissions, FLAGS_EXPAND_BOTH_WAYS )
+            self._permissions_panel.AddF( perm_buttons_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -712,8 +766,8 @@ class DialogInputNewAccountType( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( t_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( p_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( t_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._max_num_mb, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._max_num_requests, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
@@ -843,7 +897,7 @@ class DialogInputNewFormField( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -936,8 +990,10 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
                 self._sign.SetSelection( sign )
                 
-                self._duration_s = wx.SpinCtrl( self, initial = s, max = 3599 )
-                self._duration_ms = wx.SpinCtrl( self, initial = ms, max = 999 )
+                self._duration_s = wx.SpinCtrl( self, max = 3599 )
+                self._duration_s.SetValue( s )
+                self._duration_ms = wx.SpinCtrl( self, max = 999 )
+                self._duration_ms.SetValue( ms )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1012,7 +1068,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
                 self._sign.SetSelection( sign )
                 
-                self._height = wx.SpinCtrl( self, initial = height, max = 200000 )
+                self._height = wx.SpinCtrl( self, max = 200000 )
+                self._height.SetValue( height )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1048,7 +1105,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 limit = system_predicates[ 'limit' ]
                 
-                self._limit = wx.SpinCtrl( self, initial = limit, max = 1000000 )
+                self._limit = wx.SpinCtrl( self, max = 1000000 )
+                self._limit.SetValue( limit )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1131,7 +1189,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '<', '=', '>' ] )
                 self._sign.SetSelection( sign )
                 
-                self._num_tags = wx.SpinCtrl( self, initial = num_tags, max = 2000 )
+                self._num_tags = wx.SpinCtrl( self, max = 2000 )
+                self._num_tags.SetValue( num_tags )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1174,7 +1233,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign_numerical = wx.Choice( self, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated', '=uncertain' ] )
                 self._sign_numerical.SetSelection( sign )
                 
-                self._value_numerical = wx.SpinCtrl( self, initial = value, min = 0, max = 50000 ) # set bounds based on current service
+                self._value_numerical = wx.SpinCtrl( self, min = 0, max = 50000 ) # set bounds based on current service
+                self._value_numerical.SetValue( value )
                 
                 self._first_ok = wx.Button( self, label='Ok', id = HC.LOCAL_RATING_NUMERICAL )
                 self._first_ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1211,7 +1271,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 hbox.AddF( self._value_numerical, FLAGS_MIXED )
                 hbox.AddF( self._first_ok, FLAGS_MIXED )
                 
-                vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
@@ -1221,7 +1281,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 hbox.AddF( self._value_like, FLAGS_MIXED )
                 hbox.AddF( self._second_ok, FLAGS_MIXED )
                 
-                vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 self.SetSizer( vbox )
                 
@@ -1249,9 +1309,11 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '=', u'\u2248' ] )
                 self._sign.SetSelection( sign )
                 
-                self._width = wx.SpinCtrl( self, initial = width, max = 50000 )
+                self._width = wx.SpinCtrl( self, max = 50000 )
+                self._width.SetValue( width )
                 
-                self._height = wx.SpinCtrl( self, initial = height, max = 50000 )
+                self._height = wx.SpinCtrl( self, max = 50000 )
+                self._height.SetValue( height )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1292,7 +1354,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
                 self._sign.SetSelection( sign )
                 
-                self._size = wx.SpinCtrl( self, initial = size, max = 1048576 )
+                self._size = wx.SpinCtrl( self, max = 1048576 )
+                self._size.SetValue( size )
                 
                 self._unit = wx.Choice( self, choices=[ 'b', 'B', 'Kb', 'KB', 'Mb', 'MB', 'Gb', 'GB' ] )
                 self._unit.SetSelection( unit )
@@ -1335,7 +1398,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
                 self._sign.SetSelection( sign )
                 
-                self._width = wx.SpinCtrl( self, initial = width, max = 200000 )
+                self._width = wx.SpinCtrl( self, max = 200000 )
+                self._width.SetValue( width )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1445,6 +1509,8 @@ class DialogInputFileSystemPredicate( Dialog ):
             
         elif media == 'application':
             
+            self._mime_type.Append( 'any', HC.APPLICATIONS )
+            self._mime_type.Append( 'pdf', HC.APPLICATION_PDF )
             self._mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
             
         elif media == 'video':
@@ -1783,7 +1849,7 @@ class DialogInputShortcut( Dialog ):
             
             self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
             
-            self._actions = wx.Choice( self, choices = [ 'archive', 'close_page', 'filter', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last' ] )
+            self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last' ] )
             self._actions.SetSelection( self._actions.FindString( action ) )
             
             self._ok = wx.Button( self, label='Ok' )
@@ -1808,7 +1874,7 @@ class DialogInputShortcut( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -1846,11 +1912,13 @@ class DialogManageAccountTypes( Dialog ):
             
             connection = service.GetConnection()
             
-            account_types = connection.Get( 'accounttypes' )
+            account_types = connection.Get( 'account_types' )
             
             self._titles_to_account_types = {}
             
-            self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ] )
+            self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
+            
+            self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ] )
             
             for account_type in account_types:
                 
@@ -1869,13 +1937,13 @@ class DialogManageAccountTypes( Dialog ):
                 self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
                 
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self._account_types_panel, label='add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             
-            self._edit = wx.Button( self, label='edit' )
+            self._edit = wx.Button( self._account_types_panel, label='edit' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
-            self._delete = wx.Button( self, label='delete' )
+            self._delete = wx.Button( self._account_types_panel, label='delete' )
             self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
             
             self._apply = wx.Button( self, label='apply' )
@@ -1890,22 +1958,20 @@ class DialogManageAccountTypes( Dialog ):
         def InitialisePanel():
             
             h_b_box = wx.BoxSizer( wx.HORIZONTAL )
+            
             h_b_box.AddF( self._add, FLAGS_MIXED )
             h_b_box.AddF( self._edit, FLAGS_MIXED )
             h_b_box.AddF( self._delete, FLAGS_MIXED )
             
-            a_t_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            a_t_vbox.AddF( wx.StaticText( self, label = '- account types -' ), FLAGS_SMALL_INDENT )
-            a_t_vbox.AddF( self._ctrl_account_types, FLAGS_EXPAND_BOTH_WAYS )
-            a_t_vbox.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
+            self._account_types_panel.AddF( self._ctrl_account_types, FLAGS_EXPAND_BOTH_WAYS )
+            self._account_types_panel.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             b_box.AddF( self._apply, FLAGS_MIXED )
             b_box.AddF( self._cancel, FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( a_t_vbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._account_types_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -2053,7 +2119,7 @@ class DialogManageAccountTypes( Dialog ):
             
             connection = service.GetConnection()
             
-            connection.Post( 'accounttypesmodification', edit_log = self._edit_log )
+            connection.Post( 'account_types_modification', edit_log = self._edit_log )
             
         except Exception as e: wx.MessageBox( unicode( e ) )
         
@@ -2268,28 +2334,38 @@ class DialogManageBoorusBooruPanel( wx.Panel ):
         
         def InitialiseControls():
             
-            self._search_url = wx.TextCtrl( self, value = search_url )
+            self._booru_panel = ClientGUICommon.StaticBox( self, 'booru' )
+            
+            #
+            
+            self._search_panel = ClientGUICommon.StaticBox( self._booru_panel, 'search' )
+            
+            self._search_url = wx.TextCtrl( self._search_panel, value = search_url )
             self._search_url.Bind( wx.EVT_TEXT, self.EventHTML )
             
-            self._search_separator = wx.Choice( self, choices = [ '+', '&', '%20' ] )
+            self._search_separator = wx.Choice( self._search_panel, choices = [ '+', '&', '%20' ] )
             self._search_separator.Select( self._search_separator.FindString( search_separator ) )
             self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
             
-            self._gallery_advance_num = wx.SpinCtrl( self, min = 1, max = 1000, initial = gallery_advance_num )
+            self._gallery_advance_num = wx.SpinCtrl( self._search_panel, min = 1, max = 1000, initial = gallery_advance_num )
             self._gallery_advance_num.Bind( wx.EVT_SPIN, self.EventHTML )
             
-            self._thumb_classname = wx.TextCtrl( self, value = thumb_classname )
+            self._thumb_classname = wx.TextCtrl( self._search_panel, value = thumb_classname )
             self._thumb_classname.Bind( wx.EVT_TEXT, self.EventHTML )
             
-            self._example_html_search = wx.StaticText( self, style = wx.ST_NO_AUTORESIZE )
+            self._example_html_search = wx.StaticText( self._search_panel, style = wx.ST_NO_AUTORESIZE )
             
-            self._image_info = wx.TextCtrl( self )
+            #
+            
+            self._image_panel = ClientGUICommon.StaticBox( self._booru_panel, 'image' )
+            
+            self._image_info = wx.TextCtrl( self._image_panel )
             self._image_info.Bind( wx.EVT_TEXT, self.EventHTML )
             
-            self._image_id = wx.RadioButton( self, style = wx.RB_GROUP )
+            self._image_id = wx.RadioButton( self._image_panel, style = wx.RB_GROUP )
             self._image_id.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
             
-            self._image_data = wx.RadioButton( self )
+            self._image_data = wx.RadioButton( self._image_panel )
             self._image_data.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
             
             if image_id is None:
@@ -2303,65 +2379,63 @@ class DialogManageBoorusBooruPanel( wx.Panel ):
                 self._image_id.SetValue( True )
                 
             
-            self._example_html_image = wx.StaticText( self, style = wx.ST_NO_AUTORESIZE )
+            self._example_html_image = wx.StaticText( self._image_panel, style = wx.ST_NO_AUTORESIZE )
             
-            self._tag_classnames_to_namespaces = wx.ListBox( self, style = wx.LB_SORT )
+            #
+            
+            self._tag_panel = ClientGUICommon.StaticBox( self._booru_panel, 'tags' )
+            
+            self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel, style = wx.LB_SORT )
             self._tag_classnames_to_namespaces.Bind( wx.EVT_LEFT_DCLICK, self.EventRemove )
             
             for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
             
-            self._tag_classname = wx.TextCtrl( self )
-            self._namespace = wx.TextCtrl( self )
+            self._tag_classname = wx.TextCtrl( self._tag_panel )
+            self._namespace = wx.TextCtrl( self._tag_panel )
             
-            self._add = wx.Button( self, label = 'add' )
+            self._add = wx.Button( self._tag_panel, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             
-            self._example_html_tags = wx.StaticText( self, style = wx.ST_NO_AUTORESIZE )
+            self._example_html_tags = wx.StaticText( self._tag_panel, style = wx.ST_NO_AUTORESIZE )
             
         
         def InitialisePanel():
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox1 = wx.BoxSizer( wx.VERTICAL )
-            
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='search url' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._search_panel, label='search url' ), FLAGS_MIXED )
             gridbox.AddF( self._search_url, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='search tag separator' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._search_panel, label='search tag separator' ), FLAGS_MIXED )
             gridbox.AddF( self._search_separator, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='gallery page advance' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._search_panel, label='gallery page advance' ), FLAGS_MIXED )
             gridbox.AddF( self._gallery_advance_num, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='thumbnail classname' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._search_panel, label='thumbnail classname' ), FLAGS_MIXED )
             gridbox.AddF( self._thumb_classname, FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox1.AddF( wx.StaticText( self, label = '- search -' ), FLAGS_SMALL_INDENT )
-            vbox1.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox1.AddF( self._example_html_search, FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._search_panel.AddF( self._example_html_search, FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox2 = wx.BoxSizer( wx.VERTICAL )
+            #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='text' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._image_panel, label='text' ), FLAGS_MIXED )
             gridbox.AddF( self._image_info, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='id of <img>' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._image_panel, label='id of <img>' ), FLAGS_MIXED )
             gridbox.AddF( self._image_id, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='text of <a>' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._image_panel, label='text of <a>' ), FLAGS_MIXED )
             gridbox.AddF( self._image_data, FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox2.AddF( wx.StaticText( self, label = '- image -' ), FLAGS_SMALL_INDENT )
-            vbox2.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox2.AddF( self._example_html_image, FLAGS_EXPAND_PERPENDICULAR )
+            self._image_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._image_panel.AddF( self._example_html_image, FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox3 = wx.BoxSizer( wx.VERTICAL )
+            #
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -2369,15 +2443,19 @@ class DialogManageBoorusBooruPanel( wx.Panel ):
             hbox.AddF( self._namespace, FLAGS_MIXED )
             hbox.AddF( self._add, FLAGS_MIXED )
             
-            vbox3.AddF( wx.StaticText( self, label = '- tags -' ), FLAGS_SMALL_INDENT )
-            vbox3.AddF( self._tag_classnames_to_namespaces, FLAGS_EXPAND_BOTH_WAYS )
-            vbox3.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox3.AddF( self._example_html_tags, FLAGS_EXPAND_PERPENDICULAR )
+            self._tag_panel.AddF( self._tag_classnames_to_namespaces, FLAGS_EXPAND_BOTH_WAYS )
+            self._tag_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._tag_panel.AddF( self._example_html_tags, FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( wx.StaticText( self, label = '- booru -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( vbox1, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( vbox2, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( vbox3, FLAGS_EXPAND_BOTH_WAYS )
+            #
+            
+            self._booru_panel.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
+            self._booru_panel.AddF( self._image_panel, FLAGS_EXPAND_PERPENDICULAR )
+            self._booru_panel.AddF( self._tag_panel, FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._booru_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -2660,7 +2738,7 @@ class DialogManageContacts( Dialog ):
                         
                         connection = contact.GetConnection()
                         
-                        public_key = connection.Get( 'publickey', contact_key = contact_key.encode( 'hex' ) )
+                        public_key = connection.Get( 'public_key', contact_key = contact_key.encode( 'hex' ) )
                         
                     except: raise Exception( 'Could not fetch the contact\'s public key from the address:' + os.linesep + traceback.format_exc() )
                     
@@ -2925,15 +3003,17 @@ class DialogManageContactsContactPanel( wx.Panel ):
         
         def InitialiseControls():
             
-            self._name = wx.TextCtrl( self, value = name )
+            self._contact_panel = ClientGUICommon.StaticBox( self, 'contact' )
+            
+            self._name = wx.TextCtrl( self._contact_panel, value = name )
             
             contact_address = host + ':' + str( port )
             
             if contact_key is not None: contact_address = contact_key.encode( 'hex' ) + '@' + contact_address
             
-            self._contact_address = wx.TextCtrl( self, value = contact_address )
+            self._contact_address = wx.TextCtrl( self._contact_panel, value = contact_address )
             
-            self._public_key = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+            self._public_key = wx.TextCtrl( self._contact_panel, style = wx.TE_MULTILINE )
             
             if public_key is not None: self._public_key.SetValue( public_key )
             
@@ -2946,17 +3026,18 @@ class DialogManageContactsContactPanel( wx.Panel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='name' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._contact_panel, label='name' ), FLAGS_MIXED )
             gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='contact address' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._contact_panel, label='contact address' ), FLAGS_MIXED )
             gridbox.AddF( self._contact_address, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'public key' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), FLAGS_MIXED )
             gridbox.AddF( self._public_key, FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._contact_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = '- contact -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._contact_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -3089,7 +3170,7 @@ class DialogManage4chanPass( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._status, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._reauthenticate, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
@@ -3154,9 +3235,7 @@ class DialogManage4chanPass( Dialog ):
             
             connection = CC.AdvancedHTTPConnection( url = 'https://sys.4chan.org/', accept_cookies = True )
             
-            connection.request( 'POST', '/auth', headers = headers, body = body )
-            
-            cookies = connection.GetCookies()
+            response = connection.request( 'POST', '/auth', headers = headers, body = body )
             
             self._timeout = int( time.time() ) + 365 * 24 * 3600
             
@@ -3380,7 +3459,9 @@ class DialogManageImageboardsSitePanel( wx.Panel ):
             
             self._edit_log = []
             
-            self._imageboards = ClientGUICommon.ListBook( self )
+            self._site_panel = ClientGUICommon.StaticBox( self, 'site' )
+            
+            self._imageboards = ClientGUICommon.ListBook( self._site_panel )
             
             for imageboard in imageboards:
                 
@@ -3391,15 +3472,15 @@ class DialogManageImageboardsSitePanel( wx.Panel ):
                 self._imageboards.AddPage( page_info, name )
                 
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self._site_panel, label='add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self._site_panel, label='remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._export = wx.Button( self, label='export' )
+            self._export = wx.Button( self._site_panel, label='export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
         
@@ -3410,11 +3491,12 @@ class DialogManageImageboardsSitePanel( wx.Panel ):
             add_remove_hbox.AddF( self._remove, FLAGS_MIXED )
             add_remove_hbox.AddF( self._export, FLAGS_MIXED )
             
+            self._site_panel.AddF( self._imageboards, FLAGS_EXPAND_BOTH_WAYS )
+            self._site_panel.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = '- site -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( self._imageboards, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
+            vbox.AddF( self._site_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -3538,58 +3620,74 @@ class DialogManageImageboardsImageboardPanel( wx.Panel ):
         
         def InitialiseControls():
             
-            self._post_url = wx.TextCtrl( self, value = post_url )
+            self._imageboard_panel = ClientGUICommon.StaticBox( self, 'imageboard' )
             
-            self._flood_time = wx.SpinCtrl( self, min = 5, max = 1200, initial = flood_time )
+            #
             
-            self._form_fields = ClientGUICommon.SaneListCtrl( self, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ] )
+            self._basic_info_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'basic info' )
+            
+            self._post_url = wx.TextCtrl( self._basic_info_panel, value = post_url )
+            
+            self._flood_time = wx.SpinCtrl( self._basic_info_panel, min = 5, max = 1200, initial = flood_time )
+            
+            #
+            
+            self._form_fields_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'form fields' )
+            
+            self._form_fields = ClientGUICommon.SaneListCtrl( self._form_fields_panel, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ] )
             
             for ( name, type, default, editable ) in form_fields:
                 
                 self._form_fields.Append( ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
                 
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self._form_fields_panel, label='add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             
-            self._edit = wx.Button( self, label='edit' )
+            self._edit = wx.Button( self._form_fields_panel, label='edit' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
-            self._delete = wx.Button( self, label='delete' )
+            self._delete = wx.Button( self._form_fields_panel, label='delete' )
             self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            #
+            
+            self._restrictions_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'restrictions' )
             
             if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
             else: value = None
             
-            self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'min resolution', value, num_dimensions = 2 )
+            self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'min resolution', value, num_dimensions = 2 )
             
             if CC.RESTRICTION_MAX_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MAX_RESOLUTION ]
             else: value = None
             
-            self._max_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'max resolution', value, num_dimensions = 2 )
+            self._max_resolution = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'max resolution', value, num_dimensions = 2 )
             
             if CC.RESTRICTION_MAX_FILE_SIZE in restrictions: value = restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ]
             else: value = None
             
-            self._max_file_size = ClientGUICommon.NoneableSpinCtrl( self, 'max file size (KB)', value, multiplier = 1024 )
+            self._max_file_size = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'max file size (KB)', value, multiplier = 1024 )
             
-            self._mimes = wx.ListBox( self )
+            self._allowed_mimes_panel = ClientGUICommon.StaticBox( self._restrictions_panel, 'allowed mimes' )
+            
+            self._mimes = wx.ListBox( self._allowed_mimes_panel )
             
             if CC.RESTRICTION_ALLOWED_MIMES in restrictions: mimes = restrictions[ CC.RESTRICTION_ALLOWED_MIMES ]
             else: mimes = []
             
             for mime in mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
             
-            self._mime_choice = wx.Choice( self )
+            self._mime_choice = wx.Choice( self._allowed_mimes_panel )
             
             for mime in HC.ALLOWED_MIMES: self._mime_choice.Append( HC.mime_string_lookup[ mime ], mime )
             
             self._mime_choice.SetSelection( 0 )
             
-            self._add_mime = wx.Button( self, label = 'add' )
+            self._add_mime = wx.Button( self._allowed_mimes_panel, label = 'add' )
             self._add_mime.Bind( wx.EVT_BUTTON, self.EventAddMime )
             
-            self._remove_mime = wx.Button( self, label = 'remove' )
+            self._remove_mime = wx.Button( self._allowed_mimes_panel, label = 'remove' )
             self._remove_mime.Bind( wx.EVT_BUTTON, self.EventRemoveMime )
             
         
@@ -3597,51 +3695,53 @@ class DialogManageImageboardsImageboardPanel( wx.Panel ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            #
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='POST URL' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._basic_info_panel, label='POST URL' ), FLAGS_MIXED )
             gridbox.AddF( self._post_url, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='flood time' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._basic_info_panel, label='flood time' ), FLAGS_MIXED )
             gridbox.AddF( self._flood_time, FLAGS_EXPAND_BOTH_WAYS )
             
-            field_box = wx.BoxSizer( wx.VERTICAL )
+            self._basic_info_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            field_box.AddF( wx.StaticText( self, label = '- form fields -' ), FLAGS_SMALL_INDENT )
-            field_box.AddF( self._form_fields, FLAGS_EXPAND_BOTH_WAYS )
+            #
             
             h_b_box = wx.BoxSizer( wx.HORIZONTAL )
             h_b_box.AddF( self._add, FLAGS_MIXED )
             h_b_box.AddF( self._edit, FLAGS_MIXED )
             h_b_box.AddF( self._delete, FLAGS_MIXED )
             
+            self._form_fields_panel.AddF( self._form_fields, FLAGS_EXPAND_BOTH_WAYS )
+            self._form_fields_panel.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
+            
+            #
+            
             mime_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
             mime_buttons_box.AddF( self._mime_choice, FLAGS_MIXED )
             mime_buttons_box.AddF( self._add_mime, FLAGS_MIXED )
             mime_buttons_box.AddF( self._remove_mime, FLAGS_MIXED )
             
-            m_box = wx.BoxSizer( wx.VERTICAL )
+            self._allowed_mimes_panel.AddF( self._mimes, FLAGS_EXPAND_BOTH_WAYS )
+            self._allowed_mimes_panel.AddF( mime_buttons_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            m_box.AddF( wx.StaticText( self, label = '- allowed mimes -' ), FLAGS_SMALL_INDENT )
-            m_box.AddF( self._mimes, FLAGS_EXPAND_BOTH_WAYS )
-            m_box.AddF( mime_buttons_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._restrictions_panel.AddF( self._min_resolution, FLAGS_EXPAND_PERPENDICULAR )
+            self._restrictions_panel.AddF( self._max_resolution, FLAGS_EXPAND_PERPENDICULAR )
+            self._restrictions_panel.AddF( self._max_file_size, FLAGS_EXPAND_PERPENDICULAR )
+            self._restrictions_panel.AddF( self._allowed_mimes_panel, FLAGS_EXPAND_BOTH_WAYS )
             
-            restrictions_box = wx.BoxSizer( wx.VERTICAL )
+            #
             
-            restrictions_box.AddF( wx.StaticText( self, label = '- restrictions -' ), FLAGS_SMALL_INDENT )
-            restrictions_box.AddF( self._min_resolution, FLAGS_EXPAND_PERPENDICULAR )
-            restrictions_box.AddF( self._max_resolution, FLAGS_EXPAND_PERPENDICULAR )
-            restrictions_box.AddF( self._max_file_size, FLAGS_EXPAND_PERPENDICULAR )
-            restrictions_box.AddF( m_box, FLAGS_EXPAND_BOTH_WAYS )
+            self._imageboard_panel.AddF( self._basic_info_panel, FLAGS_EXPAND_PERPENDICULAR )
+            self._imageboard_panel.AddF( self._form_fields_panel, FLAGS_EXPAND_BOTH_WAYS )
+            self._imageboard_panel.AddF( self._restrictions_panel, FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( wx.StaticText( self, label = '- imageboard -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( field_box, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( restrictions_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._imageboard_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -3838,13 +3938,15 @@ class DialogManageOptionsFileRepository( Dialog ):
         
         def InitialiseControls():
             
-            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
-            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self, 'max storage (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            self._file_repository_panel = ClientGUICommon.StaticBox( self, 'file repository' )
             
-            self._log_uploader_ips = wx.CheckBox( self, label='' )
+            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._file_repository_panel, 'max monthly data (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._file_repository_panel, 'max storage (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            
+            self._log_uploader_ips = wx.CheckBox( self._file_repository_panel, label='' )
             self._log_uploader_ips.SetValue( options[ 'log_uploader_ips' ] )
             
-            self._message = wx.TextCtrl( self, value = options[ 'message' ] )
+            self._message = wx.TextCtrl( self._file_repository_panel, value = options[ 'message' ] )
             
             self._save_button = wx.Button( self, label='Save' )
             self._save_button.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -3861,17 +3963,14 @@ class DialogManageOptionsFileRepository( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='Log uploader ips?' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_repository_panel, label='Log uploader ips?' ), FLAGS_MIXED )
             gridbox.AddF( self._log_uploader_ips, FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label='Message' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_repository_panel, label='Message' ), FLAGS_MIXED )
             gridbox.AddF( self._message, FLAGS_MIXED )
             
-            file_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            file_vbox.AddF( wx.StaticText( self, label = '- file repository -' ), FLAGS_SMALL_INDENT )
-            file_vbox.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
-            file_vbox.AddF( self._max_storage, FLAGS_EXPAND_PERPENDICULAR )
-            file_vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._file_repository_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
+            self._file_repository_panel.AddF( self._max_storage, FLAGS_EXPAND_PERPENDICULAR )
+            self._file_repository_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -3880,7 +3979,7 @@ class DialogManageOptionsFileRepository( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( file_vbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._file_repository_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -3967,10 +4066,12 @@ class DialogManageOptionsLocal( Dialog ):
             
             ( thumbnail_width, thumbnail_height ) = self._options[ 'thumbnail_dimensions' ]
             
-            self._thumbnail_width = wx.SpinCtrl( self._file_page, initial = thumbnail_width, min=20, max=200 )
+            self._thumbnail_width = wx.SpinCtrl( self._file_page, min=20, max=200 )
+            self._thumbnail_width.SetValue( thumbnail_width )
             self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._thumbnail_height = wx.SpinCtrl( self._file_page, initial = thumbnail_height, min=20, max=200 )
+            self._thumbnail_height = wx.SpinCtrl( self._file_page, min=20, max=200 )
+            self._thumbnail_height.SetValue( thumbnail_height )
             self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
             self._num_autocomplete_chars = wx.SpinCtrl( self._file_page, initial = self._options[ 'num_autocomplete_chars' ], min = 1, max = 100 )
@@ -4007,6 +4108,9 @@ class DialogManageOptionsLocal( Dialog ):
             for service_identifier in service_identifiers: self._default_tag_repository.Append( service_identifier.GetName(), service_identifier )
             
             self._default_tag_repository.SetStringSelection( self._options[ 'default_tag_repository' ].GetName() )
+            
+            self._fullscreen_borderless = wx.CheckBox( self._gui_page )
+            self._fullscreen_borderless.SetValue( self._options[ 'fullscreen_borderless' ] )
             
             self._listbook.AddPage( self._gui_page, 'gui' )
             
@@ -4126,7 +4230,7 @@ class DialogManageOptionsLocal( Dialog ):
             
             self._default_sort = ClientGUICommon.ChoiceSort( self._sort_by_page, sort_by = self._options[ 'sort_by' ] )
             
-            self._default_collect = ClientGUICommon.ChoiceCollect( self._sort_by_page, sort_by = self._options[ 'sort_by' ] )
+            self._default_collect = ClientGUICommon.CheckboxCollect( self._sort_by_page, sort_by = self._options[ 'sort_by' ] )
             
             self._sort_by = wx.ListBox( self._sort_by_page )
             self._sort_by.Bind( wx.EVT_LEFT_DCLICK, self.EventRemoveSortBy )
@@ -4236,6 +4340,9 @@ class DialogManageOptionsLocal( Dialog ):
             gridbox.AddF( wx.StaticText( self._gui_page, label='By default, search non-local tags in write-autocomplete: ' ), FLAGS_MIXED )
             gridbox.AddF( self._gui_show_all_tags_in_autocomplete, FLAGS_MIXED )
             
+            gridbox.AddF( wx.StaticText( self._gui_page, label='By default, show fullscreen without borders: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._fullscreen_borderless, FLAGS_MIXED )
+            
             self._gui_page.SetSizer( gridbox )
             
             #
@@ -4253,7 +4360,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_age_days, FLAGS_MIXED )
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='days' ), FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4264,7 +4371,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_duration_ms, FLAGS_MIXED )
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='ms' ), FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4272,14 +4379,14 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_height_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_height, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:limit=' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_limit, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4288,7 +4395,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='/' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_mime_type, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4296,14 +4403,14 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_num_tags_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_tags, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:local_rating_like' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_local_rating_like_value, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4311,7 +4418,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_local_rating_numerical_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_local_rating_numerical_value, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4321,7 +4428,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label=':' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_ratio_height, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4330,7 +4437,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_size, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_size_unit, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4338,7 +4445,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._file_system_predicate_width_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_width, FLAGS_MIXED )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self._file_system_predicates_page.SetSizer( vbox )
             
@@ -4365,7 +4472,7 @@ class DialogManageOptionsLocal( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._sort_by, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_sort_by, FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4384,7 +4491,7 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( self._shortcuts_edit, FLAGS_BUTTON_SIZERS )
             hbox.AddF( self._shortcuts_delete, FLAGS_BUTTON_SIZERS )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self._shortcuts_page.SetSizer( vbox )
             
@@ -4469,6 +4576,8 @@ class DialogManageOptionsLocal( Dialog ):
             
         elif media == 'application':
             
+            self._file_system_predicate_mime_type.Append( 'any', HC.APPLICATIONS )
+            self._file_system_predicate_mime_type.Append( 'pdf', HC.APPLICATION_PDF )
             self._file_system_predicate_mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
             
         elif media == 'video':
@@ -4532,10 +4641,11 @@ class DialogManageOptionsLocal( Dialog ):
         
         self._options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
         self._options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
+        self._options[ 'fullscreen_borderless' ] = self._fullscreen_borderless.GetValue()
         
         self._options[ 'export_path' ] = HC.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
         self._options[ 'default_sort' ] = self._default_sort.GetSelection() 
-        self._options[ 'default_collect' ] = self._default_collect.GetSelection() 
+        self._options[ 'default_collect' ] = self._default_collect.GetChoice()
         
         self._options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
         
@@ -4665,10 +4775,14 @@ class DialogManageOptionsServerAdmin( Dialog ):
         
         def InitialiseControls():
             
-            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
-            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self, 'max storage (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
             
-            self._message = wx.TextCtrl( self, value = options[ 'message' ] )
+            self._server_panel = ClientGUICommon.StaticBox( self, 'server' )
+            
+            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._server_panel, 'max monthly data (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            
+            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._server_panel, 'max storage (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            
+            self._message = wx.TextCtrl( self._server_panel, value = options[ 'message' ] )
             
             self._save_button = wx.Button( self, label='Save' )
             self._save_button.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -4685,15 +4799,12 @@ class DialogManageOptionsServerAdmin( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='Message' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._server_panel, label='Message' ), FLAGS_MIXED )
             gridbox.AddF( self._message, FLAGS_MIXED )
             
-            file_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            file_vbox.AddF( wx.StaticText( self, label = '- server -' ), FLAGS_SMALL_INDENT )
-            file_vbox.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
-            file_vbox.AddF( self._max_storage, FLAGS_EXPAND_PERPENDICULAR )
-            file_vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._server_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
+            self._server_panel.AddF( self._max_storage, FLAGS_EXPAND_PERPENDICULAR )
+            self._server_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4702,7 +4813,7 @@ class DialogManageOptionsServerAdmin( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( file_vbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._server_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -4756,9 +4867,11 @@ class DialogManageOptionsTagRepository( Dialog ):
         
         def InitialiseControls():
             
-            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            self._tag_repository_panel = ClientGUICommon.StaticBox( self, 'tag repository' )
             
-            self._message = wx.TextCtrl( self, value = options[ 'message' ] )
+            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._tag_repository_panel, 'max monthly data (MB)', options[ 'max_monthly_data' ], multiplier = 1048576 )
+            
+            self._message = wx.TextCtrl( self._tag_repository_panel, value = options[ 'message' ] )
             
             self._save_button = wx.Button( self, label='Save' )
             self._save_button.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -4775,14 +4888,11 @@ class DialogManageOptionsTagRepository( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='Message' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._tag_repository_panel, label='Message' ), FLAGS_MIXED )
             gridbox.AddF( self._message, FLAGS_MIXED )
             
-            tag_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            tag_vbox.AddF( wx.StaticText( self, label = '- tag repository -' ), FLAGS_SMALL_INDENT )
-            tag_vbox.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
-            tag_vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._tag_repository_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
+            self._tag_repository_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -4791,7 +4901,7 @@ class DialogManageOptionsTagRepository( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( tag_vbox, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_repository_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -4837,6 +4947,116 @@ class DialogManageOptionsTagRepository( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
+class DialogManagePixivAccount( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._id = wx.TextCtrl( self, value = id )
+            self._password = wx.TextCtrl( self, value = password )
+            
+            self._status = wx.StaticText( self )
+            
+            self._test = wx.Button( self, label = 'test' )
+            self._test.Bind( wx.EVT_BUTTON, self.EventTest )
+            
+            self._ok = wx.Button( self, label='Ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label='id/email' ), FLAGS_MIXED )
+            gridbox.AddF( self._id, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label='password' ), FLAGS_MIXED )
+            gridbox.AddF( self._password, FLAGS_EXPAND_BOTH_WAYS )
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._status, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._test, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            x = max( x, 240 )
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'manage pixiv account' )
+        
+        ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventOk( self, event ):
+        
+        id = self._id.GetValue()
+        password = self._password.GetValue()
+        
+        wx.GetApp().Write( 'pixiv_account', id, password )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventTest( self, event ):
+        
+        try:
+            
+            id = self._id.GetValue()
+            password = self._password.GetValue()
+            
+            form_fields = {}
+            
+            form_fields[ 'mode' ] = 'login'
+            form_fields[ 'pixiv_id' ] = id
+            form_fields[ 'pass' ] = password
+            
+            body = urllib.urlencode( form_fields )
+            
+            headers = {}
+            headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+            
+            connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net/', accept_cookies = True )
+            
+            response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
+            
+            cookies = connection.GetCookies()
+            
+            # _ only given to logged in php sessions
+            if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
+            else: self._status.SetLabel( 'Did not work!' )
+            
+            wx.CallLater( 2000, self._status.SetLabel, '' )
+            
+        except Exception as e:
+            wx.MessageBox( traceback.format_exc() )
+            wx.MessageBox( unicode( e ) )
+        
+    
 class DialogManageRatings( Dialog ):
     
     def __init__( self, parent, media ):
@@ -4871,7 +5091,7 @@ class DialogManageRatings( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            for panel in self._panels: vbox.AddF( panel, FLAGS_EXPAND_BOTH_WAYS )
+            for panel in self._panels: vbox.AddF( panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -4937,7 +5157,7 @@ class DialogManageRatings( Dialog ):
     
     def RefreshAcceleratorTable( self ):
         
-        interested_actions = [ 'archive', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch' ]
+        interested_actions = [ 'manage_ratings' ]
         
         entries = []
         
@@ -4963,7 +5183,9 @@ class DialogManageRatingsPanel( wx.Panel ):
         
         def InitialiseControls():
             
-            self._current_score = wx.StaticText( self, style = wx.ALIGN_CENTER )
+            self._ratings_panel = ClientGUICommon.StaticBox( self, self._service_identifier.GetName() )
+            
+            self._current_score = wx.StaticText( self._ratings_panel, style = wx.ALIGN_CENTER )
             
             score_font = self._GetScoreFont()
             
@@ -5055,7 +5277,7 @@ class DialogManageRatingsPanel( wx.Panel ):
                     
                     ( min, max ) = extra_info
                     
-                    self._slider = wx.Slider( self, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
+                    self._slider = wx.Slider( self._ratings_panel, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
                     self._slider.Bind( wx.EVT_SLIDER, self.EventSlider )
                     
                     ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
@@ -5109,7 +5331,7 @@ class DialogManageRatingsPanel( wx.Panel ):
             
             if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                 
-                self._choices = wx.Choice( self, choices = choices )
+                self._choices = wx.Choice( self._ratings_panel, choices = choices )
                 
                 self._choices.SetSelection( self._choices.FindString( 'make no changes' ) )
                 
@@ -5122,23 +5344,24 @@ class DialogManageRatingsPanel( wx.Panel ):
             if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): label = 'local rating'
             elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): label = 'remote rating'
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( wx.StaticText( self, label = '- ' + self._service_identifier.GetName() + ' -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( self._current_score, FLAGS_EXPAND_PERPENDICULAR )
+            self._ratings_panel.AddF( self._current_score, FLAGS_EXPAND_PERPENDICULAR )
             
             if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
-                    vbox.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
+                    self._ratings_panel.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
                     
                 elif service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    vbox.AddF( self._slider, FLAGS_EXPAND_PERPENDICULAR )
-                    vbox.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
+                    self._ratings_panel.AddF( self._slider, FLAGS_EXPAND_PERPENDICULAR )
+                    self._ratings_panel.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._ratings_panel, FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -5359,7 +5582,7 @@ class DialogManageServer( Dialog ):
                 
                 connection = self._service.GetConnection()
                 
-                connection.Post( 'servicesmodification', edit_log = self._edit_log )
+                connection.Post( 'services_modification', edit_log = self._edit_log )
                 
                 wx.GetApp().Write( 'update_server_services', self._service.GetServiceIdentifier(), self._edit_log )
                 
@@ -5414,7 +5637,9 @@ class DialogManageServerServicePanel( wx.Panel ):
         
         def InitialiseControls():
             
-            self._service_port = wx.SpinCtrl( self, min = 1, max = 65535 )
+            self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+            
+            self._service_port = wx.SpinCtrl( self._service_panel, min = 1, max = 65535 )
             self._service_port.SetValue( service_identifier.GetPort() )
             
         
@@ -5428,11 +5653,12 @@ class DialogManageServerServicePanel( wx.Panel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='port' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._service_panel, label='port' ), FLAGS_MIXED )
             gridbox.AddF( self._service_port, FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.AddF( wx.StaticText( self, label = '- service -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -5632,7 +5858,26 @@ class DialogManageServices( Dialog ):
                     if service_type in HC.REMOTE_SERVICES:
                         
                         if service_type == HC.SERVER_ADMIN: credentials = CC.Credentials( 'hostname', 45870, '' )
-                        elif service_type in HC.RESTRICTED_SERVICES: credentials = CC.Credentials( 'hostname', 45871, '' )
+                        elif service_type in HC.RESTRICTED_SERVICES:
+                            
+                            with DialogChooseNewServiceMethod( self ) as dlg:
+                                
+                                if dlg.ShowModal() != wx.ID_OK: return
+                                
+                                register = dlg.GetRegister()
+                                
+                                if register:
+                                    
+                                    with DialogRegisterService( self ) as dlg:
+                                        
+                                        if dlg.ShowModal() != wx.ID_OK: return
+                                        
+                                        credentials = dlg.GetCredentials()
+                                        
+                                    
+                                else: credentials = CC.Credentials( 'hostname', 45871, '' )
+                                
+                            
                         else: credentials = CC.Credentials( 'hostname', 45871 )
                         
                     else: credentials = None
@@ -5863,37 +6108,41 @@ class DialogManageServicesServicePanel( wx.Panel ):
         
         def InitialiseControls():
             
-            self._service_name = wx.TextCtrl( self, value = self._service_identifier.GetName() )
+            self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
             
-            if service_type in HC.REMOTE_SERVICES: self._service_credentials = wx.TextCtrl( self, value = self._credentials.GetConnectionString() )
+            self._service_name = wx.TextCtrl( self._service_panel, value = self._service_identifier.GetName() )
+            
+            if service_type in HC.REMOTE_SERVICES: self._service_credentials = wx.TextCtrl( self._service_panel, value = self._credentials.GetConnectionString() )
             
             if service_type == HC.MESSAGE_DEPOT:
                 
                 ( identity_name, check_period, private_key, receive_anon ) = self._extra_info
                 
-                self._identity_name = wx.TextCtrl( self, value = identity_name )
+                self._identity_name = wx.TextCtrl( self._service_panel, value = identity_name )
                 
-                self._check_period = wx.SpinCtrl( self, min = 60, max = 86400 * 7, initial = check_period )
+                self._check_period = wx.SpinCtrl( self._service_panel, min = 60, max = 86400 * 7 )
+                self._check_period.SetValue( check_period )
                 
-                self._private_key = wx.TextCtrl( self, value = private_key, style = wx.TE_MULTILINE )
+                self._private_key = wx.TextCtrl( self._service_panel, value = private_key, style = wx.TE_MULTILINE )
                 
-                self._receive_anon = wx.CheckBox( self )
+                self._receive_anon = wx.CheckBox( self._service_panel )
                 self._receive_anon.SetValue( receive_anon )
                 
             elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
                 
                 ( like, dislike ) = self._extra_info
                 
-                self._like = wx.TextCtrl( self, value = like )
-                self._dislike = wx.TextCtrl( self, value = dislike )
+                self._like = wx.TextCtrl( self._service_panel, value = like )
+                self._dislike = wx.TextCtrl( self._service_panel, value = dislike )
                 
             elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
                 
                 ( lower, upper ) = self._extra_info
                 
-                self._lower = wx.SpinCtrl( self, min = -2000, max = 2000, initial = lower )
-                self._upper = wx.SpinCtrl( self, min = -2000, max = 2000, initial = upper )
-                
+                self._lower = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
+                self._lower.SetValue( lower )
+                self._upper = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
+                self._upper.SetValue( upper )
             
         
         def InitialisePanel():
@@ -5906,48 +6155,49 @@ class DialogManageServicesServicePanel( wx.Panel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='name' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._service_panel, label='name' ), FLAGS_MIXED )
             gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
             
             if service_type in HC.REMOTE_SERVICES:
                 
-                gridbox.AddF( wx.StaticText( self, label='credentials' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='credentials' ), FLAGS_MIXED )
                 gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
                 
             
             if service_type == HC.MESSAGE_DEPOT:
                 
-                gridbox.AddF( wx.StaticText( self, label='identity name' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='identity name' ), FLAGS_MIXED )
                 gridbox.AddF( self._identity_name, FLAGS_EXPAND_BOTH_WAYS )
                 
-                gridbox.AddF( wx.StaticText( self, label='update period' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='update period' ), FLAGS_MIXED )
                 gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
                 
-                gridbox.AddF( wx.StaticText( self, label='private key' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='private key' ), FLAGS_MIXED )
                 gridbox.AddF( self._private_key, FLAGS_EXPAND_BOTH_WAYS )
                 
-                gridbox.AddF( wx.StaticText( self, label='receive messages from Anonymous?' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='receive messages from Anonymous?' ), FLAGS_MIXED )
                 gridbox.AddF( self._receive_anon, FLAGS_EXPAND_BOTH_WAYS )
                 
             elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
                 
-                gridbox.AddF( wx.StaticText( self, label='like' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='like' ), FLAGS_MIXED )
                 gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
                 
-                gridbox.AddF( wx.StaticText( self, label='dislike' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='dislike' ), FLAGS_MIXED )
                 gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
                 
             elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
                 
-                gridbox.AddF( wx.StaticText( self, label='lower limit' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='lower limit' ), FLAGS_MIXED )
                 gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
                 
-                gridbox.AddF( wx.StaticText( self, label='upper limit' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label='upper limit' ), FLAGS_MIXED )
                 gridbox.AddF( self._upper, FLAGS_EXPAND_BOTH_WAYS )
                 
             
-            vbox.AddF( wx.StaticText( self, label = '- service -' ), FLAGS_SMALL_INDENT )
-            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -6129,7 +6379,7 @@ class DialogManageTagServicePrecedence( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._explain, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( main_hbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( main_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -6273,6 +6523,13 @@ class DialogManageTags( Dialog ):
         self.RefreshAcceleratorTable()
         
     
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        page.SetTagBoxFocus()
+        
+    
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventMenu( self, event ):
@@ -6284,6 +6541,7 @@ class DialogManageTags( Dialog ):
             ( command, data ) = action
             
             if command == 'manage_tags': self.EventCancel( event )
+            elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'ok': self.EventOk( event )
             else: event.Skip()
             
@@ -6323,9 +6581,11 @@ class DialogManageTags( Dialog ):
     
     def RefreshAcceleratorTable( self ):
         
+        interested_actions = [ 'manage_tags', 'set_search_focus' ]
+        
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -6592,7 +6852,10 @@ class DialogManageTagsPanel( wx.Panel ):
     
     def HasChanges( self ): return len( self._edit_log ) > 0
     
-    def SetTagBoxFocus( self ): self._add_tag_box.SetFocus()
+    def SetTagBoxFocus( self ):
+        
+        if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.SetFocus()
+        
     
 class DialogMessage( Dialog ):
     
@@ -6644,24 +6907,30 @@ class DialogModifyAccounts( Dialog ):
                 
                 ( subject_identifier, ) = self._subject_identifiers
                 
-                subject_string = connection.Get( 'accountinfo', subject_identifier = subject_identifier )
+                subject_string = connection.Get( 'account_info', subject_identifier = subject_identifier )
                 
             else: subject_string = 'modifying ' + HC.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
             
-            self._subject_text = wx.StaticText( self, label = str( subject_string ) )
+            self._account_info_panel = ClientGUICommon.StaticBox( self, 'account info' )
             
-            account_types = connection.Get( 'accounttypes' )
+            self._subject_text = wx.StaticText( self._account_info_panel, label = str( subject_string ) )
             
-            self._account_types = wx.Choice( self )
+            account_types = connection.Get( 'account_types' )
+            
+            self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
+            
+            self._account_types = wx.Choice( self._account_types_panel )
             
             for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
             
             self._account_types.SetSelection( 0 )
             
-            self._account_types_ok = wx.Button( self, label = 'Ok' )
+            self._account_types_ok = wx.Button( self._account_types_panel, label = 'Ok' )
             self._account_types_ok.Bind( wx.EVT_BUTTON, self.EventChangeAccountType )
             
-            self._add_to_expires = wx.Choice( self )
+            self._expiration_panel = ClientGUICommon.StaticBox( self, 'change expiration' )
+            
+            self._add_to_expires = wx.Choice( self._expiration_panel )
             
             for ( string, value ) in HC.expirations:
                 
@@ -6669,22 +6938,24 @@ class DialogModifyAccounts( Dialog ):
                 
             self._add_to_expires.SetSelection( 1 ) # three months
             
-            self._add_to_expires_ok = wx.Button( self, label = 'Ok' )
+            self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
             self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
             
-            self._set_expires = wx.Choice( self )
+            self._set_expires = wx.Choice( self._expiration_panel )
             for ( string, value ) in HC.expirations: self._set_expires.Append( string, value )
             self._set_expires.SetSelection( 1 ) # three months
             
-            self._set_expires_ok = wx.Button( self, label = 'Ok' )
+            self._set_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
             self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
             
-            self._ban = wx.Button( self, label = 'ban user' )
+            self._ban_panel = ClientGUICommon.StaticBox( self, 'bans' )
+            
+            self._ban = wx.Button( self._ban_panel, label = 'ban user' )
             self._ban.Bind( wx.EVT_BUTTON, self.EventBan )        
             self._ban.SetBackgroundColour( ( 255, 0, 0 ) )
             self._ban.SetForegroundColour( ( 255, 255, 0 ) )
             
-            self._superban = wx.Button( self, label = 'ban user and delete every contribution they have ever made' )
+            self._superban = wx.Button( self._ban_panel, label = 'ban user and delete every contribution they have ever made' )
             self._superban.Bind( wx.EVT_BUTTON, self.EventSuperban )        
             self._superban.SetBackgroundColour( ( 255, 0, 0 ) )
             self._superban.SetForegroundColour( ( 255, 255, 0 ) )
@@ -6702,46 +6973,38 @@ class DialogModifyAccounts( Dialog ):
         
         def InitialisePanel():
             
-            info_box = wx.BoxSizer( wx.VERTICAL )
+            self._account_info_panel.AddF( self._subject_text, FLAGS_EXPAND_PERPENDICULAR )
             
-            info_box.AddF( wx.StaticText( self, label = '- account info -' ), FLAGS_SMALL_INDENT )
-            info_box.AddF( self._subject_text, FLAGS_EXPAND_PERPENDICULAR )
+            account_types_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            account_types_box = wx.BoxSizer( wx.HORIZONTAL )
+            account_types_hbox.AddF( self._account_types, FLAGS_MIXED )
+            account_types_hbox.AddF( self._account_types_ok, FLAGS_MIXED )
             
-            account_types_box.AddF( wx.StaticText( self, label = '- change account type -' ), FLAGS_SMALL_INDENT )
-            account_types_box.AddF( self._account_types, FLAGS_EXPAND_BOTH_WAYS )
-            account_types_box.AddF( self._account_types_ok, FLAGS_MIXED )
+            self._account_types_panel.AddF( account_types_hbox, FLAGS_EXPAND_PERPENDICULAR )
             
             add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            add_to_expires_box.AddF( wx.StaticText( self, label = 'Add to expires: ' ), FLAGS_MIXED )
+            add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), FLAGS_MIXED )
             add_to_expires_box.AddF( self._add_to_expires, FLAGS_EXPAND_BOTH_WAYS )
             add_to_expires_box.AddF( self._add_to_expires_ok, FLAGS_MIXED )
             
             set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            set_expires_box.AddF( wx.StaticText( self, label = 'Set expires to: ' ), FLAGS_MIXED )
+            set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), FLAGS_MIXED )
             set_expires_box.AddF( self._set_expires, FLAGS_EXPAND_BOTH_WAYS )
             set_expires_box.AddF( self._set_expires_ok, FLAGS_MIXED )
             
-            expires_box = wx.BoxSizer( wx.VERTICAL )
+            self._expiration_panel.AddF( add_to_expires_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( set_expires_box, FLAGS_EXPAND_PERPENDICULAR )
             
-            expires_box.AddF( wx.StaticText( self, label = '- change expiration -' ), FLAGS_SMALL_INDENT )
-            expires_box.AddF( add_to_expires_box, FLAGS_EXPAND_PERPENDICULAR )
-            expires_box.AddF( set_expires_box, FLAGS_EXPAND_PERPENDICULAR )
-            
-            ban_box = wx.BoxSizer( wx.HORIZONTAL )
-            
-            ban_box.AddF( wx.StaticText( self, label = '- bans -' ), FLAGS_SMALL_INDENT )
-            ban_box.AddF( self._ban, FLAGS_BUTTON_SIZERS )
-            ban_box.AddF( self._superban, FLAGS_BUTTON_SIZERS )
+            self._ban_panel.AddF( self._ban, FLAGS_EXPAND_PERPENDICULAR )
+            self._ban_panel.AddF( self._superban, FLAGS_EXPAND_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( info_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( account_types_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( expires_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( ban_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._account_info_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._account_types_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._expiration_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ban_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._exit, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -6770,13 +7033,13 @@ class DialogModifyAccounts( Dialog ):
             kwargs[ 'subject_identifiers' ] = list( self._subject_identifiers )
             kwargs[ 'action' ] = action
             
-            connection.Post( 'accountmodification', **kwargs )
+            connection.Post( 'account_modification', **kwargs )
             
             if len( self._subject_identifiers ) == 1:
                 
                 ( subject_identifier, ) = self._subject_identifiers
                 
-                self._subject_text.SetLabel( str( connection.Get( 'accountinfo', subject_identifier = subject_identifier ) ) )
+                self._subject_text.SetLabel( str( connection.Get( 'account_info', subject_identifier = subject_identifier ) ) )
                 
             
         except Exception as e: wx.MessageBox( unicode( e ) )
@@ -6969,8 +7232,46 @@ class DialogPathsToTagsRegex( Dialog ):
         
         InitialisePanel()
         
+        interested_actions = [ 'set_search_focus' ]
+        
+        entries = []
+        
+        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        page.SetTagBoxFocus()
+        
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventMenu( self, event ):
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            try:
+                
+                ( command, data ) = action
+                
+                if command == 'set_search_focus': self._SetSearchFocus()
+                else: event.Skip()
+                
+            except Exception as e:
+                
+                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( traceback.format_exc() )
+                
+            
+        
     
     def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
@@ -7046,37 +7347,54 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
             self._paths_list = ClientGUICommon.SaneListCtrl( self, 300, [ ( 'path', 400 ), ( 'tags', -1 ) ] )
             
             self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            self._page_regex = wx.TextCtrl( self )
-            self._chapter_regex = wx.TextCtrl( self )
-            self._volume_regex = wx.TextCtrl( self )
-            self._title_regex = wx.TextCtrl( self )
-            self._series_regex = wx.TextCtrl( self )
-            self._creator_regex = wx.TextCtrl( self )
+            #
             
-            self._update_button = wx.Button( self, label='update' )
+            self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
+            
+            self._page_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            self._chapter_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            self._volume_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            self._title_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            self._series_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            self._creator_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            
+            self._update_button = wx.Button( self._quick_namespaces_panel, label='update' )
             self._update_button.Bind( wx.EVT_BUTTON, self.EventUpdate )
             
-            self._regex_shortcuts = wx.Button( self, label = 'regex shortcuts' )
+            self._regex_shortcuts = wx.Button( self._quick_namespaces_panel, label = 'regex shortcuts' )
             self._regex_shortcuts.Bind( wx.EVT_BUTTON, self.EventRegexShortcuts )
             
-            self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+            self._regex_link = wx.HyperlinkCtrl( self._quick_namespaces_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
             
-            self._regexes = wx.ListBox( self )
+            #
+            
+            self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
+            
+            self._regexes = wx.ListBox( self._regexes_panel )
             self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
             
-            self._regex_box = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
+            self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
             self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
             
-            self._tags = ClientGUICommon.TagsBoxFlat( self, self.TagRemoved )
+            #
             
-            self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+            self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
+            
+            self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
+            
+            self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+            
+            #
+            
+            self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for this file' )
             
             self._paths_to_single_tags = collections.defaultdict( list )
             
-            self._single_tags = ClientGUICommon.TagsBoxFlat( self, self.SingleTagRemoved )
+            self._single_tags = ClientGUICommon.TagsBoxFlat( self._single_tags_panel, self.SingleTagRemoved )
             
-            self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+            self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
             self._single_tag_box.Disable()
             
             for path in self._paths:
@@ -7095,60 +7413,44 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='Page regex ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Page regex ' ), FLAGS_MIXED )
             gridbox.AddF( self._page_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='Chapter regex ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Chapter regex ' ), FLAGS_MIXED )
             gridbox.AddF( self._chapter_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='Volume regex ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Volume regex ' ), FLAGS_MIXED )
             gridbox.AddF( self._volume_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='Title regex ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Title regex ' ), FLAGS_MIXED )
             gridbox.AddF( self._title_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='Series regex ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Series regex ' ), FLAGS_MIXED )
             gridbox.AddF( self._series_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='Creator regex ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Creator regex ' ), FLAGS_MIXED )
             gridbox.AddF( self._creator_regex, FLAGS_EXPAND_BOTH_WAYS )
             
-            ns_vbox = wx.BoxSizer( wx.VERTICAL )
+            self._quick_namespaces_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._quick_namespaces_panel.AddF( self._update_button, FLAGS_LONE_BUTTON )
+            self._quick_namespaces_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
+            self._quick_namespaces_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
             
-            ns_vbox.AddF( wx.StaticText( self, label = '- quick namespaces -' ), FLAGS_SMALL_INDENT )
+            self._regexes_panel.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
+            self._regexes_panel.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
             
-            ns_vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
-            ns_vbox.AddF( self._update_button, FLAGS_LONE_BUTTON )
-            ns_vbox.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
-            ns_vbox.AddF( self._regex_link, FLAGS_LONE_BUTTON )
+            self._tags_panel.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
+            self._tags_panel.AddF( self._tag_box, FLAGS_EXPAND_PERPENDICULAR )
             
-            regex_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            regex_vbox.AddF( wx.StaticText( self, label = '- regexes -' ), FLAGS_SMALL_INDENT )
-            
-            regex_vbox.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
-            regex_vbox.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
-            
-            tag_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            tag_vbox.AddF( wx.StaticText( self, label = '- tags for all -' ), FLAGS_SMALL_INDENT )
-            
-            tag_vbox.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
-            tag_vbox.AddF( self._tag_box, FLAGS_EXPAND_PERPENDICULAR )
-            
-            tag_single_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            tag_single_vbox.AddF( wx.StaticText( self, label = '- tags just for this file -' ), FLAGS_SMALL_INDENT )
-            
-            tag_single_vbox.AddF( self._single_tags, FLAGS_EXPAND_BOTH_WAYS )
-            tag_single_vbox.AddF( self._single_tag_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._single_tags_panel.AddF( self._single_tags, FLAGS_EXPAND_BOTH_WAYS )
+            self._single_tags_panel.AddF( self._single_tag_box, FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( ns_vbox, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( regex_vbox, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( tag_vbox, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( tag_single_vbox, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._quick_namespaces_panel, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._regexes_panel, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._tags_panel, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._single_tags_panel, FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._paths_list, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( hbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -7215,6 +7517,8 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
         
         if path in self._paths_to_single_tags: tags.extend( self._paths_to_single_tags[ path ] )
         
+        tags = [ HC.CleanTag( tag ) for tag in tags ]
+        
         return tags
         
     
@@ -7261,7 +7565,7 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
                 
                 ( path, old_tags ) = self._paths_list.GetClientData( index )
                 
-                self._paths_to_single_tags[ path ].append( tag )
+                if tag not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( tag )
                 
             
             self._RefreshFileList() # make this more clever
@@ -7284,19 +7588,26 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
     
     def EventItemSelected( self, event ):
         
-        single_tags = []
+        single_tags = set()
         
         indices = self._paths_list.GetAllSelected()
         
         if len( indices ) > 0:
             
-            path = self._paths_list.GetClientData( indices[0] )[0]
-            
-            if path in self._paths_to_single_tags: single_tags = self._paths_to_single_tags[ path ]
+            for index in indices:
+                
+                path = self._paths_list.GetClientData( index )[0]
+                
+                if path in self._paths_to_single_tags: single_tags.update( self._paths_to_single_tags[ path ] )
+                
             
             self._single_tag_box.Enable()
             
         else: self._single_tag_box.Disable()
+        
+        single_tags = list( single_tags )
+        
+        single_tags.sort()
         
         self._single_tags.SetTags( single_tags )
         
@@ -7417,21 +7728,21 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
     
     def SetTagBoxFocus( self ): self._tag_box.SetFocus()
     
-    def SingleTagRemoved( self ):
+    def SingleTagRemoved( self, tag ):
         
         indices = self._paths_list.GetAllSelected()
         
-        if len( indices ) > 0:
+        for index in indices:
             
-            path = self._paths_list.GetClientData( indices[0] )[0]
+            ( path, old_tags ) = self._paths_list.GetClientData( index )
             
-            self._paths_to_single_tags[ path ] = self._single_tags.GetTags()
+            if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
             
         
         self._RefreshFileList()
         
     
-    def TagRemoved( self ): self._RefreshFileList()
+    def TagRemoved( self, tag ): self._RefreshFileList()
     
 class DialogProgress( Dialog ):
     
@@ -7541,6 +7852,112 @@ class DialogProgress( Dialog ):
             
         
     
+class DialogRegisterService( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._address = wx.TextCtrl( self, value = 'hostname:port' )
+            self._registration_key = wx.TextCtrl( self, value = 'r0000000000000000000000000000000000000000000000000000000000000000' )
+            
+            self._register = wx.Button( self, label = 'register' )
+            self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            
+        
+        def InitialisePanel():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( wx.StaticText( self, label = 'Please fill out the forms with the appropriate information for your service.' ), FLAGS_EXPAND_PERPENDICULAR )
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label='address' ), FLAGS_MIXED )
+            gridbox.AddF( self._address, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label='registration key' ), FLAGS_MIXED )
+            gridbox.AddF( self._registration_key, FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttonbox.AddF( self._register, FLAGS_MIXED )
+            buttonbox.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'register account', position = 'center' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+        self._register = False
+        
+    
+    def EventRegister( self, event ):
+        
+        address = self._address.GetValue()
+        
+        try:
+            
+            ( host, port ) = address.split( ':' )
+            
+            port = int( port )
+            
+        except:
+            
+            wx.MessageBox( 'Could not parse that address!' )
+            
+            return
+            
+        
+        registration_key_encoded = self._registration_key.GetValue()
+        
+        if registration_key_encoded[0] == 'r': registration_key_encoded = registration_key_encoded[1:]
+        
+        try: registration_key = registration_key_encoded.decode( 'hex' )
+        except:
+            
+            wx.MessageBox( 'Could not parse that registration key!' )
+            
+            return
+            
+        
+        connection = CC.AdvancedHTTPConnection( host = host, port = port )
+        
+        headers = {}
+        
+        headers[ 'Authorization' ] = 'hydrus_network ' + registration_key.encode( 'hex' )
+        
+        try: access_key = connection.request( 'GET', '/access_key', headers = headers )
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            return
+            
+        
+        self._credentials = CC.Credentials( host, port, access_key )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def GetCredentials( self ): return self._credentials
+    
 class DialogSelectBooru( Dialog ):
     
     def __init__( self, parent ):
@@ -7633,7 +8050,7 @@ class DialogSelectImageboard( Dialog ):
             ( x, y ) = self.GetEffectiveMinSize()
             
             if x < 320: x = 320
-            if y < 320: y = 320
+            if y < 640: y = 640
             
             self.SetInitialSize( ( x, y ) )
             
@@ -7649,7 +8066,9 @@ class DialogSelectImageboard( Dialog ):
         
         item = self._tree.GetSelection()
         
-        if self._tree.GetItemData( item ).GetData() is None: self._tree.Toggle( item )
+        data_object = self._tree.GetItemData( item )
+        
+        if data_object is None: self._tree.Toggle( item )
         else: self.EndModal( wx.ID_OK )
         
     
@@ -7753,16 +8172,11 @@ class DialogSelectLocalFiles( Dialog ):
             buttons.AddF( self._tag_button, FLAGS_MIXED )
             buttons.AddF( self._close_button, FLAGS_MIXED )
             
-            advanced_import_options = wx.BoxSizer( wx.VERTICAL )
-            
-            advanced_import_options.AddF( wx.StaticText( self, label = '- advanced import options -' ), FLAGS_SMALL_INDENT )
-            advanced_import_options.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._paths_list, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( ( 0, 5 ), FLAGS_NONE )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
@@ -7811,7 +8225,7 @@ class DialogSelectLocalFiles( Dialog ):
             else: odd_paths = True
             
         
-        if odd_paths: wx.MessageBox( 'At present hydrus can handle only jpegs, pngs, bmps, gifs, swfs and flvs. The other files have not been added.' )
+        if odd_paths: wx.MessageBox( 'At present hydrus can handle only jpegs, pngs, bmps, gifs, swfs, flvs and pdfs. The other files have not been added.' )
         
     
     def _GetPaths( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
@@ -7896,31 +8310,36 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             self._actions.SetMinSize( ( 780, 360 ) )
             
-            for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items():
+            self._favourites = wx.ListBox( self )
+            
+            self._favourites.Bind( wx.EVT_LISTBOX, self.EventSelectFavourite )
+            
+            self._save_favourite = wx.Button( self, label = 'save' )
+            self._save_favourite.Bind( wx.EVT_BUTTON, self.EventSaveFavourite )
+            
+            self._save_new_favourite = wx.Button( self, label = 'save as' )
+            self._save_new_favourite.Bind( wx.EVT_BUTTON, self.EventSaveNewFavourite )
+            
+            self._delete_favourite = wx.Button( self, label = 'delete' )
+            self._delete_favourite.Bind( wx.EVT_BUTTON, self.EventDeleteFavourite )
+            
+            self._current_actions_selection = wx.NOT_FOUND
+            
+            default_actions = self._GetDefaultActions()
+            
+            self._favourites.Append( 'default', default_actions )
+            
+            favourites = wx.GetApp().Read( 'favourite_custom_filter_actions' )
+            
+            if 'previous' in favourites: self._favourites.Append( 'previous', favourites[ 'previous' ] )
+            else: self._favourites.Append( 'previous', default_actions )
+            
+            for ( name, actions ) in favourites.items():
                 
-                for ( key, action ) in key_dict.items():
-                    
-                    if action in ( 'manage_tags', 'manage_ratings', 'archive', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last' ):
-                        
-                        service_identifier = None
-                        pretty_service_identifier = ''
-                        
-                        ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
-                        
-                        self._actions.Append( ( pretty_modifier, pretty_key, pretty_service_identifier, pretty_action ), ( modifier, key, service_identifier, action ) )
-                        
-                    
+                if name != 'previous': self._favourites.Append( name, actions )
                 
             
-            ( modifier, key, service_identifier, action ) = ( wx.ACCEL_NORMAL, wx.WXK_DELETE, None, 'delete' )
-            
-            pretty_service_identifier = ''
-            
-            ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
-            
-            self._actions.Append( ( pretty_modifier, pretty_key, pretty_service_identifier, pretty_action ), ( modifier, key, service_identifier, action ) )
-            
-            self._SortListCtrl()
+            self._favourites.Select( 1 ) # previous
             
             self._add = wx.Button( self, label='add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -7961,7 +8380,23 @@ class DialogSetupCustomFilterActions( Dialog ):
             vbox.AddF( action_buttons, FLAGS_BUTTON_SIZERS )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
-            self.SetSizer( vbox )
+            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            button_hbox.AddF( self._save_favourite, FLAGS_MIXED )
+            button_hbox.AddF( self._save_new_favourite, FLAGS_MIXED )
+            button_hbox.AddF( self._delete_favourite, FLAGS_MIXED )
+            
+            f_vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            f_vbox.AddF( self._favourites, FLAGS_EXPAND_BOTH_WAYS )
+            f_vbox.AddF( button_hbox, FLAGS_BUTTON_SIZERS )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( f_vbox, FLAGS_EXPAND_PERPENDICULAR )
+            hbox.AddF( vbox, FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( hbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
             
@@ -7973,6 +8408,40 @@ class DialogSetupCustomFilterActions( Dialog ):
         InitialiseControls()
         
         InitialisePanel()
+        
+        wx.CallAfter( self.EventSelectFavourite, None )
+        
+    
+    def _GetDefaultActions( self ):
+        
+        default_actions = []
+        
+        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items():
+            
+            for ( key, action ) in key_dict.items():
+                
+                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last' ):
+                    
+                    service_identifier = None
+                    
+                    default_actions.append( ( modifier, key, service_identifier, action ) )
+                    
+                
+            
+        
+        ( modifier, key, service_identifier, action ) = ( wx.ACCEL_NORMAL, wx.WXK_DELETE, None, 'delete' )
+        
+        default_actions.append( ( modifier, key, service_identifier, action ) )
+        
+        return default_actions
+        
+    
+    def _IsUntouchableFavouriteSelection( self, selection ):
+        
+        name = self._favourites.GetString( selection )
+        
+        if name in ( 'previous', 'default' ): return True
+        else: return False
         
     
     def _SortListCtrl( self ): self._actions.SortListItems( 3 )
@@ -7994,6 +8463,19 @@ class DialogSetupCustomFilterActions( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
+    def EventDeleteFavourite( self, event ):
+        
+        selection = self._favourites.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            if not self._IsUntouchableFavouriteSelection( selection ):
+                
+                self._favourites.Delete( selection )
+                
+            
+        
+    
     def EventEdit( self, event ):
         
         for index in self._actions.GetAllSelected():
@@ -8014,9 +8496,92 @@ class DialogSetupCustomFilterActions( Dialog ):
             
         
     
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ):
+        
+        favourites = {}
+        
+        for i in range( self._favourites.GetCount() ):
+            
+            name = self._favourites.GetString( i )
+            
+            if name == 'default': continue
+            
+            actions = self._favourites.GetClientData( i )
+            
+            favourites[ name ] = actions
+            
+        
+        favourites[ 'previous' ] = self._actions.GetClientData() # overwrite
+        
+        wx.GetApp().Write( 'favourite_custom_filter_actions', favourites )
+        
+        self.EndModal( wx.ID_OK )
+        
     
     def EventRemove( self, event ): self._actions.RemoveAllSelected()
+    
+    def EventSaveFavourite( self, event ):
+        
+        selection = self._favourites.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            if not self._IsUntouchableFavouriteSelection( selection ):
+                
+                actions = self._actions.GetClientData()
+                
+                self._favourites.SetClientData( selection, actions )
+                
+            
+        
+    
+    def EventSaveNewFavourite( self, event ):
+        
+        existing_names = { self._favourites.GetString( i ) for i in range( self._favourites.GetCount() ) }
+        
+        with wx.TextEntryDialog( self, 'Enter name for these favourite actions' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                name = dlg.GetValue()
+                
+                if name == '': return
+                
+                while name in existing_names: name += str( random.randint( 0, 9 ) )
+                
+                actions = self._actions.GetClientData()
+                
+                self._favourites.Append( name, actions )
+                
+            
+        
+    
+    def EventSelectFavourite( self, event ):
+        
+        selection = self._favourites.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            if selection != self._current_actions_selection:
+                
+                self._actions.DeleteAllItems()
+                
+                actions = self._favourites.GetClientData( selection )
+                
+                for ( modifier, key, service_identifier, action ) in actions:
+                    
+                    ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                    
+                    if service_identifier is None: pretty_service_identifier = ''
+                    else: pretty_service_identifier = service_identifier.GetName()
+                    
+                    self._actions.Append( ( pretty_modifier, pretty_key, pretty_service_identifier, pretty_action ), ( modifier, key, service_identifier, action ) )
+                    
+                
+                self._SortListCtrl()
+                
+            
+        
     
     def GetActions( self ):
         

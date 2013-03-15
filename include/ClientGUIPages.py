@@ -20,6 +20,9 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
 
+FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
+FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
@@ -271,6 +274,15 @@ class PageImportDeviantArt( PageImport ):
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedDeviantArt( self._search_preview_split, self, self._page_key )
     
+class PageImportGiphy( PageImport ):
+    
+    def __init__( self, parent ):
+        
+        PageImport.__init__( self, parent )
+        
+    
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedGiphy( self._search_preview_split, self, self._page_key )
+    
 class PageImportHDD( PageImport ):
     
     def __init__( self, parent, paths, **kwargs ):
@@ -301,9 +313,31 @@ class PageImportHentaiFoundryTags( PageImport ):
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( self._search_preview_split, self, self._page_key )
     
+class PageImportPixivArtist( PageImport ):
+    
+    def __init__( self, parent ):
+        
+        PageImport.__init__( self, parent )
+        
+    
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivArtist( self._search_preview_split, self, self._page_key )
+    
+class PageImportPixivTags( PageImport ):
+    
+    def __init__( self, parent ):
+        
+        PageImport.__init__( self, parent )
+        
+    
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivTags( self._search_preview_split, self, self._page_key )
+    
 class PageImportThreadWatcher( PageImport ):
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportThreadWatcher( self._search_preview_split, self, self._page_key )
+    
+class PageImportTumblr( PageImport ):
+    
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedTumblr( self._search_preview_split, self, self._page_key )
     
 class PageImportURL( PageImport ):
     

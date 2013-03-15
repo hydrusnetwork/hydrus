@@ -1,6 +1,7 @@
 import gc
 import HydrusConstants as HC
 import HydrusImageHandling
+import HydrusSessions
 import ClientConstants as CC
 import ClientDB
 import ClientGUI
@@ -33,17 +34,26 @@ class Controller( wx.App ):
             
             if wx.TheClipboard.Open():
                 
-                data = wx.FileDataObject()
+                data = wx.DataObjectComposite()
                 
-                for path in paths: data.AddFile( path )
+                file_data = wx.FileDataObject()
+                
+                for path in paths: file_data.AddFile( path )
+                
+                text_data = wx.TextDataObject( os.linesep.join( paths ) )
+                
+                data.Add( file_data, True )
+                data.Add( text_data, False )
                 
                 wx.TheClipboard.SetData( data )
                 
                 wx.TheClipboard.Close()
                 
-            else: raise Exception( 'Could not get permission to access the clipboard!' )
+            else: wx.MessageBox( 'Could not get permission to access the clipboard!' )
             
         
+    
+    def DeleteSessionKey( self, service_identifier ): self._session_manager.DeleteSessionKey( service_identifier )
     
     def EventAnimatedTimer( self, event ):
         
@@ -53,6 +63,11 @@ class Controller( wx.App ):
         
     
     def EventMaintenanceTimer( self, event ):
+        
+        if int( time.time() ) - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
+            
+            self._last_idle_time = int( time.time() )
+            
         
         if int( time.time() ) - self._last_idle_time > 20 * 60: # 20 mins since last user-initiated db request
             
@@ -88,6 +103,8 @@ class Controller( wx.App ):
     
     def GetPreviewImageCache( self ): return self._preview_image_cache
     
+    def GetSessionKey( self, service_identifier ): return self._session_manager.GetSessionKey( service_identifier )
+    
     def GetThumbnailCache( self ): return self._thumbnail_cache
     
     def MaintainDB( self ):
@@ -120,6 +137,8 @@ class Controller( wx.App ):
             self._options = self._db.Read( 'options', HC.HIGH_PRIORITY )
             
             self._tag_service_precedence = self._db.Read( 'tag_service_precedence', HC.HIGH_PRIORITY )
+            
+            self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             
             self.SetSplashText( 'caches' )
             

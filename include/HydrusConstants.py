@@ -29,8 +29,8 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 
 # Misc
 
-NETWORK_VERSION = 8
-SOFTWARE_VERSION = 57
+NETWORK_VERSION = 9
+SOFTWARE_VERSION = 61
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -149,12 +149,15 @@ APPLICATION_YAML = 6
 IMAGE_ICON = 7
 TEXT_HTML = 8
 VIDEO_FLV = 9
+APPLICATION_PDF = 10
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, APPLICATION_PDF )
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
+
+APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF )
 
 NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV )
 
@@ -174,6 +177,8 @@ mime_enum_lookup[ 'image/vnd.microsoft.icon' ] = IMAGE_ICON
 mime_enum_lookup[ 'application/x-shockwave-flash' ] = APPLICATION_FLASH
 mime_enum_lookup[ 'application/octet-stream' ] = APPLICATION_OCTET_STREAM
 mime_enum_lookup[ 'application/x-yaml' ] = APPLICATION_YAML
+mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
+mime_enum_lookup[ 'application' ] = APPLICATIONS
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
 mime_enum_lookup[ 'unknown mime' ] = APPLICATION_UNKNOWN
@@ -190,6 +195,8 @@ mime_string_lookup[ IMAGE_ICON ] = 'image/vnd.microsoft.icon'
 mime_string_lookup[ APPLICATION_FLASH ] = 'application/x-shockwave-flash'
 mime_string_lookup[ APPLICATION_OCTET_STREAM ] = 'application/octet-stream'
 mime_string_lookup[ APPLICATION_YAML ] = 'application/x-yaml'
+mime_string_lookup[ APPLICATION_PDF ] = 'application/pdf'
+mime_string_lookup[ APPLICATIONS ] = 'application'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
@@ -205,6 +212,7 @@ mime_ext_lookup[ IMAGE_ICON ] = '.ico'
 mime_ext_lookup[ APPLICATION_FLASH ] = '.swf'
 mime_ext_lookup[ APPLICATION_OCTET_STREAM ] = '.bin'
 mime_ext_lookup[ APPLICATION_YAML ] = '.yaml'
+mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
@@ -220,7 +228,8 @@ header_and_mime = [
     ( 'BM', IMAGE_BMP ),
     ( 'CWS', APPLICATION_FLASH ),
     ( 'FWS', APPLICATION_FLASH ),
-    ( 'FLV', VIDEO_FLV )
+    ( 'FLV', VIDEO_FLV ),
+    ( '%PDF', APPLICATION_PDF )
     ]
 
 wxk_code_string_lookup = {
@@ -303,28 +312,30 @@ local_file_requests.append( ( GET, 'file', None ) )
 local_file_requests.append( ( GET, 'thumbnail', None ) )
 
 restricted_requests = list( service_requests )
-restricted_requests.append( ( GET, 'accesskeys', GENERAL_ADMIN ) )
+restricted_requests.append( ( GET, 'access_key', None ) )
 restricted_requests.append( ( GET, 'account', None ) )
-restricted_requests.append( ( GET, 'accountinfo', MANAGE_USERS ) )
-restricted_requests.append( ( GET, 'accounttypes', MANAGE_USERS ) )
+restricted_requests.append( ( GET, 'account_info', MANAGE_USERS ) )
+restricted_requests.append( ( GET, 'account_types', MANAGE_USERS ) )
 restricted_requests.append( ( GET, 'options', GENERAL_ADMIN ) )
+restricted_requests.append( ( GET, 'registration_keys', GENERAL_ADMIN ) )
+restricted_requests.append( ( GET, 'session_key', None ) )
 restricted_requests.append( ( GET, 'stats', GENERAL_ADMIN ) )
-restricted_requests.append( ( POST, 'accountmodification', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
-restricted_requests.append( ( POST, 'accounttypesmodification', GENERAL_ADMIN ) )
+restricted_requests.append( ( POST, 'account_modification', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
+restricted_requests.append( ( POST, 'account_types_modification', GENERAL_ADMIN ) )
 restricted_requests.append( ( POST, 'options', GENERAL_ADMIN ) )
 
 admin_requests = list( restricted_requests )
 admin_requests.append( ( GET, 'init', None ) )
 admin_requests.append( ( GET, 'services', EDIT_SERVICES ) )
 admin_requests.append( ( POST, 'backup', EDIT_SERVICES ) )
-admin_requests.append( ( POST, 'servicesmodification', EDIT_SERVICES ) )
+admin_requests.append( ( POST, 'services_modification', EDIT_SERVICES ) )
 
 repository_requests = list( restricted_requests )
-repository_requests.append( ( GET, 'numpetitions', RESOLVE_PETITIONS ) )
+repository_requests.append( ( GET, 'num_petitions', RESOLVE_PETITIONS ) )
 repository_requests.append( ( GET, 'petition', RESOLVE_PETITIONS ) )
 repository_requests.append( ( GET, 'update', GET_DATA ) )
 repository_requests.append( ( POST, 'news', GENERAL_ADMIN ) )
-repository_requests.append( ( POST, 'petitiondenial', RESOLVE_PETITIONS ) )
+repository_requests.append( ( POST, 'petition_denial', RESOLVE_PETITIONS ) )
 repository_requests.append( ( POST, 'petitions', ( POST_PETITIONS, RESOLVE_PETITIONS ) ) )
 
 file_repository_requests = list( repository_requests )
@@ -338,8 +349,8 @@ tag_repository_requests.append( ( POST, 'mappings', POST_DATA ) )
 
 message_depot_requests = list( restricted_requests )
 message_depot_requests.append( ( GET, 'message', GET_DATA ) )
-message_depot_requests.append( ( GET, 'messageinfosince', GET_DATA ) )
-message_depot_requests.append( ( GET, 'publickey', None ) )
+message_depot_requests.append( ( GET, 'message_info_since', GET_DATA ) )
+message_depot_requests.append( ( GET, 'public_key', None ) )
 message_depot_requests.append( ( POST, 'contact', POST_DATA ) )
 message_depot_requests.append( ( POST, 'message', None ) )
 message_depot_requests.append( ( POST, 'message_statuses', None ) )
@@ -1475,21 +1486,15 @@ class JobServer():
     
     yaml_tag = u'!JobServer'
     
-    def __init__( self, service_identifier, account_identifier, ip, request_type, request, request_args, request_length ):
+    def __init__( self, *args ):
         
-        self._service_identifier = service_identifier
-        self._account_identifier = account_identifier
-        self._ip = ip
-        self._request_type = request_type
-        self._request = request
-        self._request_args = request_args
-        self._request_length = request_length
+        self._args = args
         
         self._result = None
         self._result_ready = threading.Event()
         
     
-    def GetInfo( self ): return ( self._service_identifier, self._account_identifier, self._ip, self._request_type, self._request, self._request_args, self._request_length )
+    def GetArgs( self ): return self._args
     
     def GetResult( self ):
         
@@ -1512,13 +1517,16 @@ class JobServer():
     
 class ResponseContext():
     
-    def __init__( self, status_code, mime = None, body = '', filename = None ):
+    def __init__( self, status_code, mime = None, body = '', filename = None, cookies = [] ):
         
         self._status_code = status_code
         self._mime = mime
         self._body = body
         self._filename = filename
+        self._cookies = cookies
         
+    
+    def GetCookies( self ): return self._cookies
     
     def GetFilename( self ): return self._filename
     
@@ -1624,6 +1632,7 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
 # sqlite mod
 
 sqlite3.register_adapter( dict, yaml.safe_dump )
+sqlite3.register_adapter( list, yaml.safe_dump )
 sqlite3.register_adapter( Account, yaml.safe_dump )
 sqlite3.register_adapter( AccountType, yaml.safe_dump )
 sqlite3.register_converter( 'TEXT_YAML', yaml.safe_load )
@@ -1649,5 +1658,6 @@ class NotFoundException( Exception ): pass
 class NotModifiedException( Exception ): pass
 class ForbiddenException( Exception ): pass
 class PermissionException( Exception ): pass
+class SessionException( Exception ): pass
 class ShutdownException( Exception ): pass
 class WrongServiceTypeException( Exception ): pass

@@ -158,6 +158,19 @@ class MediaList():
         return media_results
         
     
+    def GetFlatMedia( self ):
+        
+        flat_media = []
+        
+        for media in self._sorted_media:
+            
+            if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
+            else: flat_media.append( media )
+            
+        
+        return flat_media
+        
+    
     def GetMediaIndex( self, media ): return self._sorted_media_to_indices[ media ]
     
     def GetSortedMedia( self ): return self._sorted_media
@@ -194,6 +207,16 @@ class MediaList():
         if action == CC.CONTENT_UPDATE_ARCHIVE:
             
             if 'system:inbox' in self._predicates:
+                
+                affected_singleton_media = self._GetMedia( hashes, 'singletons' )
+                affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+                
+                self._RemoveMedia( affected_singleton_media, affected_collected_media )
+                
+            
+        elif action == CC.CONTENT_UPDATE_INBOX:
+            
+            if 'system:archive' in self._predicates:
                 
                 affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                 affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -353,6 +376,7 @@ class MediaCollection( MediaList, Media ):
         
         self._hashes = set()
         
+        self._archive = True
         self._inbox = False
         
         self._size = 0
@@ -377,6 +401,7 @@ class MediaCollection( MediaList, Media ):
         
         self._hashes = HC.IntelligentMassUnion( [ media.GetHashes() for media in self._sorted_media ] )
         
+        self._archive = True in ( media.HasArchive() for media in self._sorted_media )
         self._inbox = True in ( media.HasInbox() for media in self._sorted_media )
         
         self._size = sum( [ media.GetSize() for media in self._sorted_media ] )
@@ -450,7 +475,7 @@ class MediaCollection( MediaList, Media ):
     def GetHashes( self, discriminant = None, not_uploaded_to = None ):
         
         if discriminant is not None:
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not self._inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not self.GetFileServiceIdentifiersCDPP().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and self.GetFileServiceIdentifiersCDPP().HasLocal() ): return set()
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not self._inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and not self._archive ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not self.GetFileServiceIdentifiersCDPP().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and self.GetFileServiceIdentifiersCDPP().HasLocal() ): return set()
         
         if not_uploaded_to is not None:
             if not_uploaded_to in self._file_service_identifiers.GetCurrentRemote(): return set()
@@ -497,6 +522,8 @@ class MediaCollection( MediaList, Media ):
     def GetTags( self ): return self._tags
     
     def GetTimestamp( self ): return self._timestamp
+    
+    def HasArchive( self ): return self._archive
     
     def HasDuration( self ): return self._duration is not None
     
@@ -549,7 +576,7 @@ class MediaSingleton( Media ):
         file_service_identifiers = self._media_result.GetFileServiceIdentifiersCDPP()
         
         if discriminant is not None:
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not file_service_identifiers.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and file_service_identifiers.HasLocal() ): return set()
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not file_service_identifiers.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and file_service_identifiers.HasLocal() ): return set()
         
         if not_uploaded_to is not None:
             if not_uploaded_to in file_service_identifiers.GetCurrentRemote(): return set()
@@ -611,6 +638,8 @@ class MediaSingleton( Media ):
         
     
     def GetTags( self ): return self._media_result.GetTags()
+    
+    def HasArchive( self ): return not self._media_result.GetInbox()
     
     def HasDuration( self ): return self._media_result.GetDuration() is not None
     
