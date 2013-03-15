@@ -4,11 +4,12 @@
 
 An application designed to create a personal *booru-style image tagger, that can be viewed locally or shared anonymously using a custom server. 
 
-[Download the program here.](http://www.mediafire.com/hydrus) This repository contains the source code.
+[Download the program here.](http://www.mediafire.com/hydrus) You should then read the manual on the [wiki](https://github.com/treeofsephiroth/hydrus/wiki).
 
-* [Github Source Code](https://github.com/treeofsephiroth/hydrus)
-* [Github Pages Homepage](http://treeofsephiroth.github.com/hydrus/)
-* [Author's Original Site](http://hydrus.x10.mx/)
+* [Homepage](http://treeofsephiroth.github.com/hydrus/)
+* [Wiki](https://github.com/treeofsephiroth/hydrus/wiki)
+* [Author's Original Homepage](http://hydrus.x10.mx/)
+* [Source Code on Github](https://github.com/treeofsephiroth/hydrus)
 
 ## Changed files
 
