@@ -1,5 +1,7 @@
 ## Hydrus Image Tagging Network (Client and Server)
 
+> Note: This is wholly derived from the original author at [Hydrus.x10.mx](http://hydrus.x10.mx/). Because free webhosts tend to go down unexpectedly, we've moved the code to Github for archival and version control, keeping it in sync with the original, and will hand it over to the original author upon request.
+
 An application designed to create a personal *booru-style image tagger, that can be viewed locally or shared anonymously using a custom server. 
 
 [Download the program here.](http://www.mediafire.com/hydrus) This repository contains the source code.
