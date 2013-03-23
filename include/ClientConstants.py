@@ -510,7 +510,7 @@ class AdvancedHTTPConnection():
                 
             except:
                 print( traceback.format_exc() )
-                raise Exception( 'Could not connect to server' )
+                raise
             
         except:
             print( traceback.format_exc() )
@@ -1366,24 +1366,6 @@ class ConnectionToService():
     def GetCookies( self ): return self._connection.GetCookies()
     
     def Post( self, request, **kwargs ): response = self._SendRequest( HC.POST, request, kwargs )
-    
-class ContentUpdate():
-    
-    def __init__( self, action, service_identifier, hashes, info = None ):
-        
-        self._action = action
-        self._service_identifier = service_identifier
-        self._hashes = set( hashes )
-        self._info = info
-        
-    
-    def GetAction( self ): return self._action
-    
-    def GetHashes( self ): return self._hashes
-    
-    def GetInfo( self ): return self._info
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
     
 class CPRemoteRatingsServiceIdentifiers():
     

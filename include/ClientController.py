@@ -51,6 +51,20 @@ class Controller( wx.App ):
                 
             else: wx.MessageBox( 'Could not get permission to access the clipboard!' )
             
+        elif type == 'text':
+            
+            text = data
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject( text )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
         
     
     def DeleteSessionKey( self, service_identifier ): self._session_manager.DeleteSessionKey( service_identifier )

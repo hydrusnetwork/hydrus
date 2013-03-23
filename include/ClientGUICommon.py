@@ -83,13 +83,20 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         wx.TextCtrl.__init__( self, parent, style=wx.TE_PROCESS_ENTER )
         
-        self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
+        #self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
+        #self._dropdown_window = wx.PopupTransientWindow( self, style = wx.BORDER_RAISED )
+        #self._dropdown_window = wx.Window( self, style = wx.BORDER_RAISED )
+        
+        #self._dropdown_window = wx.Panel( self )
+        
+        self._dropdown_window = wx.Frame( self.GetTopLevelParent(), style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
+        
         self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        
+        self._dropdown_list = self._InitDropDownList()
         
         self._first_letters = ''
         self._cached_results = self._InitCachedResults()
-        
-        self._dropdown_list = self._InitDropDownList()
         
         self.Bind( wx.EVT_SET_FOCUS, self.EventSetFocus )
         self.Bind( wx.EVT_KILL_FOCUS, self.EventKillFocus )
@@ -112,7 +119,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         tlp.Bind( wx.EVT_MOVE, self.EventMove )
         
-        wx.CallAfter( self._UpdateList )
+        self._initialised = False
         
     
     def _BroadcastChoice( self, predicate ): pass
@@ -130,11 +137,9 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def _ShowDropdownIfFocussed( self ):
         
-        if self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self and len( self._dropdown_list ) > 0:
+        if not self._dropdown_window.IsShown() and self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self:
             
             ( my_width, my_height ) = self.GetSize()
-            
-            #self._dropdown_list.Show()
             
             self._dropdown_window.Fit()
             
@@ -174,7 +179,10 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventKillFocus( self, event ):
         
-        self._HideDropdown()
+        new_window = event.GetWindow()
+        
+        if new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren(): pass
+        else: self._HideDropdown()
         
         event.Skip()
         
@@ -220,14 +228,10 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         try:
             
-            self._HideDropdown()
+            try: self._HideDropdown()
+            except: pass
             
-            num_chars = len( self.GetValue() )
-            
-            if num_chars == 0: lag = 0
-            elif num_chars == 1: lag = 400
-            elif num_chars == 2: lag = 250
-            else: lag = 100
+            lag = 100
             
             self._move_hide_timer.Start( lag, wx.TIMER_ONE_SHOT )
             
@@ -237,6 +241,13 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
     
     def EventSetFocus( self, event ):
+        
+        if not self._initialised:
+            
+            self._UpdateList()
+            
+            self._initialised = True
+            
         
         self._ShowDropdownIfFocussed()
         
@@ -390,29 +401,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _InitDropDownList( self ): return TagsBoxActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
-    def _ShowDropdownIfFocussed( self ):
-        
-        # don't know why I have to do this fit and layout rubbish manually here; I guess it is popupwindow screwing up as usual
-        
-        if wx.Window.FindFocus() == self:
-            
-            ( my_width, my_height ) = self.GetSize()
-            
-            #if len( self._dropdown_list ) > 0: self._dropdown_list.Show()
-            #else: self._dropdown_list.Hide()
-            
-            self._dropdown_window.Fit()
-            
-            self._dropdown_window.SetSize( ( my_width, -1 ) )
-            
-            self._dropdown_window.Layout()
-            
-            self._dropdown_window.SetPosition( self.ClientToScreenXY( -2, my_height - 2 ) )
-            
-            self._dropdown_window.Show()
-            
-        
-    
     def _UpdateList( self ):
         
         matches = self._GenerateMatches()
@@ -434,6 +422,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service_identifier ), service_identifier.GetName() )
         
         self.PopupMenu( menu )
+        
+        menu.Destroy()
         
     
     def EventMenu( self, event ):
@@ -504,6 +494,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service_identifier ), service_identifier.GetName() )
         
         self.PopupMenu( menu )
+        
+        menu.Destroy()
         
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
@@ -830,7 +822,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         all_namespaces = list( all_namespaces )
         all_namespaces.sort()
         
-        popup = CheckboxCollectDropdown( all_namespaces )
+        popup = self._Popup( all_namespaces )
         
         #self.UseAltPopupWindow( True )
         
@@ -861,72 +853,74 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         HC.pubsub.pub( 'collect_media', self._page_key, self._collect_by )
         
     
-class CheckboxCollectDropdown( wx.combo.ComboPopup ):
-    
-    def __init__( self, namespaces ):
+    class _Popup( wx.combo.ComboPopup ):
         
-        wx.combo.ComboPopup.__init__( self )
-        
-        self._namespaces = namespaces
-        
-    
-    def Create( self, parent ):
-        
-        self._control = CheckboxCollectDropdownCheckListBox( parent, self.GetCombo(), self._namespaces )
-        
-        return True
-        
-    
-    def GetAdjustedSize( self, preferred_width, preferred_height, max_height ):
-        
-        return( ( preferred_width, -1 ) )
-        
-    
-    def GetControl( self ): return self._control
-    
-class CheckboxCollectDropdownCheckListBox( wx.CheckListBox ):
-    
-    def __init__( self, parent, special_parent, namespaces ):
-        
-        wx.CheckListBox.__init__( self, parent, choices = namespaces )
-        
-        self._special_parent = special_parent
-        
-        options = wx.GetApp().Read( 'options' )
-        
-        default = options[ 'default_collect' ] # need to reset this to a list of a set in options!
-        
-        if default is not None: self.SetCheckedStrings( default )
-        
-        self.Bind( wx.EVT_CHECKLISTBOX, self.EventChanged )
-        
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
-        
-        self.EventChanged( None )
-        
-    
-    # as inspired by http://trac.wxwidgets.org/attachment/ticket/14413/test_clb_workaround.py
-    # what a clusterfuck
-    
-    def EventLeftDown( self, event ):
-        
-        index = self.HitTest( event.GetPosition() )
-        
-        if index != wx.NOT_FOUND:
+        def __init__( self, namespaces ):
             
-            self.Check( index, not self.IsChecked( index ) )
+            wx.combo.ComboPopup.__init__( self )
             
-            self.EventChanged( event )
+            self._namespaces = namespaces
             
         
-        event.Skip()
+        def Create( self, parent ):
+            
+            self._control = self._Control( parent, self.GetCombo(), self._namespaces )
+            
+            return True
+            
         
-    
-    def EventChanged( self, event ):
+        def GetAdjustedSize( self, preferred_width, preferred_height, max_height ):
+            
+            return( ( preferred_width, -1 ) )
+            
         
-        namespaces = self.GetCheckedStrings()
+        def GetControl( self ): return self._control
         
-        self._special_parent.SetNamespaces( namespaces )
+        class _Control( wx.CheckListBox ):
+            
+            def __init__( self, parent, special_parent, namespaces ):
+                
+                wx.CheckListBox.__init__( self, parent, choices = namespaces )
+                
+                self._special_parent = special_parent
+                
+                options = wx.GetApp().Read( 'options' )
+                
+                default = options[ 'default_collect' ] # need to reset this to a list of a set in options!
+                
+                if default is not None: self.SetCheckedStrings( default )
+                
+                self.Bind( wx.EVT_CHECKLISTBOX, self.EventChanged )
+                
+                self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
+                
+                self.EventChanged( None )
+                
+            
+            # as inspired by http://trac.wxwidgets.org/attachment/ticket/14413/test_clb_workaround.py
+            # what a clusterfuck
+            
+            def EventLeftDown( self, event ):
+                
+                index = self.HitTest( event.GetPosition() )
+                
+                if index != wx.NOT_FOUND:
+                    
+                    self.Check( index, not self.IsChecked( index ) )
+                    
+                    self.EventChanged( event )
+                    
+                
+                event.Skip()
+                
+            
+            def EventChanged( self, event ):
+                
+                namespaces = self.GetCheckedStrings()
+                
+                self._special_parent.SetNamespaces( namespaces )
+                
+            
         
     
 class ChoiceCollect( BetterChoice ):
@@ -1118,37 +1112,34 @@ class ListBook( wx.Panel ):
     
     def _Select( self, selection ):
         
-        with wx.FrozenWindow( self ):
+        if selection == wx.NOT_FOUND: self._current_name = None
+        else: self._current_name = self._list_box.GetString( selection )
+        
+        self._current_panel.Hide()
+        
+        self._list_box.SetSelection( selection )
+        
+        if selection == wx.NOT_FOUND: self._current_panel = self._empty_panel
+        else:
             
-            if selection == wx.NOT_FOUND: self._current_name = None
-            else: self._current_name = self._list_box.GetString( selection )
+            panel_info = self._list_box.GetClientData( selection )
             
-            self._current_panel.Hide()
+            if type( panel_info ) == tuple:
+                
+                ( classname, args, kwargs ) = panel_info
+                
+                page = classname( *args, **kwargs )
+                
+                page.Hide()
+                
+                self._panel_sizer.AddF( page, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                self._list_box.SetClientData( selection, page )
+                
+                self._RecalcListBoxWidth()
+                
             
-            self._list_box.SetSelection( selection )
-            
-            if selection == wx.NOT_FOUND: self._current_panel = self._empty_panel
-            else:
-                
-                panel_info = self._list_box.GetClientData( selection )
-                
-                if type( panel_info ) == tuple:
-                    
-                    ( classname, args, kwargs ) = panel_info
-                    
-                    page = classname( *args, **kwargs )
-                    
-                    page.Hide()
-                    
-                    self._panel_sizer.AddF( page, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                    
-                    self._list_box.SetClientData( selection, page )
-                    
-                    self._RecalcListBoxWidth()
-                    
-                
-                self._current_panel = self._list_box.GetClientData( selection )
-                
+            self._current_panel = self._list_box.GetClientData( selection )
             
         
         self._current_panel.Show()
@@ -1363,165 +1354,6 @@ class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         for index in indices: self.DeleteItem( index )
         
     
-class OnOffButton( wx.Button ):
-    
-    def __init__( self, parent, page_key, topic, on_label, off_label = None, start_on = True ):
-        
-        if start_on: label = on_label
-        else: label = off_label
-        
-        wx.Button.__init__( self, parent, label = label )
-        
-        self._page_key = page_key
-        self._topic = topic
-        self._on_label = on_label
-        
-        if off_label is None: self._off_label = on_label
-        else: self._off_label = off_label
-        
-        self._on = start_on
-        
-        if self._on: self.SetForegroundColour( ( 0, 128, 0 ) )
-        else: self.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
-        
-        HC.pubsub.sub( self, 'HitButton', 'hit_on_off_button' )
-        
-    
-    def EventButton( self, event ):
-        
-        if self._on:
-            
-            self._on = False
-            
-            self.SetLabel( self._off_label )
-            
-            self.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            HC.pubsub.pub( self._topic, self._page_key, False )
-            
-        else:
-            
-            self._on = True
-            
-            self.SetLabel( self._on_label )
-            
-            self.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            HC.pubsub.pub( self._topic, self._page_key, True )
-            
-        
-    
-    def IsOn( self ): return self._on
-    
-class NoneableSpinCtrl( wx.Panel ):
-    
-    def __init__( self, parent, message, value, none_phrase = 'no limit', max = 1000000, multiplier = 1, num_dimensions = 1 ):
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._num_dimensions = num_dimensions
-        self._multiplier = multiplier
-        
-        self._checkbox = wx.CheckBox( self, label = none_phrase )
-        self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
-        
-        if value is None:
-            
-            self._one = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
-            self._one.Disable()
-            
-            if num_dimensions == 2:
-                
-                self._two = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
-                self._two.Disable()
-                
-            
-            self._checkbox.SetValue( True )
-            
-        else:
-            
-            if num_dimensions == 2:
-                
-                ( value, value_2 ) = value
-                
-                self._two = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
-                self._two.SetValue( value_2 / multiplier )
-                
-            
-            self._one = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
-            self._one.SetValue( value / multiplier )
-            
-            self._checkbox.SetValue( False )
-            
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        hbox.AddF( wx.StaticText( self, label=message + ': ' ), FLAGS_MIXED )
-        hbox.AddF( self._one, FLAGS_MIXED )
-        
-        if self._num_dimensions == 2:
-            
-            hbox.AddF( wx.StaticText( self, label = 'x' ), FLAGS_MIXED )
-            hbox.AddF( self._two, FLAGS_MIXED )
-            
-        
-        hbox.AddF( self._checkbox, FLAGS_MIXED )
-        
-        self.SetSizer( hbox )
-        
-    
-    def EventCheckBox( self, event ):
-        
-        if self._checkbox.GetValue():
-            
-            self._one.Disable()
-            if self._num_dimensions == 2: self._two.Disable()
-            
-        else:
-            
-            self._one.Enable()
-            if self._num_dimensions == 2: self._two.Enable()
-            
-        
-    
-    def GetValue( self ):
-        
-        if self._checkbox.GetValue(): return None
-        else:
-            
-            if self._num_dimensions == 2: return ( self._one.GetValue() * self._multiplier, self._two.GetValue() * self._multiplier )
-            else: return self._one.GetValue() * self._multiplier
-            
-        
-    
-    def SetValue( self, value ):
-        
-        if value is None:
-            
-            self._checkbox.SetValue( True )
-            
-            self._one.Disable()
-            if self._num_dimensions == 2: self._two.Disable()
-            
-        else:
-            
-            self._checkbox.SetValue( False )
-            
-            self._one.Enable()
-            if self._num_dimensions == 2: self._two.Enable()
-            
-            if self._num_dimensions == 2:
-                
-                ( value, y ) = value
-                
-                self._two.SetValue( y / self._multiplier )
-                
-            
-            self._one.SetValue( value / self._multiplier )
-            
-        
-    
 class ListBox( wx.ScrolledWindow ):
     
     def __init__( self, parent, min_height = 250 ):
@@ -1554,8 +1386,11 @@ class ListBox( wx.ScrolledWindow ):
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseSelect )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventDClick )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
     def __len__( self ): return len( self._ordered_strings )
@@ -1705,6 +1540,61 @@ class ListBox( wx.ScrolledWindow ):
             else: event.Skip()
             
         else: event.Skip()
+        
+    
+    def EventMenu( self, event ):
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            try:
+                
+                ( command, data ) = action
+                
+                if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+                else:
+                    
+                    event.Skip()
+                    
+                    return # this is about select_up and select_down
+                    
+                
+            except Exception as e:
+                
+                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( traceback.format_exc() )
+                
+            
+        
+    
+    def EventMouseRightClick( self, event ):
+        
+        index = self._GetIndexUnderMouse( event )
+        
+        self._Select( index )
+        
+        if self._current_selected_index is not None:
+            
+            menu = wx.Menu()
+            
+            term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', term ), 'copy ' + term )
+            
+            if ':' in term:
+                
+                sub_term = term.split( ':', 1 )[1]
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', sub_term ), 'copy ' + sub_term )
+                
+            
+            self.PopupMenu( menu )
+            
+            menu.Destroy()
+            
+        
+        event.Skip()
         
     
     def EventMouseSelect( self, event ):
@@ -1864,6 +1754,165 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
         
         self._TextsHaveChanged()
         
+    
+class NoneableSpinCtrl( wx.Panel ):
+    
+    def __init__( self, parent, message, value, none_phrase = 'no limit', max = 1000000, multiplier = 1, num_dimensions = 1 ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._num_dimensions = num_dimensions
+        self._multiplier = multiplier
+        
+        self._checkbox = wx.CheckBox( self, label = none_phrase )
+        self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
+        
+        if value is None:
+            
+            self._one = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
+            self._one.Disable()
+            
+            if num_dimensions == 2:
+                
+                self._two = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
+                self._two.Disable()
+                
+            
+            self._checkbox.SetValue( True )
+            
+        else:
+            
+            if num_dimensions == 2:
+                
+                ( value, value_2 ) = value
+                
+                self._two = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
+                self._two.SetValue( value_2 / multiplier )
+                
+            
+            self._one = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
+            self._one.SetValue( value / multiplier )
+            
+            self._checkbox.SetValue( False )
+            
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        hbox.AddF( wx.StaticText( self, label=message + ': ' ), FLAGS_MIXED )
+        hbox.AddF( self._one, FLAGS_MIXED )
+        
+        if self._num_dimensions == 2:
+            
+            hbox.AddF( wx.StaticText( self, label = 'x' ), FLAGS_MIXED )
+            hbox.AddF( self._two, FLAGS_MIXED )
+            
+        
+        hbox.AddF( self._checkbox, FLAGS_MIXED )
+        
+        self.SetSizer( hbox )
+        
+    
+    def EventCheckBox( self, event ):
+        
+        if self._checkbox.GetValue():
+            
+            self._one.Disable()
+            if self._num_dimensions == 2: self._two.Disable()
+            
+        else:
+            
+            self._one.Enable()
+            if self._num_dimensions == 2: self._two.Enable()
+            
+        
+    
+    def GetValue( self ):
+        
+        if self._checkbox.GetValue(): return None
+        else:
+            
+            if self._num_dimensions == 2: return ( self._one.GetValue() * self._multiplier, self._two.GetValue() * self._multiplier )
+            else: return self._one.GetValue() * self._multiplier
+            
+        
+    
+    def SetValue( self, value ):
+        
+        if value is None:
+            
+            self._checkbox.SetValue( True )
+            
+            self._one.Disable()
+            if self._num_dimensions == 2: self._two.Disable()
+            
+        else:
+            
+            self._checkbox.SetValue( False )
+            
+            self._one.Enable()
+            if self._num_dimensions == 2: self._two.Enable()
+            
+            if self._num_dimensions == 2:
+                
+                ( value, y ) = value
+                
+                self._two.SetValue( y / self._multiplier )
+                
+            
+            self._one.SetValue( value / self._multiplier )
+            
+        
+    
+class OnOffButton( wx.Button ):
+    
+    def __init__( self, parent, page_key, topic, on_label, off_label = None, start_on = True ):
+        
+        if start_on: label = on_label
+        else: label = off_label
+        
+        wx.Button.__init__( self, parent, label = label )
+        
+        self._page_key = page_key
+        self._topic = topic
+        self._on_label = on_label
+        
+        if off_label is None: self._off_label = on_label
+        else: self._off_label = off_label
+        
+        self._on = start_on
+        
+        if self._on: self.SetForegroundColour( ( 0, 128, 0 ) )
+        else: self.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+        HC.pubsub.sub( self, 'HitButton', 'hit_on_off_button' )
+        
+    
+    def EventButton( self, event ):
+        
+        if self._on:
+            
+            self._on = False
+            
+            self.SetLabel( self._off_label )
+            
+            self.SetForegroundColour( ( 128, 0, 0 ) )
+            
+            HC.pubsub.pub( self._topic, self._page_key, False )
+            
+        else:
+            
+            self._on = True
+            
+            self.SetLabel( self._on_label )
+            
+            self.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            HC.pubsub.pub( self._topic, self._page_key, True )
+            
+        
+    
+    def IsOn( self ): return self._on
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     

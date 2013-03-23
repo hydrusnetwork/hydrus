@@ -97,7 +97,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_INBOX )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
         
     
     def _CopyHashToClipboard( self ):
@@ -188,7 +188,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        try: wx.GetApp().Write( 'content_updates', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, file_service_identifier, hashes ) ] )
+                        try: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, file_service_identifier, hashes ) ] )
                         except: wx.MessageBox( traceback.format_exc() )
                         
                     
@@ -215,7 +215,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             self._SetFocussedMedia( None )
             self._shift_focussed_media = None
             
-            with wx.FrozenWindow( self ): self._ReblitCanvas()
+            self._ReblitCanvas()
             
             self._PublishSelectionChange()
             
@@ -376,7 +376,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_ARCHIVE )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ CC.ContentUpdate( CC.CONTENT_UPDATE_INBOX, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_INBOX, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
         
     
     def _ManageRatings( self ):
@@ -514,12 +514,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self._shift_focussed_media = None
         
-        with wx.FrozenWindow( self ):
-            
-            self._RefitCanvas()
-            
-            self._ReblitCanvas()
-            
+        self._RefitCanvas()
+        
+        self._ReblitCanvas()
         
         self._PublishSelectionChange()
         
@@ -556,7 +553,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self._selected_media = set( self._sorted_media )
         
-        with wx.FrozenWindow( self ): self._ReblitCanvas()
+        self._ReblitCanvas()
         
         self._PublishSelectionChange()
         
@@ -605,7 +602,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             self._DeselectAll()
             
-            with wx.FrozenWindow( self ): self._RefitCanvas()
+            self._RefitCanvas()
             
             # no refresh needed since the sort call that always comes after will do it
             
@@ -674,12 +671,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if action in ( CC.SERVICE_UPDATE_DELETE_PENDING, CC.SERVICE_UPDATE_RESET ): 
             
-            with wx.FrozenWindow( self ):
-                
-                self._RefitCanvas()
-                
-                self._ReblitCanvas()
-                
+            self._RefitCanvas()
+            
+            self._ReblitCanvas()
             
         
         self._PublishSelectionChange()
@@ -711,7 +705,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             ClientGUIMixins.ListeningMediaList.Sort( self, sort_by )
             
-            with wx.FrozenWindow( self ): self._ReblitCanvas()
+            self._ReblitCanvas()
             
         
         HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self.GenerateMediaResults() )
@@ -1043,12 +1037,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if old_num_rows != num_rows:
                 
-                with wx.FrozenWindow( self ):
-                    
-                    self._RefitCanvas()
-                    
-                    self._ReblitCanvas()
-                    
+                self._RefitCanvas()
+                
+                self._ReblitCanvas()
                 
             
             self._BlitThumbnail( media )
@@ -1157,12 +1148,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if self._num_columns != old_numcols:
             
-            with wx.FrozenWindow( self ):
-                
-                self._RefitCanvas()
-                
-                self._ReblitCanvas()
-                
+            self._RefitCanvas()
+            
+            self._ReblitCanvas()
             
         else:
             
@@ -1174,7 +1162,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if self._num_rows_in_client_height > old_numclientrows:
                 
-                with wx.FrozenWindow( self ): self._ReblitCanvas()
+                self._ReblitCanvas()
                 
             
         
@@ -1403,20 +1391,23 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_local:
                     
-                    if multiple_selected: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'filter' )
-                    
-                    if i_can_post_ratings:
+                    if multiple_selected or i_can_post_ratings: 
                         
-                        ratings_filter_menu = wx.Menu()
+                        if multiple_selected: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'filter' )
                         
-                        for service in local_ratings_services: ratings_filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceIdentifier() ), service.GetServiceIdentifier().GetName() )
+                        if i_can_post_ratings:
+                            
+                            ratings_filter_menu = wx.Menu()
+                            
+                            for service in local_ratings_services: ratings_filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceIdentifier() ), service.GetServiceIdentifier().GetName() )
+                            
+                            menu.AppendMenu( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
+                            
                         
-                        menu.AppendMenu( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
+                        if multiple_selected: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
                         
-                    
-                    if multiple_selected: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
-                    
-                    if multiple_selected or i_can_post_ratings: menu.AppendSeparator()
+                        menu.AppendSeparator()
+                        
                     
                     if selection_has_inbox: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), archive_phrase )
                     if selection_has_archive: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
@@ -1468,12 +1459,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if self._last_visible_row < num_rows and current_last_visible_row > int( self._last_visible_row * 0.75 ):
             
-            with wx.FrozenWindow( self ):
-                
-                self._RefitCanvas()
-                
-                self._ReblitCanvas()
-                
+            self._RefitCanvas()
+            
+            self._ReblitCanvas()
             
         
         event.Skip()
@@ -1620,12 +1608,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         for t in self._sorted_media: t.ReloadFromDBLater()
         
-        with wx.FrozenWindow( self ):
-            
-            self._RefitCanvas()
-            
-            self._ReblitCanvas()
-            
+        self._RefitCanvas()
+        
+        self._ReblitCanvas()
         
     
 class Selectable():

@@ -2142,7 +2142,7 @@ class DialogManageBoorus( Dialog ):
                 
                 name = booru.GetName()
                 
-                page_info = ( DialogManageBoorusBooruPanel, ( self._boorus, booru ), {} )
+                page_info = ( self._Panel, ( self._boorus, booru ), {} )
                 
                 self._boorus.AddPage( page_info, name )
                 
@@ -2217,7 +2217,7 @@ class DialogManageBoorus( Dialog ):
                     
                     self._edit_log.append( ( 'add', name ) )
                     
-                    page = DialogManageBoorusBooruPanel( self._boorus, booru )
+                    page = self._Panel( self._boorus, booru )
                     
                     self._boorus.AddPage( page, name, select = True )
                     
@@ -2305,7 +2305,7 @@ class DialogManageBoorus( Dialog ):
                         
                         self._edit_log.append( ( 'add', name ) )
                         
-                        page = DialogManageBoorusBooruPanel( self._boorus, new_booru )
+                        page = self._Panel( self._boorus, new_booru )
                         
                         self._boorus.AddPage( page, name, select = True )
                         
@@ -2322,51 +2322,251 @@ class DialogManageBoorus( Dialog ):
             
         
     
-class DialogManageBoorusBooruPanel( wx.Panel ):
-    
-    def __init__( self, parent, booru ):
+    class _Panel( wx.Panel ):
         
-        wx.Panel.__init__( self, parent )
+        def __init__( self, parent, booru ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._booru = booru
+            
+            ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
+            
+            def InitialiseControls():
+                
+                self._booru_panel = ClientGUICommon.StaticBox( self, 'booru' )
+                
+                #
+                
+                self._search_panel = ClientGUICommon.StaticBox( self._booru_panel, 'search' )
+                
+                self._search_url = wx.TextCtrl( self._search_panel, value = search_url )
+                self._search_url.Bind( wx.EVT_TEXT, self.EventHTML )
+                
+                self._search_separator = wx.Choice( self._search_panel, choices = [ '+', '&', '%20' ] )
+                self._search_separator.Select( self._search_separator.FindString( search_separator ) )
+                self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
+                
+                self._gallery_advance_num = wx.SpinCtrl( self._search_panel, min = 1, max = 1000, initial = gallery_advance_num )
+                self._gallery_advance_num.Bind( wx.EVT_SPIN, self.EventHTML )
+                
+                self._thumb_classname = wx.TextCtrl( self._search_panel, value = thumb_classname )
+                self._thumb_classname.Bind( wx.EVT_TEXT, self.EventHTML )
+                
+                self._example_html_search = wx.StaticText( self._search_panel, style = wx.ST_NO_AUTORESIZE )
+                
+                #
+                
+                self._image_panel = ClientGUICommon.StaticBox( self._booru_panel, 'image' )
+                
+                self._image_info = wx.TextCtrl( self._image_panel )
+                self._image_info.Bind( wx.EVT_TEXT, self.EventHTML )
+                
+                self._image_id = wx.RadioButton( self._image_panel, style = wx.RB_GROUP )
+                self._image_id.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
+                
+                self._image_data = wx.RadioButton( self._image_panel )
+                self._image_data.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
+                
+                if image_id is None:
+                    
+                    self._image_info.SetValue( image_data )
+                    self._image_data.SetValue( True )
+                    
+                else:
+                    
+                    self._image_info.SetValue( image_id )
+                    self._image_id.SetValue( True )
+                    
+                
+                self._example_html_image = wx.StaticText( self._image_panel, style = wx.ST_NO_AUTORESIZE )
+                
+                #
+                
+                self._tag_panel = ClientGUICommon.StaticBox( self._booru_panel, 'tags' )
+                
+                self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel, style = wx.LB_SORT )
+                self._tag_classnames_to_namespaces.Bind( wx.EVT_LEFT_DCLICK, self.EventRemove )
+                
+                for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
+                
+                self._tag_classname = wx.TextCtrl( self._tag_panel )
+                self._namespace = wx.TextCtrl( self._tag_panel )
+                
+                self._add = wx.Button( self._tag_panel, label = 'add' )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                
+                self._example_html_tags = wx.StaticText( self._tag_panel, style = wx.ST_NO_AUTORESIZE )
+                
+            
+            def InitialisePanel():
+                
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._search_panel, label='search url' ), FLAGS_MIXED )
+                gridbox.AddF( self._search_url, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._search_panel, label='search tag separator' ), FLAGS_MIXED )
+                gridbox.AddF( self._search_separator, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._search_panel, label='gallery page advance' ), FLAGS_MIXED )
+                gridbox.AddF( self._gallery_advance_num, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._search_panel, label='thumbnail classname' ), FLAGS_MIXED )
+                gridbox.AddF( self._thumb_classname, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._search_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._search_panel.AddF( self._example_html_search, FLAGS_EXPAND_PERPENDICULAR )
+                
+                #
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._image_panel, label='text' ), FLAGS_MIXED )
+                gridbox.AddF( self._image_info, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._image_panel, label='id of <img>' ), FLAGS_MIXED )
+                gridbox.AddF( self._image_id, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._image_panel, label='text of <a>' ), FLAGS_MIXED )
+                gridbox.AddF( self._image_data, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._image_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._image_panel.AddF( self._example_html_image, FLAGS_EXPAND_PERPENDICULAR )
+                
+                #
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._tag_classname, FLAGS_MIXED )
+                hbox.AddF( self._namespace, FLAGS_MIXED )
+                hbox.AddF( self._add, FLAGS_MIXED )
+                
+                self._tag_panel.AddF( self._tag_classnames_to_namespaces, FLAGS_EXPAND_BOTH_WAYS )
+                self._tag_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._tag_panel.AddF( self._example_html_tags, FLAGS_EXPAND_PERPENDICULAR )
+                
+                #
+                
+                self._booru_panel.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_panel.AddF( self._image_panel, FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_panel.AddF( self._tag_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._booru_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.SetSizer( vbox )
+                
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
         
-        self._booru = booru
+        def _GetInfo( self ):
+            
+            booru_name = self._booru.GetName()
+            
+            search_url = self._search_url.GetValue()
+            
+            search_separator = self._search_separator.GetStringSelection()
+            
+            gallery_advance_num = self._gallery_advance_num.GetValue()
+            
+            thumb_classname = self._thumb_classname.GetValue()
+            
+            if self._image_id.GetValue():
+                
+                image_id = self._image_info.GetValue()
+                image_data = None
+                
+            else:
+                
+                image_id = None
+                image_data = self._image_info.GetValue()
+                
+            
+            tag_classnames_to_namespaces = { tag_classname : namespace for ( tag_classname, namespace ) in [ self._tag_classnames_to_namespaces.GetClientData( i ) for i in range( self._tag_classnames_to_namespaces.GetCount() ) ] }
+            
+            return ( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+            
         
-        ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
+        def EventAdd( self, event ):
+            
+            tag_classname = self._tag_classname.GetValue()
+            namespace = self._namespace.GetValue()
+            
+            if tag_classname != '':
+                
+                self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
+                
+                self._tag_classname.SetValue( '' )
+                self._namespace.SetValue( '' )
+                
+                self.EventHTML( event )
+                
+            
         
-        def InitialiseControls():
+        def EventHTML( self, event ):
             
-            self._booru_panel = ClientGUICommon.StaticBox( self, 'booru' )
+            pass
             
-            #
+        
+        def EventRemove( self, event ):
             
-            self._search_panel = ClientGUICommon.StaticBox( self._booru_panel, 'search' )
+            selection = self._tag_classnames_to_namespaces.GetSelection()
             
-            self._search_url = wx.TextCtrl( self._search_panel, value = search_url )
-            self._search_url.Bind( wx.EVT_TEXT, self.EventHTML )
+            if selection != wx.NOT_FOUND:
+                
+                self._tag_classnames_to_namespaces.Delete( selection )
+                
+                self.EventHTML( event )
+                
             
-            self._search_separator = wx.Choice( self._search_panel, choices = [ '+', '&', '%20' ] )
+        
+        def GetBooru( self ):
+            
+            ( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._GetInfo()
+            
+            return CC.Booru( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+            
+        
+        def HasChanges( self ):
+            
+            ( booru_name, my_search_url, my_search_separator, my_gallery_advance_num, my_thumb_classname, my_image_id, my_image_data, my_tag_classnames_to_namespaces ) = self._GetInfo()
+            
+            ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
+            
+            if search_url != my_search_url: return True
+            
+            if search_separator != my_search_separator: return True
+            
+            if gallery_advance_num != my_gallery_advance_num: return True
+            
+            if thumb_classname != my_thumb_classname: return True
+            
+            if image_id != my_image_id: return True
+            
+            if image_data != my_image_data: return True
+            
+            if tag_classnames_to_namespaces != my_tag_classnames_to_namespaces: return True
+            
+            return False
+            
+        
+        def Update( self, booru ):
+            
+            ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
+            
+            self._search_url.SetValue( search_url )
+            
             self._search_separator.Select( self._search_separator.FindString( search_separator ) )
-            self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
             
-            self._gallery_advance_num = wx.SpinCtrl( self._search_panel, min = 1, max = 1000, initial = gallery_advance_num )
-            self._gallery_advance_num.Bind( wx.EVT_SPIN, self.EventHTML )
+            self._gallery_advance_num.SetValue( gallery_advance_num )
             
-            self._thumb_classname = wx.TextCtrl( self._search_panel, value = thumb_classname )
-            self._thumb_classname.Bind( wx.EVT_TEXT, self.EventHTML )
-            
-            self._example_html_search = wx.StaticText( self._search_panel, style = wx.ST_NO_AUTORESIZE )
-            
-            #
-            
-            self._image_panel = ClientGUICommon.StaticBox( self._booru_panel, 'image' )
-            
-            self._image_info = wx.TextCtrl( self._image_panel )
-            self._image_info.Bind( wx.EVT_TEXT, self.EventHTML )
-            
-            self._image_id = wx.RadioButton( self._image_panel, style = wx.RB_GROUP )
-            self._image_id.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
-            
-            self._image_data = wx.RadioButton( self._image_panel )
-            self._image_data.Bind( wx.EVT_RADIOBUTTON, self.EventHTML )
+            self._thumb_classname.SetValue( thumb_classname )
             
             if image_id is None:
                 
@@ -2379,209 +2579,10 @@ class DialogManageBoorusBooruPanel( wx.Panel ):
                 self._image_id.SetValue( True )
                 
             
-            self._example_html_image = wx.StaticText( self._image_panel, style = wx.ST_NO_AUTORESIZE )
-            
-            #
-            
-            self._tag_panel = ClientGUICommon.StaticBox( self._booru_panel, 'tags' )
-            
-            self._tag_classnames_to_namespaces = wx.ListBox( self._tag_panel, style = wx.LB_SORT )
-            self._tag_classnames_to_namespaces.Bind( wx.EVT_LEFT_DCLICK, self.EventRemove )
+            self._tag_classnames_to_namespaces.Clear()
             
             for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
             
-            self._tag_classname = wx.TextCtrl( self._tag_panel )
-            self._namespace = wx.TextCtrl( self._tag_panel )
-            
-            self._add = wx.Button( self._tag_panel, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._example_html_tags = wx.StaticText( self._tag_panel, style = wx.ST_NO_AUTORESIZE )
-            
-        
-        def InitialisePanel():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._search_panel, label='search url' ), FLAGS_MIXED )
-            gridbox.AddF( self._search_url, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._search_panel, label='search tag separator' ), FLAGS_MIXED )
-            gridbox.AddF( self._search_separator, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._search_panel, label='gallery page advance' ), FLAGS_MIXED )
-            gridbox.AddF( self._gallery_advance_num, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._search_panel, label='thumbnail classname' ), FLAGS_MIXED )
-            gridbox.AddF( self._thumb_classname, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._search_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._search_panel.AddF( self._example_html_search, FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._image_panel, label='text' ), FLAGS_MIXED )
-            gridbox.AddF( self._image_info, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._image_panel, label='id of <img>' ), FLAGS_MIXED )
-            gridbox.AddF( self._image_id, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._image_panel, label='text of <a>' ), FLAGS_MIXED )
-            gridbox.AddF( self._image_data, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._image_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._image_panel.AddF( self._example_html_image, FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._tag_classname, FLAGS_MIXED )
-            hbox.AddF( self._namespace, FLAGS_MIXED )
-            hbox.AddF( self._add, FLAGS_MIXED )
-            
-            self._tag_panel.AddF( self._tag_classnames_to_namespaces, FLAGS_EXPAND_BOTH_WAYS )
-            self._tag_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._tag_panel.AddF( self._example_html_tags, FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            self._booru_panel.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
-            self._booru_panel.AddF( self._image_panel, FLAGS_EXPAND_PERPENDICULAR )
-            self._booru_panel.AddF( self._tag_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._booru_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def _GetInfo( self ):
-        
-        booru_name = self._booru.GetName()
-        
-        search_url = self._search_url.GetValue()
-        
-        search_separator = self._search_separator.GetStringSelection()
-        
-        gallery_advance_num = self._gallery_advance_num.GetValue()
-        
-        thumb_classname = self._thumb_classname.GetValue()
-        
-        if self._image_id.GetValue():
-            
-            image_id = self._image_info.GetValue()
-            image_data = None
-            
-        else:
-            
-            image_id = None
-            image_data = self._image_info.GetValue()
-            
-        
-        tag_classnames_to_namespaces = { tag_classname : namespace for ( tag_classname, namespace ) in [ self._tag_classnames_to_namespaces.GetClientData( i ) for i in range( self._tag_classnames_to_namespaces.GetCount() ) ] }
-        
-        return ( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-        
-    
-    def EventAdd( self, event ):
-        
-        tag_classname = self._tag_classname.GetValue()
-        namespace = self._namespace.GetValue()
-        
-        if tag_classname != '':
-            
-            self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
-            
-            self._tag_classname.SetValue( '' )
-            self._namespace.SetValue( '' )
-            
-            self.EventHTML( event )
-            
-        
-    
-    def EventHTML( self, event ):
-        
-        pass
-        
-    
-    def EventRemove( self, event ):
-        
-        selection = self._tag_classnames_to_namespaces.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            self._tag_classnames_to_namespaces.Delete( selection )
-            
-            self.EventHTML( event )
-            
-        
-    
-    def GetBooru( self ):
-        
-        ( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._GetInfo()
-        
-        return CC.Booru( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
-        
-    
-    def HasChanges( self ):
-        
-        ( booru_name, my_search_url, my_search_separator, my_gallery_advance_num, my_thumb_classname, my_image_id, my_image_data, my_tag_classnames_to_namespaces ) = self._GetInfo()
-        
-        ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
-        
-        if search_url != my_search_url: return True
-        
-        if search_separator != my_search_separator: return True
-        
-        if gallery_advance_num != my_gallery_advance_num: return True
-        
-        if thumb_classname != my_thumb_classname: return True
-        
-        if image_id != my_image_id: return True
-        
-        if image_data != my_image_data: return True
-        
-        if tag_classnames_to_namespaces != my_tag_classnames_to_namespaces: return True
-        
-        return False
-        
-    
-    def Update( self, booru ):
-        
-        ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
-        
-        self._search_url.SetValue( search_url )
-        
-        self._search_separator.Select( self._search_separator.FindString( search_separator ) )
-        
-        self._gallery_advance_num.SetValue( gallery_advance_num )
-        
-        self._thumb_classname.SetValue( thumb_classname )
-        
-        if image_id is None:
-            
-            self._image_info.SetValue( image_data )
-            self._image_data.SetValue( True )
-            
-        else:
-            
-            self._image_info.SetValue( image_id )
-            self._image_id.SetValue( True )
-            
-        
-        self._tag_classnames_to_namespaces.Clear()
-        
-        for ( tag_classname, namespace ) in tag_classnames_to_namespaces.items(): self._tag_classnames_to_namespaces.Append( tag_classname + ' : ' + namespace, ( tag_classname, namespace ) )
         
     
 class DialogManageContacts( Dialog ):
@@ -2602,7 +2603,7 @@ class DialogManageContacts( Dialog ):
                 
                 name = identity.GetName()
                 
-                page_info = ( DialogManageContactsContactPanel, ( self._contacts, identity ), { 'is_identity' : True } )
+                page_info = ( self._Panel, ( self._contacts, identity ), { 'is_identity' : True } )
                 
                 self._contacts.AddPage( page_info, ' identity - ' + name )
                 
@@ -2611,7 +2612,7 @@ class DialogManageContacts( Dialog ):
                 
                 name = contact.GetName()
                 
-                page_info = ( DialogManageContactsContactPanel, ( self._contacts, contact ), { 'is_identity' : False } )
+                page_info = ( self._Panel, ( self._contacts, contact ), { 'is_identity' : False } )
                 
                 self._contacts.AddPage( page_info, name )
                 
@@ -2746,7 +2747,7 @@ class DialogManageContacts( Dialog ):
                     
                     self._edit_log.append( ( 'add', contact ) )
                     
-                    page = DialogManageContactsContactPanel( self._contacts, contact, is_identity = False )
+                    page = self._Panel( self._contacts, contact, is_identity = False )
                     
                     self._deletable_names.add( name )
                     
@@ -2792,7 +2793,7 @@ class DialogManageContacts( Dialog ):
                     
                     self._edit_log.append( ( 'add', contact ) )
                     
-                    page = DialogManageContactsContactPanel( self._contacts, contact, is_identity = False )
+                    page = self._Panel( self._contacts, contact, is_identity = False )
                     
                     self._deletable_names.add( name )
                     
@@ -2959,7 +2960,7 @@ class DialogManageContacts( Dialog ):
                                 
                                 self._deletable_names.add( name )
                                 
-                                page = DialogManageContactsContactPanel( self._contacts, contact, False )
+                                page = self._Panel( self._contacts, contact, False )
                                 
                                 self._contacts.AddPage( page, name, select = True )
                                 
@@ -2975,7 +2976,7 @@ class DialogManageContacts( Dialog ):
                         
                         self._deletable_names.add( name )
                         
-                        page = DialogManageContactsContactPanel( self._contacts, contact, False )
+                        page = self._Panel( self._contacts, contact, False )
                         
                         self._contacts.AddPage( page, name, select = True )
                         
@@ -2988,144 +2989,145 @@ class DialogManageContacts( Dialog ):
             
         
     
-class DialogManageContactsContactPanel( wx.Panel ):
-    
-    def __init__( self, parent, contact, is_identity ):
+    class _Panel( wx.Panel ):
         
-        wx.Panel.__init__( self, parent )
-        
-        self._contact = contact
-        self._is_identity = is_identity
-        
-        ( public_key, name, host, port ) = contact.GetInfo()
-        
-        contact_key = contact.GetContactKey()
-        
-        def InitialiseControls():
+        def __init__( self, parent, contact, is_identity ):
             
-            self._contact_panel = ClientGUICommon.StaticBox( self, 'contact' )
+            wx.Panel.__init__( self, parent )
             
-            self._name = wx.TextCtrl( self._contact_panel, value = name )
+            self._contact = contact
+            self._is_identity = is_identity
+            
+            ( public_key, name, host, port ) = contact.GetInfo()
+            
+            contact_key = contact.GetContactKey()
+            
+            def InitialiseControls():
+                
+                self._contact_panel = ClientGUICommon.StaticBox( self, 'contact' )
+                
+                self._name = wx.TextCtrl( self._contact_panel, value = name )
+                
+                contact_address = host + ':' + str( port )
+                
+                if contact_key is not None: contact_address = contact_key.encode( 'hex' ) + '@' + contact_address
+                
+                self._contact_address = wx.TextCtrl( self._contact_panel, value = contact_address )
+                
+                self._public_key = wx.TextCtrl( self._contact_panel, style = wx.TE_MULTILINE )
+                
+                if public_key is not None: self._public_key.SetValue( public_key )
+                
+            
+            def InitialisePanel():
+                
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._contact_panel, label='name' ), FLAGS_MIXED )
+                gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label='contact address' ), FLAGS_MIXED )
+                gridbox.AddF( self._contact_address, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), FLAGS_MIXED )
+                gridbox.AddF( self._public_key, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._contact_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._contact_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.SetSizer( vbox )
+                
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
+        
+        def _GetInfo( self ):
+            
+            public_key = self._public_key.GetValue()
+            
+            if public_key == '': public_key = None
+            
+            name = self._name.GetValue()
+            
+            contact_address = self._contact_address.GetValue()
+            
+            try:
+                
+                if '@' in contact_address: ( contact_key, address ) = contact_address.split( '@' )
+                else: address = contact_address
+                
+                ( host, port ) = address.split( ':' )
+                
+                try: port = int( port )
+                except:
+                    
+                    port = 45871
+                    
+                    wx.MessageBox( 'Could not parse the port!' )
+                    
+                
+            except:
+                
+                host = 'hostname'
+                port = 45871
+                
+                wx.MessageBox( 'Could not parse the contact\'s address!' )
+                
+            
+            return [ public_key, name, host, port ]
+            
+        
+        def GetContact( self ):
+            
+            [ public_key, name, host, port ] = self._GetInfo()
+            
+            return ClientConstantsMessages.Contact( public_key, name, host, port )
+            
+        
+        def GetOriginalName( self ): return self._contact.GetName()
+        
+        def HasChanges( self ):
+            
+            [ my_public_key, my_name, my_host, my_port ] = self._GetInfo()
+            
+            [ public_key, name, host, port ] = self._contact.GetInfo()
+            
+            if my_public_key != public_key: return True
+            
+            if my_name != name: return True
+            
+            if my_host != host: return True
+            
+            if my_port != port: return True
+            
+            return False
+            
+        
+        def Update( self, contact ):
+            
+            ( public_key, name, host, port ) = contact.GetInfo()
+            
+            contact_key = contact.GetContactKey()
+            
+            self._name.SetValue( name )
             
             contact_address = host + ':' + str( port )
             
             if contact_key is not None: contact_address = contact_key.encode( 'hex' ) + '@' + contact_address
             
-            self._contact_address = wx.TextCtrl( self._contact_panel, value = contact_address )
+            self._contact_address.SetValue( contact_address )
             
-            self._public_key = wx.TextCtrl( self._contact_panel, style = wx.TE_MULTILINE )
+            if public_key is None: public_key = ''
             
-            if public_key is not None: self._public_key.SetValue( public_key )
+            self._public_key.SetValue( public_key )
             
-        
-        def InitialisePanel():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._contact_panel, label='name' ), FLAGS_MIXED )
-            gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._contact_panel, label='contact address' ), FLAGS_MIXED )
-            gridbox.AddF( self._contact_address, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), FLAGS_MIXED )
-            gridbox.AddF( self._public_key, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._contact_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._contact_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def _GetInfo( self ):
-        
-        public_key = self._public_key.GetValue()
-        
-        if public_key == '': public_key = None
-        
-        name = self._name.GetValue()
-        
-        contact_address = self._contact_address.GetValue()
-        
-        try:
-            
-            if '@' in contact_address: ( contact_key, address ) = contact_address.split( '@' )
-            else: address = contact_address
-            
-            ( host, port ) = address.split( ':' )
-            
-            try: port = int( port )
-            except:
-                
-                port = 45871
-                
-                wx.MessageBox( 'Could not parse the port!' )
-                
-            
-        except:
-            
-            host = 'hostname'
-            port = 45871
-            
-            wx.MessageBox( 'Could not parse the contact\'s address!' )
-            
-        
-        return [ public_key, name, host, port ]
-        
-    
-    def GetContact( self ):
-        
-        [ public_key, name, host, port ] = self._GetInfo()
-        
-        return ClientConstantsMessages.Contact( public_key, name, host, port )
-        
-    
-    def GetOriginalName( self ): return self._contact.GetName()
-    
-    def HasChanges( self ):
-        
-        [ my_public_key, my_name, my_host, my_port ] = self._GetInfo()
-        
-        [ public_key, name, host, port ] = self._contact.GetInfo()
-        
-        if my_public_key != public_key: return True
-        
-        if my_name != name: return True
-        
-        if my_host != host: return True
-        
-        if my_port != port: return True
-        
-        return False
-        
-    
-    def Update( self, contact ):
-        
-        ( public_key, name, host, port ) = contact.GetInfo()
-        
-        contact_key = contact.GetContactKey()
-        
-        self._name.SetValue( name )
-        
-        contact_address = host + ':' + str( port )
-        
-        if contact_key is not None: contact_address = contact_key.encode( 'hex' ) + '@' + contact_address
-        
-        self._contact_address.SetValue( contact_address )
-        
-        if public_key is None: public_key = ''
-        
-        self._public_key.SetValue( public_key )
         
     
 class DialogManage4chanPass( Dialog ):
@@ -3262,7 +3264,7 @@ class DialogManageImageboards( Dialog ):
             
             for ( name, imageboards ) in sites:
                 
-                page_info = ( DialogManageImageboardsSitePanel, ( self._sites, imageboards ), {} )
+                page_info = ( self._Panel, ( self._sites, imageboards ), {} )
                 
                 self._sites.AddPage( page_info, name )
                 
@@ -3335,7 +3337,7 @@ class DialogManageImageboards( Dialog ):
                     
                     self._edit_log.append( ( 'add', name ) )
                     
-                    page = DialogManageImageboardsSitePanel( self._sites, [] )
+                    page = self._Panel( self._sites, [] )
                     
                     self._sites.AddPage( page, name, select = True )
                     
@@ -3421,7 +3423,7 @@ class DialogManageImageboards( Dialog ):
                         
                         self._edit_log.append( ( 'add', name ) )
                         
-                        page = DialogManageImageboardsSitePanel( self._sites, [] )
+                        page = self._Panel( self._sites, [] )
                         
                         self._sites.AddPage( page, name, select = True )
                         
@@ -3449,487 +3451,489 @@ class DialogManageImageboards( Dialog ):
             
         
     
-class DialogManageImageboardsSitePanel( wx.Panel ):
-    
-    def __init__( self, parent, imageboards ):
+    class _Panel( wx.Panel ):
         
-        wx.Panel.__init__( self, parent )
-        
-        def InitialiseControls():
+        def __init__( self, parent, imageboards ):
             
-            self._edit_log = []
+            wx.Panel.__init__( self, parent )
             
-            self._site_panel = ClientGUICommon.StaticBox( self, 'site' )
-            
-            self._imageboards = ClientGUICommon.ListBook( self._site_panel )
-            
-            for imageboard in imageboards:
+            def InitialiseControls():
                 
-                name = imageboard.GetName()
+                self._edit_log = []
                 
-                page_info = ( DialogManageImageboardsImageboardPanel, ( self._imageboards, imageboard ), {} )
+                self._site_panel = ClientGUICommon.StaticBox( self, 'site' )
                 
-                self._imageboards.AddPage( page_info, name )
+                self._imageboards = ClientGUICommon.ListBook( self._site_panel )
                 
-            
-            self._add = wx.Button( self._site_panel, label='add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            self._add.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._remove = wx.Button( self._site_panel, label='remove' )
-            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._export = wx.Button( self._site_panel, label='export' )
-            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
-            
-        
-        def InitialisePanel():
-            
-            add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add, FLAGS_MIXED )
-            add_remove_hbox.AddF( self._remove, FLAGS_MIXED )
-            add_remove_hbox.AddF( self._export, FLAGS_MIXED )
-            
-            self._site_panel.AddF( self._imageboards, FLAGS_EXPAND_BOTH_WAYS )
-            self._site_panel.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._site_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( 980, y ) )
-            
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def EventAdd( self, event ):
-        
-        with wx.TextEntryDialog( self, 'Enter new imageboard\'s name' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                try:
+                for imageboard in imageboards:
                     
-                    name = dlg.GetValue()
+                    name = imageboard.GetName()
                     
-                    if self._imageboards.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    page_info = ( self._Panel, ( self._imageboards, imageboard ), {} )
                     
-                    if name == '': raise Exception( 'Please enter a nickname for the service.' )
-                    
-                    imageboard = CC.Imageboard( name, '', 60, [], {} )
-                    
-                    self._edit_log.append( ( 'add', name ) )
-                    
-                    page = DialogManageImageboardsImageboardPanel( self._imageboards, imageboard )
-                    
-                    self._imageboards.AddPage( page, name, select = True )
-                    
-                except Exception as e:
-                    
-                    wx.MessageBox( unicode( e ) )
-                    
-                    self.EventAdd( event )
+                    self._imageboards.AddPage( page_info, name )
                     
                 
+                self._add = wx.Button( self._site_panel, label='add' )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                self._add.SetForegroundColour( ( 0, 128, 0 ) )
+                
+                self._remove = wx.Button( self._site_panel, label='remove' )
+                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+                self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+                
+                self._export = wx.Button( self._site_panel, label='export' )
+                self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+                
+            
+            def InitialisePanel():
+                
+                add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                add_remove_hbox.AddF( self._add, FLAGS_MIXED )
+                add_remove_hbox.AddF( self._remove, FLAGS_MIXED )
+                add_remove_hbox.AddF( self._export, FLAGS_MIXED )
+                
+                self._site_panel.AddF( self._imageboards, FLAGS_EXPAND_BOTH_WAYS )
+                self._site_panel.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._site_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.SetSizer( vbox )
+                
+                ( x, y ) = self.GetEffectiveMinSize()
+                
+                self.SetInitialSize( ( 980, y ) )
+                
+            
+            InitialiseControls()
+            
+            InitialisePanel()
             
         
-    
-    def EventExport( self, event ):
-        
-        imageboard_panel = self._imageboards.GetCurrentPage()
-        
-        if imageboard_panel is not None:
+        def EventAdd( self, event ):
             
-            imageboard = imageboard_panel.GetImageboard()
-            
-            with wx.FileDialog( self, 'select where to export imageboard', defaultFile = 'imageboard.yaml', style = wx.FD_SAVE ) as dlg:
+            with wx.TextEntryDialog( self, 'Enter new imageboard\'s name' ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( imageboard ) )
-                    
-                
-            
-        
-    
-    def EventRemove( self, event ):
-        
-        imageboard_panel = self._imageboards.GetCurrentPage()
-        
-        if imageboard_panel is not None:
-            
-            name = self._imageboards.GetCurrentName()
-            
-            self._edit_log.append( ( 'delete', name ) )
-            
-            self._imageboards.DeleteCurrentPage()
-            
-        
-    
-    def GetChanges( self ):
-        
-        for page in self._imageboards.GetNameToPageDict().values():
-            
-            if page.HasChanges(): self._edit_log.append( ( 'edit', page.GetImageboard() ) )
-            
-        
-        return self._edit_log
-        
-    
-    def GetImageboards( self ): return [ page.GetImageboard() for page in self._imageboards.GetNameToPageDict().values() ]
-    
-    def HasChanges( self ): return len( self._edit_log ) > 0 or True in ( page.HasChanges() for page in self._imageboards.GetNameToPageDict().values() )
-    
-    def UpdateImageboard( self, imageboard ):
-        
-        name = imageboard.GetName()
-        
-        if not self._imageboards.NameExists( name ):
-            
-            new_imageboard = CC.Imageboard( name, '', 60, [], {} )
-            
-            self._edit_log.append( ( 'add', name ) )
-            
-            page = DialogManageImageboardsImageboardPanel( self._imageboards, new_imageboard )
-            
-            self._imageboards.AddPage( page, name, select = True )
-            
-        
-        page = self._imageboards.GetNameToPageDict()[ name ]
-        
-        page.Update( imageboard )
-        
-    
-class DialogManageImageboardsImageboardPanel( wx.Panel ):
-    
-    def __init__( self, parent, imageboard ):
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._imageboard = imageboard
-        
-        ( post_url, flood_time, form_fields, restrictions ) = self._imageboard.GetBoardInfo()
-        
-        def InitialiseControls():
-            
-            self._imageboard_panel = ClientGUICommon.StaticBox( self, 'imageboard' )
-            
-            #
-            
-            self._basic_info_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'basic info' )
-            
-            self._post_url = wx.TextCtrl( self._basic_info_panel, value = post_url )
-            
-            self._flood_time = wx.SpinCtrl( self._basic_info_panel, min = 5, max = 1200, initial = flood_time )
-            
-            #
-            
-            self._form_fields_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'form fields' )
-            
-            self._form_fields = ClientGUICommon.SaneListCtrl( self._form_fields_panel, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ] )
-            
-            for ( name, type, default, editable ) in form_fields:
-                
-                self._form_fields.Append( ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
-                
-            
-            self._add = wx.Button( self._form_fields_panel, label='add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._edit = wx.Button( self._form_fields_panel, label='edit' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._delete = wx.Button( self._form_fields_panel, label='delete' )
-            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            #
-            
-            self._restrictions_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'restrictions' )
-            
-            if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
-            else: value = None
-            
-            self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'min resolution', value, num_dimensions = 2 )
-            
-            if CC.RESTRICTION_MAX_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MAX_RESOLUTION ]
-            else: value = None
-            
-            self._max_resolution = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'max resolution', value, num_dimensions = 2 )
-            
-            if CC.RESTRICTION_MAX_FILE_SIZE in restrictions: value = restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ]
-            else: value = None
-            
-            self._max_file_size = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'max file size (KB)', value, multiplier = 1024 )
-            
-            self._allowed_mimes_panel = ClientGUICommon.StaticBox( self._restrictions_panel, 'allowed mimes' )
-            
-            self._mimes = wx.ListBox( self._allowed_mimes_panel )
-            
-            if CC.RESTRICTION_ALLOWED_MIMES in restrictions: mimes = restrictions[ CC.RESTRICTION_ALLOWED_MIMES ]
-            else: mimes = []
-            
-            for mime in mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
-            
-            self._mime_choice = wx.Choice( self._allowed_mimes_panel )
-            
-            for mime in HC.ALLOWED_MIMES: self._mime_choice.Append( HC.mime_string_lookup[ mime ], mime )
-            
-            self._mime_choice.SetSelection( 0 )
-            
-            self._add_mime = wx.Button( self._allowed_mimes_panel, label = 'add' )
-            self._add_mime.Bind( wx.EVT_BUTTON, self.EventAddMime )
-            
-            self._remove_mime = wx.Button( self._allowed_mimes_panel, label = 'remove' )
-            self._remove_mime.Bind( wx.EVT_BUTTON, self.EventRemoveMime )
-            
-        
-        def InitialisePanel():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            #
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._basic_info_panel, label='POST URL' ), FLAGS_MIXED )
-            gridbox.AddF( self._post_url, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._basic_info_panel, label='flood time' ), FLAGS_MIXED )
-            gridbox.AddF( self._flood_time, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._basic_info_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
-            h_b_box = wx.BoxSizer( wx.HORIZONTAL )
-            h_b_box.AddF( self._add, FLAGS_MIXED )
-            h_b_box.AddF( self._edit, FLAGS_MIXED )
-            h_b_box.AddF( self._delete, FLAGS_MIXED )
-            
-            self._form_fields_panel.AddF( self._form_fields, FLAGS_EXPAND_BOTH_WAYS )
-            self._form_fields_panel.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
-            
-            #
-            
-            mime_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
-            mime_buttons_box.AddF( self._mime_choice, FLAGS_MIXED )
-            mime_buttons_box.AddF( self._add_mime, FLAGS_MIXED )
-            mime_buttons_box.AddF( self._remove_mime, FLAGS_MIXED )
-            
-            self._allowed_mimes_panel.AddF( self._mimes, FLAGS_EXPAND_BOTH_WAYS )
-            self._allowed_mimes_panel.AddF( mime_buttons_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            self._restrictions_panel.AddF( self._min_resolution, FLAGS_EXPAND_PERPENDICULAR )
-            self._restrictions_panel.AddF( self._max_resolution, FLAGS_EXPAND_PERPENDICULAR )
-            self._restrictions_panel.AddF( self._max_file_size, FLAGS_EXPAND_PERPENDICULAR )
-            self._restrictions_panel.AddF( self._allowed_mimes_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            #
-            
-            self._imageboard_panel.AddF( self._basic_info_panel, FLAGS_EXPAND_PERPENDICULAR )
-            self._imageboard_panel.AddF( self._form_fields_panel, FLAGS_EXPAND_BOTH_WAYS )
-            self._imageboard_panel.AddF( self._restrictions_panel, FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._imageboard_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def _GetInfo( self ):
-        
-        imageboard_name = self._imageboard.GetName()
-        
-        post_url = self._post_url.GetValue()
-        
-        flood_time = self._flood_time.GetValue()
-        
-        # list instead of tumple cause of yaml comparisons
-        form_fields = self._form_fields.GetClientData()
-        
-        restrictions = {}
-        
-        # yaml list again
-        value = self._min_resolution.GetValue()
-        if value is not None: restrictions[ CC.RESTRICTION_MIN_RESOLUTION ] = list( value )
-        
-        # yaml list again
-        value = self._max_resolution.GetValue()
-        if value is not None: restrictions[ CC.RESTRICTION_MAX_RESOLUTION ] = list( value )
-        
-        value = self._max_file_size.GetValue()
-        if value is not None: restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ] = value
-        
-        mimes = [ self._mimes.GetClientData( i ) for i in range( self._mimes.GetCount() ) ]
-        
-        if len( mimes ) > 0: restrictions[ CC.RESTRICTION_ALLOWED_MIMES ] = mimes
-        
-        return ( imageboard_name, post_url, flood_time, form_fields, restrictions )
-        
-    
-    def EventAdd( self, event ):
-        
-        try:
-            
-            with DialogInputNewFormField( self ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( name, type, default, editable ) = dlg.GetFormField()
-                    
-                    if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]:
+                    try:
                         
-                        wx.MessageBox( 'There is already a field named ' + name )
+                        name = dlg.GetValue()
+                        
+                        if self._imageboards.NameExists( name ): raise Exception( 'That name is already in use!' )
+                        
+                        if name == '': raise Exception( 'Please enter a nickname for the service.' )
+                        
+                        imageboard = CC.Imageboard( name, '', 60, [], {} )
+                        
+                        self._edit_log.append( ( 'add', name ) )
+                        
+                        page = self._Panel( self._imageboards, imageboard )
+                        
+                        self._imageboards.AddPage( page, name, select = True )
+                        
+                    except Exception as e:
+                        
+                        wx.MessageBox( unicode( e ) )
                         
                         self.EventAdd( event )
                         
-                        return
+                    
+                
+            
+        
+        def EventExport( self, event ):
+            
+            imageboard_panel = self._imageboards.GetCurrentPage()
+            
+            if imageboard_panel is not None:
+                
+                imageboard = imageboard_panel.GetImageboard()
+                
+                with wx.FileDialog( self, 'select where to export imageboard', defaultFile = 'imageboard.yaml', style = wx.FD_SAVE ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
                         
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( imageboard ) )
+                        
+                    
+                
+            
+        
+        def EventRemove( self, event ):
+            
+            imageboard_panel = self._imageboards.GetCurrentPage()
+            
+            if imageboard_panel is not None:
+                
+                name = self._imageboards.GetCurrentName()
+                
+                self._edit_log.append( ( 'delete', name ) )
+                
+                self._imageboards.DeleteCurrentPage()
+                
+            
+        
+        def GetChanges( self ):
+            
+            for page in self._imageboards.GetNameToPageDict().values():
+                
+                if page.HasChanges(): self._edit_log.append( ( 'edit', page.GetImageboard() ) )
+                
+            
+            return self._edit_log
+            
+        
+        def GetImageboards( self ): return [ page.GetImageboard() for page in self._imageboards.GetNameToPageDict().values() ]
+        
+        def HasChanges( self ): return len( self._edit_log ) > 0 or True in ( page.HasChanges() for page in self._imageboards.GetNameToPageDict().values() )
+        
+        def UpdateImageboard( self, imageboard ):
+            
+            name = imageboard.GetName()
+            
+            if not self._imageboards.NameExists( name ):
+                
+                new_imageboard = CC.Imageboard( name, '', 60, [], {} )
+                
+                self._edit_log.append( ( 'add', name ) )
+                
+                page = self._Panel( self._imageboards, new_imageboard )
+                
+                self._imageboards.AddPage( page, name, select = True )
+                
+            
+            page = self._imageboards.GetNameToPageDict()[ name ]
+            
+            page.Update( imageboard )
+            
+        
+        class _Panel( wx.Panel ):
+            
+            def __init__( self, parent, imageboard ):
+                
+                wx.Panel.__init__( self, parent )
+                
+                self._imageboard = imageboard
+                
+                ( post_url, flood_time, form_fields, restrictions ) = self._imageboard.GetBoardInfo()
+                
+                def InitialiseControls():
+                    
+                    self._imageboard_panel = ClientGUICommon.StaticBox( self, 'imageboard' )
+                    
+                    #
+                    
+                    self._basic_info_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'basic info' )
+                    
+                    self._post_url = wx.TextCtrl( self._basic_info_panel, value = post_url )
+                    
+                    self._flood_time = wx.SpinCtrl( self._basic_info_panel, min = 5, max = 1200, initial = flood_time )
+                    
+                    #
+                    
+                    self._form_fields_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'form fields' )
+                    
+                    self._form_fields = ClientGUICommon.SaneListCtrl( self._form_fields_panel, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ] )
+                    
+                    for ( name, type, default, editable ) in form_fields:
+                        
+                        self._form_fields.Append( ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
+                        
+                    
+                    self._add = wx.Button( self._form_fields_panel, label='add' )
+                    self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                    
+                    self._edit = wx.Button( self._form_fields_panel, label='edit' )
+                    self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+                    
+                    self._delete = wx.Button( self._form_fields_panel, label='delete' )
+                    self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+                    
+                    #
+                    
+                    self._restrictions_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'restrictions' )
+                    
+                    if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
+                    else: value = None
+                    
+                    self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'min resolution', value, num_dimensions = 2 )
+                    
+                    if CC.RESTRICTION_MAX_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MAX_RESOLUTION ]
+                    else: value = None
+                    
+                    self._max_resolution = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'max resolution', value, num_dimensions = 2 )
+                    
+                    if CC.RESTRICTION_MAX_FILE_SIZE in restrictions: value = restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ]
+                    else: value = None
+                    
+                    self._max_file_size = ClientGUICommon.NoneableSpinCtrl( self._restrictions_panel, 'max file size (KB)', value, multiplier = 1024 )
+                    
+                    self._allowed_mimes_panel = ClientGUICommon.StaticBox( self._restrictions_panel, 'allowed mimes' )
+                    
+                    self._mimes = wx.ListBox( self._allowed_mimes_panel )
+                    
+                    if CC.RESTRICTION_ALLOWED_MIMES in restrictions: mimes = restrictions[ CC.RESTRICTION_ALLOWED_MIMES ]
+                    else: mimes = []
+                    
+                    for mime in mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
+                    
+                    self._mime_choice = wx.Choice( self._allowed_mimes_panel )
+                    
+                    for mime in HC.ALLOWED_MIMES: self._mime_choice.Append( HC.mime_string_lookup[ mime ], mime )
+                    
+                    self._mime_choice.SetSelection( 0 )
+                    
+                    self._add_mime = wx.Button( self._allowed_mimes_panel, label = 'add' )
+                    self._add_mime.Bind( wx.EVT_BUTTON, self.EventAddMime )
+                    
+                    self._remove_mime = wx.Button( self._allowed_mimes_panel, label = 'remove' )
+                    self._remove_mime.Bind( wx.EVT_BUTTON, self.EventRemoveMime )
+                    
+                
+                def InitialisePanel():
+                    
+                    self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                    
+                    #
+                    
+                    gridbox = wx.FlexGridSizer( 0, 2 )
+                    
+                    gridbox.AddGrowableCol( 1, 1 )
+                    
+                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label='POST URL' ), FLAGS_MIXED )
+                    gridbox.AddF( self._post_url, FLAGS_EXPAND_BOTH_WAYS )
+                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label='flood time' ), FLAGS_MIXED )
+                    gridbox.AddF( self._flood_time, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    self._basic_info_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                    
+                    #
+                    
+                    h_b_box = wx.BoxSizer( wx.HORIZONTAL )
+                    h_b_box.AddF( self._add, FLAGS_MIXED )
+                    h_b_box.AddF( self._edit, FLAGS_MIXED )
+                    h_b_box.AddF( self._delete, FLAGS_MIXED )
+                    
+                    self._form_fields_panel.AddF( self._form_fields, FLAGS_EXPAND_BOTH_WAYS )
+                    self._form_fields_panel.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
+                    
+                    #
+                    
+                    mime_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
+                    mime_buttons_box.AddF( self._mime_choice, FLAGS_MIXED )
+                    mime_buttons_box.AddF( self._add_mime, FLAGS_MIXED )
+                    mime_buttons_box.AddF( self._remove_mime, FLAGS_MIXED )
+                    
+                    self._allowed_mimes_panel.AddF( self._mimes, FLAGS_EXPAND_BOTH_WAYS )
+                    self._allowed_mimes_panel.AddF( mime_buttons_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                    
+                    self._restrictions_panel.AddF( self._min_resolution, FLAGS_EXPAND_PERPENDICULAR )
+                    self._restrictions_panel.AddF( self._max_resolution, FLAGS_EXPAND_PERPENDICULAR )
+                    self._restrictions_panel.AddF( self._max_file_size, FLAGS_EXPAND_PERPENDICULAR )
+                    self._restrictions_panel.AddF( self._allowed_mimes_panel, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    #
+                    
+                    self._imageboard_panel.AddF( self._basic_info_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    self._imageboard_panel.AddF( self._form_fields_panel, FLAGS_EXPAND_BOTH_WAYS )
+                    self._imageboard_panel.AddF( self._restrictions_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    vbox = wx.BoxSizer( wx.VERTICAL )
+                    
+                    vbox.AddF( self._imageboard_panel, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    self.SetSizer( vbox )
+                    
+                
+                InitialiseControls()
+                
+                InitialisePanel()
+                
+            
+            def _GetInfo( self ):
+                
+                imageboard_name = self._imageboard.GetName()
+                
+                post_url = self._post_url.GetValue()
+                
+                flood_time = self._flood_time.GetValue()
+                
+                # list instead of tumple cause of yaml comparisons
+                form_fields = self._form_fields.GetClientData()
+                
+                restrictions = {}
+                
+                # yaml list again
+                value = self._min_resolution.GetValue()
+                if value is not None: restrictions[ CC.RESTRICTION_MIN_RESOLUTION ] = list( value )
+                
+                # yaml list again
+                value = self._max_resolution.GetValue()
+                if value is not None: restrictions[ CC.RESTRICTION_MAX_RESOLUTION ] = list( value )
+                
+                value = self._max_file_size.GetValue()
+                if value is not None: restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ] = value
+                
+                mimes = [ self._mimes.GetClientData( i ) for i in range( self._mimes.GetCount() ) ]
+                
+                if len( mimes ) > 0: restrictions[ CC.RESTRICTION_ALLOWED_MIMES ] = mimes
+                
+                return ( imageboard_name, post_url, flood_time, form_fields, restrictions )
+                
+            
+            def EventAdd( self, event ):
+                
+                try:
+                    
+                    with DialogInputNewFormField( self ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            ( name, type, default, editable ) = dlg.GetFormField()
+                            
+                            if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]:
+                                
+                                wx.MessageBox( 'There is already a field named ' + name )
+                                
+                                self.EventAdd( event )
+                                
+                                return
+                                
+                            
+                            self._form_fields.Append( ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
+                            
+                        
+                    
+                except Exception as e: wx.MessageBox( unicode( e ) )
+                
+            
+            def EventAddMime( self, event ):
+                
+                selection = self._mime_choice.GetSelection()
+                
+                if selection != wx.NOT_FOUND:
+                    
+                    mime = self._mime_choice.GetClientData( selection )
+                    
+                    existing_mimes = [ self._mimes.GetClientData( i ) for i in range( self._mimes.GetCount() ) ]
+                    
+                    if mime not in existing_mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
+                    
+                
+            
+            def EventDelete( self, event ): self._form_fields.RemoveAllSelected()
+            
+            def EventRemoveMime( self, event ):
+                
+                selection = self._mimes.GetSelection()
+                
+                if selection != wx.NOT_FOUND: self._mimes.Delete( selection )
+                
+            
+            def EventEdit( self, event ):
+                
+                indices = self._form_fields.GetAllSelected()
+                
+                for index in indices:
+                    
+                    ( name, type, default, editable ) = self._form_fields.GetClientData( index )
+                    
+                    form_field = ( name, type, default, editable )
+                    
+                    try:
+                        
+                        with DialogInputNewFormField( self, form_field ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                old_name = name
+                                
+                                ( name, type, default, editable ) = dlg.GetFormField()
+                                
+                                if old_name != name:
+                                    
+                                    if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]: raise Exception( 'You already have a form field called ' + name + '; delete or edit that one first' )
+                                    
+                                
+                                self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
+                                
+                            
+                        
+                    except Exception as e: wx.MessageBox( unicode( e ) )
+                    
+                
+            
+            def GetImageboard( self ):
+                
+                ( name, post_url, flood_time, form_fields, restrictions ) = self._GetInfo()
+                
+                return CC.Imageboard( name, post_url, flood_time, form_fields, restrictions )
+                
+            
+            def HasChanges( self ):
+                
+                ( my_name, my_post_url, my_flood_time, my_form_fields, my_restrictions ) = self._GetInfo()
+                
+                ( post_url, flood_time, form_fields, restrictions ) = self._imageboard.GetBoardInfo()
+                
+                if post_url != my_post_url: return True
+                
+                if flood_time != my_flood_time: return True
+                
+                if set( [ tuple( item ) for item in form_fields ] ) != set( [ tuple( item ) for item in my_form_fields ] ): return True
+                
+                if restrictions != my_restrictions: return True
+                
+                return False
+                
+            
+            def Update( self, imageboard ):
+                
+                ( post_url, flood_time, form_fields, restrictions ) = imageboard.GetBoardInfo()
+                
+                self._post_url.SetValue( post_url )
+                self._flood_time.SetValue( flood_time )
+                
+                self._form_fields.ClearAll()
+                
+                self._form_fields.InsertColumn( 0, 'name', width = 120 )
+                self._form_fields.InsertColumn( 1, 'type', width = 120 )
+                self._form_fields.InsertColumn( 2, 'default' )
+                self._form_fields.InsertColumn( 3, 'editable', width = 120 )
+                
+                self._form_fields.setResizeColumn( 3 ) # default
+                
+                for ( name, type, default, editable ) in form_fields:
                     
                     self._form_fields.Append( ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
                     
                 
-            
-        except Exception as e: wx.MessageBox( unicode( e ) )
-        
-    
-    def EventAddMime( self, event ):
-        
-        selection = self._mime_choice.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            mime = self._mime_choice.GetClientData( selection )
-            
-            existing_mimes = [ self._mimes.GetClientData( i ) for i in range( self._mimes.GetCount() ) ]
-            
-            if mime not in existing_mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
-            
-        
-    
-    def EventDelete( self, event ): self._form_fields.RemoveAllSelected()
-    
-    def EventRemoveMime( self, event ):
-        
-        selection = self._mimes.GetSelection()
-        
-        if selection != wx.NOT_FOUND: self._mimes.Delete( selection )
-        
-    
-    def EventEdit( self, event ):
-        
-        indices = self._form_fields.GetAllSelected()
-        
-        for index in indices:
-            
-            ( name, type, default, editable ) = self._form_fields.GetClientData( index )
-            
-            form_field = ( name, type, default, editable )
-            
-            try:
+                if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
+                else: value = None
                 
-                with DialogInputNewFormField( self, form_field ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        old_name = name
-                        
-                        ( name, type, default, editable ) = dlg.GetFormField()
-                        
-                        if old_name != name:
-                            
-                            if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]: raise Exception( 'You already have a form field called ' + name + '; delete or edit that one first' )
-                            
-                        
-                        self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
-                        
-                    
+                self._min_resolution.SetValue( value )
                 
-            except Exception as e: wx.MessageBox( unicode( e ) )
+                if CC.RESTRICTION_MAX_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MAX_RESOLUTION ]
+                else: value = None
+                
+                self._max_resolution.SetValue( value )
+                
+                if CC.RESTRICTION_MAX_FILE_SIZE in restrictions: value = restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ]
+                else: value = None
+                
+                self._max_file_size.SetValue( value )
+                
+                self._mimes.Clear()
+                
+                if CC.RESTRICTION_ALLOWED_MIMES in restrictions: mimes = restrictions[ CC.RESTRICTION_ALLOWED_MIMES ]
+                else: mimes = []
+                
+                for mime in mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
+                
             
-        
-    
-    def GetImageboard( self ):
-        
-        ( name, post_url, flood_time, form_fields, restrictions ) = self._GetInfo()
-        
-        return CC.Imageboard( name, post_url, flood_time, form_fields, restrictions )
-        
-    
-    def HasChanges( self ):
-        
-        ( my_name, my_post_url, my_flood_time, my_form_fields, my_restrictions ) = self._GetInfo()
-        
-        ( post_url, flood_time, form_fields, restrictions ) = self._imageboard.GetBoardInfo()
-        
-        if post_url != my_post_url: return True
-        
-        if flood_time != my_flood_time: return True
-        
-        if set( [ tuple( item ) for item in form_fields ] ) != set( [ tuple( item ) for item in my_form_fields ] ): return True
-        
-        if restrictions != my_restrictions: return True
-        
-        return False
-        
-    
-    def Update( self, imageboard ):
-        
-        ( post_url, flood_time, form_fields, restrictions ) = imageboard.GetBoardInfo()
-        
-        self._post_url.SetValue( post_url )
-        self._flood_time.SetValue( flood_time )
-        
-        self._form_fields.ClearAll()
-        
-        self._form_fields.InsertColumn( 0, 'name', width = 120 )
-        self._form_fields.InsertColumn( 1, 'type', width = 120 )
-        self._form_fields.InsertColumn( 2, 'default' )
-        self._form_fields.InsertColumn( 3, 'editable', width = 120 )
-        
-        self._form_fields.setResizeColumn( 3 ) # default
-        
-        for ( name, type, default, editable ) in form_fields:
-            
-            self._form_fields.Append( ( name, CC.field_string_lookup[ type ], str( default ), str( editable ) ), ( name, type, default, editable ) )
-            
-        
-        if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
-        else: value = None
-        
-        self._min_resolution.SetValue( value )
-        
-        if CC.RESTRICTION_MAX_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MAX_RESOLUTION ]
-        else: value = None
-        
-        self._max_resolution.SetValue( value )
-        
-        if CC.RESTRICTION_MAX_FILE_SIZE in restrictions: value = restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ]
-        else: value = None
-        
-        self._max_file_size.SetValue( value )
-        
-        self._mimes.Clear()
-        
-        if CC.RESTRICTION_ALLOWED_MIMES in restrictions: mimes = restrictions[ CC.RESTRICTION_ALLOWED_MIMES ]
-        else: mimes = []
-        
-        for mime in mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
         
     
 class DialogManageOptionsFileRepository( Dialog ):
@@ -5071,7 +5075,7 @@ class DialogManageRatings( Dialog ):
             
             self._panels = []
             
-            for service_identifier in service_identifiers: self._panels.append( DialogManageRatingsPanel( self, service_identifier, media ) )
+            for service_identifier in service_identifiers: self._panels.append( self._Panel( self, service_identifier, media ) )
             
             self._apply = wx.Button( self, label='Apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -5144,7 +5148,7 @@ class DialogManageRatings( Dialog ):
                     
                     rating = panel.GetRating()
                     
-                    content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_RATING, service_identifier, self._hashes, info = rating ) )
+                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, service_identifier, self._hashes, info = rating ) )
                     
                 
             
@@ -5166,267 +5170,268 @@ class DialogManageRatings( Dialog ):
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
-class DialogManageRatingsPanel( wx.Panel ):
-    
-    def __init__( self, parent, service_identifier, media ):
+    class _Panel( wx.Panel ):
         
-        wx.Panel.__init__( self, parent )
-        
-        self._service_identifier = service_identifier
-        self._service = wx.GetApp().Read( 'service', service_identifier )
-        
-        extra_info = self._service.GetExtraInfo()
-        
-        self._media = media
-        
-        service_type = service_identifier.GetType()
-        
-        def InitialiseControls():
+        def __init__( self, parent, service_identifier, media ):
             
-            self._ratings_panel = ClientGUICommon.StaticBox( self, self._service_identifier.GetName() )
+            wx.Panel.__init__( self, parent )
             
-            self._current_score = wx.StaticText( self._ratings_panel, style = wx.ALIGN_CENTER )
+            self._service_identifier = service_identifier
+            self._service = wx.GetApp().Read( 'service', service_identifier )
             
-            score_font = self._GetScoreFont()
+            extra_info = self._service.GetExtraInfo()
             
-            self._current_score.SetFont( score_font )
+            self._media = media
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): all_rating_services = [ local_ratings for ( local_ratings, remote_ratings ) in [ media.GetRatings() for media in self._media ] ]
-            elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): all_rating_services = [ remote_ratings for ( local_ratings, remote_ratings ) in [ media.GetRatings() for media in self._media ] ]
+            service_type = service_identifier.GetType()
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.RATING_LIKE_REPOSITORY ):
+            def InitialiseControls():
                 
-                ( like, dislike ) = extra_info
+                self._ratings_panel = ClientGUICommon.StaticBox( self, self._service_identifier.GetName() )
                 
-                if service_type == HC.LOCAL_RATING_LIKE:
+                self._current_score = wx.StaticText( self._ratings_panel, style = wx.ALIGN_CENTER )
+                
+                score_font = self._GetScoreFont()
+                
+                self._current_score.SetFont( score_font )
+                
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): all_rating_services = [ local_ratings for ( local_ratings, remote_ratings ) in [ media.GetRatings() for media in self._media ] ]
+                elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): all_rating_services = [ remote_ratings for ( local_ratings, remote_ratings ) in [ media.GetRatings() for media in self._media ] ]
+                
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.RATING_LIKE_REPOSITORY ):
                     
-                    ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
+                    ( like, dislike ) = extra_info
                     
-                    if all( ( i is None for i in ratings ) ):
+                    if service_type == HC.LOCAL_RATING_LIKE:
                         
-                        choices = [ like, dislike, 'make no changes' ]
+                        ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
                         
-                        if len( self._media ) > 1: self._current_score.SetLabel( 'none rated' )
-                        else: self._current_score.SetLabel( 'not rated' )
-                        
-                    elif None in ratings:
-                        
-                        choices = [ like, dislike, 'remove rating', 'make no changes' ]
-                        
-                        self._current_score.SetLabel( 'not all rated' )
-                        
-                    else:
-                        
-                        if all( ( i == 1 for i in ratings ) ):
+                        if all( ( i is None for i in ratings ) ):
                             
-                            choices = [ dislike, 'remove rating', 'make no changes' ]
+                            choices = [ like, dislike, 'make no changes' ]
                             
-                            if len( self._media ) > 1: self._current_score.SetLabel( 'all ' + like )
-                            else: self._current_score.SetLabel( like )
+                            if len( self._media ) > 1: self._current_score.SetLabel( 'none rated' )
+                            else: self._current_score.SetLabel( 'not rated' )
                             
-                        elif all( ( i == 0 for i in ratings ) ):
-                            
-                            choices = [ like, 'remove rating', 'make no changes' ]
-                            
-                            if len( self._media ) > 1: self._current_score.SetLabel( 'all ' + dislike )
-                            else: self._current_score.SetLabel( dislike )
-                            
-                        else:
+                        elif None in ratings:
                             
                             choices = [ like, dislike, 'remove rating', 'make no changes' ]
                             
+                            self._current_score.SetLabel( 'not all rated' )
+                            
+                        else:
+                            
+                            if all( ( i == 1 for i in ratings ) ):
+                                
+                                choices = [ dislike, 'remove rating', 'make no changes' ]
+                                
+                                if len( self._media ) > 1: self._current_score.SetLabel( 'all ' + like )
+                                else: self._current_score.SetLabel( like )
+                                
+                            elif all( ( i == 0 for i in ratings ) ):
+                                
+                                choices = [ like, 'remove rating', 'make no changes' ]
+                                
+                                if len( self._media ) > 1: self._current_score.SetLabel( 'all ' + dislike )
+                                else: self._current_score.SetLabel( dislike )
+                                
+                            else:
+                                
+                                choices = [ like, dislike, 'remove rating', 'make no changes' ]
+                                
+                            
+                            overall_rating = float( sum( ratings ) ) / float( len( ratings ) )
+                            
+                            self._current_score.SetLabel( str( '%.2f' % overall_rating ) )
+                            
                         
-                        overall_rating = float( sum( ratings ) ) / float( len( ratings ) )
-                        
-                        self._current_score.SetLabel( str( '%.2f' % overall_rating ) )
-                        
-                    
-                    if len( self._media ) > 1:
-                        
-                        ratings_counter = collections.Counter( ratings )
-                        
-                        likes = ratings_counter[ 1 ]
-                        dislikes = ratings_counter[ 0 ]
-                        nones = ratings_counter[ None ]
-                        
-                        scores = []
-                        
-                        if likes > 0: scores.append( str( likes ) + ' likes' )
-                        if dislikes > 0: scores.append( str( dislikes ) + ' dislikes' )
-                        if nones > 0: scores.append( str( nones ) + ' not rated' )
-                        
-                        self._current_score.SetLabel( ', '.join( scores ) )
-                        
-                    else:
-                        
-                        ( rating, ) = ratings
-                        
-                        if rating is None: self._current_score.SetLabel( 'not rated' )
-                        elif rating == 1: self._current_score.SetLabel( like )
-                        elif rating == 0: self._current_score.SetLabel( dislike )
-                        
-                    
-                else:
-                    
-                    self._current_score.SetLabel( '23 ' + like + 's, 44 ' + dislike + 's' )
-                    
-                
-            elif service_type in ( HC.LOCAL_RATING_NUMERICAL, HC.RATING_NUMERICAL_REPOSITORY ):
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    ( min, max ) = extra_info
-                    
-                    self._slider = wx.Slider( self._ratings_panel, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
-                    self._slider.Bind( wx.EVT_SLIDER, self.EventSlider )
-                    
-                    ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
-                    
-                    if all( ( i is None for i in ratings ) ):
-                        
-                        choices = [ 'set rating', 'make no changes' ]
-                        
-                        if len( self._media ) > 1: self._current_score.SetLabel( 'none rated' )
-                        else: self._current_score.SetLabel( 'not rated' )
-                        
-                    elif None in ratings:
-                        
-                        choices = [ 'set rating', 'remove rating', 'make no changes' ]
-                        
-                        if len( self._media ) > 1: self._current_score.SetLabel( 'not all rated' )
-                        else: self._current_score.SetLabel( 'not rated' )
+                        if len( self._media ) > 1:
+                            
+                            ratings_counter = collections.Counter( ratings )
+                            
+                            likes = ratings_counter[ 1 ]
+                            dislikes = ratings_counter[ 0 ]
+                            nones = ratings_counter[ None ]
+                            
+                            scores = []
+                            
+                            if likes > 0: scores.append( str( likes ) + ' likes' )
+                            if dislikes > 0: scores.append( str( dislikes ) + ' dislikes' )
+                            if nones > 0: scores.append( str( nones ) + ' not rated' )
+                            
+                            self._current_score.SetLabel( ', '.join( scores ) )
+                            
+                        else:
+                            
+                            ( rating, ) = ratings
+                            
+                            if rating is None: self._current_score.SetLabel( 'not rated' )
+                            elif rating == 1: self._current_score.SetLabel( like )
+                            elif rating == 0: self._current_score.SetLabel( dislike )
+                            
                         
                     else:
                         
-                        # you know what? this should really be a bargraph or something!
-                        #                               *     
-                        #                               *     
-                        #                               *     
-                        #                          *    *     
-                        #    *      *              *    *     
-                        #   None    0    1    2    3    4    5
-                        # but we can't rely on integers, so just think about it
-                        # some kind of sense of distribution would be helpful though
-                        
-                        choices = [ 'set rating', 'remove rating', 'make no changes' ]
-                        
-                        overall_rating = float( sum( ratings ) ) / float( len( ratings ) )
-                        
-                        overall_rating_converted = ( overall_rating * ( max - min ) ) + min
-                        
-                        self._slider.SetValue( int( overall_rating_converted + 0.5 ) )
-                        
-                        str_overall_rating = str( '%.2f' % overall_rating_converted )
-                        
-                        if min in ( 0, 1 ): str_overall_rating += '/' + str( '%.2f' % max )
-                        
-                        self._current_score.SetLabel( str_overall_rating )
+                        self._current_score.SetLabel( '23 ' + like + 's, 44 ' + dislike + 's' )
                         
                     
-                else:
+                elif service_type in ( HC.LOCAL_RATING_NUMERICAL, HC.RATING_NUMERICAL_REPOSITORY ):
                     
-                    self._current_score.SetLabel( '3.82/5' )
+                    if service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        ( min, max ) = extra_info
+                        
+                        self._slider = wx.Slider( self._ratings_panel, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
+                        self._slider.Bind( wx.EVT_SLIDER, self.EventSlider )
+                        
+                        ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
+                        
+                        if all( ( i is None for i in ratings ) ):
+                            
+                            choices = [ 'set rating', 'make no changes' ]
+                            
+                            if len( self._media ) > 1: self._current_score.SetLabel( 'none rated' )
+                            else: self._current_score.SetLabel( 'not rated' )
+                            
+                        elif None in ratings:
+                            
+                            choices = [ 'set rating', 'remove rating', 'make no changes' ]
+                            
+                            if len( self._media ) > 1: self._current_score.SetLabel( 'not all rated' )
+                            else: self._current_score.SetLabel( 'not rated' )
+                            
+                        else:
+                            
+                            # you know what? this should really be a bargraph or something!
+                            #                               *     
+                            #                               *     
+                            #                               *     
+                            #                          *    *     
+                            #    *      *              *    *     
+                            #   None    0    1    2    3    4    5
+                            # but we can't rely on integers, so just think about it
+                            # some kind of sense of distribution would be helpful though
+                            
+                            choices = [ 'set rating', 'remove rating', 'make no changes' ]
+                            
+                            overall_rating = float( sum( ratings ) ) / float( len( ratings ) )
+                            
+                            overall_rating_converted = ( overall_rating * ( max - min ) ) + min
+                            
+                            self._slider.SetValue( int( overall_rating_converted + 0.5 ) )
+                            
+                            str_overall_rating = str( '%.2f' % overall_rating_converted )
+                            
+                            if min in ( 0, 1 ): str_overall_rating += '/' + str( '%.2f' % max )
+                            
+                            self._current_score.SetLabel( str_overall_rating )
+                            
+                        
+                    else:
+                        
+                        self._current_score.SetLabel( '3.82/5' )
+                        
+                    
+                
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                    
+                    self._choices = wx.Choice( self._ratings_panel, choices = choices )
+                    
+                    self._choices.SetSelection( self._choices.FindString( 'make no changes' ) )
                     
                 
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+            def InitialisePanel():
                 
-                self._choices = wx.Choice( self._ratings_panel, choices = choices )
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
                 
-                self._choices.SetSelection( self._choices.FindString( 'make no changes' ) )
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): label = 'local rating'
+                elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): label = 'remote rating'
                 
+                self._ratings_panel.AddF( self._current_score, FLAGS_EXPAND_PERPENDICULAR )
+                
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                    
+                    if service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        self._ratings_panel.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
+                        
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        self._ratings_panel.AddF( self._slider, FLAGS_EXPAND_PERPENDICULAR )
+                        self._ratings_panel.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
+                        
+                    
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._ratings_panel, FLAGS_EXPAND_PERPENDICULAR )
+                
+                self.SetSizer( vbox )
+                
+            
+            InitialiseControls()
+            
+            InitialisePanel()
             
         
-        def InitialisePanel():
+        def _GetScoreFont( self ):
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            normal_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): label = 'local rating'
-            elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): label = 'remote rating'
+            normal_font_size = normal_font.GetPointSize()
+            normal_font_family = normal_font.GetFamily()
             
-            self._ratings_panel.AddF( self._current_score, FLAGS_EXPAND_PERPENDICULAR )
+            return wx.Font( normal_font_size * 2, normal_font_family, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD )
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+        
+        def EventSlider( self, event ):
+            
+            rating = self._slider.GetValue()
+            
+            self._choices.SetSelection( 0 )
+            
+            self._choices.SetString( 0, 'set rating to ' + str( rating ) )
+            
+            event.Skip()
+            
+        
+        def GetRating( self ):
+            
+            service_type = self._service_identifier.GetType()
+            
+            selection = self._choices.GetSelection()
+            
+            s = self._choices.GetString( selection )
+            
+            if s == 'remove rating': return None
+            else:
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
-                    self._ratings_panel.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
+                    ( like, dislike ) = self._service.GetExtraInfo()
                     
-                elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                    if s == like: rating = 1
+                    elif s == dislike: rating = 0
                     
-                    self._ratings_panel.AddF( self._slider, FLAGS_EXPAND_PERPENDICULAR )
-                    self._ratings_panel.AddF( self._choices, FLAGS_EXPAND_PERPENDICULAR )
-                    
+                elif service_type == HC.LOCAL_RATING_NUMERICAL: rating = float( self._slider.GetValue() - self._slider.GetMin() ) / float( self._slider.GetMax() - self._slider.GetMin() )
                 
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._ratings_panel, FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
+            return rating
             
         
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def _GetScoreFont( self ):
-        
-        normal_font = wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT )
-        
-        normal_font_size = normal_font.GetPointSize()
-        normal_font_family = normal_font.GetFamily()
-        
-        return wx.Font( normal_font_size * 2, normal_font_family, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD )
-        
-    
-    def EventSlider( self, event ):
-        
-        rating = self._slider.GetValue()
-        
-        self._choices.SetSelection( 0 )
-        
-        self._choices.SetString( 0, 'set rating to ' + str( rating ) )
-        
-        event.Skip()
-        
-    
-    def GetRating( self ):
-        
-        service_type = self._service_identifier.GetType()
-        
-        selection = self._choices.GetSelection()
-        
-        s = self._choices.GetString( selection )
-        
-        if s == 'remove rating': return None
-        else:
+        def HasChanges( self ):
             
-            if service_type == HC.LOCAL_RATING_LIKE:
-                
-                ( like, dislike ) = self._service.GetExtraInfo()
-                
-                if s == like: rating = 1
-                elif s == dislike: rating = 0
-                
-            elif service_type == HC.LOCAL_RATING_NUMERICAL: rating = float( self._slider.GetValue() - self._slider.GetMin() ) / float( self._slider.GetMax() - self._slider.GetMin() )
+            selection = self._choices.GetSelection()
+            
+            s = self._choices.GetString( selection )
+            
+            if s == 'make no changes': return False
+            else: return True
             
         
-        return rating
+        def GetServiceIdentifier( self ): return self._service_identifier
         
-    
-    def HasChanges( self ):
-        
-        selection = self._choices.GetSelection()
-        
-        s = self._choices.GetString( selection )
-        
-        if s == 'make no changes': return False
-        else: return True
-        
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
     
 class DialogManageServer( Dialog ):
     
@@ -5466,7 +5471,7 @@ class DialogManageServer( Dialog ):
             
             for service_identifier in self._service_identifiers:
                 
-                page = DialogManageServerServicePanel( self._services_listbook, service_identifier )
+                page = self._Panel( self._services_listbook, service_identifier )
                 
                 name = HC.service_string_lookup[ service_identifier.GetType() ]
                 
@@ -5550,7 +5555,7 @@ class DialogManageServer( Dialog ):
             
             self._edit_log.append( ( HC.ADD, service_identifier ) )
             
-            page = DialogManageServerServicePanel( self._services_listbook, service_identifier )
+            page = self._Panel( self._services_listbook, service_identifier )
             
             name = HC.service_string_lookup[ service_type ]
             
@@ -5625,66 +5630,67 @@ class DialogManageServer( Dialog ):
             
         
     
-class DialogManageServerServicePanel( wx.Panel ):
-    
-    def __init__( self, parent, service_identifier ):
+    class _Panel( wx.Panel ):
         
-        wx.Panel.__init__( self, parent )
-        
-        self._service_identifier = service_identifier
-        
-        service_type = service_identifier.GetType()
-        
-        def InitialiseControls():
+        def __init__( self, parent, service_identifier ):
             
-            self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+            wx.Panel.__init__( self, parent )
             
-            self._service_port = wx.SpinCtrl( self._service_panel, min = 1, max = 65535 )
-            self._service_port.SetValue( service_identifier.GetPort() )
+            self._service_identifier = service_identifier
+            
+            service_type = service_identifier.GetType()
+            
+            def InitialiseControls():
+                
+                self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+                
+                self._service_port = wx.SpinCtrl( self._service_panel, min = 1, max = 65535 )
+                self._service_port.SetValue( service_identifier.GetPort() )
+                
+            
+            def InitialisePanel():
+                
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._service_panel, label='port' ), FLAGS_MIXED )
+                gridbox.AddF( self._service_port, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.SetSizer( vbox )
+                
+            
+            InitialiseControls()
+            
+            InitialisePanel()
             
         
-        def InitialisePanel():
+        def GetInfo( self ):
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            port = self._service_port.GetValue()
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._service_panel, label='port' ), FLAGS_MIXED )
-            gridbox.AddF( self._service_port, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
+            return port
             
         
-        InitialiseControls()
+        def HasChanges( self ):
+            
+            port = self.GetInfo()
+            
+            if port != self._service_identifier.GetPort(): return True
+            
+            return False
+            
         
-        InitialisePanel()
+        def GetOriginalServiceIdentifier( self ): return self._service_identifier
         
-    
-    def GetInfo( self ):
-        
-        port = self._service_port.GetValue()
-        
-        return port
-        
-    
-    def HasChanges( self ):
-        
-        port = self.GetInfo()
-        
-        if port != self._service_identifier.GetPort(): return True
-        
-        return False
-        
-    
-    def GetOriginalServiceIdentifier( self ): return self._service_identifier
     
 class DialogManageServices( Dialog ):
     
@@ -5737,7 +5743,7 @@ class DialogManageServices( Dialog ):
                 elif service_type == HC.SERVER_ADMIN: listbook = self._servers_admin
                 else: continue
                 
-                page_info = ( DialogManageServicesServicePanel, ( listbook, service_identifier, credentials, extra_info ), {} )
+                page_info = ( self._Panel, ( listbook, service_identifier, credentials, extra_info ), {} )
                 
                 listbook.AddPage( page_info, name )
                 
@@ -5897,7 +5903,7 @@ class DialogManageServices( Dialog ):
                     
                     self._edit_log.append( ( 'add', ( service_identifier, credentials, extra_info ) ) )
                     
-                    page = DialogManageServicesServicePanel( services_listbook, service_identifier, credentials, extra_info )
+                    page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
                     
                     services_listbook.AddPage( page, name, select = True )
                     
@@ -6082,7 +6088,7 @@ class DialogManageServices( Dialog ):
                     
                     self._edit_log.append( ( 'add', ( service_identifier, credentials, extra_info ) ) )
                     
-                    page = DialogManageServicesServicePanel( services_listbook, service_identifier, credentials, extra_info )
+                    page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
                     
                     services_listbook.AddPage( page, name, select = True )
                     
@@ -6094,232 +6100,233 @@ class DialogManageServices( Dialog ):
             
         
     
-class DialogManageServicesServicePanel( wx.Panel ):
-    
-    def __init__( self, parent, service_identifier, credentials, extra_info ):
+    class _Panel( wx.Panel ):
         
-        wx.Panel.__init__( self, parent )
+        def __init__( self, parent, service_identifier, credentials, extra_info ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_identifier = service_identifier
+            self._credentials = credentials
+            self._extra_info = extra_info
+            
+            service_type = service_identifier.GetType()
+            
+            def InitialiseControls():
+                
+                self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+                
+                self._service_name = wx.TextCtrl( self._service_panel, value = self._service_identifier.GetName() )
+                
+                if service_type in HC.REMOTE_SERVICES: self._service_credentials = wx.TextCtrl( self._service_panel, value = self._credentials.GetConnectionString() )
+                
+                if service_type == HC.MESSAGE_DEPOT:
+                    
+                    ( identity_name, check_period, private_key, receive_anon ) = self._extra_info
+                    
+                    self._identity_name = wx.TextCtrl( self._service_panel, value = identity_name )
+                    
+                    self._check_period = wx.SpinCtrl( self._service_panel, min = 60, max = 86400 * 7 )
+                    self._check_period.SetValue( check_period )
+                    
+                    self._private_key = wx.TextCtrl( self._service_panel, value = private_key, style = wx.TE_MULTILINE )
+                    
+                    self._receive_anon = wx.CheckBox( self._service_panel )
+                    self._receive_anon.SetValue( receive_anon )
+                    
+                elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
+                    
+                    ( like, dislike ) = self._extra_info
+                    
+                    self._like = wx.TextCtrl( self._service_panel, value = like )
+                    self._dislike = wx.TextCtrl( self._service_panel, value = dislike )
+                    
+                elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    ( lower, upper ) = self._extra_info
+                    
+                    self._lower = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
+                    self._lower.SetValue( lower )
+                    self._upper = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
+                    self._upper.SetValue( upper )
+                
+            
+            def InitialisePanel():
+                
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._service_panel, label='name' ), FLAGS_MIXED )
+                gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
+                
+                if service_type in HC.REMOTE_SERVICES:
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='credentials' ), FLAGS_MIXED )
+                    gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
+                if service_type == HC.MESSAGE_DEPOT:
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='identity name' ), FLAGS_MIXED )
+                    gridbox.AddF( self._identity_name, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='update period' ), FLAGS_MIXED )
+                    gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='private key' ), FLAGS_MIXED )
+                    gridbox.AddF( self._private_key, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='receive messages from Anonymous?' ), FLAGS_MIXED )
+                    gridbox.AddF( self._receive_anon, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='like' ), FLAGS_MIXED )
+                    gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='dislike' ), FLAGS_MIXED )
+                    gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='lower limit' ), FLAGS_MIXED )
+                    gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( wx.StaticText( self._service_panel, label='upper limit' ), FLAGS_MIXED )
+                    gridbox.AddF( self._upper, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
+                self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.SetSizer( vbox )
+                
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
         
-        self._service_identifier = service_identifier
-        self._credentials = credentials
-        self._extra_info = extra_info
-        
-        service_type = service_identifier.GetType()
-        
-        def InitialiseControls():
+        def GetInfo( self ):
             
-            self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+            service_key = self._service_identifier.GetServiceKey()
             
-            self._service_name = wx.TextCtrl( self._service_panel, value = self._service_identifier.GetName() )
+            service_type = self._service_identifier.GetType()
             
-            if service_type in HC.REMOTE_SERVICES: self._service_credentials = wx.TextCtrl( self._service_panel, value = self._credentials.GetConnectionString() )
+            name = self._service_name.GetValue()
             
-            if service_type == HC.MESSAGE_DEPOT:
-                
-                ( identity_name, check_period, private_key, receive_anon ) = self._extra_info
-                
-                self._identity_name = wx.TextCtrl( self._service_panel, value = identity_name )
-                
-                self._check_period = wx.SpinCtrl( self._service_panel, min = 60, max = 86400 * 7 )
-                self._check_period.SetValue( check_period )
-                
-                self._private_key = wx.TextCtrl( self._service_panel, value = private_key, style = wx.TE_MULTILINE )
-                
-                self._receive_anon = wx.CheckBox( self._service_panel )
-                self._receive_anon.SetValue( receive_anon )
-                
-            elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
-                
-                ( like, dislike ) = self._extra_info
-                
-                self._like = wx.TextCtrl( self._service_panel, value = like )
-                self._dislike = wx.TextCtrl( self._service_panel, value = dislike )
-                
-            elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
-                
-                ( lower, upper ) = self._extra_info
-                
-                self._lower = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
-                self._lower.SetValue( lower )
-                self._upper = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
-                self._upper.SetValue( upper )
+            if name == '': raise Exception( 'Please enter a name' )
             
-        
-        def InitialisePanel():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._service_panel, label='name' ), FLAGS_MIXED )
-            gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
+            service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
             
             if service_type in HC.REMOTE_SERVICES:
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='credentials' ), FLAGS_MIXED )
-                gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
+                connection_string = self._service_credentials.GetValue()
                 
+                if connection_string == '': raise Exception( 'Please enter some credentials' )
+                
+                if '@' in connection_string:
+                    
+                    try: ( access_key, address ) = connection_string.split( '@' )
+                    except: raise Exception( 'Could not parse those credentials - no \'@\' symbol!' )
+                    
+                    try: access_key = access_key.decode( 'hex' )
+                    except: raise Exception( 'Could not parse those credentials - could not understand access key!' )
+                    
+                    try: ( host, port ) = address.split( ':' )
+                    except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
+                    
+                    try: port = int( port )
+                    except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
+                    
+                    credentials = CC.Credentials( host, port, access_key )
+                    
+                else:
+                    
+                    try: ( host, port ) = connection_string.split( ':' )
+                    except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
+                    
+                    try: port = int( port )
+                    except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
+                    
+                    credentials = CC.Credentials( host, port )
+                    
+                
+            else: credentials = None
+            
+            if service_type == HC.MESSAGE_DEPOT: extra_info = ( self._identity_name.GetValue(), self._check_period.GetValue(), self._private_key.GetValue(), self._receive_anon.GetValue() )
+            elif service_type == HC.LOCAL_RATING_LIKE: extra_info = ( self._like.GetValue(), self._dislike.GetValue() )
+            elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                
+                ( lower, upper ) = ( self._lower.GetValue(), self._upper.GetValue() )
+                
+                if upper < lower: upper = lower + 1
+                
+                extra_info = ( lower, upper )
+                
+            else: extra_info = None
+            
+            return ( service_identifier, credentials, extra_info )
+            
+        
+        def HasChanges( self ):
+            
+            ( service_identifier, credentials, extra_info ) = self.GetInfo()
+            
+            if service_identifier != self._service_identifier: return True
+            
+            if credentials != self._credentials: return True
+            
+            if extra_info != self._extra_info: return True
+            
+            return False
+            
+        
+        def GetOriginalServiceIdentifier( self ): return self._service_identifier
+        
+        def Update( self, service_identifier, credentials, extra_info ):
+            
+            service_type = service_identifier.GetType()
+            
+            self._service_name.SetValue( service_identifier.GetName() )
+            
+            if service_type in HC.REMOTE_SERVICES: self._service_credentials.SetValue( credentials.GetConnectionString() )
             
             if service_type == HC.MESSAGE_DEPOT:
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='identity name' ), FLAGS_MIXED )
-                gridbox.AddF( self._identity_name, FLAGS_EXPAND_BOTH_WAYS )
+                if len( extra_info ) == 3:
+                    ( identity_name, check_period, private_key ) = extra_info
+                    receive_anon = True
+                else: ( identity_name, check_period, private_key, receive_anon ) = extra_info
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='update period' ), FLAGS_MIXED )
-                gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
+                self._identity_name.SetValue( identity_name )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='private key' ), FLAGS_MIXED )
-                gridbox.AddF( self._private_key, FLAGS_EXPAND_BOTH_WAYS )
+                self._check_period.SetValue( check_period )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='receive messages from Anonymous?' ), FLAGS_MIXED )
-                gridbox.AddF( self._receive_anon, FLAGS_EXPAND_BOTH_WAYS )
+                self._private_key.SetValue( private_key )
                 
-            elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
+                self._receive_anon.SetValue( receive_anon )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='like' ), FLAGS_MIXED )
-                gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
+            elif service_type == HC.LOCAL_RATING_LIKE:
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='dislike' ), FLAGS_MIXED )
-                gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
+                ( like, dislike ) = extra_info
                 
-            elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
+                self._like.SetValue( like )
+                self._dislike.SetValue( dislike )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='lower limit' ), FLAGS_MIXED )
-                gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
+            elif service_type == HC.LOCAL_RATING_NUMERICAL:
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='upper limit' ), FLAGS_MIXED )
-                gridbox.AddF( self._upper, FLAGS_EXPAND_BOTH_WAYS )
+                ( lower, upper ) = extra_info
                 
-            
-            self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def GetInfo( self ):
-        
-        service_key = self._service_identifier.GetServiceKey()
-        
-        service_type = self._service_identifier.GetType()
-        
-        name = self._service_name.GetValue()
-        
-        if name == '': raise Exception( 'Please enter a name' )
-        
-        service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
-        
-        if service_type in HC.REMOTE_SERVICES:
-            
-            connection_string = self._service_credentials.GetValue()
-            
-            if connection_string == '': raise Exception( 'Please enter some credentials' )
-            
-            if '@' in connection_string:
+                self._lower.SetValue( lower )
+                self._upper.SetValue( upper )
                 
-                try: ( access_key, address ) = connection_string.split( '@' )
-                except: raise Exception( 'Could not parse those credentials - no \'@\' symbol!' )
-                
-                try: access_key = access_key.decode( 'hex' )
-                except: raise Exception( 'Could not parse those credentials - could not understand access key!' )
-                
-                try: ( host, port ) = address.split( ':' )
-                except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
-                
-                try: port = int( port )
-                except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
-                
-                credentials = CC.Credentials( host, port, access_key )
-                
-            else:
-                
-                try: ( host, port ) = connection_string.split( ':' )
-                except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
-                
-                try: port = int( port )
-                except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
-                
-                credentials = CC.Credentials( host, port )
-                
-            
-        else: credentials = None
-        
-        if service_type == HC.MESSAGE_DEPOT: extra_info = ( self._identity_name.GetValue(), self._check_period.GetValue(), self._private_key.GetValue(), self._receive_anon.GetValue() )
-        elif service_type == HC.LOCAL_RATING_LIKE: extra_info = ( self._like.GetValue(), self._dislike.GetValue() )
-        elif service_type == HC.LOCAL_RATING_NUMERICAL:
-            
-            ( lower, upper ) = ( self._lower.GetValue(), self._upper.GetValue() )
-            
-            if upper < lower: upper = lower + 1
-            
-            extra_info = ( lower, upper )
-            
-        else: extra_info = None
-        
-        return ( service_identifier, credentials, extra_info )
-        
-    
-    def HasChanges( self ):
-        
-        ( service_identifier, credentials, extra_info ) = self.GetInfo()
-        
-        if service_identifier != self._service_identifier: return True
-        
-        if credentials != self._credentials: return True
-        
-        if extra_info != self._extra_info: return True
-        
-        return False
-        
-    
-    def GetOriginalServiceIdentifier( self ): return self._service_identifier
-    
-    def Update( self, service_identifier, credentials, extra_info ):
-        
-        service_type = service_identifier.GetType()
-        
-        self._service_name.SetValue( service_identifier.GetName() )
-        
-        if service_type in HC.REMOTE_SERVICES: self._service_credentials.SetValue( credentials.GetConnectionString() )
-        
-        if service_type == HC.MESSAGE_DEPOT:
-            
-            if len( extra_info ) == 3:
-                ( identity_name, check_period, private_key ) = extra_info
-                receive_anon = True
-            else: ( identity_name, check_period, private_key, receive_anon ) = extra_info
-            
-            self._identity_name.SetValue( identity_name )
-            
-            self._check_period.SetValue( check_period )
-            
-            self._private_key.SetValue( private_key )
-            
-            self._receive_anon.SetValue( receive_anon )
-            
-        elif service_type == HC.LOCAL_RATING_LIKE:
-            
-            ( like, dislike ) = extra_info
-            
-            self._like.SetValue( like )
-            self._dislike.SetValue( dislike )
-            
-        elif service_type == HC.LOCAL_RATING_NUMERICAL:
-            
-            ( lower, upper ) = extra_info
-            
-            self._lower.SetValue( lower )
-            self._upper.SetValue( upper )
             
         
     
@@ -6470,7 +6477,7 @@ class DialogManageTags( Dialog ):
                 
                 service_type = service_identifier.GetType()
                 
-                page_info = ( DialogManageTagsPanel, ( self._tag_repositories, self._file_service_identifier, service_identifier, media ), {} )
+                page_info = ( self._Panel, ( self._tag_repositories, self._file_service_identifier, service_identifier, media ), {} )
                 
                 name = service_identifier.GetName()
                 
@@ -6561,7 +6568,7 @@ class DialogManageTags( Dialog ):
                     
                     edit_log = page.GetEditLog()
                     
-                    content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, self._hashes, info = edit_log ) )
+                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, self._hashes, info = edit_log ) )
                     
                 
             
@@ -6590,175 +6597,184 @@ class DialogManageTags( Dialog ):
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
-class DialogManageTagsPanel( wx.Panel ):
-    
-    def __init__( self, parent, file_service_identifier, tag_service_identifier, media ):
+    class _Panel( wx.Panel ):
         
-        def InitialiseControls():
+        def __init__( self, parent, file_service_identifier, tag_service_identifier, media ):
             
-            self._tags_box = ClientGUICommon.TagsBoxManage( self, self.AddTag, self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags )
-            
-            self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
-            
-            self._show_deleted_tags = wx.CheckBox( self, label='Show deleted tags' )
-            self._show_deleted_tags.Bind( wx.EVT_CHECKBOX, self.EventShowDeletedTags )
-            
-            self._modify_mappers = wx.Button( self, label='Modify mappers' )
-            self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
-            
-            self._copy_tags = wx.Button( self, label = 'copy tags' )
-            self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
-            
-            self._paste_tags = wx.Button( self, label = 'paste tags' )
-            self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
-            
-            if self._i_am_local_tag_service:
+            def InitialiseControls():
                 
-                self._show_deleted_tags.Hide()
-                self._modify_mappers.Hide()
+                self._tags_box = ClientGUICommon.TagsBoxManage( self, self.AddTag, self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags )
                 
-            else:
+                self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
                 
-                if not self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.Hide()
-                if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
+                self._show_deleted_tags = wx.CheckBox( self, label='Show deleted tags' )
+                self._show_deleted_tags.Bind( wx.EVT_CHECKBOX, self.EventShowDeletedTags )
                 
-            
-        
-        def InitialisePanel():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            special_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            special_hbox.AddF( self._show_deleted_tags, FLAGS_MIXED )
-            special_hbox.AddF( self._modify_mappers, FLAGS_MIXED )
-            
-            copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            copy_paste_hbox.AddF( self._copy_tags, FLAGS_MIXED )
-            copy_paste_hbox.AddF( self._paste_tags, FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._add_tag_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( copy_paste_hbox, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( special_hbox, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._file_service_identifier = file_service_identifier
-        self._tag_service_identifier = tag_service_identifier
-        
-        self._i_am_local_tag_service = self._tag_service_identifier.GetType() == HC.LOCAL_TAG
-        
-        self._edit_log = []
-        
-        if not self._i_am_local_tag_service:
-            
-            service = wx.GetApp().Read( 'service', tag_service_identifier )
-            
-            self._account = service.GetAccount()
-            
-        
-        ( self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags ) = CC.MediaIntersectCDPPTagServiceIdentifiers( media, tag_service_identifier )
-        
-        self._current_tags.sort()
-        self._pending_tags.sort()
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-    
-    def AddTag( self, tag ):
-        
-        if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ok' ) ) )
-        else:
-            
-            if self._i_am_local_tag_service:
+                self._modify_mappers = wx.Button( self, label='Modify mappers' )
+                self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
                 
-                if tag in self._pending_tags:
+                self._copy_tags = wx.Button( self, label = 'copy tags' )
+                self._copy_tags.Bind( wx.EVT_BUTTON, self.EventCopyTags )
+                
+                self._paste_tags = wx.Button( self, label = 'paste tags' )
+                self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
+                
+                if self._i_am_local_tag_service:
                     
-                    self._pending_tags.remove( tag )
-                    
-                    self._tags_box.RescindPend( tag )
-                    
-                elif tag in self._petitioned_tags:
-                    
-                    self._petitioned_tags.remove( tag )
-                    
-                    self._tags_box.RescindPetition( tag )
-                    
-                elif tag in self._current_tags:
-                    
-                    self._petitioned_tags.append( tag )
-                    
-                    self._tags_box.PetitionTag( tag )
+                    self._show_deleted_tags.Hide()
+                    self._modify_mappers.Hide()
                     
                 else:
                     
-                    self._pending_tags.append( tag )
+                    if not self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.Hide()
+                    if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
                     
-                    self._tags_box.PendTag( tag )
-                    
                 
-                self._edit_log = []
+            
+            def InitialisePanel():
                 
-                self._edit_log.extend( [ ( CC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
-                self._edit_log.extend( [ ( CC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
                 
+                special_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                special_hbox.AddF( self._show_deleted_tags, FLAGS_MIXED )
+                special_hbox.AddF( self._modify_mappers, FLAGS_MIXED )
+                
+                copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                copy_paste_hbox.AddF( self._copy_tags, FLAGS_MIXED )
+                copy_paste_hbox.AddF( self._paste_tags, FLAGS_MIXED )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( self._add_tag_box, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( copy_paste_hbox, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( special_hbox, FLAGS_BUTTON_SIZERS )
+                
+                self.SetSizer( vbox )
+                
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._file_service_identifier = file_service_identifier
+            self._tag_service_identifier = tag_service_identifier
+            
+            self._i_am_local_tag_service = self._tag_service_identifier.GetType() == HC.LOCAL_TAG
+            
+            self._edit_log = []
+            
+            if not self._i_am_local_tag_service:
+                
+                service = wx.GetApp().Read( 'service', tag_service_identifier )
+                
+                self._account = service.GetAccount()
+                
+            
+            ( self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags ) = CC.MediaIntersectCDPPTagServiceIdentifiers( media, tag_service_identifier )
+            
+            self._current_tags.sort()
+            self._pending_tags.sort()
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
+        
+        def AddTag( self, tag ):
+            
+            if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ok' ) ) )
             else:
                 
-                if tag in self._pending_tags:
+                if self._i_am_local_tag_service:
                     
-                    self._pending_tags.remove( tag )
-                    
-                    self._tags_box.RescindPend( tag )
-                    
-                    self._edit_log.append( ( CC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
-                    
-                elif tag in self._petitioned_tags:
-                    
-                    self._petitioned_tags.remove( tag )
-                    
-                    self._tags_box.RescindPetition( tag )
-                    
-                    self._edit_log.append( ( CC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
-                    
-                elif tag in self._current_tags:
-                    
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    if tag in self._pending_tags:
                         
-                        self._edit_log.append( ( CC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
+                        self._pending_tags.remove( tag )
+                        
+                        self._tags_box.RescindPend( tag )
+                        
+                    elif tag in self._petitioned_tags:
+                        
+                        self._petitioned_tags.remove( tag )
+                        
+                        self._tags_box.RescindPetition( tag )
+                        
+                    elif tag in self._current_tags:
                         
                         self._petitioned_tags.append( tag )
                         
                         self._tags_box.PetitionTag( tag )
                         
-                    elif self._account.HasPermission( HC.POST_PETITIONS ):
+                    else:
                         
-                        message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
+                        self._pending_tags.append( tag )
                         
-                        with wx.TextEntryDialog( self, message ) as dlg:
-                            
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                self._edit_log.append( ( CC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
-                                
-                                self._petitioned_tags.append( tag )
-                                
-                                self._tags_box.PetitionTag( tag )
-                                
-                            
+                        self._tags_box.PendTag( tag )
                         
                     
-                elif tag in self._deleted_tags:
+                    self._edit_log = []
                     
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    self._edit_log.extend( [ ( CC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
+                    self._edit_log.extend( [ ( CC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
+                    
+                else:
+                    
+                    if tag in self._pending_tags:
+                        
+                        self._pending_tags.remove( tag )
+                        
+                        self._tags_box.RescindPend( tag )
+                        
+                        self._edit_log.append( ( CC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
+                        
+                    elif tag in self._petitioned_tags:
+                        
+                        self._petitioned_tags.remove( tag )
+                        
+                        self._tags_box.RescindPetition( tag )
+                        
+                        self._edit_log.append( ( CC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
+                        
+                    elif tag in self._current_tags:
+                        
+                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                            
+                            self._edit_log.append( ( CC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
+                            
+                            self._petitioned_tags.append( tag )
+                            
+                            self._tags_box.PetitionTag( tag )
+                            
+                        elif self._account.HasPermission( HC.POST_PETITIONS ):
+                            
+                            message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
+                            
+                            with wx.TextEntryDialog( self, message ) as dlg:
+                                
+                                if dlg.ShowModal() == wx.ID_OK:
+                                    
+                                    self._edit_log.append( ( CC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
+                                    
+                                    self._petitioned_tags.append( tag )
+                                    
+                                    self._tags_box.PetitionTag( tag )
+                                    
+                                
+                            
+                        
+                    elif tag in self._deleted_tags:
+                        
+                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                            
+                            self._edit_log.append( ( CC.CONTENT_UPDATE_PENDING, tag ) )
+                            
+                            self._pending_tags.append( tag )
+                            
+                            self._tags_box.PendTag( tag )
+                            
+                        
+                    else:
                         
                         self._edit_log.append( ( CC.CONTENT_UPDATE_PENDING, tag ) )
                         
@@ -6767,94 +6783,86 @@ class DialogManageTagsPanel( wx.Panel ):
                         self._tags_box.PendTag( tag )
                         
                     
-                else:
+                
+            
+        
+        def EventCopyTags( self, event ):
+            
+            if wx.TheClipboard.Open():
+                
+                tags = self._current_tags + self._pending_tags
+                
+                text = yaml.safe_dump( tags )
+                
+                data = wx.TextDataObject( text )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+        def EventModify( self, event ):
+            
+            tag = self._tags_box.GetSelectedTag()
+            
+            if tag is not None and tag in self._current_tags or tag in self._petitioned_tags:
+                
+                subject_identifiers = [ HC.AccountIdentifier( hash = hash, tag = tag ) for hash in self._hashes ]
+                
+                try:
                     
-                    self._edit_log.append( ( CC.CONTENT_UPDATE_PENDING, tag ) )
+                    with DialogModifyAccounts( self, self._tag_service_identifier, subject_identifiers ) as dlg: dlg.ShowModal()
                     
-                    self._pending_tags.append( tag )
+                except Exception as e: wx.MessageBox( unicode( e ) )
+                
+            
+        
+        def EventPasteTags( self, event ):
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject()
+                
+                wx.TheClipboard.GetData( data )
+                
+                wx.TheClipboard.Close()
+                
+                text = data.GetText()
+                
+                try:
                     
-                    self._tags_box.PendTag( tag )
+                    tags = yaml.safe_load( text )
                     
+                    tags = [ tag for tag in tags if tag not in self._current_tags and tag not in self._pending_tags ]
+                    
+                    for tag in tags: self.AddTag( tag )
+                    
+                except: wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
-    
-    def EventCopyTags( self, event ):
+        def EventShowDeletedTags( self, event ): self._tags_box.SetShowDeletedTags( self._show_deleted_tags.GetValue() )
         
-        if wx.TheClipboard.Open():
+        def EventTagsBoxAction( self, event ):
             
-            tags = self._current_tags + self._pending_tags
+            tag = self._tags_box.GetSelectedTag()
             
-            text = yaml.safe_dump( tags )
-            
-            data = wx.TextDataObject( text )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-        
-    
-    def EventModify( self, event ):
-        
-        tag = self._tags_box.GetSelectedTag()
-        
-        if tag is not None and tag in self._current_tags or tag in self._petitioned_tags:
-            
-            subject_identifiers = [ HC.AccountIdentifier( hash = hash, tag = tag ) for hash in self._hashes ]
-            
-            try:
-                
-                with DialogModifyAccounts( self, self._tag_service_identifier, subject_identifiers ) as dlg: dlg.ShowModal()
-                
-            except Exception as e: wx.MessageBox( unicode( e ) )
+            if tag is not None: self.AddTag( tag )
             
         
-    
-    def EventPasteTags( self, event ):
+        def GetEditLog( self ): return self._edit_log
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject()
-            
-            wx.TheClipboard.GetData( data )
-            
-            wx.TheClipboard.Close()
-            
-            text = data.GetText()
-            
-            try:
-                
-                tags = yaml.safe_load( text )
-                
-                tags = [ tag for tag in tags if tag not in self._current_tags and tag not in self._pending_tags ]
-                
-                for tag in tags: self.AddTag( tag )
-                
-            except: wx.MessageBox( 'I could not understand what was in the clipboard' )
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        def GetServiceIdentifier( self ): return self._tag_service_identifier
         
-    
-    def EventShowDeletedTags( self, event ): self._tags_box.SetShowDeletedTags( self._show_deleted_tags.GetValue() )
-    
-    def EventTagsBoxAction( self, event ):
+        def HasChanges( self ): return len( self._edit_log ) > 0
         
-        tag = self._tags_box.GetSelectedTag()
-        
-        if tag is not None: self.AddTag( tag )
-        
-    
-    def GetEditLog( self ): return self._edit_log
-    
-    def GetServiceIdentifier( self ): return self._tag_service_identifier
-    
-    def HasChanges( self ): return len( self._edit_log ) > 0
-    
-    def SetTagBoxFocus( self ):
-        
-        if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.SetFocus()
+        def SetTagBoxFocus( self ):
+            
+            if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.SetFocus()
+            
         
     
 class DialogMessage( Dialog ):
@@ -7180,7 +7188,7 @@ class DialogPathsToTagsRegex( Dialog ):
                     
                     service_identifier = service.GetServiceIdentifier()
                     
-                    page_info = ( DialogPathsToTagsRegexPanel, ( self._tag_repositories, service_identifier, paths ), {} )
+                    page_info = ( self._Panel, ( self._tag_repositories, service_identifier, paths ), {} )
                     
                     name = service_identifier.GetName()
                     
@@ -7188,7 +7196,7 @@ class DialogPathsToTagsRegex( Dialog ):
                     
                 
             
-            page = DialogPathsToTagsRegexPanel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_IDENTIFIER, paths )
+            page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_IDENTIFIER, paths )
             
             name = CC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
             
@@ -7312,252 +7320,423 @@ class DialogPathsToTagsRegex( Dialog ):
         return paths_to_tags
         
     
-class DialogPathsToTagsRegexPanel( wx.Panel ):
-    
-    ID_REGEX_WHITESPACE = 0
-    ID_REGEX_NUMBER = 1
-    ID_REGEX_ALPHANUMERIC = 2
-    ID_REGEX_ANY = 3
-    ID_REGEX_BEGINNING = 4
-    ID_REGEX_END = 5
-    ID_REGEX_0_OR_MORE_GREEDY = 6
-    ID_REGEX_1_OR_MORE_GREEDY = 7
-    ID_REGEX_0_OR_1_GREEDY = 8
-    ID_REGEX_0_OR_MORE_MINIMAL = 9
-    ID_REGEX_1_OR_MORE_MINIMAL = 10
-    ID_REGEX_0_OR_1_MINIMAL = 11
-    ID_REGEX_EXACTLY_M = 12
-    ID_REGEX_M_TO_N_GREEDY = 13
-    ID_REGEX_M_TO_N_MINIMAL = 14
-    ID_REGEX_LOOKAHEAD = 15
-    ID_REGEX_NEGATIVE_LOOKAHEAD = 16
-    ID_REGEX_LOOKBEHIND = 17
-    ID_REGEX_NEGATIVE_LOOKBEHIND = 18
-    ID_REGEX_NUMBER_WITHOUT_ZEROES = 19
-    ID_REGEX_NUMBER_EXT = 20
-    ID_REGEX_AUTHOR = 21
-    ID_REGEX_BACKSPACE = 22
-    ID_REGEX_SET = 23
-    ID_REGEX_NOT_SET = 24
-    
-    def __init__( self, parent, service_identifier, paths ):
+    class _Panel( wx.Panel ):
         
-        def InitialiseControls():
+        ID_REGEX_WHITESPACE = 0
+        ID_REGEX_NUMBER = 1
+        ID_REGEX_ALPHANUMERIC = 2
+        ID_REGEX_ANY = 3
+        ID_REGEX_BEGINNING = 4
+        ID_REGEX_END = 5
+        ID_REGEX_0_OR_MORE_GREEDY = 6
+        ID_REGEX_1_OR_MORE_GREEDY = 7
+        ID_REGEX_0_OR_1_GREEDY = 8
+        ID_REGEX_0_OR_MORE_MINIMAL = 9
+        ID_REGEX_1_OR_MORE_MINIMAL = 10
+        ID_REGEX_0_OR_1_MINIMAL = 11
+        ID_REGEX_EXACTLY_M = 12
+        ID_REGEX_M_TO_N_GREEDY = 13
+        ID_REGEX_M_TO_N_MINIMAL = 14
+        ID_REGEX_LOOKAHEAD = 15
+        ID_REGEX_NEGATIVE_LOOKAHEAD = 16
+        ID_REGEX_LOOKBEHIND = 17
+        ID_REGEX_NEGATIVE_LOOKBEHIND = 18
+        ID_REGEX_NUMBER_WITHOUT_ZEROES = 19
+        ID_REGEX_NUMBER_EXT = 20
+        ID_REGEX_AUTHOR = 21
+        ID_REGEX_BACKSPACE = 22
+        ID_REGEX_SET = 23
+        ID_REGEX_NOT_SET = 24
+        
+        def __init__( self, parent, service_identifier, paths ):
             
-            self._paths_list = ClientGUICommon.SaneListCtrl( self, 300, [ ( 'path', 400 ), ( 'tags', -1 ) ] )
+            def InitialiseControls():
+                
+                self._paths_list = ClientGUICommon.SaneListCtrl( self, 300, [ ( 'path', 400 ), ( 'tags', -1 ) ] )
+                
+                self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+                self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+                
+                #
+                
+                self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
+                
+                self._page_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                self._chapter_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                self._volume_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                self._title_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                self._series_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                self._creator_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                
+                self._update_button = wx.Button( self._quick_namespaces_panel, label='update' )
+                self._update_button.Bind( wx.EVT_BUTTON, self.EventUpdate )
+                
+                self._regex_shortcuts = wx.Button( self._quick_namespaces_panel, label = 'regex shortcuts' )
+                self._regex_shortcuts.Bind( wx.EVT_BUTTON, self.EventRegexShortcuts )
+                
+                self._regex_link = wx.HyperlinkCtrl( self._quick_namespaces_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+                
+                #
+                
+                self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
+                
+                self._regexes = wx.ListBox( self._regexes_panel )
+                self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
+                
+                self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
+                self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
+                
+                #
+                
+                self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
+                
+                self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
+                
+                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                
+                #
+                
+                self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for this file' )
+                
+                self._paths_to_single_tags = collections.defaultdict( list )
+                
+                self._single_tags = ClientGUICommon.TagsBoxFlat( self._single_tags_panel, self.SingleTagRemoved )
+                
+                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._single_tag_box.Disable()
+                
+                for path in self._paths:
+                    
+                    tags = self._GetTags( path )
+                    
+                    tags_string = ', '.join( tags )
+                    
+                    self._paths_list.Append( ( path, tags_string ), ( path, tags ) )
+                    
+                
             
-            self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            def InitialisePanel():
+                
+                gridbox = wx.FlexGridSizer( 0, 2 )
+                
+                gridbox.AddGrowableCol( 1, 1 )
+                
+                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Page regex ' ), FLAGS_MIXED )
+                gridbox.AddF( self._page_regex, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Chapter regex ' ), FLAGS_MIXED )
+                gridbox.AddF( self._chapter_regex, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Volume regex ' ), FLAGS_MIXED )
+                gridbox.AddF( self._volume_regex, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Title regex ' ), FLAGS_MIXED )
+                gridbox.AddF( self._title_regex, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Series regex ' ), FLAGS_MIXED )
+                gridbox.AddF( self._series_regex, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Creator regex ' ), FLAGS_MIXED )
+                gridbox.AddF( self._creator_regex, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._quick_namespaces_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._quick_namespaces_panel.AddF( self._update_button, FLAGS_LONE_BUTTON )
+                self._quick_namespaces_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
+                self._quick_namespaces_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
+                
+                self._regexes_panel.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
+                self._regexes_panel.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
+                
+                self._tags_panel.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
+                self._tags_panel.AddF( self._tag_box, FLAGS_EXPAND_PERPENDICULAR )
+                
+                self._single_tags_panel.AddF( self._single_tags, FLAGS_EXPAND_BOTH_WAYS )
+                self._single_tags_panel.AddF( self._single_tag_box, FLAGS_EXPAND_PERPENDICULAR )
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._quick_namespaces_panel, FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._regexes_panel, FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._tags_panel, FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._single_tags_panel, FLAGS_EXPAND_BOTH_WAYS )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._paths_list, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                self.SetSizer( vbox )
+                
             
-            #
+            wx.Panel.__init__( self, parent )
             
-            self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
+            self._service_identifier = service_identifier
+            self._paths = paths
             
-            self._page_regex = wx.TextCtrl( self._quick_namespaces_panel )
-            self._chapter_regex = wx.TextCtrl( self._quick_namespaces_panel )
-            self._volume_regex = wx.TextCtrl( self._quick_namespaces_panel )
-            self._title_regex = wx.TextCtrl( self._quick_namespaces_panel )
-            self._series_regex = wx.TextCtrl( self._quick_namespaces_panel )
-            self._creator_regex = wx.TextCtrl( self._quick_namespaces_panel )
+            InitialiseControls()
             
-            self._update_button = wx.Button( self._quick_namespaces_panel, label='update' )
-            self._update_button.Bind( wx.EVT_BUTTON, self.EventUpdate )
+            InitialisePanel()
             
-            self._regex_shortcuts = wx.Button( self._quick_namespaces_panel, label = 'regex shortcuts' )
-            self._regex_shortcuts.Bind( wx.EVT_BUTTON, self.EventRegexShortcuts )
+            self.Bind( wx.EVT_MENU, self.EventMenu )
             
-            self._regex_link = wx.HyperlinkCtrl( self._quick_namespaces_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+        
+        
+        def _GetTags( self, path ):
             
-            #
+            tags = []
             
-            self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
+            tags.extend( self._tags.GetTags() )
             
-            self._regexes = wx.ListBox( self._regexes_panel )
-            self._regexes.Bind( wx.EVT_LISTBOX_DCLICK, self.EventRemoveRegex )
+            for regex in self._regexes.GetStrings():
+                
+                try:
+                    
+                    m = re.search( regex, path )
+                    
+                    if m is not None:
+                        
+                        match = m.group()
+                        
+                        if len( match ) > 0: tags.append( match )
+                        
+                    
+                except: pass
+                
             
-            self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
-            self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
+            namespaced_regexes = []
             
-            #
+            namespaced_regexes.append( ( self._page_regex, 'page:' ) )
+            namespaced_regexes.append( ( self._chapter_regex, 'chapter:' ) )
+            namespaced_regexes.append( ( self._volume_regex, 'volume:' ) )
+            namespaced_regexes.append( ( self._title_regex, 'title:' ) )
+            namespaced_regexes.append( ( self._series_regex, 'series:' ) )
+            namespaced_regexes.append( ( self._creator_regex, 'creator:' ) )
             
-            self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
+            for ( control, prefix ) in namespaced_regexes:
+                
+                try:
+                    
+                    m = re.search( control.GetValue(), path )
+                    
+                    if m is not None:
+                        
+                        match = m.group()
+                        
+                        if len( match ) > 0: tags.append( prefix + match )
+                        
+                    
+                except: pass
+                
             
-            self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
+            if path in self._paths_to_single_tags: tags.extend( self._paths_to_single_tags[ path ] )
             
-            self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+            tags = [ HC.CleanTag( tag ) for tag in tags ]
             
-            #
+            return tags
             
-            self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for this file' )
+        
+        def _RefreshFileList( self ):
             
-            self._paths_to_single_tags = collections.defaultdict( list )
-            
-            self._single_tags = ClientGUICommon.TagsBoxFlat( self._single_tags_panel, self.SingleTagRemoved )
-            
-            self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
-            self._single_tag_box.Disable()
-            
-            for path in self._paths:
+            for ( index, ( path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
+                
+                # when doing regexes, make sure not to include '' results, same for system: and - started tags.
                 
                 tags = self._GetTags( path )
                 
-                tags_string = ', '.join( tags )
-                
-                self._paths_list.Append( ( path, tags_string ), ( path, tags ) )
-                
-            
-        
-        def InitialisePanel():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Page regex ' ), FLAGS_MIXED )
-            gridbox.AddF( self._page_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Chapter regex ' ), FLAGS_MIXED )
-            gridbox.AddF( self._chapter_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Volume regex ' ), FLAGS_MIXED )
-            gridbox.AddF( self._volume_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Title regex ' ), FLAGS_MIXED )
-            gridbox.AddF( self._title_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Series regex ' ), FLAGS_MIXED )
-            gridbox.AddF( self._series_regex, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Creator regex ' ), FLAGS_MIXED )
-            gridbox.AddF( self._creator_regex, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._quick_namespaces_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._quick_namespaces_panel.AddF( self._update_button, FLAGS_LONE_BUTTON )
-            self._quick_namespaces_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
-            self._quick_namespaces_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
-            
-            self._regexes_panel.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
-            self._regexes_panel.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._tags_panel.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
-            self._tags_panel.AddF( self._tag_box, FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._single_tags_panel.AddF( self._single_tags, FLAGS_EXPAND_BOTH_WAYS )
-            self._single_tags_panel.AddF( self._single_tag_box, FLAGS_EXPAND_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._quick_namespaces_panel, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._regexes_panel, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._tags_panel, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._single_tags_panel, FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._paths_list, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._service_identifier = service_identifier
-        self._paths = paths
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-    
-    
-    def _GetTags( self, path ):
-        
-        tags = []
-        
-        tags.extend( self._tags.GetTags() )
-        
-        for regex in self._regexes.GetStrings():
-            
-            try:
-                
-                m = re.search( regex, path )
-                
-                if m is not None:
+                if tags != old_tags:
                     
-                    match = m.group()
+                    tags_string = ', '.join( tags )
                     
-                    if len( match ) > 0: tags.append( match )
+                    self._paths_list.UpdateRow( index, ( path, tags_string ), ( path, tags ) )
                     
                 
-            except: pass
             
         
-        namespaced_regexes = []
-        
-        namespaced_regexes.append( ( self._page_regex, 'page:' ) )
-        namespaced_regexes.append( ( self._chapter_regex, 'chapter:' ) )
-        namespaced_regexes.append( ( self._volume_regex, 'volume:' ) )
-        namespaced_regexes.append( ( self._title_regex, 'title:' ) )
-        namespaced_regexes.append( ( self._series_regex, 'series:' ) )
-        namespaced_regexes.append( ( self._creator_regex, 'creator:' ) )
-        
-        for ( control, prefix ) in namespaced_regexes:
+        def AddTag( self, tag ):
             
-            try:
+            if tag is not None:
                 
-                m = re.search( control.GetValue(), path )
+                self._tags.AddTag( tag )
                 
-                if m is not None:
+                self._tag_box.Clear()
+                
+                self._RefreshFileList()
+                
+            
+        
+        def AddTagSingle( self, tag ):
+            
+            if tag is not None:
+                
+                self._single_tags.AddTag( tag )
+                
+                self._single_tag_box.Clear()
+                
+                indices = self._paths_list.GetAllSelected()
+                
+                for index in indices:
                     
-                    match = m.group()
+                    ( path, old_tags ) = self._paths_list.GetClientData( index )
                     
-                    if len( match ) > 0: tags.append( prefix + match )
+                    if tag not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( tag )
                     
                 
-            except: pass
-            
-        
-        if path in self._paths_to_single_tags: tags.extend( self._paths_to_single_tags[ path ] )
-        
-        tags = [ HC.CleanTag( tag ) for tag in tags ]
-        
-        return tags
-        
-    
-    def _RefreshFileList( self ):
-        
-        for ( index, ( path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
-            
-            # when doing regexes, make sure not to include '' results, same for system: and - started tags.
-            
-            tags = self._GetTags( path )
-            
-            if tags != old_tags:
-                
-                tags_string = ', '.join( tags )
-                
-                self._paths_list.UpdateRow( index, ( path, tags_string ), ( path, tags ) )
+                self._RefreshFileList() # make this more clever
                 
             
         
-    
-    def AddTag( self, tag ):
+        def EventAddRegex( self, event ):
+            
+            regex = self._regex_box.GetValue()
+            
+            if regex != '':
+                
+                self._regexes.Append( regex )
+                
+                self._regex_box.Clear()
+                
+                self._RefreshFileList()
+                
+            
         
-        if tag is not None:
+        def EventItemSelected( self, event ):
             
-            self._tags.AddTag( tag )
+            single_tags = set()
             
-            self._tag_box.Clear()
+            indices = self._paths_list.GetAllSelected()
             
-            self._RefreshFileList()
+            if len( indices ) > 0:
+                
+                for index in indices:
+                    
+                    path = self._paths_list.GetClientData( index )[0]
+                    
+                    if path in self._paths_to_single_tags: single_tags.update( self._paths_to_single_tags[ path ] )
+                    
+                
+                self._single_tag_box.Enable()
+                
+            else: self._single_tag_box.Disable()
+            
+            single_tags = list( single_tags )
+            
+            single_tags.sort()
+            
+            self._single_tags.SetTags( single_tags )
             
         
-    
-    def AddTagSingle( self, tag ):
+        def EventMenu( self, event ):
+            
+            id = event.GetId()
+            
+            phrase = None
+            
+            if id == self.ID_REGEX_WHITESPACE: phrase = r'\s'
+            elif id == self.ID_REGEX_NUMBER: phrase = r'\d'
+            elif id == self.ID_REGEX_ALPHANUMERIC: phrase = r'\w'
+            elif id == self.ID_REGEX_ANY: phrase = r'.'
+            elif id == self.ID_REGEX_BACKSPACE: phrase = r'\\'
+            elif id == self.ID_REGEX_BEGINNING: phrase = r'^'
+            elif id == self.ID_REGEX_END: phrase = r'$'
+            elif id == self.ID_REGEX_SET: phrase = r'[...]'
+            elif id == self.ID_REGEX_NOT_SET: phrase = r'[^...]'
+            elif id == self.ID_REGEX_0_OR_MORE_GREEDY: phrase = r'*'
+            elif id == self.ID_REGEX_1_OR_MORE_GREEDY: phrase = r'+'
+            elif id == self.ID_REGEX_0_OR_1_GREEDY: phrase = r'?'
+            elif id == self.ID_REGEX_0_OR_MORE_MINIMAL: phrase = r'*?'
+            elif id == self.ID_REGEX_1_OR_MORE_MINIMAL: phrase = r'+?'
+            elif id == self.ID_REGEX_0_OR_1_MINIMAL: phrase = r'*'
+            elif id == self.ID_REGEX_EXACTLY_M: phrase = r'{m}'
+            elif id == self.ID_REGEX_M_TO_N_GREEDY: phrase = r'{m,n}'
+            elif id == self.ID_REGEX_M_TO_N_MINIMAL: phrase = r'{m,n}?'
+            elif id == self.ID_REGEX_LOOKAHEAD: phrase = r'(?=...)'
+            elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = r'(?!...)'
+            elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
+            elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
+            elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
+            elif id == self.ID_REGEX_NUMBER_EXT: phrase = r'[1-9]+\d*(?=.{4}$)'
+            elif id == self.ID_REGEX_AUTHOR: phrase = r'[^\\][\w\s]*(?=\s-)'
+            else: event.Skip()
+            
+            if phrase is not None:
+                
+                if wx.TheClipboard.Open():
+                    
+                    data = wx.TextDataObject( phrase )
+                    
+                    wx.TheClipboard.SetData( data )
+                    
+                    wx.TheClipboard.Close()
+                    
+                else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                
+            
         
-        if tag is not None:
+        def EventRegexShortcuts( self, event ):
             
-            self._single_tags.AddTag( tag )
+            menu = wx.Menu()
             
-            self._single_tag_box.Clear()
+            menu.Append( -1, 'click on a phrase to copy to clipboard' )
+            
+            menu.AppendSeparator()
+            
+            menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
+            menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
+            menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
+            menu.Append( self.ID_REGEX_ANY, r'any character - .' )
+            menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
+            menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
+            menu.Append( self.ID_REGEX_END, r'end of line - $' )
+            menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
+            menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
+            
+            menu.AppendSeparator()
+            
+            menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
+            menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
+            menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
+            menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
+            menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
+            menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
+            menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
+            menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
+            menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
+            
+            menu.AppendSeparator()
+            
+            menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
+            menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
+            menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
+            menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
+            
+            menu.AppendSeparator()
+            
+            menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
+            menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
+            menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
+            
+            self.PopupMenu( menu )
+            
+        
+        def EventRemoveRegex( self, event ):
+            
+            selection = self._regexes.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                if len( self._regex_box.GetValue() ) == 0: self._regex_box.SetValue( self._regexes.GetString( selection ) )
+                
+                self._regexes.Delete( selection )
+                
+                self._RefreshFileList()
+                
+            
+        
+        def EventUpdate( self, event ): self._RefreshFileList()
+        
+        def GetServiceIdentifier( self ): return self._service_identifier
+        
+        # this prob needs to be made cleverer if I do the extra column
+        def GetTags( self, path ): return self._GetTags( path )
+        
+        def SetTagBoxFocus( self ): self._tag_box.SetFocus()
+        
+        def SingleTagRemoved( self, tag ):
             
             indices = self._paths_list.GetAllSelected()
             
@@ -7565,184 +7744,14 @@ class DialogPathsToTagsRegexPanel( wx.Panel ):
                 
                 ( path, old_tags ) = self._paths_list.GetClientData( index )
                 
-                if tag not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( tag )
+                if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
                 
-            
-            self._RefreshFileList() # make this more clever
-            
-        
-    
-    def EventAddRegex( self, event ):
-        
-        regex = self._regex_box.GetValue()
-        
-        if regex != '':
-            
-            self._regexes.Append( regex )
-            
-            self._regex_box.Clear()
             
             self._RefreshFileList()
             
         
-    
-    def EventItemSelected( self, event ):
+        def TagRemoved( self, tag ): self._RefreshFileList()
         
-        single_tags = set()
-        
-        indices = self._paths_list.GetAllSelected()
-        
-        if len( indices ) > 0:
-            
-            for index in indices:
-                
-                path = self._paths_list.GetClientData( index )[0]
-                
-                if path in self._paths_to_single_tags: single_tags.update( self._paths_to_single_tags[ path ] )
-                
-            
-            self._single_tag_box.Enable()
-            
-        else: self._single_tag_box.Disable()
-        
-        single_tags = list( single_tags )
-        
-        single_tags.sort()
-        
-        self._single_tags.SetTags( single_tags )
-        
-    
-    def EventMenu( self, event ):
-        
-        id = event.GetId()
-        
-        phrase = None
-        
-        if id == self.ID_REGEX_WHITESPACE: phrase = r'\s'
-        elif id == self.ID_REGEX_NUMBER: phrase = r'\d'
-        elif id == self.ID_REGEX_ALPHANUMERIC: phrase = r'\w'
-        elif id == self.ID_REGEX_ANY: phrase = r'.'
-        elif id == self.ID_REGEX_BACKSPACE: phrase = r'\\'
-        elif id == self.ID_REGEX_BEGINNING: phrase = r'^'
-        elif id == self.ID_REGEX_END: phrase = r'$'
-        elif id == self.ID_REGEX_SET: phrase = r'[...]'
-        elif id == self.ID_REGEX_NOT_SET: phrase = r'[^...]'
-        elif id == self.ID_REGEX_0_OR_MORE_GREEDY: phrase = r'*'
-        elif id == self.ID_REGEX_1_OR_MORE_GREEDY: phrase = r'+'
-        elif id == self.ID_REGEX_0_OR_1_GREEDY: phrase = r'?'
-        elif id == self.ID_REGEX_0_OR_MORE_MINIMAL: phrase = r'*?'
-        elif id == self.ID_REGEX_1_OR_MORE_MINIMAL: phrase = r'+?'
-        elif id == self.ID_REGEX_0_OR_1_MINIMAL: phrase = r'*'
-        elif id == self.ID_REGEX_EXACTLY_M: phrase = r'{m}'
-        elif id == self.ID_REGEX_M_TO_N_GREEDY: phrase = r'{m,n}'
-        elif id == self.ID_REGEX_M_TO_N_MINIMAL: phrase = r'{m,n}?'
-        elif id == self.ID_REGEX_LOOKAHEAD: phrase = r'(?=...)'
-        elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = r'(?!...)'
-        elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
-        elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
-        elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
-        elif id == self.ID_REGEX_NUMBER_EXT: phrase = r'[1-9]+\d*(?=.{4}$)'
-        elif id == self.ID_REGEX_AUTHOR: phrase = r'[^\\][\w\s]*(?=\s-)'
-        else: event.Skip()
-        
-        if phrase is not None:
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.TextDataObject( phrase )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
-        
-    
-    def EventRegexShortcuts( self, event ):
-        
-        menu = wx.Menu()
-        
-        menu.Append( -1, 'click on a phrase to copy to clipboard' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
-        menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
-        menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
-        menu.Append( self.ID_REGEX_ANY, r'any character - .' )
-        menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
-        menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
-        menu.Append( self.ID_REGEX_END, r'end of line - $' )
-        menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
-        menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
-        menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
-        menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
-        menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
-        menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
-        menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
-        menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
-        menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
-        menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
-        menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
-        menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
-        menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-        menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
-        menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
-        
-        self.PopupMenu( menu )
-        
-    
-    def EventRemoveRegex( self, event ):
-        
-        selection = self._regexes.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            if len( self._regex_box.GetValue() ) == 0: self._regex_box.SetValue( self._regexes.GetString( selection ) )
-            
-            self._regexes.Delete( selection )
-            
-            self._RefreshFileList()
-            
-        
-    
-    def EventUpdate( self, event ): self._RefreshFileList()
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
-    
-    # this prob needs to be made cleverer if I do the extra column
-    def GetTags( self, path ): return self._GetTags( path )
-    
-    def SetTagBoxFocus( self ): self._tag_box.SetFocus()
-    
-    def SingleTagRemoved( self, tag ):
-        
-        indices = self._paths_list.GetAllSelected()
-        
-        for index in indices:
-            
-            ( path, old_tags ) = self._paths_list.GetClientData( index )
-            
-            if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
-            
-        
-        self._RefreshFileList()
-        
-    
-    def TagRemoved( self, tag ): self._RefreshFileList()
     
 class DialogProgress( Dialog ):
     
@@ -8565,6 +8574,19 @@ class DialogSetupCustomFilterActions( Dialog ):
             if selection != self._current_actions_selection:
                 
                 self._actions.DeleteAllItems()
+                
+                name = self._favourites.GetString( selection )
+                
+                if name in ( 'default', 'previous' ):
+                    
+                    self._save_favourite.Disable()
+                    self._delete_favourite.Disable()
+                    
+                else:
+                    
+                    self._save_favourite.Enable()
+                    self._delete_favourite.Enable()
+                    
                 
                 actions = self._favourites.GetClientData( selection )
                 

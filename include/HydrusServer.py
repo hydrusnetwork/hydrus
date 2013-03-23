@@ -425,7 +425,8 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
             
             try:
                 
-                hydrus_client = False
+                default_mime = HC.TEXT_HTML
+                default_encoding = lambda x: unicode( x )
                 
                 user_agent_text = self.headers.getheader( 'User-Agent' )
                 
@@ -441,22 +442,21 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                             
                             if client == 'hydrus':
                                 
-                                if int( network_version ) == HC.NETWORK_VERSION: hydrus_client = True
-                                else: raise HC.NetworkVersionException( 'Network version mismatch! This repository\'s network version is ' + str( HC.NETWORK_VERSION ) + ' whereas yours is ' + network_version + '! Please download the latest release.' )
+                                default_mime = HC.APPLICATION_YAML
+                                default_encoding = lambda x: yaml.safe_dump( unicode( x ) )
+                                
+                                network_version = int( network_version )
+                                
+                                if network_version != HC.NETWORK_VERSION:
+                                    
+                                    if network_version < HC.NETWORK_VERSION: message = 'Please download the latest release.'
+                                    else: message = 'Please ask this server\'s admin to update to the latest release.'
+                                    
+                                    raise HC.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
+                                    
                                 
                             
                         
-                    
-                
-                if hydrus_client:
-                    
-                    default_mime = HC.APPLICATION_YAML
-                    default_encoding = lambda x: yaml.safe_dump( unicode( x ) )
-                    
-                else:
-                    
-                    default_mime = HC.TEXT_HTML
-                    default_encoding = lambda x: unicode( x )
                     
                 
                 ( ip, port ) = self.client_address
@@ -517,7 +517,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         except KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing.' ) )
         except HC.PermissionException as e: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( e ) )
         except HC.ForbiddenException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( e ) )
-        except HC.NotFoundException as e: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
+        except HC.NotFoundException as e:response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
         except HC.NetworkVersionException as e: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( e ) )
         except HC.SessionException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
         except Exception as e:

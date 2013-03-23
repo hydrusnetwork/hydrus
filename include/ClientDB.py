@@ -1192,8 +1192,8 @@ class RatingDB():
         c.executemany( 'INSERT INTO ratings ( service_id, hash_id, count, rating, score ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, self._GetHashId( c, hash ), count, rating, HC.CalculateScoreFromRating( count, rating ) ) for ( hash, count, rating ) in ratings if count > 0 ] )
         
         # these need count and score in
-        #self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
-        #self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
+        #self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
+        #self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
         
     
 class TagDB():
@@ -1298,8 +1298,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id_from, service_id_to, hash_id ) VALUES ( ?, ?, ? );', [ ( service_id, self._local_file_service_id, hash_id ) for hash_id in hash_ids ] )
         
         self.pub( 'notify_new_downloads' )
-        self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
-        self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
         
     
     def _AddFiles( self, c, files_info_rows ):
@@ -1379,14 +1379,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( new_hashes ) > 0:
             
-            self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
-            self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
             
         
         if len( deleted_hashes ) > 0:
             
-            self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
-            self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
             
         
         if len( new_hashes ) > 0 or len( deleted_hashes ) > 0: self.pub( 'notify_new_thumbnails' )
@@ -1585,11 +1585,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         deleted_mappings = [ deleted_mapping for deleted_mapping in update.GetDeletedMappings() ] # to clear generator
         
         if len( mappings ) > 0:
-            self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
-            self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
         if len( deleted_mappings ) > 0:
-            self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
-            self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
         
     
     def _AddUpdate( self, c, service_identifier, update ):
@@ -1624,8 +1624,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id_from, service_id_to, hash_id ) VALUES ( ?, ?, ? );', [ ( self._local_file_service_id, service_id, hash_id ) for hash_id in hash_ids ] )
         
         self.pub( 'notify_new_pending' )
-        self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-        self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+        self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+        self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
         
     
     def _ArchiveFiles( self, c, hash_ids ):
@@ -3095,7 +3095,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return ( 'new', None )
         
     
-    def _ImportFile( self, c, file, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False ):
+    def _ImportFile( self, c, file, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
         
         result = 'successful'
         
@@ -3122,6 +3122,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash_id = self._GetHashId( c, hash )
         
+        if url is not None: c.execute( 'INSERT OR IGNORE INTO urls ( url, hash_id ) VALUES ( ?, ? );', ( url, hash_id ) )
+        
         already_in_db = c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None
         
         if already_in_db:
@@ -3132,8 +3134,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) )
                 
-                self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
-                self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
+                self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
+                self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
                 
             
             can_add = False
@@ -3249,7 +3251,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 if service_identifier == CC.LOCAL_TAG_SERVICE_IDENTIFIER: edit_log = [ ( CC.CONTENT_UPDATE_ADD, tag ) for tag in tags ]
                 else: edit_log = [ ( CC.CONTENT_UPDATE_PENDING, tag ) for tag in tags ]
                 
-                content_updates = [ CC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), edit_log ) ]
+                content_updates = [ HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), edit_log ) ]
                 
                 self._ProcessContentUpdates( c, content_updates )
                 
@@ -3274,20 +3276,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         try:
             
-            ( result, hash, media_result ) = self._ImportFile( c, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True )
-            
-            if url is not None:
-                
-                hash_id = self._GetHashId( c, hash )
-                
-                c.execute( 'INSERT OR IGNORE INTO urls ( url, hash_id ) VALUES ( ?, ? );', ( url, hash_id ) )
-                
+            ( result, hash, media_result ) = self._ImportFile( c, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True, url = url )
             
             if media_result is not None: self.pub( 'add_media_result', page_key, media_result )
             
             if result == 'successful':
-                self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-                self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
             
             self.pub( 'import_done', page_key, result )
             
@@ -3328,8 +3323,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
         
         self.pub( 'notify_new_pending' )
-        self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
-        self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
+        self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
+        self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
         
     
     def _ProcessContentUpdates( self, c, content_updates ):
@@ -4179,8 +4174,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     content_updates = []
                     
-                    content_updates += [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in mappings_ids ]
-                    content_updates += [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids ]
+                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in mappings_ids ]
+                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids ]
                     
                     HC.pubsub.pub( 'progress_update', job_key, 6, 7, u'saving changes to gui' )
                     
@@ -4249,8 +4244,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 4, u'saving changes to gui' )
                         
                         if len( good_hash_ids ) > 0:
-                            self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
-                            self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
+                            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
+                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
                         
                     
                     if num_petitions > 0:
@@ -4267,8 +4262,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             self._DeleteFiles( c, service_id, hash_ids )
                             
-                            self.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-                            self.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+                            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
                             
                         except Exception as e: raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_name + ':' + os.linesep + unicode( e ) )
                         
@@ -4315,6 +4310,12 @@ class DB( ServiceDB ):
         try:
             if not os.path.exists( temp_dir ): os.mkdir( temp_dir )
         except: pass
+        
+        # clean up if last connection closed badly
+        ( db, c ) = self._GetDBCursor()
+        
+        db.close()
+        # ok should be fine
         
         ( db, c ) = self._GetDBCursor()
         
@@ -6014,8 +6015,8 @@ class DB( ServiceDB ):
                         
                         self.Write( 'import_file', HC.LOW_PRIORITY, file )
                         
-                        HC.pubsub.pub( 'content_updates_data', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-                        HC.pubsub.pub( 'content_updates_gui', [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                        HC.pubsub.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                        HC.pubsub.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
                         
                         self.pub( 'log_message', 'download files daemon', 'downloaded ' + hash.encode( 'hex' ) + ' from ' + file_repository.GetServiceIdentifier().GetName() )
                         

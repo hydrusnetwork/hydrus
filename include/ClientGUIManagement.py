@@ -1061,6 +1061,17 @@ class ManagementPanelDumper( ManagementPanel ):
             
         
     
+    def TryToClose( self ):
+        
+        if self._dumping:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'This page is still dumping. Are you sure you want to close it?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                
+            
+        
+    
 class ManagementPanelImport( ManagementPanel ):
     
     def __init__( self, parent, page, page_key ):
@@ -1280,7 +1291,7 @@ class ManagementPanelImport( ManagementPanel ):
     
     def TryToClose( self ):
         
-        if self._currently_processing_import_queue:
+        if self._currently_processing_import_queue and not self._pause_import:
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
@@ -1604,7 +1615,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                         
                         edit_log = [ ( action, tag ) for tag in tags_to_add_here ]
                         
-                        content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), info = edit_log ) )
+                        content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), info = edit_log ) )
                         
                     
                 
@@ -3132,7 +3143,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
     def _GetPreprocessStatus( self ):
         
-        status = 'reading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
+        status = 'checking url/hash status ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
         
         return status
         
@@ -3364,13 +3375,13 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             hashes = self._current_petition.GetPetitionHashes()
             
-            content_updates = [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes ) ]
+            content_updates = [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes ) ]
             
         elif isinstance( self._current_petition, HC.ServerMappingPetition ):
             
             ( reason, tag, hashes ) = self._current_petition.GetPetitionInfo()
             
-            content_updates = [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes, tag ) ]
+            content_updates = [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes, tag ) ]
             
         
         wx.GetApp().Write( 'content_updates', content_updates )

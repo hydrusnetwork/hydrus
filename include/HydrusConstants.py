@@ -30,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 61
+SOFTWARE_VERSION = 62
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1252,6 +1252,24 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     def GetServiceKey( self ): return self._service_key
     
     def GetType( self ): return self._type
+    
+class ContentUpdate():
+    
+    def __init__( self, action, service_identifier, hashes, info = None ):
+        
+        self._action = action
+        self._service_identifier = service_identifier
+        self._hashes = set( hashes )
+        self._info = info
+        
+    
+    def GetAction( self ): return self._action
+    
+    def GetHashes( self ): return self._hashes
+    
+    def GetInfo( self ): return self._info
+    
+    def GetServiceIdentifier( self ): return self._service_identifier
     
 class DAEMON( threading.Thread ):
     

@@ -94,13 +94,13 @@ class FrameGUI( ClientGUICommon.Frame ):
         HC.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
         HC.pubsub.sub( self, 'SetServiceStatus', 'service_status' )
         
-        self._NewPageQuery( CC.LOCAL_FILE_SERVICE_IDENTIFIER )
-        
         self.RefreshMenuBar()
         
         self._RefreshStatusBar()
         
         self.Show( True )
+        
+        wx.CallAfter( self._NewPageQuery, CC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
     def _THREADUploadPending( self, service_identifier, job_key, cancel_event ):
@@ -156,8 +156,8 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     content_updates = []
                     
-                    content_updates += [ CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings_object ]
-                    content_updates += [ CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( reason, tag, hashes ) in petitions_object ]
+                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings_object ]
+                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( reason, tag, hashes ) in petitions_object ]
                     
                     wx.GetApp().Write( 'content_updates', content_updates )
                     
@@ -224,8 +224,8 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     content_updates = []
                     
-                    content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, good_hashes ) )
-                    content_updates.append( CC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, petitions_object.GetHashes() ) )
+                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, good_hashes ) )
+                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, petitions_object.GetHashes() ) )
                     
                     wx.GetApp().Write( 'content_updates', content_updates )
                     
@@ -811,7 +811,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             self._notebook.AddPage( new_page, 'files', select = True )
             
-            new_page.SetSearchFocus()
+            wx.CallAfter( new_page.SetSearchFocus )
             
         
     

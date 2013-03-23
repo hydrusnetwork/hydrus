@@ -491,6 +491,8 @@ class MediaCollection( MediaList, Media ):
     
     def GetNumFrames( self ): return sum( [ media.GetNumFrames() for media in self._sorted_media ] )
     
+    def GetNumWords( self ): return sum( [ media.GetNumWords() for media in self._sorted_media ] )
+    
     def GetPrettyAge( self ): return HC.ConvertTimestampToPrettyAge( self._timestamp )
     
     def GetPrettyInfo( self ):
@@ -594,6 +596,8 @@ class MediaSingleton( Media ):
     
     def GetNumFrames( self ): return self._media_result.GetNumFrames()
     
+    def GetNumWords( self ): return self._media_result.GetNumWords()
+    
     def GetTimestamp( self ):
         
         timestamp = self._media_result.GetTimestamp()
@@ -615,6 +619,8 @@ class MediaSingleton( Media ):
         if duration is not None: info_string += ', ' + HC.ConvertMillisecondsToPrettyTime( duration )
         
         if num_frames is not None: info_string += ' (' + HC.ConvertIntToPrettyString( num_frames ) + ' frames)'
+        
+        if num_words is not None: info_string += ' (' + HC.ConvertIntToPrettyString( num_words ) + ' words)'
         
         return info_string
         
