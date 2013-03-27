@@ -351,8 +351,9 @@ class PagePetitions( PageWithMedia ):
     
 class PageQuery( PageWithMedia ):
     
-    def __init__( self, parent, file_service_identifier, initial_predicates = [] ):
+    def __init__( self, parent, file_service_identifier, initial_media_results = [], initial_predicates = [] ):
         
+        self._initial_media_results = initial_media_results
         self._initial_predicates = initial_predicates
         
         PageWithMedia.__init__( self, parent, file_service_identifier )
@@ -360,7 +361,10 @@ class PageQuery( PageWithMedia ):
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelQuery( self._search_preview_split, self, self._page_key, self._file_service_identifier, initial_predicates = self._initial_predicates )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
+    def _InitMediaPanel( self ):
+        
+        if len( self._initial_media_results ) == 0: self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
+        else: self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_predicates, self._initial_media_results )
     
 class PageThreadDumper( PageWithMedia ):
     

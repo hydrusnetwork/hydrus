@@ -944,9 +944,12 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '>' ] )
                 self._sign.SetSelection( sign )
                 
-                self._years = wx.SpinCtrl( self, initial = years, max = 30 )
-                self._months = wx.SpinCtrl( self, initial = months, max = 60 )
-                self._days = wx.SpinCtrl( self, initial = days, max = 90 )
+                self._years = wx.SpinCtrl( self, max = 30 )
+                self._years.SetValue( years )
+                self._months = wx.SpinCtrl( self, max = 60 )
+                self._months.SetValue( months )
+                self._days = wx.SpinCtrl( self, max = 90 )
+                self._days.SetValue( days )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1186,7 +1189,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 ( sign, num_tags ) = system_predicates[ 'num_tags' ]
                 
-                self._sign = wx.Choice( self, choices=[ '<', '=', '>' ] )
+                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
                 self._sign.SetSelection( sign )
                 
                 self._num_tags = wx.SpinCtrl( self, max = 2000 )
@@ -1201,7 +1204,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:numtags' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label='system:num_tags' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._num_tags, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
@@ -1214,6 +1217,46 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
             
             Dialog.__init__( self, parent, 'enter number of tags predicate' )
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
+        
+        def NumWords():
+            
+            def InitialiseControls():
+                
+                ( sign, num_words ) = system_predicates[ 'num_words' ]
+                
+                self._sign = wx.Choice( self, choices=[ '<', u'\u2248', '=', '>' ] )
+                self._sign.SetSelection( sign )
+                
+                self._num_words = wx.SpinCtrl( self, max = 1000000 )
+                self._num_words.SetValue( num_words )
+                
+                self._ok = wx.Button( self, label='Ok' )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+                
+            
+            def InitialisePanel():
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self, label='system:num_words' ), FLAGS_MIXED )
+                hbox.AddF( self._sign, FLAGS_MIXED )
+                hbox.AddF( self._num_words, FLAGS_MIXED )
+                hbox.AddF( self._ok, FLAGS_MIXED )
+                
+                self.SetSizer( hbox )
+                
+                ( x, y ) = self.GetEffectiveMinSize()
+                
+                self.SetInitialSize( ( x, y ) )
+                
+            
+            Dialog.__init__( self, parent, 'enter number of words predicate' )
             
             InitialiseControls()
             
@@ -1357,7 +1400,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._size = wx.SpinCtrl( self, max = 1048576 )
                 self._size.SetValue( size )
                 
-                self._unit = wx.Choice( self, choices=[ 'b', 'B', 'Kb', 'KB', 'Mb', 'MB', 'Gb', 'GB' ] )
+                self._unit = wx.Choice( self, choices=[ 'B', 'KB', 'MB', 'GB' ] )
                 self._unit.SetSelection( unit )
                 
                 self._ok = wx.Button( self, label='Ok' )
@@ -1460,7 +1503,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self.SetInitialSize( ( x, y ) )
                 
             
-            Dialog.__init__( self, parent, 'enter duration predicate' )
+            Dialog.__init__( self, parent, 'enter similar to predicate' )
             
             InitialiseControls()
             
@@ -1473,18 +1516,19 @@ class DialogInputFileSystemPredicate( Dialog ):
         
         self._type = type
         
-        if self._type == 'system:age': Age()
-        elif self._type == 'system:duration': Duration()
-        elif self._type == 'system:hash': Hash()
-        elif self._type == 'system:height': Height()
-        elif self._type == 'system:limit': Limit()
-        elif self._type == 'system:mime': Mime()
-        elif self._type == 'system:numtags': NumTags()
-        elif self._type == 'system:rating': Rating()
-        elif self._type == 'system:ratio': Ratio()
-        elif self._type == 'system:size': Size()
-        elif self._type == 'system:width': Width()
-        elif self._type == 'system:similar_to': SimilarTo()
+        if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: Age()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: Duration()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HASH: Hash()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT: Height()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_LIMIT: Limit()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_MIME: Mime()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: NumTags()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATING: Rating()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: Ratio()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: Size()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: Width()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO: SimilarTo()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: NumWords()
         
         self._hidden_cancel_button = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel', size = ( 0, 0 ) )
         self._hidden_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancel )
@@ -1523,13 +1567,85 @@ class DialogInputFileSystemPredicate( Dialog ):
     
     def EventOk( self, event ):
         
-        if self._type == 'system:rating':
+        if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: info = ( self._sign.GetStringSelection(), self._years.GetValue(), self._months.GetValue(), self._days.GetValue() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: info = ( self._sign.GetStringSelection(), self._duration_s.GetValue() * 1000 + self._duration_ms.GetValue() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HASH:
+            
+            hex_filter = lambda c: c in '0123456789abcdef'
+            
+            hash = filter( hex_filter, self._hash.GetValue() )
+            
+            if len( hash ) == 0: hash == '00'
+            elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
+            
+            info = hash.decode( 'hex' )
+            
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT: info = ( self._sign.GetStringSelection(), self._height.GetValue() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_LIMIT: info = self._limit.GetValue()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_MIME: info = self._mime_type.GetClientData( self._mime_type.GetSelection() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS: info = ( self._sign.GetStringSelection(), self._num_tags.GetValue() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: info = ( self._sign.GetStringSelection(), self._num_words.GetValue() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATING:
             
             id = event.GetId()
             
-            if id == HC.LOCAL_RATING_LIKE: self._type = 'system:rating_like'
-            elif id == HC.LOCAL_RATING_NUMERICAL: self._type = 'system:rating_numerical'
+            if id == HC.LOCAL_RATING_LIKE:
+                
+                service_identifier = self._service_like.GetClientData( self._service_like.GetSelection() ).GetServiceIdentifier()
+                
+                operator = '='
+                
+                selection = self._value_like.GetSelection()
+                
+                if selection == 0: value = '1'
+                elif selection == 1: value = '0'
+                elif selection == 2: value = 'rated'
+                elif selection == 3: value = 'not rated'
+                
+                info = ( service_identifier, operator, value )
+                
+            elif id == HC.LOCAL_RATING_NUMERICAL:
+                
+                service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
+                
+                service_identifier = service.GetServiceIdentifier()
+                
+                operator = self._sign_numerical.GetStringSelection()
+                
+                if operator in ( '=rated', '=not rated', '=uncertain' ):
+                    
+                    value = operator[1:]
+                    
+                    operator = '='
+                    
+                else:
+                    
+                    ( lower, upper ) = service.GetExtraInfo()
+                    
+                    value_raw = self._value_numerical.GetValue()
+                    
+                    value = float( value_raw - lower ) / float( upper - lower )
+                    
+                
+                info = ( service_identifier, operator, value )
+                
             
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: info = ( self._sign.GetStringSelection(), float( ( self._width.GetValue() ) / float( self._height.GetValue() ) ) )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: info = ( self._sign.GetStringSelection(), self._size.GetValue(), HC.ConvertUnitToInteger( self._unit.GetStringSelection() ) )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: info = ( self._sign.GetStringSelection(), self._width.GetValue() )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
+            
+            hex_filter = lambda c: c in '0123456789abcdef'
+            
+            hash = filter( hex_filter, self._hash.GetValue() )
+            
+            if len( hash ) == 0: hash == '00'
+            elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
+            
+            info = ( hash.decode( 'hex' ), self._max_hamming.GetValue() )
+            
+        
+        self._predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ), None )
         
         self.EndModal( wx.ID_OK )
         
@@ -1562,62 +1678,7 @@ class DialogInputFileSystemPredicate( Dialog ):
         except: pass
         
     
-    def GetString( self ):
-        
-        if self._type == 'system:age': return 'system:age' + self._sign.GetStringSelection() + str( self._years.GetValue() ) + 'y' + str( self._months.GetValue() ) + 'm' + str( self._days.GetValue() ) + 'd'
-        elif self._type == 'system:duration': return 'system:duration' + self._sign.GetStringSelection() + str( self._duration_s.GetValue() * 1000 + self._duration_ms.GetValue() )
-        elif self._type == 'system:hash':
-            
-            hex_filter = lambda c: c in '0123456789abcdef'
-            
-            hash = filter( hex_filter, self._hash.GetValue() )
-            
-            if len( hash ) == 0: hash == '00'
-            elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
-            
-            return 'system:hash=' + hash
-            
-        elif self._type == 'system:height': return 'system:height' + self._sign.GetStringSelection() + str( self._height.GetValue() )
-        elif self._type == 'system:limit': return 'system:limit=' + str( self._limit.GetValue() )
-        elif self._type == 'system:mime': return 'system:mime=' + HC.mime_string_lookup[ self._mime_type.GetClientData( self._mime_type.GetSelection() ) ]
-        elif self._type == 'system:numtags': return 'system:numtags' + self._sign.GetStringSelection() + str( self._num_tags.GetValue() )
-        elif self._type == 'system:rating_like':
-            
-            s = 'system:rating:' + self._service_like.GetClientData( self._service_like.GetSelection() ).GetServiceIdentifier().GetName() + '='
-            
-            selection = self._value_like.GetSelection()
-            
-            if selection == 0: s += '1'
-            elif selection == 1: s += '0'
-            elif selection == 2: s += 'rated'
-            elif selection == 3: s += 'not rated'
-            
-            return s
-            
-        elif self._type == 'system:rating_numerical':
-            
-            service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
-            
-            s = 'system:rating:' + service.GetServiceIdentifier().GetName() + self._sign_numerical.GetStringSelection()
-            
-            if self._sign_numerical.GetStringSelection() not in ( '=rated', '=not rated', '=uncertain' ):
-                
-                ( lower, upper ) = service.GetExtraInfo()
-                
-                value = self._value_numerical.GetValue()
-                
-                value_normalised = float( value - lower ) / float( upper - lower )
-                
-                s += str( value_normalised )
-                
-            
-            return s
-            
-        elif self._type == 'system:ratio': return 'system:ratio' + self._sign.GetStringSelection() + str( self._width.GetValue() ) + ':' + str( self._height.GetValue() )
-        elif self._type == 'system:size': return 'system:size' + self._sign.GetStringSelection() + str( self._size.GetValue() ) + self._unit.GetStringSelection()
-        elif self._type == 'system:width': return 'system:width' + self._sign.GetStringSelection() + str( self._width.GetValue() )
-        elif self._type == 'system:similar_to': return 'system:similar_to=' + self._hash.GetValue() + u'\u2248' + str( self._max_hamming.GetValue() )
-        
+    def GetPredicate( self ): return self._predicate
     
 class DialogInputMessageSystemPredicate( Dialog ):
     
@@ -2347,7 +2408,8 @@ class DialogManageBoorus( Dialog ):
                 self._search_separator.Select( self._search_separator.FindString( search_separator ) )
                 self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
                 
-                self._gallery_advance_num = wx.SpinCtrl( self._search_panel, min = 1, max = 1000, initial = gallery_advance_num )
+                self._gallery_advance_num = wx.SpinCtrl( self._search_panel, min = 1, max = 1000 )
+                self._gallery_advance_num.SetValue( gallery_advance_num )
                 self._gallery_advance_num.Bind( wx.EVT_SPIN, self.EventHTML )
                 
                 self._thumb_classname = wx.TextCtrl( self._search_panel, value = thumb_classname )
@@ -3630,7 +3692,8 @@ class DialogManageImageboards( Dialog ):
                     
                     self._post_url = wx.TextCtrl( self._basic_info_panel, value = post_url )
                     
-                    self._flood_time = wx.SpinCtrl( self._basic_info_panel, min = 5, max = 1200, initial = flood_time )
+                    self._flood_time = wx.SpinCtrl( self._basic_info_panel, min = 5, max = 1200 )
+                    self._flood_time.SetValue( flood_time )
                     
                     #
                     
@@ -4053,17 +4116,20 @@ class DialogManageOptionsLocal( Dialog ):
             self._exclude_deleted_files = wx.CheckBox( self._file_page, label='' )
             self._exclude_deleted_files.SetValue( self._options[ 'exclude_deleted_files' ] )
             
-            self._thumbnail_cache_size = wx.SpinCtrl( self._file_page, initial = int( self._options[ 'thumbnail_cache_size' ] / 1048576 ), min = 10, max = 3000 )
+            self._thumbnail_cache_size = wx.SpinCtrl( self._file_page, min = 10, max = 3000 )
+            self._thumbnail_cache_size.SetValue( int( self._options[ 'thumbnail_cache_size' ] / 1048576 ) )
             self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._estimated_number_thumbnails = wx.StaticText( self._file_page, label = '', style = wx.ST_NO_AUTORESIZE )
+            self._estimated_number_thumbnails = wx.StaticText( self._file_page, label = '' )
             
-            self._preview_cache_size = wx.SpinCtrl( self._file_page, initial = int( self._options[ 'preview_cache_size' ] / 1048576 ), min = 20, max = 3000 )
+            self._preview_cache_size = wx.SpinCtrl( self._file_page, min = 20, max = 3000 )
+            self._preview_cache_size.SetValue( int( self._options[ 'preview_cache_size' ] / 1048576 ) )
             self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
             
             self._estimated_number_previews = wx.StaticText( self._file_page, label = '', style = wx.ST_NO_AUTORESIZE )
             
-            self._fullscreen_cache_size = wx.SpinCtrl( self._file_page, initial = int( self._options[ 'fullscreen_cache_size' ] / 1048576 ), min = 100, max = 3000 )
+            self._fullscreen_cache_size = wx.SpinCtrl( self._file_page, min = 100, max = 3000 )
+            self._fullscreen_cache_size.SetValue( int( self._options[ 'fullscreen_cache_size' ] / 1048576 ) )
             self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
             
             self._estimated_number_fullscreens = wx.StaticText( self._file_page, label = '', style = wx.ST_NO_AUTORESIZE )
@@ -4078,7 +4144,8 @@ class DialogManageOptionsLocal( Dialog ):
             self._thumbnail_height.SetValue( thumbnail_height )
             self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._num_autocomplete_chars = wx.SpinCtrl( self._file_page, initial = self._options[ 'num_autocomplete_chars' ], min = 1, max = 100 )
+            self._num_autocomplete_chars = wx.SpinCtrl( self._file_page, min = 1, max = 100 )
+            self._num_autocomplete_chars.SetValue( self._options[ 'num_autocomplete_chars' ] )
             self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
             
             self._listbook.AddPage( self._file_page, 'files and memory' )
@@ -4130,28 +4197,35 @@ class DialogManageOptionsLocal( Dialog ):
             self._file_system_predicate_age_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '>' ] )
             self._file_system_predicate_age_sign.SetSelection( sign )
             
-            self._file_system_predicate_age_years = wx.SpinCtrl( self._file_system_predicates_page, initial = years, max = 30 )
-            self._file_system_predicate_age_months = wx.SpinCtrl( self._file_system_predicates_page, initial = months, max = 60 )
-            self._file_system_predicate_age_days = wx.SpinCtrl( self._file_system_predicates_page, initial = days, max = 90 )
+            self._file_system_predicate_age_years = wx.SpinCtrl( self._file_system_predicates_page, max = 30 )
+            self._file_system_predicate_age_years.SetValue( years )
+            self._file_system_predicate_age_months = wx.SpinCtrl( self._file_system_predicates_page, max = 60 )
+            self._file_system_predicate_age_months.SetValue( months )
+            self._file_system_predicate_age_days = wx.SpinCtrl( self._file_system_predicates_page, max = 90 )
+            self._file_system_predicate_age_days.SetValue( days )
             
             ( sign, s, ms ) = system_predicates[ 'duration' ]
             
             self._file_system_predicate_duration_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
             self._file_system_predicate_duration_sign.SetSelection( sign )
             
-            self._file_system_predicate_duration_s = wx.SpinCtrl( self._file_system_predicates_page, initial = s, max = 3599 )
-            self._file_system_predicate_duration_ms = wx.SpinCtrl( self._file_system_predicates_page, initial = ms, max = 999 )
+            self._file_system_predicate_duration_s = wx.SpinCtrl( self._file_system_predicates_page, max = 3599 )
+            self._file_system_predicate_duration_s.SetValue( s )
+            self._file_system_predicate_duration_ms = wx.SpinCtrl( self._file_system_predicates_page, max = 999 )
+            self._file_system_predicate_duration_ms.SetValue( ms )
             
             ( sign, height ) = system_predicates[ 'height' ]
             
             self._file_system_predicate_height_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
             self._file_system_predicate_height_sign.SetSelection( sign )
             
-            self._file_system_predicate_height = wx.SpinCtrl( self._file_system_predicates_page, initial = height, max = 200000 )
+            self._file_system_predicate_height = wx.SpinCtrl( self._file_system_predicates_page, max = 200000 )
+            self._file_system_predicate_height.SetValue( height )
             
             limit = system_predicates[ 'limit' ]
             
-            self._file_system_predicate_limit = wx.SpinCtrl( self._file_system_predicates_page, initial = limit, max = 1000000 )
+            self._file_system_predicate_limit = wx.SpinCtrl( self._file_system_predicates_page, max = 1000000 )
+            self._file_system_predicate_limit.SetValue( limit )
             
             ( media, type ) = system_predicates[ 'mime' ]
             
@@ -4170,14 +4244,16 @@ class DialogManageOptionsLocal( Dialog ):
             self._file_system_predicate_num_tags_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', '=', '>' ] )
             self._file_system_predicate_num_tags_sign.SetSelection( sign )
             
-            self._file_system_predicate_num_tags = wx.SpinCtrl( self._file_system_predicates_page, initial = num_tags, max = 2000 )
+            self._file_system_predicate_num_tags = wx.SpinCtrl( self._file_system_predicates_page, max = 2000 )
+            self._file_system_predicate_num_tags.SetValue( num_tags )
             
             ( sign, value ) = system_predicates[ 'local_rating_numerical' ]
             
             self._file_system_predicate_local_rating_numerical_sign = wx.Choice( self._file_system_predicates_page, choices=[ '>', '<', '=', u'\u2248', '=rated', '=not rated', '=uncertain' ] )
             self._file_system_predicate_local_rating_numerical_sign.SetSelection( sign )
             
-            self._file_system_predicate_local_rating_numerical_value = wx.SpinCtrl( self._file_system_predicates_page, initial = value, min = 0, max = 50000 )
+            self._file_system_predicate_local_rating_numerical_value = wx.SpinCtrl( self._file_system_predicates_page, min = 0, max = 50000 )
+            self._file_system_predicate_local_rating_numerical_value.SetValue( value )
             
             value = system_predicates[ 'local_rating_like' ]
             
@@ -4189,18 +4265,20 @@ class DialogManageOptionsLocal( Dialog ):
             self._file_system_predicate_ratio_sign = wx.Choice( self._file_system_predicates_page, choices=[ '=', u'\u2248' ] )
             self._file_system_predicate_ratio_sign.SetSelection( sign )
             
-            self._file_system_predicate_ratio_width = wx.SpinCtrl( self._file_system_predicates_page, initial = width, max = 50000 )
-            
-            self._file_system_predicate_ratio_height = wx.SpinCtrl( self._file_system_predicates_page, initial = height, max = 50000 )
+            self._file_system_predicate_ratio_width = wx.SpinCtrl( self._file_system_predicates_page, max = 50000 )
+            self._file_system_predicate_ratio_width.SetValue( width )
+            self._file_system_predicate_ratio_height = wx.SpinCtrl( self._file_system_predicates_page, max = 50000 )
+            self._file_system_predicate_ratio_height.SetValue( height )
             
             ( sign, size, unit ) = system_predicates[ 'size' ]
             
             self._file_system_predicate_size_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
             self._file_system_predicate_size_sign.SetSelection( sign )
             
-            self._file_system_predicate_size = wx.SpinCtrl( self._file_system_predicates_page, initial = size, max = 1048576 )
+            self._file_system_predicate_size = wx.SpinCtrl( self._file_system_predicates_page, max = 1048576 )
+            self._file_system_predicate_size.SetValue( size )
             
-            self._file_system_predicate_size_unit = wx.Choice( self._file_system_predicates_page, choices=[ 'b', 'B', 'Kb', 'KB', 'Mb', 'MB', 'Gb', 'GB' ] )
+            self._file_system_predicate_size_unit = wx.Choice( self._file_system_predicates_page, choices=[ 'B', 'KB', 'MB', 'GB' ] )
             self._file_system_predicate_size_unit.SetSelection( unit )
             
             ( sign, width ) = system_predicates[ 'width' ]
@@ -4208,7 +4286,16 @@ class DialogManageOptionsLocal( Dialog ):
             self._file_system_predicate_width_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
             self._file_system_predicate_width_sign.SetSelection( sign )
             
-            self._file_system_predicate_width = wx.SpinCtrl( self._file_system_predicates_page, initial = width, max = 200000 )
+            self._file_system_predicate_width = wx.SpinCtrl( self._file_system_predicates_page, max = 200000 )
+            self._file_system_predicate_width.SetValue( width )
+            
+            ( sign, num_words ) = system_predicates[ 'num_words' ]
+            
+            self._file_system_predicate_num_words_sign = wx.Choice( self._file_system_predicates_page, choices=[ '<', u'\u2248', '=', '>' ] )
+            self._file_system_predicate_num_words_sign.SetSelection( sign )
+            
+            self._file_system_predicate_num_words = wx.SpinCtrl( self._file_system_predicates_page, max = 1000000 )
+            self._file_system_predicate_num_words.SetValue( num_words )
             
             self._listbook.AddPage( self._file_system_predicates_page, 'default file system predicates' )
             
@@ -4403,7 +4490,7 @@ class DialogManageOptionsLocal( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:numtags' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:num_tags' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_tags_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_tags, FLAGS_MIXED )
             
@@ -4448,6 +4535,14 @@ class DialogManageOptionsLocal( Dialog ):
             hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:width' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_width_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_width, FLAGS_MIXED )
+            
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:num_words' ), FLAGS_MIXED )
+            hbox.AddF( self._file_system_predicate_num_words_sign, FLAGS_MIXED )
+            hbox.AddF( self._file_system_predicate_num_words, FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -4682,6 +4777,7 @@ class DialogManageOptionsLocal( Dialog ):
         system_predicates[ 'ratio' ] = ( self._file_system_predicate_ratio_sign.GetSelection(), self._file_system_predicate_ratio_width.GetValue(), self._file_system_predicate_ratio_height.GetValue() )
         system_predicates[ 'size' ] = ( self._file_system_predicate_size_sign.GetSelection(), self._file_system_predicate_size.GetValue(), self._file_system_predicate_size_unit.GetSelection() )
         system_predicates[ 'width' ] = ( self._file_system_predicate_width_sign.GetSelection(), self._file_system_predicate_width.GetValue() )
+        system_predicates[ 'num_words' ] = ( self._file_system_predicate_num_words_sign.GetSelection(), self._file_system_predicate_num_words.GetValue() )
         
         self._options[ 'file_system_predicates' ] = system_predicates
         

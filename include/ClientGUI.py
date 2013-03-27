@@ -801,13 +801,13 @@ class FrameGUI( ClientGUICommon.Frame ):
             
         
     
-    def _NewPageQuery( self, service_identifier, tags = [] ):
+    def _NewPageQuery( self, service_identifier, initial_media_results = [], initial_predicates = [] ):
         
         if service_identifier is None: service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_types = ( HC.FILE_REPOSITORY, ) )
         
         if service_identifier is not None:
             
-            new_page = ClientGUIPages.PageQuery( self._notebook, service_identifier, tags )
+            new_page = ClientGUIPages.PageQuery( self._notebook, service_identifier, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
             
             self._notebook.AddPage( new_page, 'files', select = True )
             
@@ -1120,7 +1120,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPagePetitions( self, service_identifier ): self._NewPagePetitions( service_identifier )
     
-    def NewPageQuery( self, service_identifier, tags = [] ): self._NewPageQuery( service_identifier, tags = tags )
+    def NewPageQuery( self, service_identifier, initial_media_results = [], initial_predicates = [] ): self._NewPageQuery( service_identifier, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
     
     def NewPageThreadDumper( self, hashes ):
         
@@ -1139,7 +1139,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, [ 'system:similar_to=' + hash.encode( 'hex' ) + u'\u2248' + '5' ] )
+    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ), None ) ] )
     
     def RefreshAcceleratorTable( self ):
         

@@ -1108,6 +1108,12 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
     def EventShowMenu( self, event ):
         
+        services = wx.GetApp().Read( 'services' )
+        
+        local_ratings_services = [ service for service in services if service.GetServiceIdentifier().GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+        
+        i_can_post_ratings = len( local_ratings_services ) > 0
+        
         self._last_drag_coordinates = None # to stop successive right-click drag warp bug
         
         menu = wx.Menu()
@@ -1138,6 +1144,12 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
             
         
         #
+        
+        menu.AppendSeparator()
+        
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+        
+        if i_can_post_ratings: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'manage ratings' )
         
         menu.AppendSeparator()
         
@@ -1842,7 +1854,7 @@ class RatingsFilterFrame( ClientGUICommon.Frame ):
                     rating = local_ratings.GetRating( self._service_identifier )
                     
                 
-                if other_min == 0.0: against_string += ' - dislike'
+                if rating == 0.0: against_string += ' - dislike'
                 else: against_string += ' - like'
                 
             

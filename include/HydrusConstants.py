@@ -12,8 +12,6 @@ import traceback
 import wx
 import yaml
 
-locale.setlocale( locale.LC_ALL, '' )
-
 BASE_DIR = sys.path[0]
 
 DB_DIR = BASE_DIR + os.path.sep + 'db'
@@ -30,7 +28,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 62
+SOFTWARE_VERSION = 63
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -232,6 +230,31 @@ header_and_mime = [
     ( '%PDF', APPLICATION_PDF )
     ]
 
+PREDICATE_TYPE_SYSTEM = 0
+PREDICATE_TYPE_TAG = 1
+PREDICATE_TYPE_NAMESPACE = 2
+
+SYSTEM_PREDICATE_TYPE_EVERYTHING = 0
+SYSTEM_PREDICATE_TYPE_INBOX = 1
+SYSTEM_PREDICATE_TYPE_ARCHIVE = 2
+SYSTEM_PREDICATE_TYPE_UNTAGGED = 3
+SYSTEM_PREDICATE_TYPE_NUM_TAGS = 4
+SYSTEM_PREDICATE_TYPE_LIMIT = 5
+SYSTEM_PREDICATE_TYPE_SIZE = 6
+SYSTEM_PREDICATE_TYPE_AGE = 7
+SYSTEM_PREDICATE_TYPE_HASH = 8
+SYSTEM_PREDICATE_TYPE_WIDTH = 9
+SYSTEM_PREDICATE_TYPE_HEIGHT = 10
+SYSTEM_PREDICATE_TYPE_RATIO = 11
+SYSTEM_PREDICATE_TYPE_DURATION = 12
+SYSTEM_PREDICATE_TYPE_MIME = 13
+SYSTEM_PREDICATE_TYPE_RATING = 14
+SYSTEM_PREDICATE_TYPE_SIMILAR_TO = 15
+SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO = 16
+SYSTEM_PREDICATE_TYPE_LOCAL = 17
+SYSTEM_PREDICATE_TYPE_NOT_LOCAL = 18
+SYSTEM_PREDICATE_TYPE_NUM_WORDS = 19
+
 wxk_code_string_lookup = {
     wx.WXK_SPACE: 'space',
     wx.WXK_BACK: 'backspace',
@@ -287,7 +310,9 @@ wxk_code_string_lookup = {
     wx.WXK_NUMPAD_ADD: 'numpad +',
     wx.WXK_NUMPAD_DIVIDE: 'numpad /',
     wx.WXK_NUMPAD_SUBTRACT: 'numpad -',
-    wx.WXK_NUMPAD_MULTIPLY: 'numpad *'
+    wx.WXK_NUMPAD_MULTIPLY: 'numpad *',
+    wx.WXK_NUMPAD_DELETE: 'numpad delete',
+    wx.WXK_NUMPAD_DECIMAL: 'numpad decimal'
     }
 
 # request checking
@@ -788,6 +813,20 @@ def ConvertTimeToPrettyTime( secs ):
     
     return time.strftime( '%H:%M:%S', time.gmtime( secs ) )
     
+def ConvertUnitToInteger( unit ):
+    
+    if unit == 'B': return 8
+    elif unit == 'KB': return 1024
+    elif unit == 'MB': return 1048576
+    elif unit == 'GB': return 1073741824
+    
+def ConvertUnitToString( unit ):
+    
+    if unit == 8: return 'B'
+    elif unit == 1024: return 'KB'
+    elif unit == 1048576: return 'MB'
+    elif unit == 1073741824: return 'GB'
+    
 def ConvertZoomToPercentage( zoom ):
     
     zoom = zoom * 100.0
@@ -881,6 +920,18 @@ def IsCollection( mime ): return mime in ( APPLICATION_HYDRUS_CLIENT_COLLECTION,
 
 def IsImage( mime ): return mime in ( IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG, IMAGE_BMP )
 
+def SearchEntryMatchesPredicate( search_entry, predicate ):
+    
+    ( predicate_type, info ) = predicate.GetInfo()
+    
+    if predicate_type == PREDICATE_TYPE_TAG:
+        
+        ( operator, value ) = info
+        
+        return SearchEntryMatchesTag( search_entry, value )
+        
+    else: return False
+    
 def SearchEntryMatchesTag( search_entry, tag ):
     
     # note that at no point is the namespace checked against the search_entry!
@@ -893,7 +944,6 @@ def SearchEntryMatchesTag( search_entry, tag ):
         
     else: return tag.startswith( search_entry )
     
-
 def SplayListForDB( xs ): return '(' + ','.join( [ '"' + str( x ) + '"' for x in xs ] ) + ')'
 
 def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + str( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
@@ -1531,6 +1581,181 @@ class JobServer():
         self._result = result
         
         self._result_ready.set()
+        
+    
+class Predicate():
+    
+    def __init__( self, predicate_type, value, count ):
+        
+        self._predicate_type = predicate_type
+        self._value = value
+        self._count = count
+        
+    
+    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return ( self._predicate_type, self._value ).__hash__()
+    
+    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, None )
+    
+    def GetCount( self ): return self._count
+    
+    def GetInfo( self ): return ( self._predicate_type, self._value )
+    
+    def GetPredicateType( self ): return self._predicate_type
+    
+    def GetUnicode( self ):
+        
+        if self._predicate_type == PREDICATE_TYPE_SYSTEM:
+            
+            ( system_predicate_type, info ) = self._value
+            
+            if system_predicate_type == SYSTEM_PREDICATE_TYPE_EVERYTHING: base = u'system:everything'
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_INBOX: base = u'system:inbox'
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_ARCHIVE: base = u'system:archive'
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_UNTAGGED: base = u'system:untagged'
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_LOCAL: base = u'system:local'
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NOT_LOCAL: base = u'system:not_local'
+            elif system_predicate_type in ( SYSTEM_PREDICATE_TYPE_NUM_TAGS, SYSTEM_PREDICATE_TYPE_WIDTH, SYSTEM_PREDICATE_TYPE_HEIGHT, SYSTEM_PREDICATE_TYPE_RATIO, SYSTEM_PREDICATE_TYPE_DURATION, SYSTEM_PREDICATE_TYPE_NUM_WORDS ):
+                
+                if system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_TAGS: base = u'system:num_tags'
+                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_WIDTH: base = u'system:width'
+                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HEIGHT: base = u'system:height'
+                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATIO: base = u'system:ratio'
+                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_DURATION: base = u'system:duration'
+                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_WORDS: base = u'system:num_words'
+                
+                if info is not None:
+                    
+                    ( operator, value ) = info
+                    
+                    base = base + operator + unicode( value )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIZE:
+                
+                base = u'system:size'
+                
+                if info is not None:
+                    
+                    ( operator, size, unit ) = info
+                    
+                    base = base + operator + unicode( size ) + ConvertUnitToString( unit )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_LIMIT:
+                
+                base = u'system:limit'
+                
+                if info is not None:
+                    
+                    value = info
+                    
+                    base = base + u'=' + unicode( value )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_AGE:
+                
+                base = u'system:age'
+                
+                if info is not None:
+                    
+                    ( operator, years, months, days ) = info
+                    
+                    base = base + operator + unicode( years ) + u'y' + unicode( months ) + u'm' + unicode( days ) + u'd'
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HASH:
+                
+                base = u'system:hash'
+                
+                if info is not None:
+                    
+                    hash = info
+                    
+                    base = base + u'=' + hash.encode( 'hex' )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_MIME:
+                
+                base = u'system:mime'
+                
+                if info is not None:
+                    
+                    mime = info
+                    
+                    base = base + u'=' + mime_string_lookup[ mime ]
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATING:
+                
+                base = u'system:rating'
+                
+                if info is not None:
+                    
+                    ( service_identifier, operator, value ) = info
+                    
+                    base = base + u':' + service_identifier.GetName() + operator + unicode( value )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
+                
+                base = u'system:similar_to'
+                
+                if info is not None:
+                    
+                    ( hash, max_hamming ) = info
+                    
+                    base = base + u'=' + hash.encode( 'hex' ) + u'\u2248' + unicode( max_hamming )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO:
+                
+                base = u'system:not_uploaded_to'
+                
+                if info is not None:
+                    
+                    service_identifier = info
+                    
+                    base = base + u':' + service_identifier.GetName()
+                    
+                
+            
+        elif self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            ( operator, tag ) = self._value
+            
+            if operator == '-': base = u'-'
+            elif operator == '+': base = u''
+            
+            base = base + tag
+            
+        elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
+            
+            ( operator, namespace ) = self._value
+            
+            if operator == '-': base = u'-'
+            elif operator == '+': base = u''
+            
+            base = base + namespace + u':*'
+            
+        
+        if self._count is None: return base
+        else: return base + u' (' + ConvertIntToPrettyString( self._count ) + u')'
+        
+    
+    def GetValue( self ): return self._value
+    
+    def SetOperator( self, operator ):
+        
+        if self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            ( old_operator, tag ) = self._value
+            
+            self._value = ( operator, tag )
+            
         
     
 class ResponseContext():

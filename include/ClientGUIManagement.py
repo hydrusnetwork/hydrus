@@ -3535,36 +3535,25 @@ class ManagementPanelQuery( ManagementPanel ):
             
             if predicate is not None:
                 
-                if predicate in ( 'system:size', 'system:age', 'system:hash', 'system:limit', 'system:numtags', 'system:width', 'system:height', 'system:ratio', 'system:duration', u'system:mime', u'system:rating', u'system:similar_to' ):
+                ( predicate_type, value ) = predicate.GetInfo()
+                
+                if predicate_type == HC.PREDICATE_TYPE_SYSTEM:
                     
-                    with ClientGUIDialogs.DialogInputFileSystemPredicate( self, predicate ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK: predicate = dlg.GetString()
-                        else: return
-                        
+                    ( system_predicate_type, info ) = value
                     
-                elif predicate == 'system:untagged': predicate = 'system:numtags=0'
+                    if system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO ]:
+                        
+                        with ClientGUIDialogs.DialogInputFileSystemPredicate( self, system_predicate_type ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK: predicate = dlg.GetPredicate()
+                            else: return
+                            
+                        
+                    elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ) ), None )
+                    
                 
                 if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )
-                else:
-                    
-                    if predicate in ( 'system:inbox', 'system:archive', 'system:local', 'system:not local' ):
-                        
-                        if predicate == 'system:inbox': removee = 'system:archive'
-                        elif predicate == 'system:archive': removee = 'system:inbox'
-                        elif predicate == 'system:local': removee = 'system:not local'
-                        elif predicate == 'system:not local': removee = 'system:local'
-                        
-                    else:
-                        
-                        if predicate.startswith( '-' ): removee = predicate[1:]
-                        else: removee = '-' + predicate
-                        
-                    
-                    if self._current_predicates_box.HasPredicate( removee ): self._current_predicates_box.RemovePredicate( removee )
-                    
-                    self._current_predicates_box.AddPredicate( predicate )
-                    
+                else: self._current_predicates_box.AddPredicate( predicate )
                 
             
             self._DoQuery()

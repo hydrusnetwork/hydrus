@@ -70,6 +70,8 @@ def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
     
     if pil_image.mode == 'P' and 'transparency' in pil_image.info:
         
+        # I think gif problems are around here somewhere; the transparency info is not converted to RGBA properly, so it starts drawing colours when it should draw nothing
+        
         current_frame = current_frame.convert( 'RGBA' )
         
         if canvas is None: canvas = current_frame
@@ -87,8 +89,6 @@ def GenerateHydrusBitmapFromFile( file ):
     
 def GenerateHydrusBitmapFromPILImage( pil_image ):
     
-    ( image_width, image_height ) = pil_image.size
-    
     if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
         
         if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
@@ -97,7 +97,7 @@ def GenerateHydrusBitmapFromPILImage( pil_image ):
         
     else:
         
-        if pil_image.mode in ( 'P', 'L', 'LA' ): pil_image = pil_image.convert( 'RGB' )
+        if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
         
         return HydrusBitmap( pil_image.tostring(), wx.BitmapBufferFormat_RGB, pil_image.size )
         

@@ -256,7 +256,14 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventText( self, event ):
         
-        self._lag_timer.Start( 100, wx.TIMER_ONE_SHOT )
+        num_chars = len( self.GetValue() )
+        
+        if num_chars == 0: lag = 0
+        elif num_chars == 1: lag = 400
+        elif num_chars == 2: lag = 200
+        else: lag = 100
+        
+        self._lag_timer.Start( lag, wx.TIMER_ONE_SHOT )
         
     
 class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
@@ -405,7 +412,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         matches = self._GenerateMatches()
         
-        self._dropdown_list.SetTags( matches )
+        self._dropdown_list.SetPredicates( matches )
         
         self._current_matches = matches
         
@@ -551,8 +558,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         raw_entry = self.GetValue()
         
-        if raw_entry.startswith( '-' ): search_text = raw_entry[1:]
-        else: search_text = raw_entry
+        if raw_entry.startswith( '-' ):
+            
+            operator = '-'
+            
+            search_text = raw_entry[1:]
+            
+        else:
+            
+            operator = '+'
+            
+            search_text = raw_entry
+            
         
         search_text = HC.CleanTag( search_text )
         
@@ -590,9 +607,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             if len( half_complete_tag ) >= num_first_letters:
                 
-                if must_do_a_search or half_complete_tag[ : num_first_letters ] != self._first_letters:
+                if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
                     
-                    self._first_letters = half_complete_tag[ : num_first_letters ]
+                    self._first_letters = half_complete_tag
                     
                     media = self._media_callable()
                     
@@ -626,15 +643,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         tags_to_count = collections.Counter( absolutely_all_tags_flat )
                         
-                        self._cached_results = CC.AutocompleteMatchesCounted( tags_to_count )
+                        self._cached_results = CC.AutocompleteMatchesPredicates( [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
                         
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
                 
-                if raw_entry.startswith( '-' ): matches = [ ( '-' + tag, count ) for ( tag, count ) in matches ]
-                
             else: matches = []
+            
+            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ), None ) )
+            
+        
+        for match in matches:
+            
+            if match.GetPredicateType() == HC.PREDICATE_TYPE_TAG: match.SetOperator( operator )
             
         
         return matches
@@ -688,7 +710,18 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._dropdown_window.SetSizer( vbox )
         
     
-    def _BroadcastChoice( self, predicate ): self._chosen_tag_callable( predicate )
+    def _BroadcastChoice( self, predicate ):
+        
+        if predicate is None: broadcast = None
+        else:
+            
+            ( operator, tag ) = predicate.GetValue()
+            
+            broadcast = tag
+            
+        
+        self._chosen_tag_callable( broadcast )
+        
     
     def _GenerateMatches( self ):
         
@@ -732,9 +765,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( half_complete_tag ) >= num_first_letters:
                 
-                if must_do_a_search or half_complete_tag[ : num_first_letters ] != self._first_letters:
+                if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
                     
-                    self._first_letters = half_complete_tag[ : num_first_letters ]
+                    self._first_letters = half_complete_tag
                     
                     self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text )
                     
@@ -743,19 +776,17 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
             else: matches = []
             
+            predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ), 0 )
+            
             try:
                 
-                tags_in_order = [ tag for ( tag, count ) in matches ]
+                predicate = matches[ matches.index( predicate ) ]
                 
-                index = tags_in_order.index( search_text )
+                matches.remove( predicate )
                 
-                match = matches[ index ]
-                
-                matches.remove( match )
-                
-                matches.insert( 0, match )
-                
-            except: matches.insert( 0, ( search_text, 0 ) )
+            except: pass
+            
+            matches.insert( 0, predicate )
             
         
         return matches
@@ -2496,32 +2527,31 @@ class TagsBoxActiveOnly( TagsBox ):
         
         self._callable = callable
         
-        self._matches = {}
+        self._predicates = {}
         
     
-    def _Activate( self, tag ): self._callable( tag )
+    def _Activate( self, predicate ): self._callable( predicate )
     
-    def SetTags( self, matches ):
+    def SetPredicates( self, predicates ):
         
-        if matches != self._matches:
+        if predicates != self._predicates:
             
-            self._matches = matches
+            self._predicates = predicates
             
             self._ordered_strings = []
             self._strings_to_terms = {}
             
-            for ( tag, count ) in matches:
+            for predicate in predicates:
                 
-                if count is None: tag_string = tag
-                else: tag_string = tag + ' (' + HC.ConvertIntToPrettyString( count ) + ')'
+                tag_string = predicate.GetUnicode()
                 
                 self._ordered_strings.append( tag_string )
-                self._strings_to_terms[ tag_string ] = tag
+                self._strings_to_terms[ tag_string ] = predicate
                 
             
             self._TextsHaveChanged()
             
-            if len( matches ) > 0: self._Select( 0 )
+            if len( predicates ) > 0: self._Select( 0 )
             
         
     
@@ -2546,7 +2576,12 @@ class TagsBoxCPP( TagsBox ):
         HC.pubsub.sub( self, 'ChangeTagRepository', 'change_tag_repository' )
         
     
-    def _Activate( self, tag ): HC.pubsub.pub( 'add_predicate', self._page_key, tag )
+    def _Activate( self, tag ):
+        
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), None )
+        
+        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
     
     def _SortTags( self ):
         
@@ -2886,50 +2921,51 @@ class TagsBoxPredicates( TagsBox ):
             
         
     
-    def _Activate( self, tag ): HC.pubsub.pub( 'remove_predicate', self._page_key, tag )
-    
-    def ActivatePredicate( self, tag ):
-        
-        if tag in self._ordered_strings:
-            
-            self._ordered_strings.remove( tag )
-            del self._strings_to_terms[ tag ]
-            
-        else:
-            
-            if tag == 'system:inbox' and 'system:archive' in self._ordered_strings: self._ordered_strings.remove( 'system:archive' )
-            elif tag == 'system:archive' and 'system:inbox' in self._ordered_strings: self._ordered_strings.remove( 'system:inbox' )
-            elif tag == 'system:local' and 'system:not local' in self._ordered_strings: self._ordered_strings.remove( 'system:not local' )
-            elif tag == 'system:not local' and 'system:local' in self._ordered_strings: self._ordered_strings.remove( 'system:local' )
-            
-            self._ordered_strings.append( tag )
-            self._strings_to_terms[ tag ] = tag
-            
-            self._ordered_strings.sort()
-            
-        
-        self._TextsHaveChanged()
-        
+    def _Activate( self, predicate ): HC.pubsub.pub( 'remove_predicate', self._page_key, predicate )
     
     def AddPredicate( self, predicate ):
         
-        self._ordered_strings.append( predicate )
-        self._strings_to_terms[ predicate ] = predicate
+        predicate = predicate.GetCountlessCopy()
+        
+        predicate_string = predicate.GetUnicode()
+        
+        inbox_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), None )
+        archive_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), None )
+        
+        if predicate == inbox_predicate and self.HasPredicate( archive_predicate ): self.RemovePredicate( archive_predicate )
+        elif predicate == archive_predicate and self.HasPredicate( inbox_predicate ): self.RemovePredicate( inbox_predicate )
+        
+        local_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), None )
+        not_local_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), None )
+        
+        if predicate == local_predicate and self.HasPredicate( not_local_predicate ): self.RemovePredicate( not_local_predicate )
+        elif predicate == not_local_predicate and self.HasPredicate( local_predicate ): self.RemovePredicate( local_predicate )
+        
+        self._ordered_strings.append( predicate_string )
+        self._strings_to_terms[ predicate_string ] = predicate
         
         self._ordered_strings.sort()
         
         self._TextsHaveChanged()
         
     
-    def GetPredicates( self ): return self._ordered_strings
+    def GetPredicates( self ): return self._strings_to_terms.values()
     
-    def HasPredicate( self, predicate ): return predicate in self._ordered_strings
+    def HasPredicate( self, predicate ): return predicate in self._strings_to_terms.values()
     
     def RemovePredicate( self, predicate ):
         
-        self._ordered_strings.remove( predicate )
-        del self._strings_to_terms[ predicate ]
-        
-        self._TextsHaveChanged()
+        for ( s, existing_predicate ) in self._strings_to_terms.items():
+            
+            if existing_predicate == predicate:
+                
+                self._ordered_strings.remove( s )
+                del self._strings_to_terms[ s ]
+                
+                self._TextsHaveChanged()
+                
+                break
+                
+            
         
     

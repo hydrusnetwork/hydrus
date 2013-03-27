@@ -703,6 +703,19 @@ class AutocompleteMatchesCounted():
     
     def GetMatches( self, search ): return [ ( match, self._matches_to_count[ match ] ) for match in self._matches if HC.SearchEntryMatchesTag( search, match ) ]
     
+class AutocompleteMatchesPredicates():
+    
+    def __init__( self, predicates ):
+        
+        self._predicates = predicates
+        
+        def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
+        
+        self._predicates.sort( cmp = cmp_func, reverse = True )
+        
+    
+    def GetMatches( self, search ): return [ predicate for predicate in self._predicates if HC.SearchEntryMatchesPredicate( search, predicate ) ]
+    
 class Booru( HC.HydrusYAMLBase ):
     
     yaml_tag = u'!Booru'
@@ -1621,7 +1634,7 @@ class FileQueryResult():
     
 class FileSearchContext():
     
-    def __init__( self, file_service_identifier = LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = NULL_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, raw_predicates = [] ):
+    def __init__( self, file_service_identifier = LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = NULL_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
         
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = tag_service_identifier
@@ -1629,20 +1642,43 @@ class FileSearchContext():
         self._include_current_tags = include_current_tags
         self._include_pending_tags = include_pending_tags
         
-        self._raw_predicates = raw_predicates
+        self._predicates = predicates
         
-        raw_system_predicates = [ predicate for predicate in raw_predicates if predicate.startswith( 'system:' ) ]
+        system_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_SYSTEM ]
         
-        self._system_predicates = FileSystemPredicates( raw_system_predicates )
+        self._system_predicates = FileSystemPredicates( system_predicates )
         
-        raw_tags = [ predicate for predicate in raw_predicates if not predicate.startswith( 'system:' ) ]
+        tag_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG ]
         
-        self._tags_to_include = [ tag for tag in raw_tags if not tag.startswith( '-' ) ]
-        self._tags_to_exclude = [ tag[1:] for tag in raw_tags if tag.startswith( '-' ) ]
+        self._tags_to_include = []
+        self._tags_to_exclude = []
+        
+        for predicate in tag_predicates:
+            
+            ( operator, tag ) = predicate.GetValue()
+            
+            if operator == '+': self._tags_to_include.append( tag )
+            elif operator == '-': self._tags_to_exclude.append( tag )
+            
+        
+        namespace_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_NAMESPACE ]
+        
+        self._namespaces_to_include = []
+        self._namespaces_to_exclude = []
+        
+        for predicate in namespace_predicates:
+            
+            ( operator, namespace ) = predicate.GetValue()
+            
+            if operator == '+': self._namespaces_to_include.append( namespace )
+            elif operator == '-': self._namespaces_to_exclude.append( namespace )
+            
         
     
     def GetFileServiceIdentifier( self ): return self._file_service_identifier
-    def GetRawPredicates( self ): return self._raw_predicates
+    def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
+    def GetNamespacesToInclude( self ): return self._namespaces_to_include
+    def GetPredicates( self ): return self._predicates
     def GetSystemPredicates( self ): return self._system_predicates
     def GetTagServiceIdentifier( self ): return self._tag_service_identifier
     def GetTagsToExclude( self ): return self._tags_to_exclude
@@ -1682,13 +1718,10 @@ class FileSystemPredicates():
         self._predicates[ self.RATIO ] = []
         self._predicates[ self.REPOSITORIES ] = []
         
-        self._inbox = 'system:inbox' in system_predicates
-        
-        self._archive = 'system:archive' in system_predicates
-        
-        self._local = 'system:local' in system_predicates
-        
-        self._not_local = 'system:not local' in system_predicates
+        self._inbox = False
+        self._archive = False
+        self._local = False
+        self._not_local = False
         
         self._num_tags_zero = False
         self._num_tags_nonzero = False
@@ -1706,6 +1739,9 @@ class FileSystemPredicates():
         self._min_height = None
         self._height = None
         self._max_height = None
+        self._min_num_words = None
+        self._num_words = None
+        self._max_num_words = None
         self._min_duration = None
         self._duration = None
         self._max_duration = None
@@ -1726,286 +1762,171 @@ class FileSystemPredicates():
         
         for predicate in system_predicates:
             
-            if predicate.startswith( 'system:hash=' ):
+            ( system_predicate_type, info ) = predicate.GetValue()
+            
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_INBOX: self._inbox = True
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_ARCHIVE: self._archive = True
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LOCAL: self._local = True
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL: self._not_local = True
+            
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HASH:
                 
-                try:
-                    
-                    hash = predicate[12:].decode( 'hex' )
-                    
-                    self._hash = hash
-                    
-                except: raise Exception( 'I could not parse the hash predicate.' )
+                hash = info
+                
+                self._hash = hash
                 
             
-            if predicate.startswith( 'system:age' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE:
                 
-                try:
+                ( operator, years, months, days ) = info
+                
+                timestamp = int( time.time() ) - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
+                
+                # this is backwards because we are talking about age, not timestamp
+                
+                if operator == '<': self._min_timestamp = timestamp
+                elif operator == '>': self._max_timestamp = timestamp
+                elif operator == u'\u2248':
                     
-                    condition = predicate[10]
+                    self._min_timestamp = int( timestamp * 0.85 )
+                    self._max_timestamp = int( timestamp * 1.15 )
                     
-                    if condition not in ( '<', '>', u'\u2248' ): raise Exception()
-                    
-                    age = predicate[11:]
-                    
-                    years = 0
-                    months = 0
-                    days = 0
-                    
-                    if 'y' in age:
-                        
-                        ( years, age ) = age.split( 'y' )
-                        
-                        years = int( years )
-                        
-                    
-                    if 'm' in age:
-                        
-                        ( months, age ) = age.split( 'm' )
-                        
-                        months = int( months )
-                        
-                    
-                    if 'd' in age:
-                        
-                        ( days, age ) = age.split( 'd' )
-                        
-                        days = int( days )
-                        
-                    
-                    timestamp = int( time.time() ) - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
-                    
-                    # this is backwards because we are talking about age, not timestamp
-                    
-                    if condition == '<': self._min_timestamp = timestamp
-                    elif condition == '>': self._max_timestamp = timestamp
-                    elif condition == u'\u2248':
-                        self._min_timestamp = int( timestamp * 0.85 )
-                        self._max_timestamp = int( timestamp * 1.15 )
-                    
-                except: raise Exception( 'I could not parse the age predicate.' )
                 
             
-            if predicate.startswith( 'system:mime' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_MIME:
                 
-                try:
-                    
-                    mime = predicate[12:]
-                    
-                    if mime == 'image': self._mimes = HC.IMAGES
-                    elif mime == 'application': self._mimes = HC.APPLICATIONS
-                    else: self._mimes = ( HC.mime_enum_lookup[ mime ], )
-                    
-                except: raise Exception( 'I could not parse the mime predicate.' )
+                mimes = info
+                
+                if type( mimes ) == int: mimes = ( mimes, )
+                
+                self._mimes = mimes
                 
             
-            if predicate.startswith( 'system:duration' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_DURATION:
                 
-                try:
+                ( operator, duration ) = info
+                
+                if operator == '<': self._max_duration = duration
+                elif operator == '>': self._min_duration = duration
+                elif operator == '=': self._duration = duration
+                elif operator == u'\u2248':
                     
-                    condition = predicate[15]
+                    self._min_duration = int( duration * 0.85 )
+                    self._max_duration = int( duration * 1.15 )
                     
-                    if condition not in ( '>', '<', '=', u'\u2248' ): raise Exception()
-                    
-                    duration = int( predicate[16:] )
-                    
-                    if duration >= 0:
-                        
-                        if condition == '<': self._max_duration = duration
-                        elif condition == '>': self._min_duration = duration
-                        elif condition == '=': self._duration = duration
-                        elif condition == u'\u2248':
-                            self._min_duration = int( duration * 0.85 )
-                            self._max_duration = int( duration * 1.15 )
-                        
-                    
-                except: raise Exception( 'I could not parse the duration predicate.' )
                 
             
-            if predicate.startswith( 'system:rating' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATING:
                 
-                try:
-                    
-                    # system:rating:[service_name][operator][value]
-                    
-                    stuff_i_care_about = predicate[14:]
-                    
-                    operators = [ '<', u'\u2248', '=', '>' ]
-                    
-                    for operator in operators:
-                        
-                        if operator in stuff_i_care_about:
-                            
-                            ( service_name, value ) = stuff_i_care_about.split( operator )
-                            
-                            self._ratings_predicates.append( ( service_name, operator, value ) )
-                            
-                            break
-                            
-                        
-                    
-                except: raise Exception( 'I could not parse the ratio predicate.' )
+                ( service_identifier, operator, value ) = info
+                
+                self._ratings_predicates.append( ( service_identifier, operator, value ) )
                 
             
-            if predicate.startswith( 'system:ratio' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATIO:
                 
-                try:
-                    
-                    condition = predicate[12]
-                    
-                    if condition not in ( '=', u'\u2248' ): raise Exception()
-                    
-                    ratio = predicate[13:]
-                    
-                    ( width, height ) = ratio.split( ':', 1 )
-                    
-                    width = float( width )
-                    height = float( height )
-                    
-                    if width > 0 and height > 0:
-                        
-                        if condition == '=': self._predicates[ self.RATIO ].append( ( equals, width / height ) )
-                        elif condition == u'\u2248': self._predicates[ self.RATIO ].append( ( about_equals, width / height ) )
-                        
-                    
-                except: raise Exception( 'I could not parse the ratio predicate.' )
+                ( operator, ratio ) = info
+                
+                if operator == '=': self._predicates[ self.RATIO ].append( ( equals, ratio ) )
+                elif operator == u'\u2248': self._predicates[ self.RATIO ].append( ( about_equals, ratio ) )
                 
             
-            if predicate.startswith( 'system:size' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIZE:
                 
-                try:
+                ( operator, size, unit ) = info
+                
+                size = size * unit
+                
+                if operator == '<': self._max_size = size
+                elif operator == '>': self._min_size = size
+                elif operator == '=': self._size = size
+                elif operator == u'\u2248':
                     
-                    condition = predicate[11]
+                    self._min_size = int( size * 0.85 )
+                    self._max_size = int( size * 1.15 )
                     
-                    if condition not in ( '>', '<', '=', u'\u2248' ): raise Exception()
-                    
-                    size = int( predicate[12:-2] )
-                    
-                    multiplier = predicate[-2]
-                    
-                    if multiplier == 'k': multiplier = 1000
-                    elif multiplier == 'K': multiplier = 1024
-                    elif multiplier == 'm': multiplier = 1000000
-                    elif multiplier == 'M': multiplier = 1048576
-                    elif multiplier == 'g': multiplier = 1000000000
-                    elif multiplier == 'G': multiplier = 1073741824
-                    else:
-                        
-                        multiplier = 1
-                        
-                        size = int( predicate[12:-1] )
-                        
-                    
-                    size = size * multiplier
-                    
-                    bB = predicate[-1]
-                    
-                    if bB not in ( 'b', 'B' ): raise Exception()
-                    
-                    if bB == 'b': size = size / 8
-                    
-                    if condition == '<': self._max_size = size
-                    elif condition == '>': self._min_size = size
-                    elif condition == '=': self._size = size
-                    elif condition == u'\u2248':
-                        self._min_size = int( size * 0.85 )
-                        self._max_size = int( size * 1.15 )
-                    
-                except: raise Exception( 'I could not parse the size predicate.' )
                 
             
-            if predicate.startswith( 'system:numtags' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS:
                 
-                try:
+                ( operator, num_tags ) = info
+                
+                if operator == '<': self._predicates[ self.NUM_TAGS ].append( ( lessthan, num_tags ) )
+                elif operator == '>':
                     
-                    condition = predicate[14]
+                    self._predicates[ self.NUM_TAGS ].append( ( greaterthan, num_tags ) )
                     
-                    if condition not in ( '>', '<', '=' ): raise Exception()
+                    if num_tags == 0: self._num_tags_nonzero = True
                     
-                    num_tags = int( predicate[15:] )
+                elif operator == '=':
                     
-                    if num_tags >= 0:
-                        
-                        if condition == '<': self._predicates[ self.NUM_TAGS ].append( ( lessthan, num_tags ) )
-                        elif condition == '>':
-                            
-                            self._predicates[ self.NUM_TAGS ].append( ( greaterthan, num_tags ) )
-                            
-                            if num_tags == 0: self._num_tags_nonzero = True
-                            
-                        elif condition == '=':
-                            
-                            self._predicates[ self.NUM_TAGS ].append( ( equals, num_tags ) )
-                            
-                            if num_tags == 0: self._num_tags_zero = True
-                            
-                        
+                    self._predicates[ self.NUM_TAGS ].append( ( equals, num_tags ) )
                     
-                except: raise Exception( 'I could not parse the numtags predicate.' )
+                    if num_tags == 0: self._num_tags_zero = True
+                    
                 
             
-            if predicate.startswith( 'system:width' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_WIDTH:
                 
-                try:
+                ( operator, width ) = info
+                
+                if operator == '<': self._max_width = width
+                elif operator == '>': self._min_width = width
+                elif operator == '=': self._width = width
+                elif operator == u'\u2248':
                     
-                    condition = predicate[12]
+                    self._min_width = int( width * 0.85 )
+                    self._max_width = int( width * 1.15 )
                     
-                    if condition not in ( '>', '<', '=', u'\u2248' ): raise Exception()
-                    
-                    width = int( predicate[13:] )
-                    
-                    if width >= 0:
-                        
-                        if condition == '<': self._max_width = width
-                        elif condition == '>': self._min_width = width
-                        elif condition == '=': self._width = width
-                        elif condition == u'\u2248':
-                            self._min_width = int( width * 0.85 )
-                            self._max_width = int( width * 1.15 )
-                        
-                    
-                except: raise Exception( 'I could not parse the width predicate.' )
                 
             
-            if predicate.startswith( 'system:height' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_HEIGHT:
                 
-                try:
+                ( operator, height ) = info
+                
+                if operator == '<': self._max_height = height
+                elif operator == '>': self._min_height = height
+                elif operator == '=': self._height = height
+                elif operator == u'\u2248':
                     
-                    condition = predicate[13]
+                    self._min_height = int( height * 0.85 )
+                    self._max_height = int( height * 1.15 )
                     
-                    if condition not in ( '>', '<', '=', u'\u2248' ): raise Exception()
-                    
-                    height = int( predicate[14:] )
-                    
-                    if height >= 0:
-                        
-                        if condition == '<': self._max_height = height
-                        elif condition == '>': self._min_height = height
-                        elif condition == '=': self._height = height
-                        elif condition == u'\u2248':
-                            self._min_height = int( height * 0.85 )
-                            self._max_height = int( height * 1.15 )
-                        
-                    
-                except: raise Exception( 'I could not parse the height predicate.' )
                 
             
-            if predicate.startswith( 'system:limit=' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS:
                 
-                try: self._limit = int( predicate[13:] )
-                except: raise Exception( 'I could not parse the limit predicate.' )
+                ( operator, num_words ) = info
+                
+                if operator == '<': self._max_num_words = num_words
+                elif operator == '>': self._min_num_words = num_words
+                elif operator == '=': self._num_words = num_words
+                elif operator == u'\u2248':
+                    
+                    self._min_num_words = int( num_words * 0.85 )
+                    self._max_num_words = int( num_words * 1.15 )
+                    
                 
             
-            if predicate.startswith( 'system:not_uploaded_to:' ): self._file_repositories_to_exclude.append( predicate[23:] )
-            
-            if predicate.startswith( 'system:similar_to=' ):
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_LIMIT:
                 
-                try:
-                    
-                    ( hash, max_hamming ) = predicate[18:].split( u'\u2248', 1 )
-                    
-                    self._similar_to = ( hash.decode( 'hex' ), int( max_hamming ) )
-                    
-                except: raise Exception( 'I could not parse the similar to predicate.' )
+                limit = info
+                
+                self._limit = limit
+                
+            
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO:
+                
+                service_identifier = info
+                
+                self._file_repositories_to_exclude.append( service_identifier )
+                
+            
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
+                
+                ( hash, max_hamming ) = info
+                
+                self._similar_to = ( hash, max_hamming )
                 
             
         
@@ -2028,9 +1949,9 @@ class FileSystemPredicates():
         return True
         
     
-    def GetFileRepositoryNamesToExclude( self ): return self._file_repositories_to_exclude
+    def GetFileRepositoriesToExclude( self ): return self._file_repositories_to_exclude
     
-    def GetInfo( self ): return ( self._hash, self._min_size, self._size, self._max_size, self._mimes, self._min_timestamp, self._max_timestamp, self._min_width, self._width, self._max_width, self._min_height, self._height, self._max_height, self._min_duration, self._duration, self._max_duration )
+    def GetInfo( self ): return ( self._hash, self._min_size, self._size, self._max_size, self._mimes, self._min_timestamp, self._max_timestamp, self._min_width, self._width, self._max_width, self._min_height, self._height, self._max_height, self._min_num_words, self._num_words, self._max_num_words, self._min_duration, self._duration, self._max_duration )
     
     def GetLimit( self ): return self._limit
     
@@ -2051,6 +1972,8 @@ class FileSystemPredicates():
     def MustNotBeLocal( self ): return self._not_local
     
     def OkFirstRound( self, width, height ):
+        
+        if len( self._predicates[ self.RATIO ] ) > 0 and ( width is None or height is None ): return False
         
         if False in ( function( float( width ) / float( height ), arg ) for ( function, arg ) in self._predicates[ self.RATIO ] ): return False
         

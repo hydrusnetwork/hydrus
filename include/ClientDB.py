@@ -1716,8 +1716,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             except: pass
             
         
-        local_files_hashes = { hash.decode( 'hex' ) for hash in dircache.listdir( HC.CLIENT_FILES_DIR ) }
-        
         for hash in local_files_hashes & deletee_hashes: os.remove( HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) )
         
         # perceptual_hashes and thumbs
@@ -1803,12 +1801,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tags_to_include = search_context.GetTagsToInclude()
         tags_to_exclude = search_context.GetTagsToExclude()
         
+        namespaces_to_include = search_context.GetNamespacesToInclude()
+        namespaces_to_exclude = search_context.GetNamespacesToExclude()
+        
         include_current_tags = search_context.IncludeCurrentTags()
         include_pending_tags = search_context.IncludePendingTags()
         
         sql_predicates = [ 'service_id = ' + str( file_service_id ) ]
         
-        ( hash, min_size, size, max_size, mimes, min_timestamp, max_timestamp, min_width, width, max_width, min_height, height, max_height, min_duration, duration, max_duration ) = system_predicates.GetInfo()
+        ( hash, min_size, size, max_size, mimes, min_timestamp, max_timestamp, min_width, width, max_width, min_height, height, max_height, min_num_words, num_words, max_num_words, min_duration, duration, max_duration ) = system_predicates.GetInfo()
         
         if min_size is not None: sql_predicates.append( 'size > ' + str( min_size ) )
         if size is not None: sql_predicates.append( 'size = ' + str( size ) )
@@ -1836,6 +1837,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if height is not None: sql_predicates.append( 'height = ' + str( height ) )
         if max_height is not None: sql_predicates.append( 'height < ' + str( max_height ) )
         
+        if min_num_words is not None: sql_predicates.append( 'num_words > ' + str( min_num_words ) )
+        if num_words is not None: sql_predicates.append( 'num_words = ' + str( num_words ) )
+        if max_num_words is not None: sql_predicates.append( 'num_words < ' + str( max_num_words ) )
+        
         if min_duration is not None: sql_predicates.append( 'duration > ' + str( min_duration ) )
         if duration is not None:
             
@@ -1844,9 +1849,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         if max_duration is not None: sql_predicates.append( 'duration < ' + str( max_duration ) )
         
-        if len( tags_to_include ) > 0:
+        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0:
             
-            query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+            query_hash_ids = None
+            
+            if len( tags_to_include ) > 0: query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+            
+            if len( namespaces_to_include ) > 0:
+                
+                namespace_query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
+                
+                if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
+                else: query_hash_ids.intersection_update( namespace_query_hash_ids )
+                
             
             if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
             
@@ -1914,20 +1929,22 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         exclude_query_hash_ids = HC.IntelligentMassUnion( [ self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) for tag in tags_to_exclude ] )
         
+        exclude_query_hash_ids.update( HC.IntelligentMassUnion( [ self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_exclude ] ) )
+        
         if file_service_type == HC.FILE_REPOSITORY and self._options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
-        for name_to_exclude in system_predicates.GetFileRepositoryNamesToExclude():
+        for service_identifier in system_predicates.GetFileRepositoriesToExclude():
             
-            ( service_id, ) = c.execute( 'SELECT service_id FROM services WHERE type = ? AND name = ?;', ( HC.FILE_REPOSITORY, name_to_exclude ) ).fetchone()
+            service_id = self._GetServiceId( c, service_identifier )
             
             query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
-        for ( service_name, operator, value ) in system_predicates.GetRatingsPredicates():
+        for ( service_identifier, operator, value ) in system_predicates.GetRatingsPredicates():
             
-            service_id = self._GetServiceId( c, service_name )
+            service_id = self._GetServiceId( c, service_identifier )
             
             if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
             elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
@@ -2113,12 +2130,70 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             [ tags_to_count.update( { ( 1, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results if namespace_id != 1 and tag_id in unnamespaced_tag_ids ]
             
         
-        matches = CC.AutocompleteMatchesCounted( { self._GetNamespaceTag( c, namespace_id, tag_id ) : num_tags for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 } )
+        matches = CC.AutocompleteMatchesPredicates( [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', self._GetNamespaceTag( c, namespace_id, tag_id ) ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ] )
         
         return matches
         
     
     def _GetFavouriteCustomFilterActions( self, c ): return dict( c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' ).fetchall() )
+    
+    def _GetHashIdsFromNamespace( self, c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ):
+        
+        hash_ids = set()
+        
+        if file_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            
+            if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+                
+                current_tables_phrase = 'active_mappings'
+                pending_tables_phrase = 'active_pending_mappings'
+                
+                current_predicates_phrase = ''
+                pending_predicates_phrase = ''
+                
+            else:
+                
+                tag_service_id = self._GetServiceId( c, tag_service_identifier )
+                
+                current_tables_phrase = 'mappings'
+                pending_tables_phrase = 'pending_mappings'
+                
+                current_predicates_phrase = 'service_id = ' + str( tag_service_id ) + ' AND '
+                pending_predicates_phrase = 'service_id = ' + str( tag_service_id ) + ' AND '
+                
+            
+        else:
+            
+            file_service_id = self._GetServiceId( c, file_service_identifier )
+            
+            if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+                
+                current_tables_phrase = '( active_mappings, files_info USING ( hash_id ) )'
+                pending_tables_phrase = '( active_pending_mappings, files_info USING ( hash_id ) )'
+                
+                current_predicates_phrase = 'service_id = ' + str( file_service_id ) + ' AND '
+                pending_predicates_phrase = 'service_id = ' + str( file_service_id ) + ' AND '
+                
+            else:
+                
+                tag_service_id = self._GetServiceId( c, tag_service_identifier )
+                
+                # we have to do a crazy join because of the nested joins, which wipe out table-namespaced identifiers like mappings.service_id, replacing them with useless stuff like service_id:1
+                
+                current_tables_phrase = '( mappings, files_info ON ( mappings.hash_id = files_info.hash_id AND mappings.service_id = ' + str( tag_service_id ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' ) )'
+                pending_tables_phrase = '( pending_mappings, files_info ON ( pending_mappings.hash_id = files_info.hash_id AND pending_mappings.service_id = ' + str( tag_service_id ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' ) )'
+                
+                current_predicates_phrase = ''
+                pending_predicates_phrase = ''
+                
+            
+            
+        
+        if include_current_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM namespaces, ' + current_tables_phrase + ' USING ( namespace_id ) WHERE ' + current_predicates_phrase + 'namespace = ?;', ( namespace, ) ) ] )
+        if include_pending_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM namespaces, ' + pending_tables_phrase + ' USING ( namespace_id ) WHERE ' + pending_predicates_phrase + 'namespace = ?;', ( namespace, ) ) ] )
+        
+        return hash_ids
+        
     
     def _GetHashIdsFromTag( self, c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ):
         
@@ -2471,7 +2546,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             media_results.append( CC.MediaResult( ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings ) ) )
             
         
-        return CC.FileQueryResult( file_service_identifier, search_context.GetRawPredicates(), media_results )
+        return CC.FileQueryResult( file_service_identifier, search_context.GetPredicates(), media_results )
         
     
     def _GetMediaResultsFromHashes( self, c, search_context, hashes ):
@@ -2893,99 +2968,59 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         predicates = []
         
-        if service_type == HC.NULL_SERVICE:
+        if service_type in ( HC.NULL_SERVICE, HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
             service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( ( u'system:everything', num_everything ) )
+            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), num_everything ) )
             
-            predicates.extend( [ ( predicate, None ) for predicate in [ u'system:untagged', u'system:numtags', u'system:hash' ] ] )
+            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
             
-            # num local, would be great
-            # num inbox, would be great
+            # num local would be great
+            # num inbox would be great
             
-            # we can't guarantee knowing files_info, so only have untagged and numtags
-            
-        elif service_type == HC.TAG_REPOSITORY:
-            
-            service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
-            
-            num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-            
-            predicates.append( ( u'system:everything', num_everything ) )
-            
-            predicates.extend( [ ( predicate, None ) for predicate in [ u'system:untagged', u'system:numtags', u'system:hash' ] ] )
-            
-            # num local, would be great
-            # num inbox, would be great
-            
-        elif service_type == HC.LOCAL_TAG:
-            
-            service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
-            
-            num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-            
-            predicates.append( ( u'system:everything', num_everything ) )
-            
-            predicates.extend( [ ( predicate, None ) for predicate in [ u'system:untagged', u'system:numtags', u'system:hash' ] ] )
-            
-            # num local, would be great
-            # num inbox, would be great
-            
-        elif service_type == HC.LOCAL_FILE:
+        elif service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
             
             service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_INBOX } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-            num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
             
+            if service_type == HC.FILE_REPOSITORY:
+                
+                if self._options[ 'exclude_deleted_files' ]:
+                    
+                    ( num_everything_deleted, ) = c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+                    
+                    num_everything -= num_everything_deleted
+                    
+                
+            
+            num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
             num_archive = num_everything - num_inbox
             
-            predicates.append( ( u'system:everything', num_everything ) )
+            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), num_everything ) )
             
             if num_inbox > 0:
                 
-                predicates.append( ( u'system:inbox', num_inbox ) )
-                predicates.append( ( u'system:archive', num_archive ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), num_inbox ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), num_archive ) )
                 
             
-            predicates.extend( [ ( predicate, None ) for predicate in [ u'system:untagged', u'system:numtags', u'system:limit', u'system:size', u'system:age', u'system:hash', u'system:width', u'system:height', u'system:ratio', u'system:duration', u'system:mime', u'system:rating', u'system:similar_to' ] ] )
-            
-            for service_identifier in self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, ) ): predicates.append( ( u'system:not_uploaded_to:' + service_identifier.GetName(), None ) )
-            
-        elif service_type == HC.FILE_REPOSITORY:
-            
-            service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_INBOX } )
-            
-            num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-            num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
-            
-            if self._options[ 'exclude_deleted_files' ]:
+            if service_type == HC.FILE_REPOSITORY:
                 
-                ( num_everything_deleted, ) = c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+                ( num_local, ) = c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
                 
-                num_everything -= num_everything_deleted
+                num_not_local = num_everything - num_local
+                
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), num_local ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), num_not_local ) )
                 
             
-            ( num_local, ) = c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO ] ] )
             
-            num_not_local = num_everything - num_local
-            num_archive = num_local - num_inbox
-            
-            predicates.append( ( u'system:everything', num_everything ) )
-            
-            if num_inbox > 0:
-                
-                predicates.append( ( u'system:inbox', num_inbox ) )
-                predicates.append( ( u'system:archive', num_archive ) )
-                
-            
-            predicates.append( ( u'system:local', num_local ) )
-            predicates.append( ( u'system:not local', num_not_local ) )
-            
-            predicates.extend( [ ( predicate, None ) for predicate in [ u'system:untagged', u'system:numtags', u'system:limit', u'system:size', u'system:age', u'system:hash', u'system:width', u'system:height', u'system:ratio', u'system:duration', u'system:mime', u'system:rating', u'system:similar_to' ] ] )
+            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO, service_identifier ), None ) for service_identifier in self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, ) ) ] )
             
         
         return predicates
@@ -4358,6 +4393,7 @@ class DB( ServiceDB ):
         
         HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
         HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
+        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, () )
         HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
         HC.DAEMONWorker( 'SynchroniseRepositories', self.DAEMONSynchroniseRepositories, ( 'notify_new_permissions', ) )
@@ -4653,8 +4689,9 @@ class DB( ServiceDB ):
             system_predicates[ 'local_rating_numerical' ] = ( 0, 3 )
             system_predicates[ 'local_rating_like' ] = 0
             system_predicates[ 'ratio' ] = ( 0, 16, 9 )
-            system_predicates[ 'size' ] = ( 0, 200, 3 )
+            system_predicates[ 'size' ] = ( 0, 200, 1 )
             system_predicates[ 'width' ] = ( 1, 1920 )
+            system_predicates[ 'num_words' ] = ( 0, 30000 )
             
             CLIENT_DEFAULT_OPTIONS[ 'file_system_predicates' ] = system_predicates
             
@@ -4893,6 +4930,21 @@ class DB( ServiceDB ):
                 if version < 61:
                     
                     c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
+                    
+                
+                if version < 63:
+                    
+                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    
+                    system_predicates = self._options[ 'file_system_predicates' ]
+                    
+                    ( sign, size, unit ) = system_predicates[ 'size' ]
+                    
+                    system_predicates[ 'size' ] = ( sign, size, 1 )
+                    
+                    system_predicates[ 'num_words' ] = ( 0, 30000 )
+                    
+                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -6084,6 +6136,44 @@ class DB( ServiceDB ):
         
     
     def DAEMONFlushServiceUpdates( self, update_log ): self.Write( 'service_updates', HC.HIGH_PRIORITY, update_log )
+    
+    def DAEMONResizeThumbnails( self ):
+        
+        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+        
+        full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
+        
+        resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
+        
+        thumbnail_paths_to_render = full_size_thumbnail_paths.difference( resized_thumbnail_paths )
+        
+        i = 0
+        
+        limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
+        
+        for thumbnail_path in thumbnail_paths_to_render:
+            
+            try:
+                
+                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+                
+                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
+                
+                thumbnail_resized_path_to = thumbnail_path + '_resized'
+                
+                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
+                
+            except: print( traceback.format_exc() )
+            
+            time.sleep( 1 )
+            
+            i += 1
+            
+            if i > limit: break
+            
+            if HC.shutdown: break
+            
+        
     
     def DAEMONSynchroniseAccounts( self ):
         

@@ -107,17 +107,17 @@ class MediaList():
                 
                 singletons = set()
                 
-                keys_to_multiples_media = collections.defaultdict( list )
+                keys_to_medias = collections.defaultdict( list )
                 
                 for media in self._singleton_media:
                     
                     key = media.GetTags().GetNamespaceSlice( collect_by )
                     
-                    keys_to_multiples_media[ key ].append( media )
+                    keys_to_medias[ key ].append( media )
                     
                 
-                self._singleton_media = singletons
-                self._collected_media = set( [ self._GenerateMediaCollection( [ media.GetMediaResult() for media in multiples_media ] ) for multiples_media in keys_to_multiples_media.values() ] )
+                self._singleton_media = set( [ medias[0] for medias in keys_to_medias.values() if len( medias ) == 1 ] )
+                self._collected_media = set( [ self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for medias in keys_to_medias.values() if len( medias ) > 1 ] )
                 
             
             self._sorted_media = list( self._singleton_media ) + list( self._collected_media )

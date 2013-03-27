@@ -565,6 +565,24 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         HC.pubsub.pub( 'focus_changed', self._page_key, media )
         
     
+    def _ShowSelectionInNewQueryPage( self ):
+        
+        hashes = self._GetSelectedHashes()
+        
+        if hashes is not None and len( hashes ) > 0:
+            
+            search_context = CC.FileSearchContext()
+            
+            unsorted_file_query_result = wx.GetApp().Read( 'media_results', search_context, hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_file_query_result }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            HC.pubsub.pub( 'new_page_query', self._file_service_identifier, initial_media_results = sorted_media_results )
+            
+        
+    
     def _UploadFiles( self, file_service_identifier ):
         
         hashes = self._GetSelectedHashes( not_uploaded_to = file_service_identifier )
@@ -1096,6 +1114,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 elif command == 'scroll_end': self._ScrollEnd()
                 elif command == 'scroll_home': self._ScrollHome()
                 elif command == 'select_all': self._SelectAll()
+                elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
                 elif command == 'upload': self._UploadFiles( data )
                 elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
                 elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
@@ -1420,6 +1439,13 @@ class MediaPanelThumbnails( MediaPanel ):
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 menu.AppendSeparator()
+                
+                if multiple_selected:
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
+                    
+                    menu.AppendSeparator()
+                    
                 
                 copy_menu = wx.Menu()
                 
