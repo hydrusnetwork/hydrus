@@ -836,7 +836,7 @@ class BetterChoice( wx.Choice ):
     
 class CheckboxCollect( wx.combo.ComboCtrl ):
     
-    def __init__( self, parent, page_key = None, sort_by = None ):
+    def __init__( self, parent, page_key = None ):
         
         wx.combo.ComboCtrl.__init__( self, parent, style = wx.CB_READONLY )
         
@@ -844,16 +844,20 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         options = wx.GetApp().Read( 'options' )
         
-        if sort_by is None: sort_by = options[ 'sort_by' ]
+        sort_by = options[ 'sort_by' ]
         
-        all_namespaces = set()
+        collect_types = set()
         
-        for ( sort_by_type, namespaces ) in sort_by: all_namespaces.update( namespaces )
+        for ( sort_by_type, namespaces ) in sort_by: collect_types.update( namespaces )
         
-        all_namespaces = list( all_namespaces )
-        all_namespaces.sort()
+        collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
+        collect_types.sort()
         
-        popup = self._Popup( all_namespaces )
+        ratings_service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        
+        for service_identifier in ratings_service_identifiers: collect_types.append( ( service_identifier.GetName(), ( 'rating', service_identifier ) ) )
+        
+        popup = self._Popup( collect_types )
         
         #self.UseAltPopupWindow( True )
         
@@ -862,17 +866,13 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
     
     def GetChoice( self ): return self._collect_by
     
-    def SetNamespaces( self, namespaces ):
+    def SetCollectTypes( self, collect_types, collect_type_strings ):
         
-        namespaces = list( namespaces )
-        
-        namespaces.sort()
-        
-        if len( namespaces ) > 0:
+        if len( collect_type_strings ) > 0:
             
-            self.SetValue( 'collect by ' + '-'.join( namespaces ) )
+            self.SetValue( 'collect by ' + '-'.join( collect_type_strings ) )
             
-            self._collect_by = namespaces
+            self._collect_by = collect_types
             
         else:
             
@@ -886,16 +886,16 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
     
     class _Popup( wx.combo.ComboPopup ):
         
-        def __init__( self, namespaces ):
+        def __init__( self, collect_types ):
             
             wx.combo.ComboPopup.__init__( self )
             
-            self._namespaces = namespaces
+            self._collect_types = collect_types
             
         
         def Create( self, parent ):
             
-            self._control = self._Control( parent, self.GetCombo(), self._namespaces )
+            self._control = self._Control( parent, self.GetCombo(), self._collect_types )
             
             return True
             
@@ -909,15 +909,21 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         class _Control( wx.CheckListBox ):
             
-            def __init__( self, parent, special_parent, namespaces ):
+            def __init__( self, parent, special_parent, collect_types ):
                 
-                wx.CheckListBox.__init__( self, parent, choices = namespaces )
+                texts = [ text for ( text, data ) in collect_types ] # we do this so it sizes its height properly on init
+                
+                wx.CheckListBox.__init__( self, parent, choices = texts )
+                
+                self.Clear()
+                
+                for ( text, data ) in collect_types: self.Append( text, data )
                 
                 self._special_parent = special_parent
                 
                 options = wx.GetApp().Read( 'options' )
                 
-                default = options[ 'default_collect' ] # need to reset this to a list of a set in options!
+                default = options[ 'default_collect' ]
                 
                 if default is not None: self.SetCheckedStrings( default )
                 
@@ -947,9 +953,13 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             
             def EventChanged( self, event ):
                 
-                namespaces = self.GetCheckedStrings()
+                collect_types = []
                 
-                self._special_parent.SetNamespaces( namespaces )
+                for i in self.GetChecked(): collect_types.append( self.GetClientData( i ) )
+                
+                collect_type_strings = self.GetCheckedStrings()
+                
+                self._special_parent.SetCollectTypes( collect_types, collect_type_strings )
                 
             
         
@@ -2494,6 +2504,50 @@ class AdvancedTagOptions( AdvancedOptions ):
         event.Skip()
         
     
+class RadioBox( StaticBox ):
+    
+    def __init__( self, parent, title, choice_pairs, initial_index = None ):
+        
+        StaticBox.__init__( self, parent, title )
+        
+        self._indices_to_radio_buttons = {}
+        self._radio_buttons_to_data = {}
+        
+        first_button = True
+        
+        for ( index, ( text, data ) ) in enumerate( choice_pairs ):
+            
+            if first_button:
+                
+                style = wx.RB_GROUP
+                
+                first_button = False
+                
+            else: style = 0
+            
+            radio_button = wx.RadioButton( self, label = text, style = style )
+            
+            self.AddF( radio_button, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._indices_to_radio_buttons[ index ] = radio_button
+            self._radio_buttons_to_data[ radio_button ] = data
+            
+        
+        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ index ].SetValue( True )
+        
+    
+    def GetSelectedClientData( self ):
+        
+        for radio_button in self._radio_buttons_to_data.keys():
+            
+            if radio_button.GetValue() == True: return self._radio_buttons_to_data[ radio_button ]
+            
+        
+    
+    def SetSelection( self, index ): self._indices_to_radio_buttons[ index ].SetValue( True )
+    
+    def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabel( text )
+    
 class TagsBox( ListBox ):
     
     def _GetNamespaceColours( self ): return self._options[ 'namespace_colours' ]
@@ -2929,14 +2983,14 @@ class TagsBoxPredicates( TagsBox ):
         
         predicate_string = predicate.GetUnicode()
         
-        inbox_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), None )
-        archive_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), None )
+        inbox_predicate = HC.SYSTEM_PREDICATE_INBOX
+        archive_predicate = HC.SYSTEM_PREDICATE_ARCHIVE
         
         if predicate == inbox_predicate and self.HasPredicate( archive_predicate ): self.RemovePredicate( archive_predicate )
         elif predicate == archive_predicate and self.HasPredicate( inbox_predicate ): self.RemovePredicate( inbox_predicate )
         
-        local_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), None )
-        not_local_predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), None )
+        local_predicate = HC.SYSTEM_PREDICATE_LOCAL
+        not_local_predicate = HC.SYSTEM_PREDICATE_NOT_LOCAL
         
         if predicate == local_predicate and self.HasPredicate( not_local_predicate ): self.RemovePredicate( not_local_predicate )
         elif predicate == not_local_predicate and self.HasPredicate( local_predicate ): self.RemovePredicate( local_predicate )

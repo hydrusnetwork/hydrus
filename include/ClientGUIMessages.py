@@ -295,6 +295,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         self.PopupMenu( menu )
         
+        menu.Destroy()
+        
     
     def GetListCtrl( self ): return self
     
@@ -674,6 +676,8 @@ class DestinationPanel( wx.Panel ):
         
         self.PopupMenu( menu )
         
+        menu.Destroy()
+        
     
     def EventRetryMenu( self, event ):
         
@@ -683,6 +687,8 @@ class DestinationPanel( wx.Panel ):
         
         self.PopupMenu( menu )
         
+        menu.Destroy()
+        
     
     def EventUnreadMenu( self, event ):
         
@@ -691,6 +697,8 @@ class DestinationPanel( wx.Panel ):
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'unread' )
         
         self.PopupMenu( menu )
+        
+        menu.Destroy()
         
     
     def SetStatus( self, status ):

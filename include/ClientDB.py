@@ -1628,6 +1628,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
         
     
+    def _AddWebSession( self, c, name, cookies, expiry ):
+        
+        c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expiry ) )
+        
+    
     def _ArchiveFiles( self, c, hash_ids ):
         
         valid_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_inbox WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
@@ -1935,11 +1940,34 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
-        for service_identifier in system_predicates.GetFileRepositoriesToExclude():
+        ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
+        
+        for service_identifier in file_services_to_include_current:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_identifier in file_services_to_include_pending:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_identifier in file_services_to_exclude_current:
             
             service_id = self._GetServiceId( c, service_identifier )
             
             query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_identifier in file_services_to_exclude_pending:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) ) ] )
             
         
         for ( service_identifier, operator, value ) in system_predicates.GetRatingsPredicates():
@@ -3018,9 +3046,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), num_not_local ) )
                 
             
-            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO ] ] )
-            
-            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO, service_identifier ), None ) for service_identifier in self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, ) ) ] )
+            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
             
         
         return predicates
@@ -3128,6 +3154,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         return ( 'new', None )
+        
+    
+    def _GetWebSessions( self, c ):
+        
+        now = int( time.time() )
+        
+        c.execute( 'DELETE FROM web_sessions WHERE ? > expiry;', ( now, ) )
+        
+        sessions = []
+        
+        sessions = c.execute( 'SELECT name, cookies, expiry FROM web_sessions;' ).fetchall()
+        
+        return sessions
         
     
     def _ImportFile( self, c, file, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
@@ -4393,7 +4432,6 @@ class DB( ServiceDB ):
         
         HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
         HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
-        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, () )
         HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
         HC.DAEMONWorker( 'SynchroniseRepositories', self.DAEMONSynchroniseRepositories, ( 'notify_new_permissions', ) )
@@ -4476,6 +4514,8 @@ class DB( ServiceDB ):
     def _InitDB( self ):
         
         if not os.path.exists( self._db_path ):
+            
+            HC.is_first_start = True
             
             if not os.path.exists( HC.CLIENT_FILES_DIR ): os.mkdir( HC.CLIENT_FILES_DIR )
             if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
@@ -4639,6 +4679,8 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE version ( version INTEGER );' )
             
+            c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
+            
             # inserts
             
             account = CC.GetUnknownAccount()
@@ -4756,6 +4798,11 @@ class DB( ServiceDB ):
             shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_HOME ] = 'first'
             shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_END ] = 'last'
             shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_END ] = 'last'
+            
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
             
             CLIENT_DEFAULT_OPTIONS[ 'shortcuts' ] = shortcuts
             
@@ -4943,6 +4990,26 @@ class DB( ServiceDB ):
                     system_predicates[ 'size' ] = ( sign, size, 1 )
                     
                     system_predicates[ 'num_words' ] = ( 0, 30000 )
+                    
+                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    
+                
+                if version < 64:
+                    
+                    c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
+                    
+                    c.execute( 'UPDATE ADDRESSES SET host = ? WHERE host = ?;', ( 'hydrus.no-ip.org', '98.214.1.156' ) )
+                    
+                    c.execute( 'DELETE FROM service_info WHERE info_type IN ( 6, 7 );' ) # resetting thumb count, to see if it breaks again
+                    
+                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    
+                    shortcuts = self._options[ 'shortcuts' ]
+                    
+                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
+                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'
+                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
+                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
                     
                     c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
                     
@@ -6137,44 +6204,6 @@ class DB( ServiceDB ):
     
     def DAEMONFlushServiceUpdates( self, update_log ): self.Write( 'service_updates', HC.HIGH_PRIORITY, update_log )
     
-    def DAEMONResizeThumbnails( self ):
-        
-        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
-        
-        full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
-        
-        resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
-        
-        thumbnail_paths_to_render = full_size_thumbnail_paths.difference( resized_thumbnail_paths )
-        
-        i = 0
-        
-        limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
-        
-        for thumbnail_path in thumbnail_paths_to_render:
-            
-            try:
-                
-                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_path, 'rb' ) as f: thumbnail = f.read()
-                
-                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
-                
-                thumbnail_resized_path_to = thumbnail_path + '_resized'
-                
-                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
-                
-            except: print( traceback.format_exc() )
-            
-            time.sleep( 1 )
-            
-            i += 1
-            
-            if i > limit: break
-            
-            if HC.shutdown: break
-            
-        
-    
     def DAEMONSynchroniseAccounts( self ):
         
         services = self.Read( 'services', HC.LOW_PRIORITY, HC.RESTRICTED_SERVICES )
@@ -6451,13 +6480,13 @@ class DB( ServiceDB ):
                         
                         for ( i, sub_update ) in enumerate( updates ):
                             
-                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
-                            
-                            self.WaitUntilGoodTimeToUseDBThread()
+                            self.Write( 'update', HC.LOW_PRIORITY, service_identifier, sub_update )
                             
                             HC.pubsub.pub( 'service_status', 'Processing ' + update_index_string + ' part ' + str( i + 1 ) + '/' + str( num_updates ) + ' for ' + name )
                             
-                            self.Write( 'update', HC.LOW_PRIORITY, service_identifier, sub_update )
+                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                            
+                            self.WaitUntilGoodTimeToUseDBThread()
                             
                         
                         HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string + ' (' + HC.ConvertTimestampToPrettyTime( update.GetEnd() ) + ')' )
@@ -6489,6 +6518,44 @@ class DB( ServiceDB ):
                 print( error_message )
                 print( traceback.format_exc() )
                 
+            
+        
+    
+    def THREADResizeThumbnails( self ):
+        
+        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+        
+        full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
+        
+        resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
+        
+        thumbnail_paths_to_render = full_size_thumbnail_paths.difference( resized_thumbnail_paths )
+        
+        i = 0
+        
+        limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
+        
+        for thumbnail_path in thumbnail_paths_to_render:
+            
+            try:
+                
+                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+                
+                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
+                
+                thumbnail_resized_path_to = thumbnail_path + '_resized'
+                
+                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
+                
+            except: print( traceback.format_exc() )
+            
+            time.sleep( 1 )
+            
+            i += 1
+            
+            if i > limit: break
+            
+            if HC.shutdown: break
             
         
     
@@ -6635,6 +6702,7 @@ class DB( ServiceDB ):
         elif action == 'transport_message': result = self._GetTransportMessage( c, *args, **kwargs )
         elif action == 'transport_messages_from_draft': result = self._GetTransportMessagesFromDraft( c, *args, **kwargs )
         elif action == 'url_status': result = self._GetURLStatus( c, *args, **kwargs )
+        elif action == 'web_sessions': result = self._GetWebSessions( c, *args, **kwargs )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
         return result
@@ -6684,6 +6752,7 @@ class DB( ServiceDB ):
         elif action == 'update_services': self._UpdateServices( c, *args, **kwargs )
         elif action == 'upload_pending': self._UploadPending( c, *args, **kwargs )
         elif action == 'vacuum': self._Vacuum()
+        elif action == 'web_session': result = self._AddWebSession( c, *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
     

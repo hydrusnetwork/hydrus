@@ -8,6 +8,7 @@ import collections
 import os
 import random
 import re
+import subprocess
 import time
 import traceback
 import urllib
@@ -159,7 +160,7 @@ class DialogChooseNewServiceMethod( Dialog ):
     
 class DialogFinishFiltering( Dialog ):
     
-    def __init__( self, parent, num_kept, num_deleted ):
+    def __init__( self, parent, num_kept, num_deleted, keep = 'Keep', delete = 'delete' ):
         
         def InitialiseControls():
             
@@ -184,7 +185,7 @@ class DialogFinishFiltering( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            label = 'Keep ' + HC.ConvertIntToPrettyString( num_kept ) + ' and delete ' + HC.ConvertIntToPrettyString( num_deleted ) + ' files?'
+            label = keep + ' ' + HC.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HC.ConvertIntToPrettyString( num_deleted ) + ' files?'
             
             vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -269,6 +270,54 @@ class DialogFinishRatingFiltering( Dialog ):
     def EventCommit( self, event ): self.EndModal( wx.ID_YES )
     
     def EventForget( self, event ): self.EndModal( wx.ID_NO )
+    
+class DialogFirstStart( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok!' )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel', size = ( 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            message1 = 'Hi, this looks like the first time you have started the hydrus client. Don\'t forget to check out the'
+            link = wx.HyperlinkCtrl( self, id = -1, label = 'help', url = 'file://' + HC.BASE_DIR + '/help/index.html' )
+            message2 = 'if you haven\'t already.'
+            message3 = 'When you close this dialog, the client will start its local http server. You will probably get a firewall warning.'
+            message4 = 'You can block it if you like, or you can allow it. It doesn\'t phone home, or expose your files to your network; it just provides another way to locally export your files.'
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self, label = message1 ), FLAGS_MIXED )
+            hbox.AddF( link, FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = message2 ), FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            vbox.AddF( wx.StaticText( self, label = message3 ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = message4 ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ok, FLAGS_LONE_BUTTON )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'First start', position = 'center' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
     
 class DialogInputCustomFilterAction( Dialog ):
     
@@ -1029,6 +1078,55 @@ class DialogInputFileSystemPredicate( Dialog ):
             InitialisePanel()
             
         
+        def FileService():
+            
+            def InitialiseControls():
+                
+                self._sign = wx.Choice( self )
+                self._sign.Append( 'is', True )
+                self._sign.Append( 'is not', False )
+                self._sign.SetSelection( 0 )
+                
+                self._current_pending = wx.Choice( self )
+                self._current_pending.Append( 'currently in', HC.CURRENT )
+                self._current_pending.Append( 'pending to', HC.PENDING )
+                self._current_pending.SetSelection( 0 )
+                
+                service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+                
+                self._file_service_identifier = wx.Choice( self )
+                for service_identifier in service_identifiers: self._file_service_identifier.Append( service_identifier.GetName(), service_identifier )
+                self._file_service_identifier.SetSelection( 0 )
+                
+                self._ok = wx.Button( self, label='Ok' )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+                
+            
+            def InitialisePanel():
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self, label='system:file service:' ), FLAGS_MIXED )
+                hbox.AddF( self._sign, FLAGS_MIXED )
+                hbox.AddF( self._current_pending, FLAGS_MIXED )
+                hbox.AddF( self._file_service_identifier, FLAGS_MIXED )
+                hbox.AddF( self._ok, FLAGS_MIXED )
+                
+                self.SetSizer( hbox )
+                
+                ( x, y ) = self.GetEffectiveMinSize()
+                
+                self.SetInitialSize( ( x, y ) )
+                
+            
+            Dialog.__init__( self, parent, 'enter file service predicate' )
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
+        
         def Hash():
             
             def InitialiseControls():
@@ -1529,6 +1627,7 @@ class DialogInputFileSystemPredicate( Dialog ):
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: Width()
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO: SimilarTo()
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: NumWords()
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: FileService()
         
         self._hidden_cancel_button = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel', size = ( 0, 0 ) )
         self._hidden_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancel )
@@ -1644,6 +1743,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             info = ( hash.decode( 'hex' ), self._max_hamming.GetValue() )
             
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_identifier.GetClientData( self._file_service_identifier.GetSelection() ) )
         
         self._predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ), None )
         
@@ -4126,13 +4226,13 @@ class DialogManageOptionsLocal( Dialog ):
             self._preview_cache_size.SetValue( int( self._options[ 'preview_cache_size' ] / 1048576 ) )
             self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
             
-            self._estimated_number_previews = wx.StaticText( self._file_page, label = '', style = wx.ST_NO_AUTORESIZE )
+            self._estimated_number_previews = wx.StaticText( self._file_page, label = '' )
             
             self._fullscreen_cache_size = wx.SpinCtrl( self._file_page, min = 100, max = 3000 )
             self._fullscreen_cache_size.SetValue( int( self._options[ 'fullscreen_cache_size' ] / 1048576 ) )
             self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
             
-            self._estimated_number_fullscreens = wx.StaticText( self._file_page, label = '', style = wx.ST_NO_AUTORESIZE )
+            self._estimated_number_fullscreens = wx.StaticText( self._file_page, label = '' )
             
             ( thumbnail_width, thumbnail_height ) = self._options[ 'thumbnail_dimensions' ]
             
@@ -4321,7 +4421,7 @@ class DialogManageOptionsLocal( Dialog ):
             
             self._default_sort = ClientGUICommon.ChoiceSort( self._sort_by_page, sort_by = self._options[ 'sort_by' ] )
             
-            self._default_collect = ClientGUICommon.CheckboxCollect( self._sort_by_page, sort_by = self._options[ 'sort_by' ] )
+            self._default_collect = ClientGUICommon.CheckboxCollect( self._sort_by_page )
             
             self._sort_by = wx.ListBox( self._sort_by_page )
             self._sort_by.Bind( wx.EVT_LEFT_DCLICK, self.EventRemoveSortBy )
@@ -5431,9 +5531,11 @@ class DialogManageRatings( Dialog ):
                 
                 if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    self._choices = wx.Choice( self._ratings_panel, choices = choices )
+                    initial_index = choices.index( 'make no changes' )
                     
-                    self._choices.SetSelection( self._choices.FindString( 'make no changes' ) )
+                    choice_pairs = [ ( choice, choice ) for choice in choices ]
+                    
+                    self._choices = ClientGUICommon.RadioBox( self._ratings_panel, 'actions', choice_pairs, initial_index )
                     
                 
             
@@ -5496,19 +5598,17 @@ class DialogManageRatings( Dialog ):
             
             service_type = self._service_identifier.GetType()
             
-            selection = self._choices.GetSelection()
+            choice_text = self._choices.GetSelectedClientData()
             
-            s = self._choices.GetString( selection )
-            
-            if s == 'remove rating': return None
+            if choice_text == 'remove rating': return None
             else:
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
                     ( like, dislike ) = self._service.GetExtraInfo()
                     
-                    if s == like: rating = 1
-                    elif s == dislike: rating = 0
+                    if choice_text == like: rating = 1
+                    elif choice_text == dislike: rating = 0
                     
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: rating = float( self._slider.GetValue() - self._slider.GetMin() ) / float( self._slider.GetMax() - self._slider.GetMin() )
                 
@@ -5518,11 +5618,9 @@ class DialogManageRatings( Dialog ):
         
         def HasChanges( self ):
             
-            selection = self._choices.GetSelection()
+            choice_text = self._choices.GetSelectedClientData()
             
-            s = self._choices.GetString( selection )
-            
-            if s == 'make no changes': return False
+            if choice_text == 'make no changes': return False
             else: return True
             
         
@@ -7808,6 +7906,8 @@ class DialogPathsToTagsRegex( Dialog ):
             
             self.PopupMenu( menu )
             
+            menu.Destroy()
+            
         
         def EventRemoveRegex( self, event ):
             
@@ -8525,7 +8625,7 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             for ( key, action ) in key_dict.items():
                 
-                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last' ):
+                if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last', 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
                     service_identifier = None
                     
@@ -8710,6 +8810,380 @@ class DialogSetupCustomFilterActions( Dialog ):
         for ( modifier, key, service_identifier, action ) in raw_data: actions[ modifier ][ key ] = ( service_identifier, action )
         
         return actions
+        
+    
+class DialogSetupExport( Dialog ):
+    
+    ID_HASH = 0
+    ID_TAGS = 1
+    ID_NN_TAGS = 2
+    ID_NAMESPACE = 3
+    ID_TAG = 4
+    
+    def __init__( self, parent, flat_media ):
+        
+        def InitialiseControls():
+            
+            self._tags_box = ClientGUICommon.TagsBoxCPPWithSorter( self, self._page_key )
+            self._tags_box.SetMinSize( ( 220, 300 ) )
+            
+            self._paths = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'path', -1 ) ] )
+            self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
+            self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
+            self._paths.SetMinSize( ( 740, 360 ) )
+            
+            for ( i, media ) in enumerate( flat_media ):
+                
+                mime = media.GetMime()
+                
+                pretty_tuple = ( str( i + 1 ), HC.mime_string_lookup[ mime ], '' )
+                data_tuple = ( ( i, media ), mime, '' )
+                
+                self._paths.Append( pretty_tuple, data_tuple )
+                
+            
+            self._directory_picker = wx.DirPickerCtrl( self )
+            if self._options[ 'export_path' ] is not None: self._directory_picker.SetPath( HC.ConvertPortablePathToAbsPath( self._options[ 'export_path' ] ) )
+            self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
+            
+            self._open_location = wx.Button( self, label = 'open this location' )
+            self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
+            
+            self._pattern = wx.TextCtrl( self )
+            self._pattern.SetValue( '{hash}' )
+            
+            self._update = wx.Button( self, label = 'update' )
+            self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
+            
+            self._examples = wx.Button( self, label = 'pattern shortcuts' )
+            self._examples.Bind( wx.EVT_BUTTON, self.EventPatternShortcuts )
+            
+            self._export = wx.Button( self, label = 'export' )
+            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='close' )
+            
+        
+        def InitialisePanel():
+            
+            top_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            top_hbox.AddF( self._tags_box, FLAGS_EXPAND_PERPENDICULAR )
+            top_hbox.AddF( self._paths, FLAGS_EXPAND_BOTH_WAYS )
+            
+            destination_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            destination_hbox.AddF( self._directory_picker, FLAGS_EXPAND_BOTH_WAYS )
+            destination_hbox.AddF( self._open_location, FLAGS_MIXED )
+            
+            pattern_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            pattern_hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
+            pattern_hbox.AddF( self._update, FLAGS_MIXED )
+            pattern_hbox.AddF( self._examples, FLAGS_MIXED )
+            pattern_hbox.AddF( self._export, FLAGS_MIXED )
+            
+            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( top_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( destination_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( pattern_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._cancel, FLAGS_LONE_BUTTON )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'setup export' )
+        
+        self._page_key = os.urandom( 32 )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+        wx.CallAfter( self.EventSelectPath, None )
+        wx.CallAfter( self.EventRecalcPaths, None )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def _GetPath( self, media, terms ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        filename = ''
+        
+        for ( term_type, term ) in terms:
+            
+            tags = media.GetTags()
+            
+            if term_type == 'string': filename += term
+            elif term_type == 'namespace':
+                
+                tags = tags.GetNamespaceSlice( ( term, ) )
+                
+                filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
+                
+            elif term_type == 'predicate':
+                
+                if term in ( 'tags', 'nn tags' ):
+                    
+                    ( current, deleted, pending, petitioned ) = tags.GetUnionCDPP()
+                    
+                    tags = list( current.union( pending ) )
+                    
+                    if term == 'nn tags': tags = [ tag for tag in tags if ':' not in tag ]
+                    else: tags = [ tag if ':' not in tag else tag.split( ':' )[1] for tag in tags ]
+                    
+                    tags.sort()
+                    
+                    filename += ', '.join( tags )
+                    
+                elif term == 'hash':
+                    
+                    hash = media.GetHash()
+                    
+                    filename += hash.encode( 'hex' )
+                    
+                
+            elif term_type == 'tag':
+                
+                if ':' in term: term = term.split( ':' )[1]
+                
+                if tags.HasTag( term ): filename += term
+                
+            
+        
+        mime = media.GetMime()
+        
+        ext = HC.mime_ext_lookup[ mime ]
+        
+        return directory + os.path.sep + filename + ext
+        
+    
+    def _RecalcPaths( self ):
+        
+        pattern = self._pattern.GetValue()
+        
+        try:
+            
+            terms = [ ( 'string', pattern ) ]
+            
+            new_terms = []
+            
+            for ( term_type, term ) in terms:
+                
+                if term_type == 'string':
+                    
+                    while '[' in term:
+                        
+                        ( pre, term ) = term.split( '[', 1 )
+                        
+                        ( namespace, term ) = term.split( ']', 1 )
+                        
+                        new_terms.append( ( 'string', pre ) )
+                        new_terms.append( ( 'namespace', namespace ) )
+                        
+                    
+                
+                new_terms.append( ( term_type, term ) )
+                
+            
+            terms = new_terms
+            
+            new_terms = []
+            
+            for ( term_type, term ) in terms:
+                
+                if term_type == 'string':
+                    
+                    while '{' in term:
+                        
+                        ( pre, term ) = term.split( '{', 1 )
+                        
+                        ( predicate, term ) = term.split( '}', 1 )
+                        
+                        new_terms.append( ( 'string', pre ) )
+                        new_terms.append( ( 'predicate', predicate ) )
+                        
+                    
+                
+                new_terms.append( ( term_type, term ) )
+                
+            
+            terms = new_terms
+            
+            new_terms = []
+            
+            for ( term_type, term ) in terms:
+                
+                if term_type == 'string':
+                    
+                    while '(' in term:
+                        
+                        ( pre, term ) = term.split( '(', 1 )
+                        
+                        ( tag, term ) = term.split( ')', 1 )
+                        
+                        new_terms.append( ( 'string', pre ) )
+                        new_terms.append( ( 'tag', tag ) )
+                        
+                    
+                
+                new_terms.append( ( term_type, term ) )
+                
+            
+            terms = new_terms
+            
+        except: raise Exception( 'Could not parse that pattern!' )
+        
+        all_paths = set()
+        
+        for ( index, ( ( ordering_index, media ), mime, old_path ) ) in enumerate( self._paths.GetClientData() ):
+            
+            path = self._GetPath( media, terms )
+            
+            if path in all_paths:
+                
+                i = 1
+                
+                while self._GetPath( media, terms + [ ( 'string', str( i ) ) ] ) in all_paths: i += 1
+                
+                path = self._GetPath( media, terms + [ ( 'string', str( i ) ) ] )
+                
+            
+            all_paths.add( path )
+            
+            if path != old_path:
+                
+                mime = media.GetMime()
+                
+                self._paths.UpdateRow( index, ( str( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
+                
+            
+        
+    
+    def EventExport( self, event ):
+        
+        try: self._RecalcPaths()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            return
+            
+        
+        for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
+            
+            try:
+                
+                hash = media.GetHash()
+                
+                file = wx.GetApp().Read( 'file', hash )
+                
+                with open( path, 'wb' ) as f: f.write( file )
+                
+            except:
+                
+                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + '.' + os.linesep + + os.linesep + traceback.format_exc() )
+                
+                break
+                
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        id = event.GetId()
+        
+        phrase = None
+        
+        if id == self.ID_HASH: phrase = r'{hash}'
+        if id == self.ID_TAGS: phrase = r'{tags}'
+        if id == self.ID_NN_TAGS: phrase = r'{nn tags}'
+        if id == self.ID_NAMESPACE: phrase = r'[...]'
+        if id == self.ID_TAG: phrase = r'(...)'
+        else: event.Skip()
+        
+        if phrase is not None:
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject( phrase )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
+    def EventPatternShortcuts( self, event ):
+        
+        menu = wx.Menu()
+        
+        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_HASH, r'the file\'s hash - {hash}' )
+        menu.Append( self.ID_TAGS, r'all the file\'s tags - {tags}' )
+        menu.Append( self.ID_NN_TAGS, r'all the file\'s non-namespaced tags - {nn tags}' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_NAMESPACE, r'all instances of a particular namespace - [...]' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_TAG, r'a particular tag, if the file has it - (...)' )
+        
+        self.PopupMenu( menu )
+        
+        menu.Destroy()
+        
+    
+    def EventOpenLocation( self, event ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        if directory is not None and directory != '':
+            
+            try:
+                
+                if 'Windows' in os.environ.get( 'os' ): subprocess.Popen( [ 'explorer', directory ] )
+                else: subprocess.Popen( [ 'explorer', directory ] )
+                
+            except: wx.MessageBox( 'Could not open that location!' )
+        
+    
+    def EventRecalcPaths( self, event ):
+        
+        try: self._RecalcPaths()
+        except Exception as e: wx.MessageBox( unicode( e ) )
+        
+    
+    def EventSelectPath( self, event ):
+        
+        indices = self._paths.GetAllSelected()
+        
+        if len( indices ) == 0:
+            
+            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in self._paths.GetClientData() ]
+            
+        else:
+            
+            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in [ self._paths.GetClientData( index ) for index in indices ] ]
+            
+        
+        HC.pubsub.pub( 'new_tags_selection', self._page_key, all_media )
         
     
 class DialogYesNo( Dialog ):

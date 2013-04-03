@@ -18,7 +18,7 @@ import wx.lib.flashwin
 
 ID_TIMER_ANIMATED = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
-ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
+ID_TIMER_CURSOR_HIDE = wx.NewId()
 
 ANIMATED_SCANBAR_HEIGHT = 20
 ANIMATED_SCANBAR_CARET_WIDTH = 10
@@ -523,9 +523,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         wx.GetApp().SetTopWindow( self )
         
-        self._timer_media_info_display = wx.Timer( self, id = ID_TIMER_MEDIA_INFO_DISPLAY )
+        self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
         
-        self.Bind( wx.EVT_TIMER, self.EventTimerMediaInfoDisplay, id = ID_TIMER_MEDIA_INFO_DISPLAY )
+        self.Bind( wx.EVT_TIMER, self.EventTimerCursorHide, id = ID_TIMER_CURSOR_HIDE )
         
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         
@@ -534,6 +534,15 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
         
         HC.pubsub.pub( 'set_focus', self._page_key, None )
+        
+    
+    def _DoManualPan( self, delta_x, delta_y ):
+        
+        ( old_delta_x, old_delta_y ) = self._total_drag_delta
+        
+        self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+        
+        self._DrawCurrentMedia()
         
     
     def _FullscreenSwitch( self ):
@@ -861,7 +870,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
-        self._timer_media_info_display.Start( 800, wx.TIMER_ONE_SHOT )
+        self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
         
     
     def EventDragBegin( self, event ):
@@ -903,13 +912,13 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         event.Skip()
         
     
-    def EventTimerMediaInfoDisplay( self, event ):
+    def EventTimerCursorHide( self, event ):
         
-        if self._menu_open: self._timer_media_info_display.Start( 800, wx.TIMER_ONE_SHOT )
+        if self._menu_open: self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
         else: self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
         
     
-    def KeepCursorAlive( self ): self._timer_media_info_display.Start( 800, wx.TIMER_ONE_SHOT )
+    def KeepCursorAlive( self ): self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
     
     def ProcessContentUpdates( self, updates ):
         
@@ -1073,6 +1082,15 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                     elif command == 'inbox': self._Inbox()
                     elif command == 'manage_ratings': self._ManageRatings()
                     elif command == 'manage_tags': self._ManageTags()
+                    elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
+                        
+                        distance = 20
+                        
+                        if command == 'pan_up': self._DoManualPan( 0, -distance )
+                        elif command == 'pan_down': self._DoManualPan( 0, distance )
+                        elif command == 'pan_left': self._DoManualPan( -distance, 0 )
+                        elif command == 'pan_right': self._DoManualPan( distance, 0 )
+                        
                     elif command == 'slideshow': self._StartSlideshow( data )
                     elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
                     elif command == 'zoom_in': self._ZoomIn()
@@ -1272,6 +1290,15 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     elif action == 'inbox': self._Inbox()
                     elif action == 'manage_ratings': self._ManageRatings()
                     elif action == 'manage_tags': self._ManageTags()
+                    elif action in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
+                        
+                        distance = 20
+                        
+                        if action == 'pan_up': self._DoManualPan( 0, -distance )
+                        elif action == 'pan_down': self._DoManualPan( 0, distance )
+                        elif action == 'pan_left': self._DoManualPan( -distance, 0 )
+                        elif action == 'pan_right': self._DoManualPan( distance, 0 )
+                        
                     elif action == 'first': self._ShowFirst()
                     elif action == 'last': self._ShowLast()
                     elif action == 'previous': self._ShowPrevious()
@@ -1572,7 +1599,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             elif event.KeyCode == wx.WXK_BACK: self.EventBack( event )
             elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
-            elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
+            elif not event.ShiftDown() and event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
                 
                 ( modifier, key ) = HC.GetShortcutFromEvent( event )
@@ -1623,6 +1650,15 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                     elif command == 'frame_next': self._ChangeFrame( 1 )
                     elif command == 'manage_ratings': self._ManageRatings()
                     elif command == 'manage_tags': self._ManageTags()
+                    elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
+                        
+                        distance = 20
+                        
+                        if command == 'pan_up': self._DoManualPan( 0, -distance )
+                        elif command == 'pan_down': self._DoManualPan( 0, distance )
+                        elif command == 'pan_left': self._DoManualPan( -distance, 0 )
+                        elif command == 'pan_right': self._DoManualPan( distance, 0 )
+                        
                     elif command == 'zoom_in': self._ZoomIn()
                     elif command == 'zoom_out': self._ZoomOut()
                     else: event.Skip()
@@ -1658,7 +1694,65 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             
         
     
-class RatingsFilterFrame( ClientGUICommon.Frame ):
+class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
+    
+    def __init__( self, my_parent, page_key, service_identifier, media_results ):
+        
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, CC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+        
+        self._rating_service_identifier = service_identifier
+        self._service = wx.GetApp().Read( 'service', service_identifier )
+        
+    
+    def EventClose( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            if len( self._kept ) > 0 or len( self._deleted ) > 0:
+                
+                ( like, dislike ) = self._service.GetExtraInfo()
+                
+                with ClientGUIDialogs.DialogFinishFiltering( self, len( self._kept ), len( self._deleted ), keep = like, delete = dislike ) as dlg:
+                    
+                    modal = dlg.ShowModal()
+                    
+                    if modal == wx.ID_CANCEL:
+                        
+                        if self._current_media in self._kept: self._kept.remove( self._current_media )
+                        if self._current_media in self._deleted: self._deleted.remove( self._current_media )
+                        
+                    else:
+                        
+                        if modal == wx.ID_YES:
+                            
+                            try:
+                                
+                                self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
+                                self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                                
+                                content_updates = []
+                                
+                                content_updates.extend( [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, self._rating_service_identifier, ( hash, ), info = 0.0 ) for hash in self._deleted_hashes ] )
+                                content_updates.extend( [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, self._rating_service_identifier, ( hash, ), info = 1.0 ) for hash in self._kept_hashes ] )
+                                
+                                wx.GetApp().Write( 'content_updates', content_updates )
+                                
+                                self._kept = set()
+                                self._deleted = set()
+                                
+                            except: wx.MessageBox( traceback.format_exc() )
+                            
+                        
+                        CanvasFullscreenMediaList.EventClose( self, event )
+                        
+                    
+                
+            else: CanvasFullscreenMediaList.EventClose( self, event )
+            
+        
+    
+class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     
     RATINGS_FILTER_INEQUALITY_FULL = 0
     RATINGS_FILTER_INEQUALITY_HALF = 1
@@ -2355,9 +2449,9 @@ class RatingsFilterFrame( ClientGUICommon.Frame ):
             self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
             self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
             
-            self._timer_media_info_display = wx.Timer( self, id = ID_TIMER_MEDIA_INFO_DISPLAY )
+            self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
             
-            self.Bind( wx.EVT_TIMER, self.EventTimerMediaInfoDisplay, id = ID_TIMER_MEDIA_INFO_DISPLAY )
+            self.Bind( wx.EVT_TIMER, self.EventTimerCursorHide, id = ID_TIMER_CURSOR_HIDE )
             
             self.Bind( wx.EVT_MENU, self.EventMenu )
             
@@ -2502,7 +2596,7 @@ class RatingsFilterFrame( ClientGUICommon.Frame ):
             
             self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
             
-            self._timer_media_info_display.Start( 800, wx.TIMER_ONE_SHOT )
+            self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
             
         
         def EventDragBegin( self, event ):
@@ -2614,7 +2708,7 @@ class RatingsFilterFrame( ClientGUICommon.Frame ):
                 
             
         
-        def EventTimerMediaInfoDisplay( self, event ): self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+        def EventTimerCursorHide( self, event ): self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
         
         def RefreshBackground( self ): self._DrawBackgroundBitmap()
         

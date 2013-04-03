@@ -483,7 +483,11 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( media_results ) > 0:
             
-            try: ClientGUICanvas.RatingsFilterFrame( self.GetTopLevelParent(), self._page_key, service_identifier, media_results )
+            try:
+                
+                if service_identifier.GetType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_identifier, media_results )
+                elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL: ClientGUICanvas.RatingsFilterFrameNumerical( self.GetTopLevelParent(), self._page_key, service_identifier, media_results )
+                
             except: wx.MessageBox( traceback.format_exc() )
             
         
@@ -839,6 +843,31 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def _ExportFilesSpecial( self ):
+        
+        if len( self._selected_media ) > 0:
+            
+            try:
+                
+                flat_media = []
+                
+                for media in self._sorted_media:
+                    
+                    if media in self._selected_media:
+                        
+                        if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
+                        else: flat_media.append( media )
+                        
+                    
+                
+                with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg: dlg.ShowModal()
+                
+                self.SetFocus()
+                
+            except: wx.MessageBox( traceback.format_exc() )
+            
+        
+    
     def _GenerateMediaCollection( self, media_results ): return ThumbnailMediaCollection( self._file_service_identifier, self._predicates, media_results )
     
     def _GenerateMediaSingleton( self, media_result ): return ThumbnailMediaSingleton( self._file_service_identifier, media_result )
@@ -1100,6 +1129,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 elif command == 'deselect': self._DeselectAll()
                 elif command == 'download': wx.GetApp().Write( 'add_downloads', data, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) )
                 elif command == 'export': self._ExportFiles()
+                elif command == 'export special': self._ExportFilesSpecial()
                 elif command == 'filter': self._Filter()
                 elif command == 'fullscreen': self._FullScreen()
                 elif command == 'get_similar_to': self._GetSimilarTo()
@@ -1259,6 +1289,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     local_delete_phrase = 'delete all'
                     dump_phrase = 'dump all'
                     export_phrase = 'export all'
+                    export_special_phrase = 'advanced export all'
                     copy_phrase = 'files'
                     
                 else:
@@ -1283,6 +1314,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     local_delete_phrase = 'delete'
                     dump_phrase = 'dump'
                     export_phrase = 'export'
+                    export_special_phrase = 'advanced export'
                     copy_phrase = 'file'
                     
                 
@@ -1435,7 +1467,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
                     
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export' ), export_phrase )
+                #menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export' ), export_phrase )
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export special' ), export_phrase )
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 menu.AppendSeparator()

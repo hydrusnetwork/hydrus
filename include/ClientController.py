@@ -6,6 +6,7 @@ import ClientConstants as CC
 import ClientDB
 import ClientGUI
 import os
+import sqlite3
 import threading
 import time
 import traceback
@@ -87,6 +88,8 @@ class Controller( wx.App ):
             
             self.MaintainDB()
             
+            threading.Thread( target = self._db.THREADResizeThumbnails, name = 'Resize Thumbnails' ).start()
+            
         
     
     def EventPubSub( self, event ):
@@ -118,6 +121,8 @@ class Controller( wx.App ):
     def GetPreviewImageCache( self ): return self._preview_image_cache
     
     def GetSessionKey( self, service_identifier ): return self._session_manager.GetSessionKey( service_identifier )
+    
+    def GetWebCookies( self, name ): return self._web_session_manager.GetCookies( name )
     
     def GetThumbnailCache( self ): return self._thumbnail_cache
     
@@ -153,6 +158,7 @@ class Controller( wx.App ):
             self._tag_service_precedence = self._db.Read( 'tag_service_precedence', HC.HIGH_PRIORITY )
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
+            self._web_session_manager = CC.WebSessionManagerClient()
             
             self.SetSplashText( 'caches' )
             
@@ -184,6 +190,8 @@ class Controller( wx.App ):
             
             self.SetSplashText( 'starting daemons' )
             
+            if HC.is_first_start: self._gui.DoFirstStart()
+            
             self._db._InitPostGUI()
             
             self._last_idle_time = 0.0
@@ -192,6 +200,16 @@ class Controller( wx.App ):
             
             self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
             self._maintenance_event_timer.Start( 20 * 60000, wx.TIMER_CONTINUOUS )
+            
+        except sqlite3.OperationalError:
+            
+            message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
+            message += os.linesep + os.linesep
+            message += 'This instance will now close. You can either wait a while and try again, or force-close the old instance through task manager and try again immediately.'
+            
+            wx.MessageBox( message )
+            
+            return False
             
         except HC.PermissionException as e: pass
         except:

@@ -28,7 +28,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 63
+SOFTWARE_VERSION = 64
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -39,6 +39,7 @@ UPDATE_DURATION = 100000
 expirations = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), ( 'six months', 6 * 31 * 86400 ), ( 'one year', 12 * 31 * 86400 ), ( 'two years', 24 * 31 * 86400 ), ( 'five years', 60 * 31 * 86400 ), ( 'does not expire', None ) ]
 
 shutdown = False
+is_first_start = False
 
 # Enums
 
@@ -250,10 +251,10 @@ SYSTEM_PREDICATE_TYPE_DURATION = 12
 SYSTEM_PREDICATE_TYPE_MIME = 13
 SYSTEM_PREDICATE_TYPE_RATING = 14
 SYSTEM_PREDICATE_TYPE_SIMILAR_TO = 15
-SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO = 16
 SYSTEM_PREDICATE_TYPE_LOCAL = 17
 SYSTEM_PREDICATE_TYPE_NOT_LOCAL = 18
 SYSTEM_PREDICATE_TYPE_NUM_WORDS = 19
+SYSTEM_PREDICATE_TYPE_FILE_SERVICE = 20
 
 wxk_code_string_lookup = {
     wx.WXK_SPACE: 'space',
@@ -1617,21 +1618,21 @@ class Predicate():
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_ARCHIVE: base = u'system:archive'
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_UNTAGGED: base = u'system:untagged'
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_LOCAL: base = u'system:local'
-            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NOT_LOCAL: base = u'system:not_local'
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NOT_LOCAL: base = u'system:not local'
             elif system_predicate_type in ( SYSTEM_PREDICATE_TYPE_NUM_TAGS, SYSTEM_PREDICATE_TYPE_WIDTH, SYSTEM_PREDICATE_TYPE_HEIGHT, SYSTEM_PREDICATE_TYPE_RATIO, SYSTEM_PREDICATE_TYPE_DURATION, SYSTEM_PREDICATE_TYPE_NUM_WORDS ):
                 
-                if system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_TAGS: base = u'system:num_tags'
+                if system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_TAGS: base = u'system:number of tags'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_WIDTH: base = u'system:width'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HEIGHT: base = u'system:height'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATIO: base = u'system:ratio'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_DURATION: base = u'system:duration'
-                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_WORDS: base = u'system:num_words'
+                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_WORDS: base = u'system:number of words'
                 
                 if info is not None:
                     
                     ( operator, value ) = info
                     
-                    base = base + operator + unicode( value )
+                    base += u' ' + operator + u' ' + unicode( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIZE:
@@ -1642,7 +1643,7 @@ class Predicate():
                     
                     ( operator, size, unit ) = info
                     
-                    base = base + operator + unicode( size ) + ConvertUnitToString( unit )
+                    base += u' ' + operator + u' ' + unicode( size ) + ConvertUnitToString( unit )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_LIMIT:
@@ -1653,7 +1654,7 @@ class Predicate():
                     
                     value = info
                     
-                    base = base + u'=' + unicode( value )
+                    base += u' is ' + unicode( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_AGE:
@@ -1664,7 +1665,7 @@ class Predicate():
                     
                     ( operator, years, months, days ) = info
                     
-                    base = base + operator + unicode( years ) + u'y' + unicode( months ) + u'm' + unicode( days ) + u'd'
+                    base += u' ' + operator + u' ' + unicode( years ) + u'y' + unicode( months ) + u'm' + unicode( days ) + u'd'
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HASH:
@@ -1675,7 +1676,7 @@ class Predicate():
                     
                     hash = info
                     
-                    base = base + u'=' + hash.encode( 'hex' )
+                    base += u' is ' + hash.encode( 'hex' )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_MIME:
@@ -1686,7 +1687,7 @@ class Predicate():
                     
                     mime = info
                     
-                    base = base + u'=' + mime_string_lookup[ mime ]
+                    base += u' is ' + mime_string_lookup[ mime ]
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATING:
@@ -1697,29 +1698,37 @@ class Predicate():
                     
                     ( service_identifier, operator, value ) = info
                     
-                    base = base + u':' + service_identifier.GetName() + operator + unicode( value )
+                    base += u' for ' + service_identifier.GetName() + u' ' + operator + u' ' + unicode( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
                 
-                base = u'system:similar_to'
+                base = u'system:similar to '
                 
                 if info is not None:
                     
                     ( hash, max_hamming ) = info
                     
-                    base = base + u'=' + hash.encode( 'hex' ) + u'\u2248' + unicode( max_hamming )
+                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + unicode( max_hamming )
                     
                 
-            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO:
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
                 
-                base = u'system:not_uploaded_to'
+                base = u'system:file service'
                 
                 if info is not None:
                     
-                    service_identifier = info
+                    ( operator, type, service_identifier ) = info
                     
-                    base = base + u':' + service_identifier.GetName()
+                    base += u':'
+                    
+                    if operator == True: base += u' is'
+                    else: base += u' is not'
+                    
+                    if type == PENDING: base += u' pending to '
+                    else: base += u' currently in '
+                    
+                    base += service_identifier.GetName()
                     
                 
             
@@ -1730,7 +1739,7 @@ class Predicate():
             if operator == '-': base = u'-'
             elif operator == '+': base = u''
             
-            base = base + tag
+            base += tag
             
         elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
             
@@ -1739,7 +1748,7 @@ class Predicate():
             if operator == '-': base = u'-'
             elif operator == '+': base = u''
             
-            base = base + namespace + u':*'
+            base += namespace + u':*'
             
         
         if self._count is None: return base
@@ -1758,6 +1767,11 @@ class Predicate():
             
         
     
+SYSTEM_PREDICATE_INBOX = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_INBOX, None ), None )
+SYSTEM_PREDICATE_ARCHIVE = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), None )
+SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_LOCAL, None ), None )
+SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), None )
+
 class ResponseContext():
     
     def __init__( self, status_code, mime = None, body = '', filename = None, cookies = [] ):

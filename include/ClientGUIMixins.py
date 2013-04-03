@@ -105,15 +105,36 @@ class MediaList():
             
             if collect_by is not None:
                 
+                namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
+                ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
+                
+                local_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+                remote_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
+                
                 singletons = set()
                 
                 keys_to_medias = collections.defaultdict( list )
                 
                 for media in self._singleton_media:
                     
-                    key = media.GetTags().GetNamespaceSlice( collect_by )
+                    if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTags().GetNamespaceSlice( namespaces_to_collect_by )
+                    else: namespace_key = None
                     
-                    keys_to_medias[ key ].append( media )
+                    if len( ratings_to_collect_by ) > 0:
+                        
+                        ( local_ratings, remote_ratings ) = media.GetRatings()
+                        
+                        if len( local_ratings_to_collect_by ) > 0: local_rating_key = local_ratings.GetRatingSlice( local_ratings_to_collect_by )
+                        else: local_rating_key = None
+                        
+                        if len( remote_ratings_to_collect_by ) > 0: remote_rating_key = remote_ratings.GetRatingSlice( remote_ratings_to_collect_by )
+                        else: remote_rating_key = None
+                        
+                        rating_key = ( local_rating_key, remote_rating_key )
+                        
+                    else: rating_key = None
+                    
+                    keys_to_medias[ ( namespace_key, rating_key ) ].append( media )
                     
                 
                 self._singleton_media = set( [ medias[0] for medias in keys_to_medias.values() if len( medias ) == 1 ] )
@@ -206,7 +227,7 @@ class MediaList():
         
         if action == CC.CONTENT_UPDATE_ARCHIVE:
             
-            if 'system:inbox' in self._predicates:
+            if HC.SYSTEM_PREDICATE_INBOX in self._predicates:
                 
                 affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                 affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -216,7 +237,7 @@ class MediaList():
             
         elif action == CC.CONTENT_UPDATE_INBOX:
             
-            if 'system:archive' in self._predicates:
+            if HC.SYSTEM_PREDICATE_ARCHIVE in self._predicates:
                 
                 affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                 affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -445,6 +466,10 @@ class MediaCollection( MediaList, Media ):
         
         # END OF HORRIBLE CODE
         
+        # new horrible compromise
+        if len( self._sorted_media ) > 0: self._ratings = self._sorted_media[0].GetRatings()
+        else: self._ratings = ( CC.LocalRatings( {} ), CC.CPRemoteRatingsServiceIdentifiers( {} ) )
+        
         all_file_service_identifiers = [ media.GetFileServiceIdentifiersCDPP() for media in self._sorted_media ]
         
         current = HC.IntelligentMassIntersect( [ file_service_identifiers.GetCurrent() for file_service_identifiers in all_file_service_identifiers ] )
@@ -507,6 +532,8 @@ class MediaCollection( MediaList, Media ):
         
         return info_string
         
+    
+    def GetRatings( self ): return self._ratings
     
     def GetResolution( self ): return ( self._width, self._height )
     

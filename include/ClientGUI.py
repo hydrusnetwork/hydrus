@@ -298,12 +298,12 @@ class FrameGUI( ClientGUICommon.Frame ):
                     edit_log = []
                     
                     tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
-                    tag_repo_credentials = CC.Credentials( '98.214.1.156', 45871, '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' ) )
+                    tag_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45871, '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' ) )
                     
                     edit_log.append( ( 'add', ( tag_repo_identifier, tag_repo_credentials, None ) ) )
                     
                     file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
-                    file_repo_credentials = CC.Credentials( '98.214.1.156', 45872, '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' ) )
+                    file_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45872, '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' ) )
                     
                     edit_log.append( ( 'add', ( file_repo_identifier, file_repo_credentials, None ) ) )
                     
@@ -938,6 +938,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'vacuum' )
             
+        
+    
+    def DoFirstStart( self ):
+        
+        with ClientGUIDialogs.DialogFirstStart( self ) as dlg: dlg.ShowModal()
         
     
     def EventExit( self, event ):

@@ -1979,9 +1979,9 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
         self._new_queue_input.SetValue( 'tag' )
         
     
-    def _GetAndParseTags( self, id, timestamp ):
+    def _GetAndParseTags( self, id ):
         
-        url = 'http://giphy.com/api/gifs/' + str( id ) + '?ds=' + str( timestamp )
+        url = 'http://giphy.com/api/gifs/' + str( id )
         
         parse_result = urlparse.urlparse( url )
         
@@ -2015,7 +2015,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
         
         try:
             
-            ( url, id, timestamp ) = queue_object
+            ( url, id ) = queue_object
             
             ( status, hash ) = wx.GetApp().Read( 'url_status', url )
             
@@ -2034,7 +2034,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
                     
                     try:
                         
-                        tags = self._GetAndParseTags( id, timestamp )
+                        tags = self._GetAndParseTags( id )
                         
                         self._DoRedundantTagContentUpdates( hash, tags )
                         
@@ -2057,7 +2057,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
                 
                 file = connection.geturl( url )
                 
-                tags = self._GetAndParseTags( id, timestamp )
+                tags = self._GetAndParseTags( id )
                 
                 service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
                 
@@ -2110,7 +2110,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
                     
                     json_data = json_dict[ 'data' ]
                     
-                    results = [ ( d[ 'original_url' ], d[ 'id' ], d[ 'timestamp' ] ) for d in json_data ]
+                    results = [ ( d[ 'image_original_url' ], d[ 'id' ] ) for d in json_data ]
                     
                     total_results_found += len( results )
                     
@@ -2248,11 +2248,15 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with hentai foundry' )
             
             # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
-            self._search_connection.request( 'GET', '/?enterAgree=1' )
+            #self._search_connection.request( 'GET', '/?enterAgree=1' )
             
-            cookies = self._search_connection.GetCookies()
+            cookies = wx.GetApp().GetWebCookies( 'hentai foundry' )
             
-            for ( key, value ) in cookies.items(): self._page_connection.SetCookie( key, value )
+            for ( key, value ) in cookies.items():
+                
+                self._search_connection.SetCookie( key, value )
+                self._page_connection.SetCookie( key, value )
+                
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established' )
             
@@ -2514,40 +2518,18 @@ class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueu
         
         try:
             
-            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
-            
-            if id == '' and password == '':
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'You need to set up your pixiv credentials in services->manage pixiv account.' )
-                
-                return
-                
-            
             self._search_connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
             self._page_connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with pixiv' )
             
-            form_fields = {}
+            cookies = wx.GetApp().GetWebCookies( 'pixiv' )
             
-            form_fields[ 'mode' ] = 'login'
-            form_fields[ 'pixiv_id' ] = id
-            form_fields[ 'pass' ] = password
-            
-            body = urllib.urlencode( form_fields )
-            
-            headers = {}
-            headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-            
-            # this logs in and establishes the php session cookie
-            response = self._search_connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
-            
-            cookies = self._search_connection.GetCookies()
-            
-            # _ only given to logged in php sessions
-            if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Login credentials not accepted!' )
-            
-            for ( key, value ) in cookies.items(): self._page_connection.SetCookie( key, value )
+            for ( key, value ) in cookies.items():
+                
+                self._search_connection.SetCookie( key, value )
+                self._page_connection.SetCookie( key, value )
+                
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established' )
             
@@ -3541,7 +3523,7 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     ( system_predicate_type, info ) = value
                     
-                    if system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO ]:
+                    if system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ]:
                         
                         with ClientGUIDialogs.DialogInputFileSystemPredicate( self, system_predicate_type ) as dlg:
                             
@@ -3576,10 +3558,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._tag_service_identifier = service_identifier
             
-            current_predicates = self._current_predicates_box.GetPredicates()
-            
-            # if we are basing the search on the tag service or there are any regular tags...
-            if self._file_service_identifier == CC.NULL_SERVICE_IDENTIFIER or False in ( pred.startswith( 'system:' ) for pred in current_predicates ): self._DoQuery()
+            self._DoQuery()
             
         
     

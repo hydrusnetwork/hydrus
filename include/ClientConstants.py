@@ -1049,6 +1049,8 @@ class CDPPTagServiceIdentifiers():
     
     def GetUnionCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
     
+    def HasTag( self, tag ): return tag in self._current or tag in self._pending
+    
     def ProcessContentUpdate( self, content_update ):
         
         service_identifier = content_update.GetServiceIdentifier()
@@ -1161,6 +1163,8 @@ class LocalRatings():
         if service_identifier in self._service_identifiers_to_ratings: return self._service_identifiers_to_ratings[ service_identifier ]
         else: return None
         
+    
+    def GetRatingSlice( self, service_identifiers ): return frozenset( { self._service_identifiers_to_ratings[ service_identifier ] for service_identifier in service_identifiers if service_identifier in self._service_identifiers_to_ratings } )
     
     def GetServiceIdentifiersToRatings( self ): return self._service_identifiers_to_ratings
     
@@ -1391,6 +1395,13 @@ class CPRemoteRatingsServiceIdentifiers():
         
         if service_identifier in self._service_identifiers_to_cp: return self._service_identifiers_to_cp[ service_identifier ]
         else: return ( None, None )
+        
+    
+    def GetRatingSlice( self, service_identifiers ):
+        
+        # this doesn't work yet. it should probably use self.GetScore( s_i ) like I think Sort by remote rating does
+        
+        return frozenset( { self._service_identifiers_to_ratings[ service_identifier ] for service_identifier in service_identifiers if service_identifier in self._service_identifiers_to_ratings } )
         
     
     def GetServiceIdentifiersToCP( self ): return self._service_identifiers_to_cp
@@ -1749,7 +1760,10 @@ class FileSystemPredicates():
         self._limit = None
         self._similar_to = None
         
-        self._file_repositories_to_exclude = []
+        self._file_services_to_include_current = []
+        self._file_services_to_include_pending = []
+        self._file_services_to_exclude_current = []
+        self._file_services_to_exclude_pending = []
         
         self._ratings_predicates = []
         
@@ -1915,11 +1929,20 @@ class FileSystemPredicates():
                 self._limit = limit
                 
             
-            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_NOT_UPLOADED_TO:
+            if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
                 
-                service_identifier = info
+                ( operator, current_or_pending, service_identifier ) = info
                 
-                self._file_repositories_to_exclude.append( service_identifier )
+                if operator == True:
+                    
+                    if current_or_pending == HC.CURRENT: self._file_services_to_include_current.append( service_identifier )
+                    else: self._file_services_to_include_pending.append( service_identifier )
+                    
+                else:
+                    
+                    if current_or_pending == HC.CURRENT: self._file_services_to_exclude_current.append( service_identifier )
+                    else: self._file_services_to_exclude_pending.append( service_identifier )
+                    
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
@@ -1949,7 +1972,7 @@ class FileSystemPredicates():
         return True
         
     
-    def GetFileRepositoriesToExclude( self ): return self._file_repositories_to_exclude
+    def GetFileServiceInfo( self ): return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
     
     def GetInfo( self ): return ( self._hash, self._min_size, self._size, self._max_size, self._mimes, self._min_timestamp, self._max_timestamp, self._min_width, self._width, self._max_width, self._min_height, self._height, self._max_height, self._min_num_words, self._num_words, self._max_num_words, self._min_duration, self._duration, self._max_duration )
     
@@ -2852,4 +2875,84 @@ class VPTreeNodeEmpty():
     def __len__( self ): return 0
     
     def GetMatches( self, phash, max_hamming ): return []
+    
+class WebSessionManagerClient():
+    
+    def __init__( self ):
+        
+        existing_sessions = wx.GetApp().Read( 'web_sessions' )
+        
+        self._sessions = { name : ( cookies, expiry ) for ( name, cookies, expiry ) in existing_sessions }
+        
+        self._lock = threading.Lock()
+        
+    
+    def GetCookies( self, name ):
+        
+        now = int( time.time() )
+        
+        with self._lock:
+            
+            if name in self._sessions:
+                
+                ( cookies, expiry ) = self._sessions[ name ]
+                
+                if now + 300 > expiry: del self._sessions[ name ]
+                else: return cookies
+                
+            
+            # name not found, or expired
+            
+            if name == 'hentai foundry':
+                
+                connection = AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
+                
+                # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
+                connection.request( 'GET', '/?enterAgree=1' )
+                
+                cookies = connection.GetCookies()
+                
+                expiry = now + 90 * 60
+                
+            elif name == 'pixiv':
+                
+                ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+                
+                if id == '' and password == '':
+                    
+                    raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                    
+                
+                connection = AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+                
+                form_fields = {}
+                
+                form_fields[ 'mode' ] = 'login'
+                form_fields[ 'pixiv_id' ] = id
+                form_fields[ 'pass' ] = password
+                form_fields[ 'skip' ] = '1'
+                
+                body = urllib.urlencode( form_fields )
+                
+                headers = {}
+                headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+                
+                # this logs in and establishes the php session cookie
+                response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
+                
+                cookies = connection.GetCookies()
+                
+                # _ only given to logged in php sessions
+                if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Login credentials not accepted!' )
+                
+                expiry = now + 30 * 86400
+                
+            
+            self._sessions[ name ] = ( cookies, expiry )
+            
+            wx.GetApp().Write( 'web_session', name, cookies, expiry )
+            
+            return cookies
+            
+        
     
