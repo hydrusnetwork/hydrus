@@ -5089,15 +5089,22 @@ class DB( ServiceDB ):
                     
                     for filename in filenames:
                         
-                        old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
-                        
-                        mime = HC.GetMimeFromPath( old_path )
-                        
-                        new_path = old_path + HC.mime_ext_lookup[ mime ]
-                        
-                        shutil.move( old_path, new_path )
-                        
-                        os.chmod( new_path, stat.S_IREAD )
+                        if '.' not in filename:
+                            
+                            try:
+                                
+                                old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
+                                
+                                mime = HC.GetMimeFromPath( old_path )
+                                
+                                new_path = old_path + HC.mime_ext_lookup[ mime ]
+                                
+                                shutil.move( old_path, new_path )
+                                
+                                os.chmod( new_path, stat.S_IREAD )
+                                
+                            except: pass
+                            
                         
                         i += 1
                         
