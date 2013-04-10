@@ -137,7 +137,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
         self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
         
         self._InitManagementPanel()
-        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, CC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         self._InitMessagesPanel()
         
         self.SplitVertically( self._search_preview_split, self._messages_panel, self._options[ 'hpos' ] )
@@ -171,7 +171,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
     
 class PageWithMedia( PageBase, wx.SplitterWindow ):
     
-    def __init__( self, parent, file_service_identifier = CC.LOCAL_FILE_SERVICE_IDENTIFIER ):
+    def __init__( self, parent, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER ):
         
         wx.SplitterWindow.__init__( self, parent )
         PageBase.__init__( self )
@@ -382,10 +382,10 @@ class PageThreadDumper( PageWithMedia ):
         
         self._media_results = filter( self._imageboard.IsOkToPost, self._media_results )
         
-        PageWithMedia.__init__( self, parent, CC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, CC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
     

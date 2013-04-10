@@ -3,7 +3,6 @@ import dircache
 import gc
 import hashlib
 import httplib
-import ClientParsers
 import HydrusConstants as HC
 import HydrusImageHandling
 import HydrusMessageHandling
@@ -30,10 +29,6 @@ COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
 COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
 COLOUR_MESSAGE = wx.Colour( 230, 246, 255 )
-
-LOCAL_FILE_SERVICE_IDENTIFIER = HC.ClientServiceIdentifier( 'local files', HC.LOCAL_FILE, 'local files' )
-LOCAL_TAG_SERVICE_IDENTIFIER = HC.ClientServiceIdentifier( 'local tags', HC.LOCAL_TAG, 'local tags' )
-NULL_SERVICE_IDENTIFIER = HC.ClientServiceIdentifier( '', HC.NULL_SERVICE, 'no service' )
 
 SHORTCUT_HELP = '''You can set up many custom shortcuts in file->options->shortcuts. Please check that to see your current mapping.
 
@@ -71,18 +66,6 @@ collection_string_lookup[ COLLECT_BY_S ] = 'collect by series'
 collection_string_lookup[ COLLECT_BY_SV ] = 'collect by series-volume'
 collection_string_lookup[ COLLECT_BY_SVC ] = 'collect by series-volume-chapter'
 collection_string_lookup[ NO_COLLECTIONS ] = 'no collections'
-
-CONTENT_UPDATE_ADD = 0
-CONTENT_UPDATE_DELETE = 1
-CONTENT_UPDATE_PENDING = 2
-CONTENT_UPDATE_RESCIND_PENDING = 3
-CONTENT_UPDATE_PETITION = 4
-CONTENT_UPDATE_RESCIND_PETITION = 5
-CONTENT_UPDATE_EDIT_LOG = 6
-CONTENT_UPDATE_ARCHIVE = 7
-CONTENT_UPDATE_INBOX = 8
-CONTENT_UPDATE_RATING = 9
-CONTENT_UPDATE_RATINGS_FILTER = 10
 
 DISCRIMINANT_INBOX = 0
 DISCRIMINANT_LOCAL = 1
@@ -136,14 +119,6 @@ RESTRICTION_MIN_RESOLUTION = 0
 RESTRICTION_MAX_RESOLUTION = 1
 RESTRICTION_MAX_FILE_SIZE = 2
 RESTRICTION_ALLOWED_MIMES = 3
-
-SERVICE_UPDATE_ACCOUNT = 0
-SERVICE_UPDATE_DELETE_PENDING = 1
-SERVICE_UPDATE_ERROR = 2
-SERVICE_UPDATE_NEXT_BEGIN = 3
-SERVICE_UPDATE_RESET = 4
-SERVICE_UPDATE_REQUEST_MADE = 5
-SERVICE_UPDATE_LAST_CHECK = 6
 
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1
@@ -295,7 +270,7 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     return m.get()
     
-def GetMediasTagCount( pool, tag_service_identifier = NULL_SERVICE_IDENTIFIER ):
+def GetMediasTagCount( pool, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER ):
     
     all_tags = []
     
@@ -312,7 +287,7 @@ def GetMediasTagCount( pool, tag_service_identifier = NULL_SERVICE_IDENTIFIER ):
     
     for tags in all_tags:
         
-        if tag_service_identifier == NULL_SERVICE_IDENTIFIER: ( current, deleted, pending, petitioned ) = tags.GetUnionCDPP()
+        if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: ( current, deleted, pending, petitioned ) = tags.GetUnionCDPP()
         else: ( current, deleted, pending, petitioned ) = tags.GetCDPP( tag_service_identifier )
         
         current_tags_to_count.update( current )
@@ -433,250 +408,6 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
         
     
     return good_paths
-    
-class AdvancedHTTPConnection():
-    
-    def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
-        
-        if len( url ) > 0:
-            
-            parse_result = urlparse.urlparse( url )
-            
-            ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-            
-        
-        self._scheme = scheme
-        self._host = host
-        self._port = port
-        self._service_identifier = service_identifier
-        self._accept_cookies = accept_cookies
-        
-        self._cookies = {}
-        
-        if service_identifier is None: timeout = 30
-        else: timeout = 300
-        
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
-        else: self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
-        
-    
-    def close( self ): self._connection.close()
-    
-    def connect( self ): self._connection.connect()
-    
-    def GetCookies( self ): return self._cookies
-    
-    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True ):
-        
-        parse_result = urlparse.urlparse( url )
-        
-        request = parse_result.path
-        
-        query = parse_result.query
-        
-        if query != '': request += '?' + query
-        
-        return self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects )
-        
-    
-    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True ):
-        
-        if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
-        
-        if len( self._cookies ) > 0: headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in self._cookies.items() ] )
-        
-        try:
-            
-            self._connection.request( request_type, request, headers = headers, body = body )
-            
-            response = self._connection.getresponse()
-            
-            raw_response = response.read()
-            
-        except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
-            
-            # for some reason, we can't send a request on the current connection, so let's make a new one!
-            
-            try:
-                
-                if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
-                else: self._connection = httplib.HTTPSConnection( self._host, self._port )
-                
-                self._connection.request( request_type, request, headers = headers, body = body )
-                
-                response = self._connection.getresponse()
-                
-                raw_response = response.read()
-                
-            except:
-                print( traceback.format_exc() )
-                raise
-            
-        except:
-            print( traceback.format_exc() )
-            raise Exception( 'Could not connect to server' )
-        
-        if self._accept_cookies:
-            
-            for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
-                
-                try:
-                    
-                    cookie = cookie.replace( 'Set-Cookie: ', '' )
-                    
-                    if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
-                    
-                    ( k, v ) = cookie.split( '=' )
-                    
-                    self._cookies[ k ] = v
-                    
-                except: pass
-                
-            
-        
-        if len( raw_response ) > 0:
-            
-            content_type = response.getheader( 'Content-Type' )
-            
-            if content_type is not None:
-                
-                # additional info can be a filename or charset=utf-8 or whatever
-                
-                if content_type == 'text/html':
-                    
-                    mime_string = content_type
-                    
-                    try: raw_response = raw_response.decode( 'utf-8' )
-                    except: pass
-                    
-                elif '; ' in content_type:
-                    
-                    ( mime_string, additional_info ) = content_type.split( '; ' )
-                    
-                    if 'charset=' in additional_info:
-                        
-                        # this does utf-8, ISO-8859-4, whatever
-                        
-                        ( gumpf, charset ) = additional_info.split( '=' )
-                        
-                        try: raw_response = raw_response.decode( charset )
-                        except: pass
-                        
-                    
-                else: mime_string = content_type
-                
-                if mime_string in HC.mime_enum_lookup and HC.mime_enum_lookup[ mime_string ] == HC.APPLICATION_YAML:
-                    
-                    try: parsed_response = yaml.safe_load( raw_response )
-                    except Exception as e: raise HC.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + unicode( e ) )
-                    
-                else: parsed_response = raw_response
-                
-            else: parsed_response = raw_response
-            
-        else: parsed_response = raw_response
-        
-        if self._service_identifier is not None:
-            
-            service_type = self._service_identifier.GetType()
-            
-            server_header = response.getheader( 'Server' )
-            
-            service_string = HC.service_string_lookup[ service_type ]
-            
-            if server_header is None or service_string not in server_header:
-                
-                HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, GetUnknownAccount() ) )
-                
-                raise HC.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
-                
-            
-            if '?' in request: request_command = request.split( '?' )[0]
-            else: request_command = request
-            
-            if '/' in request_command: request_command = request_command.split( '/' )[1]
-            
-            if request_type == 'GET':
-                
-                if ( service_type, HC.GET, request_command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, self._service_identifier, len( raw_response ) ) )
-                
-            elif ( service_type, HC.POST, request_command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, self._service_identifier, len( body ) ) )
-            
-        
-        if response.status == 200: return parsed_response
-        elif response.status == 205: return
-        elif response.status in ( 301, 302, 303, 307 ):
-            
-            location = response.getheader( 'Location' )
-            
-            if location is None: raise Exception( data )
-            else:
-                
-                if not follow_redirects: return ''
-                
-                if is_redirect: raise Exception( 'Too many redirects!' )
-                
-                url = location
-                
-                parse_result = urlparse.urlparse( url )
-                
-                redirected_request = parse_result.path
-                
-                redirected_query = parse_result.query
-                
-                if redirected_query != '': redirected_request += '?' + redirected_query
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme is None or scheme == self._scheme ) and ( request == redirected_request or request in redirected_request or redirected_request in request ): raise Exception( 'Redirection problem' )
-                else:
-                    
-                    if host is None or ( host == self._host and port == self._port ): connection = self
-                    else: connection = AdvancedHTTPConnection( url )
-                    
-                    if response.status in ( 301, 307 ):
-                        
-                        # 301: moved permanently, repeat request
-                        # 307: moved temporarily, repeat request
-                        
-                        return connection.request( request_type, redirected_request, headers = headers, body = body, is_redirect = True )
-                        
-                    elif response.status in ( 302, 303 ):
-                        
-                        # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
-                        # 303: thanks, now go here with GET
-                        
-                        return connection.request( 'GET', redirected_request, is_redirect = True )
-                        
-                    
-                
-            
-        elif response.status == 304: raise HC.NotModifiedException()
-        else:
-            
-            if self._service_identifier is not None:
-                
-                HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ERROR, self._service_identifier, parsed_response ) )
-                
-                if response.status in ( 401, 426 ): HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, GetUnknownAccount() ) )
-                
-            
-            if response.status == 401: raise HC.PermissionsException( parsed_response )
-            elif response.status == 403: raise HC.ForbiddenException( parsed_response )
-            elif response.status == 404: raise HC.NotFoundException( parsed_response )
-            elif response.status == 426: raise HC.NetworkVersionException( parsed_response )
-            elif response.status in ( 500, 501, 502, 503 ):
-                
-                try: print( parsed_response )
-                except: pass
-                
-                raise Exception( parsed_response )
-                
-            else: raise Exception( parsed_response )
-           
-        
-    
-    def SetCookie( self, key, value ): self._cookies[ key ] = value
     
 class AutocompleteMatches():
     
@@ -884,20 +615,20 @@ class CDPPFileServiceIdentifiers():
     def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
     
     def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ): return self._current - set( ( LOCAL_FILE_SERVICE_IDENTIFIER, ) )
+    def GetCurrentRemote( self ): return self._current - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
     
     def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ): return self._deleted - set( ( LOCAL_FILE_SERVICE_IDENTIFIER, ) )
+    def GetDeletedRemote( self ): return self._deleted - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
     
     def GetPending( self ): return self._pending
-    def GetPendingRemote( self ): return self._pending - set( ( LOCAL_FILE_SERVICE_IDENTIFIER, ) )
+    def GetPendingRemote( self ): return self._pending - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
     
     def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ): return self._petitioned - set( ( LOCAL_FILE_SERVICE_IDENTIFIER, ) )
+    def GetPetitionedRemote( self ): return self._petitioned - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
     
-    def HasDownloading( self ): return LOCAL_FILE_SERVICE_IDENTIFIER in self._pending
+    def HasDownloading( self ): return HC.LOCAL_FILE_SERVICE_IDENTIFIER in self._pending
     
-    def HasLocal( self ): return LOCAL_FILE_SERVICE_IDENTIFIER in self._current
+    def HasLocal( self ): return HC.LOCAL_FILE_SERVICE_IDENTIFIER in self._current
     
     def ProcessContentUpdate( self, content_update ):
         
@@ -905,30 +636,30 @@ class CDPPFileServiceIdentifiers():
         
         service_identifier = content_update.GetServiceIdentifier()
         
-        if action == CONTENT_UPDATE_ADD:
+        if action == HC.CONTENT_UPDATE_ADD:
             
             self._current.add( service_identifier )
             
             self._deleted.discard( service_identifier )
             self._pending.discard( service_identifier )
             
-        elif action == CONTENT_UPDATE_DELETE:
+        elif action == HC.CONTENT_UPDATE_DELETE:
             
             self._deleted.add( service_identifier )
             
             self._current.discard( service_identifier )
             self._petitioned.discard( service_identifier )
             
-        elif action == CONTENT_UPDATE_PENDING:
+        elif action == HC.CONTENT_UPDATE_PENDING:
             
             if service_identifier not in self._current: self._pending.add( service_identifier )
             
-        elif action == CONTENT_UPDATE_PETITION:
+        elif action == HC.CONTENT_UPDATE_PETITION:
             
             if service_identifier not in self._deleted: self._petitioned.add( service_identifier )
             
-        elif action == CONTENT_UPDATE_RESCIND_PENDING: self._pending.discard( service_identifier )
-        elif action == CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_identifier )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: self._pending.discard( service_identifier )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_identifier )
         
     
     def ResetService( self, service_identifier ):
@@ -1029,7 +760,7 @@ class CDPPTagServiceIdentifiers():
         
         num_tags = 0
         
-        if tag_service_identifier == NULL_SERVICE_IDENTIFIER:
+        if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
             if include_current_tags: num_tags += len( self._current )
             if include_pending_tags: num_tags += len( self._pending )
@@ -1065,7 +796,7 @@ class CDPPTagServiceIdentifiers():
         
         action = content_update.GetAction()
         
-        if action == CONTENT_UPDATE_ADD:
+        if action == HC.CONTENT_UPDATE_ADD:
             
             tag = content_update.GetInfo()
             
@@ -1074,7 +805,7 @@ class CDPPTagServiceIdentifiers():
             deleted.discard( tag )
             pending.discard( tag )
             
-        elif action == CONTENT_UPDATE_DELETE:
+        elif action == HC.CONTENT_UPDATE_DELETE:
             
             tag = content_update.GetInfo()
             
@@ -1083,13 +814,13 @@ class CDPPTagServiceIdentifiers():
             current.discard( tag )
             petitioned.discard( tag )
             
-        elif action == CONTENT_UPDATE_EDIT_LOG:
+        elif action == HC.CONTENT_UPDATE_EDIT_LOG:
             
             edit_log = content_update.GetInfo()
             
             for ( action, info ) in edit_log:
                 
-                if action == CONTENT_UPDATE_ADD:
+                if action == HC.CONTENT_UPDATE_ADD:
                     
                     tag = info
                     
@@ -1098,7 +829,7 @@ class CDPPTagServiceIdentifiers():
                     deleted.discard( tag )
                     pending.discard( tag )
                     
-                elif action == CONTENT_UPDATE_DELETE:
+                elif action == HC.CONTENT_UPDATE_DELETE:
                     
                     tag = info
                     
@@ -1107,25 +838,25 @@ class CDPPTagServiceIdentifiers():
                     current.discard( tag )
                     petitioned.discard( tag )
                     
-                elif action == CONTENT_UPDATE_PENDING:
+                elif action == HC.CONTENT_UPDATE_PENDING:
                     
                     tag = info
                     
                     if tag not in current: pending.add( tag )
                     
-                elif action == CONTENT_UPDATE_RESCIND_PENDING:
+                elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
                     
                     tag = info
                     
                     pending.discard( tag )
                     
-                elif action == CONTENT_UPDATE_PETITION:
+                elif action == HC.CONTENT_UPDATE_PETITION:
                     
                     ( tag, reason ) = info
                     
                     if tag not in deleted: petitioned.add( tag )
                     
-                elif action == CONTENT_UPDATE_RESCIND_PETITION:
+                elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
                     
                     tag = info
                     
@@ -1174,7 +905,7 @@ class LocalRatings():
         
         action = content_update.GetAction()
         
-        if action == CONTENT_UPDATE_RATING:
+        if action == HC.CONTENT_UPDATE_RATING:
             
             rating = content_update.GetInfo()
             
@@ -1199,7 +930,7 @@ class ConnectionToService():
             
             ( host, port ) = self._credentials.GetAddress()
             
-            self._connection = AdvancedHTTPConnection( host = host, port = port, service_identifier = self._service_identifier, accept_cookies = True )
+            self._connection = HC.AdvancedHTTPConnection( host = host, port = port, service_identifier = self._service_identifier, accept_cookies = True )
             
             self._connection.connect()
             
@@ -1207,7 +938,7 @@ class ConnectionToService():
             
             error_message = 'Could not connect.'
             
-            if self._service_identifier is not None: HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ERROR, self._service_identifier, error_message ) )
+            if self._service_identifier is not None: HC.pubsub.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, self._service_identifier, error_message ) )
             
             raise Exception( error_message )
             
@@ -1368,13 +1099,13 @@ class ConnectionToService():
             
             account.MakeFresh()
             
-            HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, account ) )
+            HC.pubsub.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, self._service_identifier, account ) )
             
         elif request == 'update':
             
             update = response
             
-            HC.pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_NEXT_BEGIN, self._service_identifier, update.GetNextBegin() ) )
+            HC.pubsub.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_BEGIN, self._service_identifier, update.GetNextBegin() ) )
             
         
         return response
@@ -1422,21 +1153,21 @@ class CPRemoteRatingsServiceIdentifiers():
         
         # this may well need work; need to figure out how to set the pending back to None after an upload. rescind seems ugly
         
-        if action == CONTENT_UPDATE_ADD:
+        if action == HC.CONTENT_UPDATE_ADD:
             
             rating = content_update.GetInfo()
             
             current = rating
             
-        elif action == CONTENT_UPDATE_DELETE:
+        elif action == HC.CONTENT_UPDATE_DELETE:
             
             current = None
             
-        elif action == CONTENT_UPDATE_RESCIND_PENDING:
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
             
             pending = None
             
-        elif action == CONTENT_UPDATE_DELETE:
+        elif action == HC.CONTENT_UPDATE_DELETE:
             
             rating = content_update.GetInfo()
             
@@ -1608,15 +1339,15 @@ class FileQueryResult():
             
             hashes = content_update.GetHashes()
             
-            if action == CONTENT_UPDATE_ARCHIVE:
+            if action == HC.CONTENT_UPDATE_ARCHIVE:
                 
                 if 'system:inbox' in self._predicates: self._Remove( hashes )
                 
-            elif action == CONTENT_UPDATE_INBOX:
+            elif action == HC.CONTENT_UPDATE_INBOX:
                 
                 if 'system:archive' in self._predicates: self._Remove( hashes )
                 
-            elif action == CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier: self._Remove( hashes )
+            elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier: self._Remove( hashes )
             
             for hash in self._hashes.intersection( hashes ):
                 
@@ -1633,11 +1364,11 @@ class FileQueryResult():
         
         service_identifier = update.GetServiceIdentifier()
         
-        if action == SERVICE_UPDATE_DELETE_PENDING:
+        if action == HC.SERVICE_UPDATE_DELETE_PENDING:
             
             for media_result in self._hashes_to_media_results.values(): media_result.DeletePending( service_identifier )
             
-        elif action == SERVICE_UPDATE_RESET:
+        elif action == HC.SERVICE_UPDATE_RESET:
             
             for media_result in self._hashes_to_media_results.values(): media_result.ResetService( service_identifier )
             
@@ -1645,7 +1376,7 @@ class FileQueryResult():
     
 class FileSearchContext():
     
-    def __init__( self, file_service_identifier = LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = NULL_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
+    def __init__( self, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
         
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = tag_service_identifier
@@ -2272,10 +2003,10 @@ class MediaResult():
                 
                 action = content_update.GetAction()
                 
-                if action == CONTENT_UPDATE_ADD and not file_service_identifiers_cdpp.HasLocal(): inbox = True
-                elif action == CONTENT_UPDATE_ARCHIVE: inbox = False
-                elif action == CONTENT_UPDATE_INBOX: inbox = True
-                elif action == CONTENT_UPDATE_DELETE: inbox = False
+                if action == HC.CONTENT_UPDATE_ADD and not file_service_identifiers_cdpp.HasLocal(): inbox = True
+                elif action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
+                elif action == HC.CONTENT_UPDATE_INBOX: inbox = True
+                elif action == HC.CONTENT_UPDATE_DELETE: inbox = False
                 
                 self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings )
                 
@@ -2468,8 +2199,8 @@ class ServiceRemote( Service ):
             
             action = update.GetAction()
             
-            if action == SERVICE_UPDATE_ERROR: self._last_error = int( time.time() )
-            elif action == SERVICE_UPDATE_RESET:
+            if action == HC.SERVICE_UPDATE_ERROR: self._last_error = int( time.time() )
+            elif action == HC.SERVICE_UPDATE_RESET:
                 
                 self._service_identifier = update.GetInfo()
                 
@@ -2523,14 +2254,14 @@ class ServiceRemoteRestricted( ServiceRemote ):
             
             action = update.GetAction()
             
-            if action == SERVICE_UPDATE_ACCOUNT:
+            if action == HC.SERVICE_UPDATE_ACCOUNT:
                 
                 account = update.GetInfo()
                 
                 self._account = account
                 self._last_error = 0
                 
-            elif action == SERVICE_UPDATE_REQUEST_MADE:
+            elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
                 
                 num_bytes = update.GetInfo()
                 
@@ -2591,13 +2322,13 @@ class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
             
             action = update.GetAction()
             
-            if action == SERVICE_UPDATE_NEXT_BEGIN:
+            if action == HC.SERVICE_UPDATE_NEXT_BEGIN:
                 
                 next_begin = update.GetInfo()
                 
                 self.SetNextBegin( next_begin )
                 
-            elif action == SERVICE_UPDATE_RESET:
+            elif action == HC.SERVICE_UPDATE_RESET:
                 
                 self._service_identifier = update.GetInfo()
                 
@@ -2677,13 +2408,13 @@ class ServiceRemoteRestrictedDepot( ServiceRemoteRestricted ):
             
             action = update.GetAction()
             
-            if action == SERVICE_UPDATE_LAST_CHECK:
+            if action == HC.SERVICE_UPDATE_LAST_CHECK:
                 
                 last_check = update.GetInfo()
                 
                 self._last_check = last_check
                 
-            elif action == SERVICE_UPDATE_RESET:
+            elif action == HC.SERVICE_UPDATE_RESET:
                 
                 self._service_identifier = update.GetInfo()
                 
@@ -2714,21 +2445,6 @@ class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
     def ReceivesAnon( self ): return self._receive_anon
     
     def Decrypt( self, encrypted_message ): return HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, self._private_key )
-    
-class ServiceUpdate():
-    
-    def __init__( self, action, service_identifier, info = None ):
-        
-        self._action = action # make this an enumerated thing, yo
-        self._service_identifier = service_identifier
-        self._info = info
-        
-    
-    def GetAction( self ): return self._action
-    
-    def GetInfo( self ): return self._info
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
     
 class ThumbnailCache():
     
@@ -2905,7 +2621,7 @@ class WebSessionManagerClient():
             
             if name == 'hentai foundry':
                 
-                connection = AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
+                connection = HC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
                 
                 # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
                 connection.request( 'GET', '/?enterAgree=1' )
@@ -2923,7 +2639,7 @@ class WebSessionManagerClient():
                     raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
                     
                 
-                connection = AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+                connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
                 
                 form_fields = {}
                 

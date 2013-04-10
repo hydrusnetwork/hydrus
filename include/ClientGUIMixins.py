@@ -225,7 +225,7 @@ class MediaList():
         
         for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( content_update )
         
-        if action == CC.CONTENT_UPDATE_ARCHIVE:
+        if action == HC.CONTENT_UPDATE_ARCHIVE:
             
             if HC.SYSTEM_PREDICATE_INBOX in self._predicates:
                 
@@ -235,7 +235,7 @@ class MediaList():
                 self._RemoveMedia( affected_singleton_media, affected_collected_media )
                 
             
-        elif action == CC.CONTENT_UPDATE_INBOX:
+        elif action == HC.CONTENT_UPDATE_INBOX:
             
             if HC.SYSTEM_PREDICATE_ARCHIVE in self._predicates:
                 
@@ -245,7 +245,7 @@ class MediaList():
                 self._RemoveMedia( affected_singleton_media, affected_collected_media )
                 
             
-        elif action == CC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
+        elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
             
             affected_singleton_media = self._GetMedia( hashes, 'singletons' )
             affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -265,8 +265,8 @@ class MediaList():
         
         service_identifier = update.GetServiceIdentifier()
         
-        if action == CC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_identifier )
-        elif action == CC.SERVICE_UPDATE_RESET: self.ResetService( service_identifier )
+        if action == HC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_identifier )
+        elif action == HC.SERVICE_UPDATE_RESET: self.ResetService( service_identifier )
         
     
     def ResetService( self, service_identifier ):

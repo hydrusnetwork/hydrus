@@ -10,6 +10,28 @@
 			<ul>
 				<li><h3>version 64</h3></li>
 				<ul>
+					<li>added subscriptions dialog</li>
+					<li>added prototype subscription daemon, but not yet activated it</li>
+					<li>added downloader classes</li>
+					<li>began reorganisation of nearly all download code</li>
+					<li>moved parsing around</li>
+					<li>moved advancedhttpconnection around</li>
+					<li>moved serviceupdate around</li>
+					<li>moved some content_update stuff around</li>
+					<li>moved some constants around</li>
+					<li>files in client_files now have extensions</li>
+					<li>files in client_files are now read only</li>
+					<li>pdf launch is simplified as a result of this new ext stuff</li>
+					<li>fixed find similar images; it was just a typo</li>
+					<li>also fixed initial predicates string display</li>
+					<li>rejiggered the thumbnail resizer again; due to my stupidity, it was causing lag</li>
+					<li>thumbnail resizer burns a little more cpu when there are >10,000 or >100,000 thumbnails to render</li>
+					<li>it also now does thumbs in random order, for a couple of good reasons</li>
+					<li>upgraded sqlite, hopefully some queries will run faster?</li>
+					<li>upgraded to python 2.7.4. please report any weird errors</li>
+				</ul>
+				<li><h3>version 64</h3></li>
+				<ul>
 					<li>got rid of system:not_uploaded_to - now system:file service, which is a lot more powerful</li>
 					<li>some display changes to system predicates to make them a bit more human-readable</li>
 					<li>added export dialog</li>

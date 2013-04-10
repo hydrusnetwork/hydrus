@@ -419,7 +419,7 @@ class Canvas():
                             
                             file_hash = self._current_display_media.GetHash()
                             
-                            self._media_window.movie = HC.CLIENT_FILES_DIR + os.path.sep + file_hash.encode( 'hex' )
+                            self._media_window.movie = HC.CLIENT_FILES_DIR + os.path.sep + file_hash.encode( 'hex' ) + '.swf'
                             
                         elif self._current_display_media.GetMime() == HC.VIDEO_FLV:
                             
@@ -428,7 +428,7 @@ class Canvas():
                             file_hash = self._current_display_media.GetHash()
                             
                             flash_vars = []
-                            flash_vars.append( ( 'flv', HC.CLIENT_FILES_DIR + os.path.sep + file_hash.encode( 'hex' ) ) )
+                            flash_vars.append( ( 'flv', HC.CLIENT_FILES_DIR + os.path.sep + file_hash.encode( 'hex' ) + '.flv' ) )
                             flash_vars.append( ( 'margin', '0' ) )
                             flash_vars.append( ( 'autoload', '1' ) )
                             flash_vars.append( ( 'autoplay', '1' ) )
@@ -961,7 +961,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -980,7 +980,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._current_media.GetHash().encode( 'hex' ) )
+            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._current_media.GetHash().encode( 'hex' ) + HC.mime_ext_lookup[ self._current_media.GetMime() ] )
             
             wx.TheClipboard.SetData( data )
             
@@ -993,13 +993,13 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_INBOX, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_INBOX, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
     
     def _PausePlaySlideshow( self ):
         
@@ -1173,7 +1173,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
         
         menu.AppendSeparator()
         
@@ -1228,7 +1228,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         self.SetMedia( self._GetFirst() )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1247,7 +1247,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._current_media.GetHash().encode( 'hex' ) )
+            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._current_media.GetHash().encode( 'hex' ) + HC.mime_ext_lookup[ self._current_media.GetMime() ] )
             
             wx.TheClipboard.SetData( data )
             
@@ -1260,13 +1260,13 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_INBOX, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_INBOX, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
     
     def EventKeyDown( self, event ):
         
@@ -1316,37 +1316,37 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                         
                         if service_type == HC.LOCAL_TAG:
                             
-                            if action in current: edit_log = [ ( CC.CONTENT_UPDATE_DELETE, action ) ]
-                            else: edit_log = [ ( CC.CONTENT_UPDATE_ADD, action ) ]
+                            if action in current: edit_log = [ ( HC.CONTENT_UPDATE_DELETE, action ) ]
+                            else: edit_log = [ ( HC.CONTENT_UPDATE_ADD, action ) ]
                             
                         else:
                             
                             if action in current:
                                 
-                                if action in petitioned: edit_log = [ ( CC.CONTENT_UPDATE_RESCIND_PETITION, action ) ]
+                                if action in petitioned: edit_log = [ ( HC.CONTENT_UPDATE_RESCIND_PETITION, action ) ]
                                 else:
                                     
                                     message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
                                     
                                     with wx.TextEntryDialog( self, message ) as dlg:
                                         
-                                        if dlg.ShowModal() == wx.ID_OK: edit_log = [ ( CC.CONTENT_UPDATE_PETITION, ( action, dlg.GetValue() ) ) ]
+                                        if dlg.ShowModal() == wx.ID_OK: edit_log = [ ( HC.CONTENT_UPDATE_PETITION, ( action, dlg.GetValue() ) ) ]
                                         else: return
                                         
                                     
                                 
                             else:
                                 
-                                if action in pending: edit_log = [ ( CC.CONTENT_UPDATE_RESCIND_PENDING, action ) ]
-                                else: edit_log = [ ( CC.CONTENT_UPDATE_PENDING, action ) ]
+                                if action in pending: edit_log = [ ( HC.CONTENT_UPDATE_RESCIND_PENDING, action ) ]
+                                else: edit_log = [ ( HC.CONTENT_UPDATE_PENDING, action ) ]
                                 
                             
                         
-                        content_update = HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( self._current_media.GetHash(), ), info = edit_log )
+                        content_update = HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( self._current_media.GetHash(), ), info = edit_log )
                         
                     elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                         
-                        content_update = HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, service_identifier, ( self._current_media.GetHash(), ), info = action )
+                        content_update = HC.ContentUpdate( HC.CONTENT_UPDATE_RATING, service_identifier, ( self._current_media.GetHash(), ), info = action )
                         
                     
                     wx.GetApp().Write( 'content_updates', ( content_update, ) )
@@ -1461,7 +1461,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
         
         menu.AppendSeparator()
         
@@ -1556,8 +1556,8 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                                 
                                 content_updates = []
                                 
-                                content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, self._deleted_hashes ) )
-                                content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, self._kept_hashes ) )
+                                content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._deleted_hashes ) )
+                                content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._kept_hashes ) )
                                 
                                 wx.GetApp().Write( 'content_updates', content_updates )
                                 
@@ -1698,7 +1698,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
     
     def __init__( self, my_parent, page_key, service_identifier, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, CC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
         
         self._rating_service_identifier = service_identifier
         self._service = wx.GetApp().Read( 'service', service_identifier )
@@ -1733,8 +1733,8 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                                 
                                 content_updates = []
                                 
-                                content_updates.extend( [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, self._rating_service_identifier, ( hash, ), info = 0.0 ) for hash in self._deleted_hashes ] )
-                                content_updates.extend( [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, self._rating_service_identifier, ( hash, ), info = 1.0 ) for hash in self._kept_hashes ] )
+                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING, self._rating_service_identifier, ( hash, ), info = 0.0 ) for hash in self._deleted_hashes ] )
+                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING, self._rating_service_identifier, ( hash, ), info = 1.0 ) for hash in self._kept_hashes ] )
                                 
                                 wx.GetApp().Write( 'content_updates', content_updates )
                                 
@@ -1770,7 +1770,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         self._service_identifier = service_identifier
         self._media_still_to_rate = { ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results }
         
-        self._file_query_result = CC.FileQueryResult( CC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+        self._file_query_result = CC.FileQueryResult( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
         
         if service_identifier.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
@@ -2331,8 +2331,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                         
                         content_updates = []
                         
-                        content_updates.extend( [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, self._service_identifier, ( hash, ), info = rating ) for ( hash, rating ) in certain_ratings ] )
-                        content_updates.extend( [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATINGS_FILTER, self._service_identifier, ( hash, ), info = ( min, max ) ) for ( hash, min, max ) in uncertain_ratings ] )
+                        content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING, self._service_identifier, ( hash, ), info = rating ) for ( hash, rating ) in certain_ratings ] )
+                        content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATINGS_FILTER, self._service_identifier, ( hash, ), info = ( min, max ) ) for ( hash, min, max ) in uncertain_ratings ] )
                         
                         wx.GetApp().Write( 'content_updates', content_updates )
                         
@@ -2437,7 +2437,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         def __init__( self, parent ):
             
             wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            Canvas.__init__( self, CC.LOCAL_FILE_SERVICE_IDENTIFIER, wx.GetApp().GetFullscreenImageCache() )
+            Canvas.__init__( self, HC.LOCAL_FILE_SERVICE_IDENTIFIER, wx.GetApp().GetFullscreenImageCache() )
             
             wx.CallAfter( self.Refresh )
             
@@ -2942,16 +2942,10 @@ class PDFButton( wx.Button ):
     
     def EventButton( self, event ):
         
-        existing_path = HC.CLIENT_FILES_DIR + os.path.sep + self._hash.encode( 'hex' )
+        path = HC.CLIENT_FILES_DIR + os.path.sep + self._hash.encode( 'hex' ) + '.pdf'
         
-        new_path = HC.TEMP_DIR + os.path.sep + self._hash.encode( 'hex' ) + '.pdf'
-        
-        try:
-            if not os.path.exists( new_path ): shutil.copy( existing_path, new_path )
-        except: pass
-        
-        # os.system( 'start ' + new_path )
-        subprocess.call( 'start "" "' + new_path + '"', shell = True )
+        # os.system( 'start ' + path )
+        subprocess.call( 'start "" "' + path + '"', shell = True )
         
     
 class Text( wx.Window ):

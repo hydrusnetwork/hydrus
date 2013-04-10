@@ -97,7 +97,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_INBOX )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
         
     
     def _CopyHashToClipboard( self ):
@@ -143,7 +143,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' ) )
+            display_media = self._focussed_media.GetDisplayMedia()
+            
+            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + display_media.GetHash().encode( 'hex' ) + HC.mime_ext_lookup[ display_media.GetMime() ] )
             
             wx.TheClipboard.SetData( data )
             
@@ -188,7 +190,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        try: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, file_service_identifier, hashes ) ] )
+                        try: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, file_service_identifier, hashes ) ] )
                         except: wx.MessageBox( traceback.format_exc() )
                         
                     
@@ -376,7 +378,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_ARCHIVE )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( CC.CONTENT_UPDATE_INBOX, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_INBOX, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
         
     
     def _ManageRatings( self ):
@@ -673,7 +675,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             action = content_update.GetAction()
             
-            if action == CC.CONTENT_UPDATE_DELETE and service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) and self._focussed_media in affected_media: self._SetFocussedMedia( None )
+            if action == HC.CONTENT_UPDATE_DELETE and service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) and self._focussed_media in affected_media: self._SetFocussedMedia( None )
             
             if len( affected_media ) > 0: self._ReblitMedia( affected_media )
             
@@ -691,7 +693,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         service_identifier = update.GetServiceIdentifier()
         
-        if action in ( CC.SERVICE_UPDATE_DELETE_PENDING, CC.SERVICE_UPDATE_RESET ): 
+        if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ): 
             
             self._RefitCanvas()
             
@@ -1170,7 +1172,7 @@ class MediaPanelThumbnails( MediaPanel ):
         if t is not None:
             
             if t.GetFileServiceIdentifiersCDPP().HasLocal(): self._FullScreen( t )
-            elif self._file_service_identifier != CC.NULL_SERVICE_IDENTIFIER: wx.GetApp().Write( 'add_downloads', self._file_service_identifier, t.GetHashes() )
+            elif self._file_service_identifier != HC.NULL_SERVICE_IDENTIFIER: wx.GetApp().Write( 'add_downloads', self._file_service_identifier, t.GetHashes() )
             
         
     
@@ -1464,7 +1466,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     if selection_has_archive: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
                     
                     menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), remove_phrase )
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
                     
                 
                 #menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export' ), export_phrase )
@@ -1609,8 +1611,8 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_home' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_IDENTIFIER ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', CC.LOCAL_FILE_SERVICE_IDENTIFIER ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_RETURN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_ENTER, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_up' ) ),
@@ -1767,7 +1769,7 @@ class Thumbnail( Selectable ):
             
             my_file_service_identifiers = self.GetFileServiceIdentifiersCDPP().GetCurrent()
             
-            if CC.LOCAL_FILE_SERVICE_IDENTIFIER in my_file_service_identifiers: thumbnail_file_service_identifier = CC.LOCAL_FILE_SERVICE_IDENTIFIER
+            if HC.LOCAL_FILE_SERVICE_IDENTIFIER in my_file_service_identifiers: thumbnail_file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER
             elif len( my_file_service_identifiers ) > 0: thumbnail_file_service_identifier = list( my_file_service_identifiers )[0]
             else: thumbnail_file_service_identifier = self._file_service_identifier
             
@@ -1926,7 +1928,7 @@ class Thumbnail( Selectable ):
         file_service_identifiers = self.GetFileServiceIdentifiersCDPP()
         
         if inbox: dc.DrawBitmap( CC.GlobalBMPs.inbox_bmp, width - 18, 0 )
-        elif CC.LOCAL_FILE_SERVICE_IDENTIFIER in file_service_identifiers.GetPending(): dc.DrawBitmap( CC.GlobalBMPs.downloading_bmp, width - 18, 0 )
+        elif HC.LOCAL_FILE_SERVICE_IDENTIFIER in file_service_identifiers.GetPending(): dc.DrawBitmap( CC.GlobalBMPs.downloading_bmp, width - 18, 0 )
         
         if self._dump_status == CC.DUMPER_DUMPED_OK: dc.DrawBitmap( CC.GlobalBMPs.dump_ok, width - 18, 18 )
         elif self._dump_status == CC.DUMPER_RECOVERABLE_ERROR: dc.DrawBitmap( CC.GlobalBMPs.dump_recoverable, width - 18, 18 )
@@ -1996,7 +1998,7 @@ class ThumbnailMediaCollection( Thumbnail, ClientGUIMixins.MediaCollection ):
         
         ClientGUIMixins.MediaCollection.ProcessContentUpdate( self, content_update )
         
-        if content_update.GetAction() == CC.CONTENT_UPDATE_ADD and content_update.GetServiceIdentifier() == CC.LOCAL_FILE_SERVICE_IDENTIFIER:
+        if content_update.GetAction() == HC.CONTENT_UPDATE_ADD and content_update.GetServiceIdentifier() == HC.LOCAL_FILE_SERVICE_IDENTIFIER:
             
             if self.GetDisplayMedia() in self._GetMedia( content_update.GetHashes() ): self.ReloadFromDB()
             
@@ -2014,6 +2016,6 @@ class ThumbnailMediaSingleton( Thumbnail, ClientGUIMixins.MediaSingleton ):
         
         ClientGUIMixins.MediaSingleton.ProcessContentUpdate( self, content_update )
         
-        if content_update.GetAction() == CC.CONTENT_UPDATE_ADD and content_update.GetServiceIdentifier() == CC.LOCAL_FILE_SERVICE_IDENTIFIER: self.ReloadFromDB()
+        if content_update.GetAction() == HC.CONTENT_UPDATE_ADD and content_update.GetServiceIdentifier() == HC.LOCAL_FILE_SERVICE_IDENTIFIER: self.ReloadFromDB()
         
     

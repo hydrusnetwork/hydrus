@@ -1,4 +1,5 @@
 import collections
+import httplib
 import HydrusPubSub
 import locale
 import os
@@ -9,6 +10,7 @@ import sys
 import threading
 import time
 import traceback
+import urlparse
 import wx
 import yaml
 
@@ -28,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 64
+SOFTWARE_VERSION = 65
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -42,6 +44,18 @@ shutdown = False
 is_first_start = False
 
 # Enums
+
+CONTENT_UPDATE_ADD = 0
+CONTENT_UPDATE_DELETE = 1
+CONTENT_UPDATE_PENDING = 2
+CONTENT_UPDATE_RESCIND_PENDING = 3
+CONTENT_UPDATE_PETITION = 4
+CONTENT_UPDATE_RESCIND_PETITION = 5
+CONTENT_UPDATE_EDIT_LOG = 6
+CONTENT_UPDATE_ARCHIVE = 7
+CONTENT_UPDATE_INBOX = 8
+CONTENT_UPDATE_RATING = 9
+CONTENT_UPDATE_RATINGS_FILTER = 10
 
 GET_DATA = 0
 POST_DATA = 1
@@ -126,6 +140,14 @@ SERVICE_INFO_NUM_PENDING = 11
 SERVICE_INFO_NUM_CONVERSATIONS = 12
 SERVICE_INFO_NUM_UNREAD = 13
 SERVICE_INFO_NUM_DRAFTS = 14
+
+SERVICE_UPDATE_ACCOUNT = 0
+SERVICE_UPDATE_DELETE_PENDING = 1
+SERVICE_UPDATE_ERROR = 2
+SERVICE_UPDATE_NEXT_BEGIN = 3
+SERVICE_UPDATE_RESET = 4
+SERVICE_UPDATE_REQUEST_MADE = 5
+SERVICE_UPDATE_LAST_CHECK = 6
 
 ADD = 0
 DELETE = 1
@@ -234,6 +256,13 @@ header_and_mime = [
 PREDICATE_TYPE_SYSTEM = 0
 PREDICATE_TYPE_TAG = 1
 PREDICATE_TYPE_NAMESPACE = 2
+
+SUBSCRIPTION_TYPE_DEVIANT_ART = 0
+SUBSCRIPTION_TYPE_GIPHY = 1
+SUBSCRIPTION_TYPE_PIXIV = 2
+SUBSCRIPTION_TYPE_BOORU = 3
+SUBSCRIPTION_TYPE_TUMBLR = 4
+SUBSCRIPTION_TYPE_HENTAI_FOUNDRY = 5
 
 SYSTEM_PREDICATE_TYPE_EVERYTHING = 0
 SYSTEM_PREDICATE_TYPE_INBOX = 1
@@ -968,6 +997,250 @@ def ThumbnailResolution( original_resolution, target_resolution ):
     
     return ( int( round( original_width ) ), int( round( original_height ) ) )
 
+class AdvancedHTTPConnection():
+    
+    def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
+        
+        if len( url ) > 0:
+            
+            parse_result = urlparse.urlparse( url )
+            
+            ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+            
+        
+        self._scheme = scheme
+        self._host = host
+        self._port = port
+        self._service_identifier = service_identifier
+        self._accept_cookies = accept_cookies
+        
+        self._cookies = {}
+        
+        if service_identifier is None: timeout = 30
+        else: timeout = 300
+        
+        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
+        else: self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
+        
+    
+    def close( self ): self._connection.close()
+    
+    def connect( self ): self._connection.connect()
+    
+    def GetCookies( self ): return self._cookies
+    
+    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True ):
+        
+        parse_result = urlparse.urlparse( url )
+        
+        request = parse_result.path
+        
+        query = parse_result.query
+        
+        if query != '': request += '?' + query
+        
+        return self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects )
+        
+    
+    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True ):
+        
+        if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + str( NETWORK_VERSION )
+        
+        if len( self._cookies ) > 0: headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in self._cookies.items() ] )
+        
+        try:
+            
+            self._connection.request( request_type, request, headers = headers, body = body )
+            
+            response = self._connection.getresponse()
+            
+            raw_response = response.read()
+            
+        except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
+            
+            # for some reason, we can't send a request on the current connection, so let's make a new one!
+            
+            try:
+                
+                if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
+                else: self._connection = httplib.HTTPSConnection( self._host, self._port )
+                
+                self._connection.request( request_type, request, headers = headers, body = body )
+                
+                response = self._connection.getresponse()
+                
+                raw_response = response.read()
+                
+            except:
+                print( traceback.format_exc() )
+                raise
+            
+        except:
+            print( traceback.format_exc() )
+            raise Exception( 'Could not connect to server' )
+        
+        if self._accept_cookies:
+            
+            for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
+                
+                try:
+                    
+                    cookie = cookie.replace( 'Set-Cookie: ', '' )
+                    
+                    if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
+                    
+                    ( k, v ) = cookie.split( '=' )
+                    
+                    self._cookies[ k ] = v
+                    
+                except: pass
+                
+            
+        
+        if len( raw_response ) > 0:
+            
+            content_type = response.getheader( 'Content-Type' )
+            
+            if content_type is not None:
+                
+                # additional info can be a filename or charset=utf-8 or whatever
+                
+                if content_type == 'text/html':
+                    
+                    mime_string = content_type
+                    
+                    try: raw_response = raw_response.decode( 'utf-8' )
+                    except: pass
+                    
+                elif '; ' in content_type:
+                    
+                    ( mime_string, additional_info ) = content_type.split( '; ' )
+                    
+                    if 'charset=' in additional_info:
+                        
+                        # this does utf-8, ISO-8859-4, whatever
+                        
+                        ( gumpf, charset ) = additional_info.split( '=' )
+                        
+                        try: raw_response = raw_response.decode( charset )
+                        except: pass
+                        
+                    
+                else: mime_string = content_type
+                
+                if mime_string in mime_enum_lookup and mime_enum_lookup[ mime_string ] == APPLICATION_YAML:
+                    
+                    try: parsed_response = yaml.safe_load( raw_response )
+                    except Exception as e: raise NetworkVersionException( 'Failed to parse a response object!' + os.linesep + unicode( e ) )
+                    
+                else: parsed_response = raw_response
+                
+            else: parsed_response = raw_response
+            
+        else: parsed_response = raw_response
+        
+        if self._service_identifier is not None:
+            
+            service_type = self._service_identifier.GetType()
+            
+            server_header = response.getheader( 'Server' )
+            
+            service_string = service_string_lookup[ service_type ]
+            
+            if server_header is None or service_string not in server_header:
+                
+                pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, GetUnknownAccount() ) )
+                
+                raise WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
+                
+            
+            if '?' in request: request_command = request.split( '?' )[0]
+            else: request_command = request
+            
+            if '/' in request_command: request_command = request_command.split( '/' )[1]
+            
+            if request_type == 'GET':
+                
+                if ( service_type, GET, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, self._service_identifier, len( raw_response ) ) )
+                
+            elif ( service_type, POST, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, self._service_identifier, len( body ) ) )
+            
+        
+        if response.status == 200: return parsed_response
+        elif response.status == 205: return
+        elif response.status in ( 301, 302, 303, 307 ):
+            
+            location = response.getheader( 'Location' )
+            
+            if location is None: raise Exception( data )
+            else:
+                
+                if not follow_redirects: return ''
+                
+                if is_redirect: raise Exception( 'Too many redirects!' )
+                
+                url = location
+                
+                parse_result = urlparse.urlparse( url )
+                
+                redirected_request = parse_result.path
+                
+                redirected_query = parse_result.query
+                
+                if redirected_query != '': redirected_request += '?' + redirected_query
+                
+                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+                
+                if ( scheme is None or scheme == self._scheme ) and ( request == redirected_request or request in redirected_request or redirected_request in request ): raise Exception( 'Redirection problem' )
+                else:
+                    
+                    if host is None or ( host == self._host and port == self._port ): connection = self
+                    else: connection = AdvancedHTTPConnection( url )
+                    
+                    if response.status in ( 301, 307 ):
+                        
+                        # 301: moved permanently, repeat request
+                        # 307: moved temporarily, repeat request
+                        
+                        return connection.request( request_type, redirected_request, headers = headers, body = body, is_redirect = True )
+                        
+                    elif response.status in ( 302, 303 ):
+                        
+                        # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
+                        # 303: thanks, now go here with GET
+                        
+                        return connection.request( 'GET', redirected_request, is_redirect = True )
+                        
+                    
+                
+            
+        elif response.status == 304: raise NotModifiedException()
+        else:
+            
+            if self._service_identifier is not None:
+                
+                pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ERROR, self._service_identifier, parsed_response ) )
+                
+                if response.status in ( 401, 426 ): pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, GetUnknownAccount() ) )
+                
+            
+            if response.status == 401: raise PermissionsException( parsed_response )
+            elif response.status == 403: raise ForbiddenException( parsed_response )
+            elif response.status == 404: raise NotFoundException( parsed_response )
+            elif response.status == 426: raise NetworkVersionException( parsed_response )
+            elif response.status in ( 500, 501, 502, 503 ):
+                
+                try: print( parsed_response )
+                except: pass
+                
+                raise Exception( parsed_response )
+                
+            else: raise Exception( parsed_response )
+           
+        
+    
+    def SetCookie( self, key, value ): self._cookies[ key ] = value
+    
 class HydrusYAMLBase( yaml.YAMLObject ):
     
     yaml_loader = yaml.SafeLoader
@@ -1304,6 +1577,10 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     def GetType( self ): return self._type
     
+LOCAL_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local files', LOCAL_FILE, 'local files' )
+LOCAL_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local tags', LOCAL_TAG, 'local tags' )
+NULL_SERVICE_IDENTIFIER = ClientServiceIdentifier( '', NULL_SERVICE, 'no service' )
+
 class ContentUpdate():
     
     def __init__( self, action, service_identifier, hashes, info = None ):
@@ -1380,11 +1657,12 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, name, callable, topics = [], period = 1200 ):
+    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3 ):
         
         DAEMON.__init__( self, name, callable, period )
         
         self._topics = topics
+        self._init_wait = init_wait
         
         self.start()
         
@@ -1393,7 +1671,7 @@ class DAEMONWorker( DAEMON ):
     
     def run( self ):
         
-        time.sleep( 3 )
+        self._event.wait( self._init_wait )
         
         while True:
             
@@ -1885,6 +2163,21 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     def GetPort( self ): return self._port
     
     def GetType( self ): return self._type
+    
+class ServiceUpdate():
+    
+    def __init__( self, action, service_identifier, info = None ):
+        
+        self._action = action # make this an enumerated thing, yo
+        self._service_identifier = service_identifier
+        self._info = info
+        
+    
+    def GetAction( self ): return self._action
+    
+    def GetInfo( self ): return self._info
+    
+    def GetServiceIdentifier( self ): return self._service_identifier
     
 # sqlite mod
 

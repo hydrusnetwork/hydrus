@@ -389,13 +389,13 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = tag_service_identifier
         
-        if self._file_service_identifier == CC.NULL_SERVICE_IDENTIFIER: name = 'all known files'
+        if self._file_service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known files'
         else: name = self._file_service_identifier.GetName()
         
         self._file_repo_button = wx.Button( self._dropdown_window, label = name )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
         
-        if self._tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER: name = 'all known tags'
+        if self._tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known tags'
         else: name = self._tag_service_identifier.GetName()
         
         self._tag_repo_button = wx.Button( self._dropdown_window, label = name )
@@ -423,8 +423,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        if len( service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', CC.NULL_SERVICE_IDENTIFIER ), 'all known files' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), 'local files' )
+        if len( service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known files' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 'local files' )
         
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service_identifier ), service_identifier.GetName() )
         
@@ -449,7 +449,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                     
                     self._file_service_identifier = service_identifier
                     
-                    if service_identifier == CC.NULL_SERVICE_IDENTIFIER: name = 'all known files'
+                    if service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known files'
                     else: name = service_identifier.GetName()
                     
                     self._file_repo_button.SetLabel( name )
@@ -462,7 +462,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                     
                     self._tag_service_identifier = service_identifier
                     
-                    if service_identifier == CC.NULL_SERVICE_IDENTIFIER: name = 'all known tags'
+                    if service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known tags'
                     else: name = service_identifier.GetName()
                     
                     self._tag_repo_button.SetLabel( name )
@@ -495,8 +495,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        if len( service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', CC.NULL_SERVICE_IDENTIFIER ), 'all known tags' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', CC.LOCAL_TAG_SERVICE_IDENTIFIER ), 'local tags' )
+        if len( service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known tags' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.LOCAL_TAG_SERVICE_IDENTIFIER ), 'local tags' )
         
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service_identifier ), service_identifier.GetName() )
         
@@ -578,7 +578,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._first_letters = ''
             self._current_namespace = ''
             
-            if self._file_service_identifier == CC.NULL_SERVICE_IDENTIFIER: s_i = self._tag_service_identifier
+            if self._file_service_identifier == HC.NULL_SERVICE_IDENTIFIER: s_i = self._tag_service_identifier
             else: s_i = self._file_service_identifier
             
             matches = wx.GetApp().Read( 'file_system_predicates', s_i )
@@ -626,7 +626,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         absolutely_all_tags = []
                         
-                        if self._tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+                        if self._tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                             
                             if self._include_current: absolutely_all_tags += [ list( current ) for ( current, deleted, pending, petitioned ) in [ tags.GetUnionCDPP() for tags in all_tags ] ]
                             if self._include_pending: absolutely_all_tags += [ list( pending ) for ( current, deleted, pending, petitioned ) in [ tags.GetUnionCDPP() for tags in all_tags ] ]
@@ -693,7 +693,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._options = wx.GetApp().Read( 'options' )
         
-        if self._options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = CC.NULL_SERVICE_IDENTIFIER
+        if self._options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.NULL_SERVICE_IDENTIFIER
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
         
@@ -2335,23 +2335,32 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
     
 class AdvancedImportOptions( AdvancedOptions ):
     
-    def __init__( self, parent ): AdvancedOptions.__init__( self, parent, 'advanced import options' )
+    def __init__( self, parent, initial_settings = {} ):
+        
+        self._initial_settings = initial_settings
+        
+        AdvancedOptions.__init__( self, parent, 'advanced import options' )
+        
     
     def _InitPanel( self, panel ):
         
         options = wx.GetApp().Read( 'options' )
         
         self._auto_archive = wx.CheckBox( panel )
-        self._auto_archive.SetValue( False )
+        if 'auto_archive' in self._initial_settings: self._auto_archive.SetValue( self._initial_settings[ 'auto_archive' ] )
+        else: self._auto_archive.SetValue( False )
         
         self._exclude_deleted = wx.CheckBox( panel )
-        self._exclude_deleted.SetValue( options[ 'exclude_deleted_files' ] )
+        if 'exclude_deleted_files' in self._initial_settings: self._exclude_deleted.SetValue( self._initial_settings[ 'exclude_deleted_files' ] )
+        else: self._exclude_deleted.SetValue( options[ 'exclude_deleted_files' ] )
         
         self._min_size = NoneableSpinCtrl( panel, 'minimum size (KB): ', 5120, multiplier = 1024 )
-        self._min_size.SetValue( None )
+        if 'min_size' in self._initial_settings: self._min_size.SetValue( self._initial_settings[ 'min_size' ] )
+        else: self._min_size.SetValue( None )
         
         self._min_resolution = NoneableSpinCtrl( panel, 'minimum resolution: ', ( 50, 50 ), num_dimensions = 2 )
-        self._min_resolution.SetValue( None )
+        if 'min_resolution' in self._initial_settings: self._min_resolution.SetValue( self._initial_settings[ 'min_resolution' ] )
+        else: self._min_resolution.SetValue( None )
         
         hbox1 = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2394,10 +2403,11 @@ class AdvancedImportOptions( AdvancedOptions ):
     
 class AdvancedTagOptions( AdvancedOptions ):
     
-    def __init__( self, parent, info_string, namespaces = [] ):
+    def __init__( self, parent, info_string, namespaces = [], initial_settings = {} ):
         
         self._info_string = info_string
         self._namespaces = namespaces
+        self._initial_settings = initial_settings
         
         self._checkboxes_to_service_identifiers = {}
         self._service_identifiers_to_namespaces = {}
@@ -2418,6 +2428,7 @@ class AdvancedTagOptions( AdvancedOptions ):
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 checkbox = wx.CheckBox( panel )
+                if service_identifier in self._initial_settings: checkbox.SetValue( True )
                 checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
                 
                 self._checkboxes_to_service_identifiers[ checkbox ] = service_identifier
@@ -2441,7 +2452,8 @@ class AdvancedTagOptions( AdvancedOptions ):
                         else: text = wx.StaticText( panel, label = namespace )
                         
                         namespace_checkbox = wx.CheckBox( panel )
-                        namespace_checkbox.SetValue( True )
+                        if service_identifier in self._initial_settings and namespace not in self._initial_settings[ service_identifier ]: namespace_checkbox.SetValue( False )
+                        else: namespace_checkbox.SetValue( True )
                         namespace_checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
                         
                         self._service_identifiers_to_namespaces[ service_identifier ].append( ( namespace, namespace_checkbox ) )
@@ -2471,11 +2483,18 @@ class AdvancedTagOptions( AdvancedOptions ):
             
         
     
+    def EventChecked( self, event ):
+        
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'advanced_tag_options_changed' ) ) )
+        
+        event.Skip()
+        
+    
     def GetInfo( self ):
         
         service_identifiers = [ self._checkboxes_to_service_identifiers[ checkbox ] for checkbox in self._checkboxes_to_service_identifiers.keys() if checkbox.GetValue() ]
         
-        result = []
+        result = {}
         
         for service_identifier in service_identifiers:
             
@@ -2491,17 +2510,10 @@ class AdvancedTagOptions( AdvancedOptions ):
                     
                 
             
-            result.append( ( service_identifier, good_namespaces ) )
+            result[ service_identifier ] = good_namespaces
             
         
         return result
-        
-    
-    def EventChecked( self, event ):
-        
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'advanced_tag_options_changed' ) ) )
-        
-        event.Skip()
         
     
 class RadioBox( StaticBox ):
@@ -2619,7 +2631,7 @@ class TagsBoxCPP( TagsBox ):
         
         self._page_key = page_key
         
-        self._tag_service_identifier = CC.NULL_SERVICE_IDENTIFIER
+        self._tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER
         self._last_media = None
         
         self._current_tags_to_count = {}
@@ -2967,8 +2979,10 @@ class TagsBoxPredicates( TagsBox ):
             
             for predicate in initial_predicates:
                 
-                self._ordered_strings.append( predicate )
-                self._strings_to_terms[ predicate ] = predicate
+                predicate_string = predicate.GetUnicode()
+                
+                self._ordered_strings.append( predicate_string )
+                self._strings_to_terms[ predicate_string ] = predicate
                 
             
             self._TextsHaveChanged()

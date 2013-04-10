@@ -349,7 +349,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._tag_service_identifiers = wx.Choice( self._tag_panel )
             self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, CC.NULL_SERVICE_IDENTIFIER )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.NULL_SERVICE_IDENTIFIER )
             
             self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
@@ -3397,7 +3397,7 @@ class DialogManage4chanPass( Dialog ):
             headers = {}
             headers[ 'Content-Type' ] = ct
             
-            connection = CC.AdvancedHTTPConnection( url = 'https://sys.4chan.org/', accept_cookies = True )
+            connection = HC.AdvancedHTTPConnection( url = 'https://sys.4chan.org/', accept_cookies = True )
             
             response = connection.request( 'POST', '/auth', headers = headers, body = body )
             
@@ -5240,7 +5240,7 @@ class DialogManagePixivAccount( Dialog ):
             headers = {}
             headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
             
-            connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net/', accept_cookies = True )
+            connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net/', accept_cookies = True )
             
             response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
             
@@ -5344,7 +5344,7 @@ class DialogManageRatings( Dialog ):
                     
                     rating = panel.GetRating()
                     
-                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_RATING, service_identifier, self._hashes, info = rating ) )
+                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_RATING, service_identifier, self._hashes, info = rating ) )
                     
                 
             
@@ -6115,26 +6115,12 @@ class DialogManageServices( Dialog ):
     
     def EventExport( self, event ):
         
-        services_listbook = self._listbook.GetCurrentPage()
-        
-        if services_listbook is not None:
+        try: self._CheckCurrentServiceIsValid()
+        except Exception as e:
             
-            service_panel = services_listbook.GetCurrentPage()
+            wx.MessageBox( unicode( e ) )
             
-            if service_panel is not None:
-                
-                ( service_identifier, credentials, extra_info ) = service_panel.GetInfo()
-                
-                old_name = services_listbook.GetCurrentName()
-                name = service_identifier.GetName()
-                
-                if old_name is not None and name != old_name:
-                    
-                    if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
-                    
-                    services_listbook.RenamePage( old_name, name )
-                    
-                
+            return
             
         
         services_listbook = self._listbook.GetCurrentPage()
@@ -6243,7 +6229,13 @@ class DialogManageServices( Dialog ):
     
     def Import( self, paths ):
         
-        self._CheckCurrentServiceIsValid()
+        try: self._CheckCurrentSubscriptionIsValid()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            return
+            
         
         for path in paths:
             
@@ -6524,6 +6516,521 @@ class DialogManageServices( Dialog ):
             
         
     
+class DialogManageSubscriptions( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._listbook = ClientGUICommon.ListBook( self )
+            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            types_to_listbooks = {}
+            
+            self._deviant_art = ClientGUICommon.ListBook( self._listbook )
+            self._deviant_art.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            self._hentai_foundry = ClientGUICommon.ListBook( self._listbook )
+            self._hentai_foundry.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            self._giphy = ClientGUICommon.ListBook( self._listbook )
+            self._giphy.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            self._pixiv = ClientGUICommon.ListBook( self._listbook )
+            self._pixiv.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            self._booru = ClientGUICommon.ListBook( self._listbook )
+            self._booru.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            self._tumblr = ClientGUICommon.ListBook( self._listbook )
+            self._tumblr.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
+            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_DEVIANT_ART ] = self._deviant_art
+            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY ] = self._hentai_foundry
+            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_GIPHY ] = self._giphy
+            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_PIXIV ] = self._pixiv
+            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_BOORU ] = self._booru
+            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_TUMBLR ] = self._tumblr
+            
+            for ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in self._original_subscriptions:
+                
+                listbook = types_to_listbooks[ subscription_type ]
+                
+                page_info = ( self._Panel, ( listbook, subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ), {} )
+                
+                listbook.AddPage( page_info, name )
+                
+            
+            self._listbook.AddPage( self._deviant_art, 'deviant art' )
+            self._listbook.AddPage( self._hentai_foundry, 'hentai foundry' )
+            self._listbook.AddPage( self._giphy, 'giphy' )
+            self._listbook.AddPage( self._pixiv, 'pixiv' )
+            self._listbook.AddPage( self._booru, 'booru' )
+            self._listbook.AddPage( self._tumblr, 'tumblr' )
+            
+            self._add = wx.Button( self, label='add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            self._add.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._remove = wx.Button( self, label='remove' )
+            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+            self._remove.SetForegroundColour( ( 128, 0, 0 ) )
+            
+            self._export = wx.Button( self, label='export' )
+            self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+            
+            self._ok = wx.Button( self, label='ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+            # these need to be below the addpages because they'd fire the events
+            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._listbook )
+            
+        
+        def InitialisePanel():
+            
+            add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            add_remove_hbox.AddF( self._add, FLAGS_MIXED )
+            add_remove_hbox.AddF( self._remove, FLAGS_MIXED )
+            add_remove_hbox.AddF( self._export, FLAGS_MIXED )
+            
+            ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            ok_hbox.AddF( self._ok, FLAGS_MIXED )
+            ok_hbox.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            vbox.AddF( self._listbook, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
+            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( 680, max( 720, y ) ) )
+            
+        
+        Dialog.__init__( self, parent, 'manage subscriptions' )
+        
+        self._original_subscriptions = wx.GetApp().Read( 'subscriptions' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+        self.SetDropTarget( ClientGUICommon.FileDropTarget( self.Import ) )
+        
+    
+    def _CheckCurrentSubscriptionIsValid( self ):
+        
+        subs_listbook = self._listbook.GetCurrentPage()
+        
+        if subs_listbook is not None:
+            
+            sub_panel = subs_listbook.GetCurrentPage()
+            
+            if sub_panel is not None:
+                
+                name = sub_panel.GetName()
+                old_name = subs_listbook.GetCurrentName()
+                
+                if old_name is not None and name != old_name:
+                    
+                    if subs_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    
+                    subs_listbook.RenamePage( old_name, name )
+                    
+                
+            
+        
+    
+    def EventAdd( self, event ):
+        
+        with wx.TextEntryDialog( self, 'Enter name for subscription' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                try:
+                    
+                    name = dlg.GetValue()
+                    
+                    subscription_listbook = self._listbook.GetCurrentPage()
+                    
+                    if subscription_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    
+                    if name == '': raise Exception( 'Please enter a nickname for the subscription.' )
+                    
+                    if subscription_listbook == self._deviant_art: subscription_type = HC.SUBSCRIPTION_TYPE_DEVIANT_ART
+                    elif subscription_listbook == self._hentai_foundry: subscription_type = HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY
+                    elif subscription_listbook == self._giphy: subscription_type = HC.SUBSCRIPTION_TYPE_GIPHY
+                    elif subscription_listbook == self._pixiv: subscription_type = HC.SUBSCRIPTION_TYPE_PIXIV
+                    elif subscription_listbook == self._booru: subscription_type = HC.SUBSCRIPTION_TYPE_BOORU
+                    elif subscription_listbook == self._tumblr: subscription_type = HC.SUBSCRIPTION_TYPE_TUMBLR
+                    
+                    if subscription_type in ( HC.SUBSCRIPTION_TYPE_DEVIANT_ART, HC.SUBSCRIPTION_TYPE_TUMBLR ): query_type = 'artist'
+                    else: query_type = 'tags'
+                    
+                    if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU: query_type = ( '', query_type )
+                    
+                    query = ''
+                    
+                    frequency_type = 86400
+                    frequency_number = 7
+                    
+                    advanced_tag_options = {}
+                    advanced_import_options = {} # blaaah not sure
+                    
+                    last_checked = None
+                    url_cache = set()
+                    
+                    page = self._Panel( subscription_listbook, subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                    
+                    subscription_listbook.AddPage( page, name, select = True )
+                    
+                except Exception as e:
+                    
+                    wx.MessageBox( unicode( e ) )
+                    
+                    self.EventAdd( event )
+                    
+                
+            
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventExport( self, event ):
+        
+        try: self._CheckCurrentSubscriptionIsValid()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            return
+            
+        
+        subscription_listbook = self._listbook.GetCurrentPage()
+        
+        if subscription_listbook is not None:
+            
+            sub_panel = subscription_listbook.GetCurrentPage()
+            
+            info = sub_panel.GetInfo()
+            
+            try:
+                
+                with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                        
+                    
+                
+            except:
+                
+                with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.yaml', style = wx.FD_SAVE ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                        
+                    
+                
+            
+        
+    
+    def EventOk( self, event ):
+        
+        try: self._CheckCurrentSubscriptionIsValid()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            return
+            
+        
+        all_pages = []
+        
+        all_pages.extend( self._deviant_art.GetNameToPageDict().values() )
+        all_pages.extend( self._hentai_foundry.GetNameToPageDict().values() )
+        all_pages.extend( self._giphy.GetNameToPageDict().values() )
+        all_pages.extend( self._pixiv.GetNameToPageDict().values() )
+        all_pages.extend( self._booru.GetNameToPageDict().values() )
+        all_pages.extend( self._tumblr.GetNameToPageDict().values() )
+        
+        subscriptions = [ page.GetInfo() for page in all_pages ]
+        
+        try: wx.GetApp().Write( 'subscriptions', subscriptions )
+        except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + unicode( e ) )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventPageChanging( self, event ):
+        
+        try: self._CheckCurrentSubscriptionIsValid()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            event.Veto()
+            
+        
+    
+    def EventRemove( self, event ):
+        
+        subscription_listbook = self._listbook.GetCurrentPage()
+        
+        sub_panel = subscription_listbook.GetCurrentPage()
+        
+        if sub_panel is not None: subscription_listbook.DeleteCurrentPage()
+        
+    
+    def EventServiceChanging( self, event ):
+        
+        try: self._CheckCurrentSubscriptionIsValid()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            event.Veto()
+            
+        
+    
+    def Import( self, paths ):
+        
+        try: self._CheckCurrentSubscriptionIsValid()
+        except Exception as e:
+            
+            wx.MessageBox( unicode( e ) )
+            
+            return
+            
+        
+        # do this
+        
+        return
+        
+        for path in paths:
+            
+            try:
+                
+                with open( path, 'rb' ) as f: file = f.read()
+                
+                ( service_identifier, credentials, extra_info ) = yaml.safe_load( file )
+                
+                name = service_identifier.GetName()
+                
+                service_type = service_identifier.GetType()
+                
+                if service_type == HC.TAG_REPOSITORY: services_listbook = self._tag_repositories
+                elif service_type == HC.FILE_REPOSITORY: services_listbook = self._file_repositories
+                elif service_type == HC.MESSAGE_DEPOT: services_listbook = self._message_depots
+                elif service_type == HC.SERVER_ADMIN: services_listbook = self._servers_admin
+                
+                self._listbook.SelectPage( services_listbook )
+                
+                if services_listbook.NameExists( name ):
+                    
+                    message = 'A service already exists with that name. Overwrite it?'
+                    
+                    with DialogYesNo( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            page = services_listbook.GetNameToPageDict()[ name ]
+                            
+                            page.Update( service_identifier, credentials, extra_info )
+                            
+                        
+                    
+                else:
+                    
+                    self._edit_log.append( ( 'add', ( service_identifier, credentials, extra_info ) ) )
+                    
+                    page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
+                    
+                    services_listbook.AddPage( page, name, select = True )
+                    
+                
+            except:
+                
+                wx.MessageBox( traceback.format_exc() )
+                
+            
+        
+    
+    class _Panel( wx.ScrolledWindow ):
+        
+        def __init__( self, parent, subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+            
+            wx.ScrolledWindow.__init__( self, parent )
+            
+            self.SetScrollRate( 0, 20 )
+            
+            self.SetMinSize( ( 540, 620 ) )
+            
+            advanced_tag_options = dict( advanced_tag_options ) # db yaml storage bug
+            
+            self._original_info = ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            
+            # init controls
+            
+            self._name_panel = ClientGUICommon.StaticBox( self, 'name' )
+            
+            self._name = wx.TextCtrl( self._name_panel, value = name )
+            
+            self._query_panel = ClientGUICommon.StaticBox( self, 'query' )
+            
+            self._query = wx.TextCtrl( self._query_panel, value = query )
+            
+            self._booru_selector = wx.ListBox( self._query_panel )
+            
+            if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU:
+                
+                ( booru_name, query_type ) = query_type
+                
+                boorus = wx.GetApp().Read( 'boorus' )
+                
+                i = 0
+                
+                index_to_select = 0
+                
+                for booru in boorus:
+                    
+                    self._booru_selector.Append( booru.GetName(), booru )
+                    
+                    if booru.GetName() == booru_name: index_to_select = i
+                    
+                    i += 1
+                    
+                
+                self._booru_selector.Select( index_to_select )
+                
+                initial_index = 1
+                
+            else:
+                
+                self._booru_selector.Hide()
+                
+                if query_type == 'artist': initial_index = 0
+                elif query_type == 'tags': initial_index = 1
+                
+            
+            self._query_type = ClientGUICommon.RadioBox( self._query_panel, 'query type', ( ( 'artist', 'artist' ), ( 'tags', 'tags' ) ), initial_index = initial_index )
+            
+            if subscription_type in ( HC.SUBSCRIPTION_TYPE_BOORU, HC.SUBSCRIPTION_TYPE_DEVIANT_ART, HC.SUBSCRIPTION_TYPE_GIPHY, HC.SUBSCRIPTION_TYPE_TUMBLR ): self._query_type.Hide()
+            
+            self._frequency_number = wx.SpinCtrl( self._query_panel )
+            self._frequency_number.SetValue( frequency_number )
+            
+            self._frequency_type = wx.Choice( self._query_panel )
+            
+            index_to_select = None
+            i = 0
+            
+            for ( title, time ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ):
+                
+                self._frequency_type.Append( title, time )
+                
+                if frequency_type == time: index_to_select = i
+                
+                i += 1
+                
+            
+            if index_to_select is not None: self._frequency_type.Select( index_to_select )
+            
+            self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
+            
+            if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU: namespaces = [ 'creator', 'series', 'character', '' ]
+            elif subscription_type == HC.SUBSCRIPTION_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
+            elif subscription_type == HC.SUBSCRIPTION_TYPE_GIPHY: namespaces = [ '' ]
+            elif subscription_type == HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
+            elif subscription_type == HC.SUBSCRIPTION_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
+            elif subscription_type == HC.SUBSCRIPTION_TYPE_TUMBLR: namespaces = [ '' ]
+            
+            self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send tags to ', namespaces, initial_settings = advanced_tag_options )
+            
+            self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self, initial_settings = advanced_import_options )
+            
+            # init panel
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._name_panel.AddF( self._name, FLAGS_EXPAND_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), FLAGS_MIXED )
+            hbox.AddF( self._frequency_number, FLAGS_MIXED )
+            hbox.AddF( self._frequency_type, FLAGS_MIXED )
+            
+            self._query_panel.AddF( self._query, FLAGS_EXPAND_PERPENDICULAR )
+            self._query_panel.AddF( self._query_type, FLAGS_EXPAND_PERPENDICULAR )
+            self._query_panel.AddF( self._booru_selector, FLAGS_EXPAND_PERPENDICULAR )
+            self._query_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            if last_checked is None: last_checked_message = 'not yet initialised'
+            else: last_checked_message = 'set this static text up'
+            
+            self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), FLAGS_EXPAND_PERPENDICULAR )
+            self._info_panel.AddF( wx.StaticText( self._info_panel, label = str( len( url_cache ) ) + ' urls in cache' ), FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._name_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._query_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._info_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def GetInfo( self ):
+            
+            ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = self._original_info
+            
+            name = self._name.GetValue()
+            
+            query_type = self._query_type.GetSelectedClientData()
+            
+            if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU:
+                
+                booru_name = self._booru_selector.GetStringSelection()
+                
+                query_type = ( booru_name, query_type )
+                
+            
+            query = self._query.GetValue()
+            
+            frequency_number = self._frequency_number.GetValue()
+            frequency_type = self._frequency_type.GetClientData( self._frequency_type.GetSelection() )
+            
+            advanced_tag_options = self._advanced_tag_options.GetInfo()
+            
+            advanced_tag_options = advanced_tag_options.items() # db yaml storage bug
+            
+            advanced_import_options = self._advanced_import_options.GetInfo()
+            
+            return ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            
+        
+        def GetName( self ): return self._name.GetValue()
+        
+        def Update( self, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+            
+            pass
+            
+            # do this
+            
+        
+    
 class DialogManageTagServicePrecedence( Dialog ):
     
     def __init__( self, parent ):
@@ -6667,7 +7174,7 @@ class DialogManageTags( Dialog ):
             
             service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) )
             
-            for service_identifier in list( service_identifiers ) + [ CC.LOCAL_TAG_SERVICE_IDENTIFIER ]:
+            for service_identifier in list( service_identifiers ) + [ HC.LOCAL_TAG_SERVICE_IDENTIFIER ]:
                 
                 service_type = service_identifier.GetType()
                 
@@ -6762,7 +7269,7 @@ class DialogManageTags( Dialog ):
                     
                     edit_log = page.GetEditLog()
                     
-                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, self._hashes, info = edit_log ) )
+                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, self._hashes, info = edit_log ) )
                     
                 
             
@@ -6909,8 +7416,8 @@ class DialogManageTags( Dialog ):
                     
                     self._edit_log = []
                     
-                    self._edit_log.extend( [ ( CC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
-                    self._edit_log.extend( [ ( CC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
+                    self._edit_log.extend( [ ( HC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
+                    self._edit_log.extend( [ ( HC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
                     
                 else:
                     
@@ -6920,7 +7427,7 @@ class DialogManageTags( Dialog ):
                         
                         self._tags_box.RescindPend( tag )
                         
-                        self._edit_log.append( ( CC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
+                        self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
                         
                     elif tag in self._petitioned_tags:
                         
@@ -6928,13 +7435,13 @@ class DialogManageTags( Dialog ):
                         
                         self._tags_box.RescindPetition( tag )
                         
-                        self._edit_log.append( ( CC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
+                        self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
                         
                     elif tag in self._current_tags:
                         
                         if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                             
-                            self._edit_log.append( ( CC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
+                            self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
                             
                             self._petitioned_tags.append( tag )
                             
@@ -6948,7 +7455,7 @@ class DialogManageTags( Dialog ):
                                 
                                 if dlg.ShowModal() == wx.ID_OK:
                                     
-                                    self._edit_log.append( ( CC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
+                                    self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
                                     
                                     self._petitioned_tags.append( tag )
                                     
@@ -6961,7 +7468,7 @@ class DialogManageTags( Dialog ):
                         
                         if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                             
-                            self._edit_log.append( ( CC.CONTENT_UPDATE_PENDING, tag ) )
+                            self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
                             
                             self._pending_tags.append( tag )
                             
@@ -6970,7 +7477,7 @@ class DialogManageTags( Dialog ):
                         
                     else:
                         
-                        self._edit_log.append( ( CC.CONTENT_UPDATE_PENDING, tag ) )
+                        self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
                         
                         self._pending_tags.append( tag )
                         
@@ -7390,9 +7897,9 @@ class DialogPathsToTagsRegex( Dialog ):
                     
                 
             
-            page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_IDENTIFIER, paths )
+            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER, paths )
             
-            name = CC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
+            name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
             
             self._tag_repositories.AddPage( page, name )
             
@@ -7586,7 +8093,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
                 
-                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 
                 #
                 
@@ -7596,7 +8103,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._single_tags = ClientGUICommon.TagsBoxFlat( self._single_tags_panel, self.SingleTagRemoved )
                 
-                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, CC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 self._single_tag_box.Disable()
                 
                 for path in self._paths:
@@ -8142,7 +8649,7 @@ class DialogRegisterService( Dialog ):
             return
             
         
-        connection = CC.AdvancedHTTPConnection( host = host, port = port )
+        connection = HC.AdvancedHTTPConnection( host = host, port = port )
         
         headers = {}
         

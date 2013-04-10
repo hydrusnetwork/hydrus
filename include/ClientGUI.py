@@ -100,7 +100,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        wx.CallAfter( self._NewPageQuery, CC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        wx.CallAfter( self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
     def _THREADUploadPending( self, service_identifier, job_key, cancel_event ):
@@ -156,8 +156,8 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     content_updates = []
                     
-                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings_object ]
-                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( reason, tag, hashes ) in petitions_object ]
+                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings_object ]
+                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( reason, tag, hashes ) in petitions_object ]
                     
                     wx.GetApp().Write( 'content_updates', content_updates )
                     
@@ -224,8 +224,8 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     content_updates = []
                     
-                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, good_hashes ) )
-                    content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, petitions_object.GetHashes() ) )
+                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, good_hashes ) )
+                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, petitions_object.GetHashes() ) )
                     
                     wx.GetApp().Write( 'content_updates', content_updates )
                     
@@ -644,6 +644,15 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
     
+    def _ManageSubscriptions( self ):
+        
+        try:
+            
+            with ClientGUIDialogs.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
+            
+        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        
+    
     def _ManageTagServicePrecedence( self ):
         
         try:
@@ -1012,6 +1021,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'manage_imageboards': self._ManageImageboards()
                 elif command == 'manage_pixiv_account': self._ManagePixivAccount()
                 elif command == 'manage_services': self._ManageServices( data )
+                elif command == 'manage_subscriptions': self._ManageSubscriptions()
                 elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
                 elif command == 'modify_account': self._ModifyAccount( data )
                 elif command == 'new_accounts': self._NewAccounts( data )
@@ -1144,7 +1154,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ), None ) ] )
+    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ), None ) ] )
     
     def RefreshAcceleratorTable( self ):
         
@@ -1195,7 +1205,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
         file.AppendSeparator()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&Options' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&Options' ) )
         file.AppendSeparator()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'exit' ), p( '&Exit' ) )
         
@@ -1207,7 +1217,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         view.AppendSeparator()
         view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
         view.AppendSeparator()
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', CC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
         for s_i in file_service_identifiers: view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', s_i ), p( 'New ' + s_i.GetName() + ' Search' ), p( 'Open a new search tab for ' + s_i.GetName() + '.' ) )
         if len( petition_resolve_tag_service_identifiers ) > 0 or len( petition_resolve_file_service_identifiers ) > 0:
             
@@ -1272,6 +1282,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_contacts' ), p( 'Manage &Contacts and Identities' ), p( 'Change the names and addresses of the people you talk to.' ) )
         services.AppendSeparator()
@@ -1580,7 +1591,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
             file_repos = [ ( 'page_query', service_identifier ) for service_identifier in [ service.GetServiceIdentifier() for service in self._services ] if service_identifier.GetType() == HC.FILE_REPOSITORY ]
             
-            entries = [ ( 'page_query', CC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
+            entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
             
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery': entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'menu', 'pixiv' ), ( 'page_import_gallery', 'tumblr' ) ]
@@ -2211,9 +2222,9 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
             
             action = update.GetAction()
             
-            if action == CC.SERVICE_UPDATE_RESET: self._service_identifier = update.GetInfo()
+            if action == HC.SERVICE_UPDATE_RESET: self._service_identifier = update.GetInfo()
             
-            if action in ( CC.SERVICE_UPDATE_ACCOUNT, CC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 200, self._DisplayAccountInfo )
+            if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 200, self._DisplayAccountInfo )
             else:
                 wx.CallLater( 200, self._DisplayService )
                 wx.CallLater( 400, self.Layout ) # ugly hack, but it works for now

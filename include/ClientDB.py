@@ -5,6 +5,7 @@ import httplib
 import itertools
 import HydrusConstants as HC
 import HydrusDocumentHandling
+import HydrusDownloading
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusMessageHandling
@@ -17,6 +18,7 @@ import Queue
 import random
 import shutil
 import sqlite3
+import stat
 import sys
 import threading
 import time
@@ -61,9 +63,11 @@ class FileDB():
                 
                 try:
                     
-                    path_from = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
+                    hash_id = self._GetHashId( c, hash )
                     
-                    mime = HC.GetMimeFromPath( path_from )
+                    mime = self._GetMime( c, self._local_file_service_id, hash_id )
+                    
+                    path_from = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
                     path_to = export_path + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
@@ -107,11 +111,11 @@ class FileDB():
                     
                     HC.pubsub.pub( 'progress_update', job_key, index, num_hashes, 'The client is now exporting the files to ' + export_path + ' (' + HC.ConvertIntToPrettyString( index + 1 ) + '/' + HC.ConvertIntToPrettyString( num_hashes ) + ')' )
                     
-                    path_from = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
+                    hash_id = self._GetHashId( c, hash )
                     
-                    mime = HC.GetMimeFromPath( path_from )
+                    mime = self._GetMime( c, self._local_file_service_id, hash_id )
                     
-                    # could search for some appropriate tags here, convert them to ascii or whatever, and make sure they are unique given the whole list
+                    path_from = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
                     path_to = export_path + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
@@ -152,7 +156,9 @@ class FileDB():
         
         try:
             
-            with open( HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ), 'rb' ) as f: file = f.read()
+            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+            
+            with open( HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], 'rb' ) as f: file = f.read()
             
         except MemoryError: print( 'Memory error!' )
         except: raise Exception( 'Could not find that file!' )
@@ -1192,8 +1198,8 @@ class RatingDB():
         c.executemany( 'INSERT INTO ratings ( service_id, hash_id, count, rating, score ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, self._GetHashId( c, hash ), count, rating, HC.CalculateScoreFromRating( count, rating ) ) for ( hash, count, rating ) in ratings if count > 0 ] )
         
         # these need count and score in
-        #self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
-        #self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
+        #self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
+        #self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
         
     
 class TagDB():
@@ -1298,13 +1304,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id_from, service_id_to, hash_id ) VALUES ( ?, ?, ? );', [ ( service_id, self._local_file_service_id, hash_id ) for hash_id in hash_ids ] )
         
         self.pub( 'notify_new_downloads' )
-        self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
-        self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, CC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
         
     
     def _AddFiles( self, c, files_info_rows ):
         
         # service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words
+        
+        for ( hash_id, mime ) in [ ( row[ 1 ], row[ 3 ] ) for row in files_info_rows ]:
+            
+            hash = self._GetHash( c, hash_id )
+            
+            with self._hashes_to_mimes_lock: self._hashes_to_mimes[ hash ] = mime
+            
         
         c.executemany( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', files_info_rows )
         
@@ -1379,14 +1392,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( new_hashes ) > 0:
             
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
             
         
         if len( deleted_hashes ) > 0:
             
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
             
         
         if len( new_hashes ) > 0 or len( deleted_hashes ) > 0: self.pub( 'notify_new_thumbnails' )
@@ -1501,7 +1514,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service_id = self._GetServiceId( c, service_identifier )
                 
-                if action == CC.SERVICE_UPDATE_ACCOUNT:
+                if action == HC.SERVICE_UPDATE_ACCOUNT:
                     
                     account = service_update.GetInfo()
                     
@@ -1510,8 +1523,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     do_new_permissions = True
                     
-                elif action == CC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( int( time.time() ), service_id ) )
-                elif action == CC.SERVICE_UPDATE_REQUEST_MADE: requests_made.append( ( service_id, service_update.GetInfo() ) )
+                elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( int( time.time() ), service_id ) )
+                elif action == HC.SERVICE_UPDATE_REQUEST_MADE: requests_made.append( ( service_id, service_update.GetInfo() ) )
                 
             except: pass
             
@@ -1585,11 +1598,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         deleted_mappings = [ deleted_mapping for deleted_mapping in update.GetDeletedMappings() ] # to clear generator
         
         if len( mappings ) > 0:
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
         if len( deleted_mappings ) > 0:
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
+            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
+            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
         
     
     def _AddUpdate( self, c, service_identifier, update ):
@@ -1624,8 +1637,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id_from, service_id_to, hash_id ) VALUES ( ?, ?, ? );', [ ( self._local_file_service_id, service_id, hash_id ) for hash_id in hash_ids ] )
         
         self.pub( 'notify_new_pending' )
-        self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-        self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+        self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+        self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
         
     
     def _AddWebSession( self, c, name, cookies, expiry ):
@@ -1715,13 +1728,31 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         local_files_hashes = set()
         
+        hashes_to_filenames = {}
+        
         for filename in cached_filenames:
             
-            try: local_files_hashes.add( filename.decode( 'hex' ) ) # this try ... except is for weird files that might have got into the directory by accident
+            try:
+                
+                ( hash, ext ) = filename.split( '.' )
+                
+                hash = hash.decode( 'hex' )
+                
+                local_files_hashes.add( hash ) # this try ... except is for weird files that might have got into the directory by accident
+                
+                hashes_to_filenames[ hash ] = filename
+                
             except: pass
             
         
-        for hash in local_files_hashes & deletee_hashes: os.remove( HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) )
+        for hash in local_files_hashes & deletee_hashes:
+            
+            path = HC.CLIENT_FILES_DIR + os.path.sep + hashes_to_filenames[ hash ]
+            
+            os.chmod( path, stat.S_IWRITE )
+            
+            os.remove( path )
+            
         
         # perceptual_hashes and thumbs
         
@@ -1785,7 +1816,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         self.pub( 'notify_new_pending' )
-        self.pub( 'service_update_db', CC.ServiceUpdate( CC.SERVICE_UPDATE_DELETE_PENDING, service_identifier ) )
+        self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING, service_identifier ) )
         
     
     def _DoFileQuery( self, c, query_key, search_context ):
@@ -1872,8 +1903,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         else:
             
-            if file_service_identifier != CC.NULL_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
-            elif tag_service_identifier != CC.NULL_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ?;', ( tag_service_id, ) ) }
+            if file_service_identifier != HC.NULL_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
+            elif tag_service_identifier != HC.NULL_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ?;', ( tag_service_id, ) ) }
             else: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
             
         
@@ -1885,7 +1916,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if include_current_tags:
                 
-                if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER: current_zero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_mappings;' ) }
+                if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: current_zero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_mappings;' ) }
                 else: current_zero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ?;', ( tag_service_id, ) ) }
                 
                 zero_tag_hash_ids = current_zero_tag_hash_ids
@@ -1893,7 +1924,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if include_pending_tags:
                 
-                if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER: pending_zero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_pending_mappings;' ) }
+                if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: pending_zero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_pending_mappings;' ) }
                 else: pending_zero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM pending_mappings WHERE service_id = ?;', ( tag_service_id, ) ) }
                 
                 zero_tag_hash_ids.update( pending_zero_tag_hash_ids )
@@ -1908,7 +1939,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if include_current_tags:
                 
-                if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER: current_nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_mappings;' ) }
+                if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: current_nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_mappings;' ) }
                 else: current_nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ?;', ( tag_service_id, ) ) }
                 
                 nonzero_tag_hash_ids = current_nonzero_tag_hash_ids
@@ -1916,7 +1947,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if include_pending_tags:
                 
-                if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER: pending_nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_pending_mappings;' ) }
+                if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: pending_nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM active_pending_mappings;' ) }
                 else: pending_nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM pending_mappings WHERE service_id = ?;', ( tag_service_id, ) ) }
                 
                 nonzero_tag_hash_ids.update( pending_nonzero_tag_hash_ids )
@@ -1996,8 +2027,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tag_service_identifiers = self._GetServiceIdentifiers( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         file_service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
         
-        tag_service_identifiers.add( CC.NULL_SERVICE_IDENTIFIER )
-        file_service_identifiers.add( CC.NULL_SERVICE_IDENTIFIER )
+        tag_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+        file_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
         
         for ( tag_service_identifier, file_service_identifier ) in itertools.product( tag_service_identifiers, file_service_identifiers ): self._GetAutocompleteTags( c, tag_service_identifier = tag_service_identifier, file_service_identifier = file_service_identifier )
         
@@ -2021,13 +2052,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return all_downloads
         
     
-    def _GetAutocompleteTags( self, c, tag_service_identifier = CC.NULL_SERVICE_IDENTIFIER, file_service_identifier = CC.NULL_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True ):
+    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, file_service_identifier = HC.NULL_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True ):
         
-        if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+        if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
             tag_service_id = None
             
-            if file_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            if file_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                 
                 file_service_id = None
                 
@@ -2046,7 +2077,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             tag_service_id = self._GetServiceId( c, tag_service_identifier )
             
-            if file_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            if file_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                 
                 file_service_id = None
                 
@@ -2169,9 +2200,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash_ids = set()
         
-        if file_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+        if file_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
-            if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                 
                 current_tables_phrase = 'active_mappings'
                 pending_tables_phrase = 'active_pending_mappings'
@@ -2194,7 +2225,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             file_service_id = self._GetServiceId( c, file_service_identifier )
             
-            if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                 
                 current_tables_phrase = '( active_mappings, files_info USING ( hash_id ) )'
                 pending_tables_phrase = '( active_pending_mappings, files_info USING ( hash_id ) )'
@@ -2227,9 +2258,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash_ids = set()
         
-        if file_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+        if file_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
-            if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                 
                 current_tables_phrase = 'active_mappings'
                 pending_tables_phrase = 'active_pending_mappings'
@@ -2252,7 +2283,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             file_service_id = self._GetServiceId( c, file_service_identifier )
             
-            if tag_service_identifier == CC.NULL_SERVICE_IDENTIFIER:
+            if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
                 
                 current_tables_phrase = '( active_mappings, files_info USING ( hash_id ) )'
                 pending_tables_phrase = '( active_pending_mappings, files_info USING ( hash_id ) )'
@@ -3108,6 +3139,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return shutdown_timestamps
         
     
+    def _GetSubscriptions( self, c ):
+        
+        result = c.execute( 'SELECT subscriptions FROM subscriptions;', ).fetchone()
+        
+        if result is None: return []
+        else:
+            
+            ( subscriptions, ) = result
+            
+            return subscriptions
+            
+        
+    
     def _GetTagServicePrecedence( self, c ):
         
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence ASC;' ) ]
@@ -3208,8 +3252,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) )
                 
-                self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
-                self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ARCHIVE, CC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
+                self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
+                self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
                 
             
             can_add = False
@@ -3278,11 +3322,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             timestamp = int( time.time() )
             
-            dest_path = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
+            dest_path = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
             
             if not os.path.exists( dest_path ):
                 
                 with open( dest_path, 'wb' ) as f: f.write( file )
+                
+                os.chmod( dest_path, stat.S_IREAD )
                 
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
@@ -3322,10 +3368,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             for ( service_identifier, tags ) in service_identifiers_to_tags.items():
                 
-                if service_identifier == CC.LOCAL_TAG_SERVICE_IDENTIFIER: edit_log = [ ( CC.CONTENT_UPDATE_ADD, tag ) for tag in tags ]
-                else: edit_log = [ ( CC.CONTENT_UPDATE_PENDING, tag ) for tag in tags ]
+                if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: edit_log = [ ( HC.CONTENT_UPDATE_ADD, tag ) for tag in tags ]
+                else: edit_log = [ ( HC.CONTENT_UPDATE_PENDING, tag ) for tag in tags ]
                 
-                content_updates = [ HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), edit_log ) ]
+                content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), edit_log ) ]
                 
                 self._ProcessContentUpdates( c, content_updates )
                 
@@ -3355,8 +3401,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             if media_result is not None: self.pub( 'add_media_result', page_key, media_result )
             
             if result == 'successful':
-                self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-                self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
             
             self.pub( 'import_done', page_key, result )
             
@@ -3397,8 +3443,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
         
         self.pub( 'notify_new_pending' )
-        self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
-        self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
+        self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
+        self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
         
     
     def _ProcessContentUpdates( self, c, content_updates ):
@@ -3419,10 +3465,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 hash_ids = self._GetHashIds( c, hashes )
                 
-                if action == CC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( c, hash_ids )
-                elif action == CC.CONTENT_UPDATE_INBOX: self._InboxFiles( c, hash_ids )
-                elif action == CC.CONTENT_UPDATE_DELETE: self._DeleteFiles( c, service_id, hash_ids )
-                elif action == CC.CONTENT_UPDATE_ADD:
+                if action == HC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( c, hash_ids )
+                elif action == HC.CONTENT_UPDATE_INBOX: self._InboxFiles( c, hash_ids )
+                elif action == HC.CONTENT_UPDATE_DELETE: self._DeleteFiles( c, service_id, hash_ids )
+                elif action == HC.CONTENT_UPDATE_ADD:
                     
                     # this is really 'uploaded' rather than a strict add, so may need to improve it in future!
                     
@@ -3439,7 +3485,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 info = content_update.GetInfo()
                 
-                if action == CC.CONTENT_UPDATE_EDIT_LOG:
+                if action == HC.CONTENT_UPDATE_EDIT_LOG:
                     
                     splayed_hash_ids = HC.SplayListForDB( hash_ids )
                     
@@ -3452,7 +3498,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     for ( action, info ) in edit_log:
                         
-                        if action == CC.CONTENT_UPDATE_ADD:
+                        if action == HC.CONTENT_UPDATE_ADD:
                             
                             tag = info
                             
@@ -3462,7 +3508,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             
-                        elif action == CC.CONTENT_UPDATE_DELETE:
+                        elif action == HC.CONTENT_UPDATE_DELETE:
                             
                             tag = info
                             
@@ -3485,7 +3531,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 info = content_update.GetInfo()
                 
-                if action == CC.CONTENT_UPDATE_ADD:
+                if action == HC.CONTENT_UPDATE_ADD:
                     
                     tag = info
                     
@@ -3493,7 +3539,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     self._UpdateMappings( c, service_id, [ ( namespace_id, tag_id, hash_ids ) ], [] )
                     
-                elif action == CC.CONTENT_UPDATE_DELETE:
+                elif action == HC.CONTENT_UPDATE_DELETE:
                     
                     tag = info
                     
@@ -3501,7 +3547,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     self._UpdateMappings( c, service_id, [], [ ( namespace_id, tag_id, hash_ids ) ] )
                     
-                elif action == CC.CONTENT_UPDATE_EDIT_LOG:
+                elif action == HC.CONTENT_UPDATE_EDIT_LOG:
                     
                     ( precedence, ) = c.execute( 'SELECT precedence FROM tag_service_precedence WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
@@ -3517,7 +3563,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     for ( action, info ) in edit_log:
                         
-                        if action == CC.CONTENT_UPDATE_PENDING:
+                        if action == HC.CONTENT_UPDATE_PENDING:
                             
                             tag = info
                             
@@ -3545,7 +3591,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             self._UpdateAutocompleteTagCacheFromActivePendingTags( c, namespace_id, tag_id, valid_hash_ids, 1 )
                             
-                        elif action == CC.CONTENT_UPDATE_RESCIND_PENDING:
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
                             
                             tag = info
                             
@@ -3567,7 +3613,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             self._UpdateAutocompleteTagCacheFromActivePendingTags( c, namespace_id, tag_id, actual_hash_ids_i_can_delete, -1 )
                             
-                        elif action == CC.CONTENT_UPDATE_PETITION:
+                        elif action == HC.CONTENT_UPDATE_PETITION:
                             
                             ( tag, reason ) = info
                             
@@ -3577,7 +3623,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             c.executemany( 'INSERT OR IGNORE INTO mapping_petitions VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, reason_id ) for hash_id in hash_ids ] )
                             
-                        elif action == CC.CONTENT_UPDATE_RESCIND_PETITION:
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
                             
                             tag = info
                             
@@ -3602,7 +3648,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 info = content_update.GetInfo()
                 
-                if action == CC.CONTENT_UPDATE_RATING:
+                if action == HC.CONTENT_UPDATE_RATING:
                     
                     rating = info
                     
@@ -3628,7 +3674,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
                         
                     
-                elif action == CC.CONTENT_UPDATE_RATINGS_FILTER:
+                elif action == HC.CONTENT_UPDATE_RATINGS_FILTER:
                     
                     ( min, max ) = info
                     
@@ -3725,7 +3771,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._AddService( c, new_service_identifier, credentials, extra_info )
         
-        self.pub( 'service_update_db', CC.ServiceUpdate( CC.SERVICE_UPDATE_RESET, service_identifier, new_service_identifier ) )
+        self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, service_identifier, new_service_identifier ) )
         self.pub( 'notify_new_pending' )
         self.pub( 'permissions_are_stale' )
         self.pub( 'log_message', 'database', 'reset ' + service_name )
@@ -3750,6 +3796,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.execute( 'DELETE FROM pixiv_account;' )
         
         c.execute( 'INSERT INTO pixiv_account ( pixiv_id, password ) VALUES ( ?, ? );', ( pixiv_id, password ) )
+        
+    
+    def _SetSubscriptions( self, c, subscriptions ):
+        
+        c.execute( 'DELETE FROM subscriptions;' )
+        
+        c.execute( 'INSERT INTO subscriptions ( subscriptions ) VALUES ( ? );', ( subscriptions, ) )
         
     
     def _SetTagServicePrecedence( self, c, service_identifiers ):
@@ -4044,7 +4097,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     c.execute( 'DELETE FROM services WHERE service_id = ?;', ( client_service_id, ) )
                     
-                    self.pub( 'service_update_db', CC.ServiceUpdate( CC.SERVICE_UPDATE_RESET, client_service_identifier ) )
+                    self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, client_service_identifier ) )
                     
                 
                 if len( names ) > 0: recalc_active_mappings = True
@@ -4077,7 +4130,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
-                self.pub( 'service_update_db', CC.ServiceUpdate( CC.SERVICE_UPDATE_RESET, service_identifier ) )
+                self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, service_identifier ) )
                 
                 service_type = service_identifier.GetType()
                 
@@ -4248,8 +4301,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     content_updates = []
                     
-                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in mappings_ids ]
-                    content_updates += [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids ]
+                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in mappings_ids ]
+                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids ]
                     
                     HC.pubsub.pub( 'progress_update', job_key, 6, 7, u'saving changes to gui' )
                     
@@ -4318,8 +4371,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 4, u'saving changes to gui' )
                         
                         if len( good_hash_ids ) > 0:
-                            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
-                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
+                            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
+                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
                         
                     
                     if num_petitions > 0:
@@ -4336,8 +4389,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             self._DeleteFiles( c, service_id, hash_ids )
                             
-                            self.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+                            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
+                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
                             
                         except Exception as e: raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_name + ':' + os.linesep + unicode( e ) )
                         
@@ -4401,6 +4454,8 @@ class DB( ServiceDB ):
         
         ( self._local_file_service_id, ) = c.execute( 'SELECT service_id FROM services WHERE type = ?;', ( HC.LOCAL_FILE, ) ).fetchone()
         
+        self._InitHashToMimeCache( c )
+        
         ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
         
         self._tag_service_precedence = self._GetTagServicePrecedence( c )
@@ -4408,6 +4463,13 @@ class DB( ServiceDB ):
         if not self._CheckPassword(): raise HC.PermissionException( 'No password!' )
         
         threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
+        
+    
+    def _InitHashToMimeCache( self, c ):
+        
+        self._hashes_to_mimes_lock = threading.Lock()
+        
+        self._hashes_to_mimes = { hash : mime for ( hash, mime ) in c.execute( 'SELECT hash, mime FROM hashes, files_info USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
         
     
     def _InitPostGUI( self ):
@@ -4432,6 +4494,7 @@ class DB( ServiceDB ):
         
         HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
         HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
+        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 1200 )
         HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
         HC.DAEMONWorker( 'SynchroniseRepositories', self.DAEMONSynchroniseRepositories, ( 'notify_new_permissions', ) )
@@ -4669,6 +4732,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX statuses_status_index ON statuses ( status );' )
             
+            c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
+            
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
             
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
@@ -4806,7 +4871,7 @@ class DB( ServiceDB ):
             
             CLIENT_DEFAULT_OPTIONS[ 'shortcuts' ] = shortcuts
             
-            CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = CC.LOCAL_TAG_SERVICE_IDENTIFIER
+            CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
             CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
             
             c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( CLIENT_DEFAULT_OPTIONS, ) )
@@ -5012,6 +5077,34 @@ class DB( ServiceDB ):
                     shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
                     
                     c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    
+                
+                if version < 65:
+                    
+                    wx.GetApp().SetSplashText( 'renaming db files' )
+                    
+                    filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
+                    
+                    i = 1
+                    
+                    for filename in filenames:
+                        
+                        old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
+                        
+                        mime = HC.GetMimeFromPath( old_path )
+                        
+                        new_path = old_path + HC.mime_ext_lookup[ mime ]
+                        
+                        shutil.move( old_path, new_path )
+                        
+                        os.chmod( new_path, stat.S_IREAD )
+                        
+                        i += 1
+                        
+                        if i % 250 == 0: wx.GetApp().SetSplashText( 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                        
+                    
+                    c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -5921,7 +6014,7 @@ class DB( ServiceDB ):
             
             ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'default_tag_repository' ] = CC.LOCAL_TAG_SERVICE_IDENTIFIER
+            self._options[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
             
             c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
             
@@ -6134,8 +6227,8 @@ class DB( ServiceDB ):
                         
                         self.Write( 'import_file', HC.LOW_PRIORITY, file )
                         
-                        HC.pubsub.pub( 'content_updates_data', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-                        HC.pubsub.pub( 'content_updates_gui', [ HC.ContentUpdate( CC.CONTENT_UPDATE_ADD, CC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                        HC.pubsub.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                        HC.pubsub.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
                         
                         self.pub( 'log_message', 'download files daemon', 'downloaded ' + hash.encode( 'hex' ) + ' from ' + file_repository.GetServiceIdentifier().GetName() )
                         
@@ -6203,6 +6296,50 @@ class DB( ServiceDB ):
         
     
     def DAEMONFlushServiceUpdates( self, update_log ): self.Write( 'service_updates', HC.HIGH_PRIORITY, update_log )
+    
+    def DAEMONResizeThumbnails( self ):
+        
+        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+        
+        full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
+        
+        resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
+        
+        thumbnail_paths_to_render = full_size_thumbnail_paths.difference( resized_thumbnail_paths )
+        
+        thumbnail_paths_to_render = list( thumbnail_paths_to_render )
+        
+        random.shuffle( thumbnail_paths_to_render )
+        
+        i = 0
+        
+        limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
+        
+        for thumbnail_path in thumbnail_paths_to_render:
+            
+            try:
+                
+                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+                
+                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
+                
+                thumbnail_resized_path_to = thumbnail_path + '_resized'
+                
+                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
+                
+            except: print( traceback.format_exc() )
+            
+            if limit > 10000: time.sleep( 0.10 )
+            elif limit > 1000: time.sleep( 0.5 )
+            else: time.sleep( 1 )
+            
+            i += 1
+            
+            if i > limit: break
+            
+            if HC.shutdown: break
+            
+        
     
     def DAEMONSynchroniseAccounts( self ):
         
@@ -6521,42 +6658,107 @@ class DB( ServiceDB ):
             
         
     
-    def THREADResizeThumbnails( self ):
+    def DAEMONSynchroniseSubscriptions( self ):
         
-        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+        subscriptions = wx.GetApp().Read( 'subscriptions' )
         
-        full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
+        updated_subscriptions = []
         
-        resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
-        
-        thumbnail_paths_to_render = full_size_thumbnail_paths.difference( resized_thumbnail_paths )
-        
-        i = 0
-        
-        limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
-        
-        for thumbnail_path in thumbnail_paths_to_render:
+        for ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions:
             
             try:
                 
-                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+                now = int( time.time() )
                 
-                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
+                do_tags = len( advanced_tag_options ) > 0
                 
-                thumbnail_resized_path_to = thumbnail_path + '_resized'
+                if last_checked + ( frequency_type * frequency_number ) > now:
+                    
+                    if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU:
+                        
+                        ( booru_name, query_type ) = query_type
+                        
+                        try: booru = wx.GetApp().Read( 'booru', booru_name )
+                        except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
+                        
+                        args = ( booru, query )
+                        
+                    elif subscription_type == HC.SUBSCRIPTION_TYPE_HENTAI_FOUNTDRY: args = ( query_type, query )
+                    elif subscription_type == HC.SUBSCRIPTION_TYPE_PIXIV: args = ( query_type, query )
+                    else: args = ( query, )
+                    
+                    downloader = HydrusDownloading.GetDownloader( subscription_type, *args )
+                    
+                    all_url_args = set()
+                    
+                    while len( urls.intersection( url_cache ) ) == 0:
+                        
+                        page_of_url_args = downloader.GetAnotherPage()
+                        
+                        if len( page_of_url_args ) == 0: break
+                        else: all_url_args.update( page_of_url_args )
+                        
+                    
+                    if len( all_url_args ) > 0:
+                        
+                        for url_args in all_url_args:
+                            
+                            url = url_args[0]
+                            
+                            url_cache.add( url )
+                            
+                            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+                            
+                            if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
+                            
+                            if status == 'redundant':
+                                
+                                if do_tags:
+                                    
+                                    try:
+                                        
+                                        tags = downloader.GetTags( *url_args )
+                                        
+                                        service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                        
+                                        content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( service_identifiers_to_tags )
+                                        
+                                        wx.GetApp().Write( 'content_updates', content_updates )
+                                        
+                                    except: pass
+                                    
+                                
+                            elif status == 'new':
+                                
+                                if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
+                                else:
+                                    
+                                    file = downloader.GetFile( *url_args )
+                                    
+                                    tags = []
+                                    
+                                
+                                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                
+                                wx.GetApp().Write( 'import', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                
+                            
+                        
+                    
+                    last_checked = now
+                    
                 
-                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
+            except:
                 
-            except: print( traceback.format_exc() )
+                last_checked = now + HC.UPDATE_DURATION
+                
+                # write an error to the normal log, maybe print to the text file log too
+                
             
-            time.sleep( 1 )
+            updated_subscriptions.append( ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) )
             
-            i += 1
-            
-            if i > limit: break
-            
-            if HC.shutdown: break
-            
+        
+        wx.GetApp().Write( 'subscriptions', updated_subscriptions )
         
     
     def ProcessRequest( self, request_type, request, request_args ):
@@ -6696,6 +6898,7 @@ class DB( ServiceDB ):
         elif action == 'services': result = self._GetServices( c, *args, **kwargs )
         elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
         elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
+        elif action == 'subscriptions': result = self._GetSubscriptions( c, *args, **kwargs )
         elif action == 'tag_service_precedence': result = self._tag_service_precedence
         elif action == 'thumbnail': result = self._GetThumbnail( *args, **kwargs )
         elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( c, *args, **kwargs )
@@ -6743,6 +6946,7 @@ class DB( ServiceDB ):
         elif action == 'session': self._AddSession( c, *args, **kwargs )
         elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
         elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
+        elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
         elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
         elif action == 'update': self._AddUpdate( c, *args, **kwargs )
         elif action == 'update_boorus': self._UpdateBoorus( c, *args, **kwargs )

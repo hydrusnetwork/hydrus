@@ -1,4 +1,5 @@
 import HydrusConstants as HC
+import HydrusDownloading
 import HydrusImageHandling
 import ClientConstants as CC
 import ClientConstantsMessages
@@ -244,7 +245,7 @@ class CaptchaControl( wx.Panel ):
         
         try:
             
-            connection = CC.AdvancedHTTPConnection( scheme = 'http', host = 'www.google.com', port = 80 )
+            connection = HC.AdvancedHTTPConnection( scheme = 'http', host = 'www.google.com', port = 80 )
             
             javascript_string = connection.request( 'GET', '/recaptcha/api/challenge?k=' + self._captcha_key )
             
@@ -346,7 +347,7 @@ class Comment( wx.Panel ):
     
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier = CC.LOCAL_FILE_SERVICE_IDENTIFIER ):
+    def __init__( self, parent, page, page_key, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
@@ -358,7 +359,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page = page
         self._page_key = page_key
         self._file_service_identifier = file_service_identifier
-        self._tag_service_identifier = CC.NULL_SERVICE_IDENTIFIER
+        self._tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER
         
         HC.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
         
@@ -400,7 +401,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._imageboard = imageboard
         
-        self._media_list = ClientGUIMixins.ListeningMediaList( CC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+        self._media_list = ClientGUIMixins.ListeningMediaList( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
         
         self._current_media = None
         
@@ -578,7 +579,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            connection = CC.AdvancedHTTPConnection( scheme = self._post_scheme, host = self._post_host, port = self._post_port )
+            connection = HC.AdvancedHTTPConnection( scheme = self._post_scheme, host = self._post_host, port = self._post_port )
             
             data = connection.request( 'POST', self._post_request, headers = headers, body = body )
             
@@ -622,9 +623,9 @@ class ManagementPanelDumper( ManagementPanel ):
         
         initial += str( index + 1 ) + '/' + str( num_files )
         
-        info = self._advanced_tag_options.GetInfo()
+        advanced_tag_options = self._advanced_tag_options.GetInfo()
         
-        for ( service_identifier, namespaces ) in info:
+        for ( service_identifier, namespaces ) in advanced_tag_options.items():
             
             ( current, deleted, pending, petitioned ) = media.GetTags().GetCDPP( service_identifier )
             
@@ -1028,7 +1029,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._media_list = ClientGUIMixins.ListeningMediaList( CC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+            self._media_list = ClientGUIMixins.ListeningMediaList( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
             
             new_media_to_dump_info = {}
             
@@ -1590,13 +1591,13 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
     # this could be in the advanced_tag_options class
     def _DoRedundantTagContentUpdates( self, hash, tags ):
         
-        tag_import_info = self._advanced_tag_options.GetInfo()
+        advanced_tag_options = self._advanced_tag_options.GetInfo()
         
-        if len( tag_import_info ) > 0:
+        if len( advanced_tag_options ) > 0:
             
             content_updates = []
             
-            for ( service_identifier, namespaces ) in tag_import_info:
+            for ( service_identifier, namespaces ) in advanced_tag_options.items():
                 
                 if len( namespaces ) > 0:
                     
@@ -1610,12 +1611,12 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     if len( tags_to_add_here ) > 0:
                         
-                        if service_identifier == CC.LOCAL_TAG_SERVICE_IDENTIFIER: action = CC.CONTENT_UPDATE_ADD
-                        else: action = CC.CONTENT_UPDATE_PENDING
+                        if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: action = HC.CONTENT_UPDATE_ADD
+                        else: action = HC.CONTENT_UPDATE_PENDING
                         
                         edit_log = [ ( action, tag ) for tag in tags_to_add_here ]
                         
-                        content_updates.append( HC.ContentUpdate( CC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), info = edit_log ) )
+                        content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), info = edit_log ) )
                         
                     
                 
@@ -1631,7 +1632,9 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         
         service_identifiers_to_tags = {}
         
-        for ( service_identifier, namespaces ) in self._advanced_tag_options.GetInfo():
+        advanced_tag_options = self._advanced_tag_options.GetInfo()
+        
+        for ( service_identifier, namespaces ) in advanced_tag_options.items():
             
             if len( namespaces ) > 0:
                 
@@ -1677,6 +1680,106 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             
         
     
+    def _THREADGetImportArgs( self, *url_args ):
+        
+        try:
+            
+            downloader = self._GetDownloader( 'example' )
+            
+            advanced_tag_options = self._advanced_tag_options.GetInfo()
+            
+            do_tags = len( advanced_tag_options ) > 0
+            
+            url = url_args[0]
+            
+            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+            
+            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+            
+            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
+            elif status == 'redundant':
+                
+                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                
+                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+                
+                if do_tags:
+                    
+                    tags = downloader.GetTags( *url_args )
+                    
+                    service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                    
+                    content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
+                    
+                    wx.GetApp().Write( 'content_updates', content_updates )
+                    
+                
+                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
+                
+            else:
+                
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                
+                if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
+                else:
+                    
+                    file = downloader.GetFile( *url_args )
+                    
+                    tags = []
+                    
+                
+                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                
+                advanced_import_options = self._advanced_import_options.GetInfo()
+                
+                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                
+            
+        except Exception as e:
+            print( traceback.format_exc() )
+            wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
+        
+    
+    def _THREADDownloadImportItems( self, raw_query ):
+        
+        # this is important, because we'll instantiate new objects in the eventcancel
+        
+        cancel_import = self._cancel_import_queue
+        cancel_download = self._cancel_outer_queue
+        
+        try:
+            
+            downloader = self._GetDownloader( raw_query )
+            
+            total_urls_found = 0
+            
+            while True:
+                
+                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_urls_found ) + ' urls' )
+                
+                while self._pause_outer_queue: time.sleep( 1 )
+                
+                if cancel_import.is_set(): break
+                if cancel_download.is_set(): break
+                
+                urls = downloader.GetAnotherPage()
+                
+                total_urls_found += len( urls )
+                
+                if len( urls ) == 0: break
+                else: wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
+                
+            
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
+            
+        except HC.NotFoundException: pass
+        except Exception as e:
+            print( traceback.format_exc() )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        
+        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        
+    
     def EventCancelOuterQueue( self, event ):
         
         self._cancel_outer_queue.set()
@@ -1714,146 +1817,11 @@ class ManagementPanelImportWithQueueAdvancedBooru( ManagementPanelImportWithQueu
         ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
         
     
-    def _GetImageUrlAndTags( self, html, url ):
+    def _GetDownloader( self, raw_tags ):
         
-        ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
+        tags = raw_tags.split( ' ' )
         
-        ( image_url, tags ) = ClientParsers.ParseBooruPage( html, url, tag_classnames_to_namespaces, image_id = image_id, image_data = image_data )
-        
-        return ( image_url, tags )
-        
-    
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        try:
-            
-            url = queue_object
-            
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                
-                tag_import_info = self._advanced_tag_options.GetInfo()
-                
-                if len( tag_import_info ) > 0:
-                    
-                    parse_result = urlparse.urlparse( url )
-                    
-                    ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                    
-                    if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                    
-                    connection = self._connections[ ( scheme, host, port ) ]
-                    
-                    html = connection.geturl( url )
-                    
-                    ( image_url, tags ) = self._GetImageUrlAndTags( html, url )
-                    
-                    self._DoRedundantTagContentUpdates( hash, tags )
-                    
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                html = connection.geturl( url )
-                
-                ( image_url, tags ) = self._GetImageUrlAndTags( html, url )
-                
-                parse_result = urlparse.urlparse( image_url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                file = connection.geturl( image_url )
-                
-                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
-                
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
-        
-    
-    def _THREADDownloadImportItems( self, tags_string ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            tags = tags_string.split( ' ' )
-            
-            ( search_url, gallery_advance_num, search_separator, thumb_classname ) = self._booru.GetGalleryParsingInfo()
-            
-            urls = []
-            
-            example_url = search_url.replace( '%tags%', search_separator.join( tags ) ).replace( '%index%', '0' )
-            
-            connection = CC.AdvancedHTTPConnection( url = example_url )
-            
-            if gallery_advance_num == 1: i = 1 # page 1, 2, 3
-            else: i = 0 # index 0, 25, 50
-            
-            total_urls_found = 0
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_urls_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                current_url = search_url.replace( '%tags%', search_separator.join( tags ) ).replace( '%index%', str( i * gallery_advance_num ) )
-                
-                html = connection.geturl( current_url )
-                
-                urls = ClientParsers.ParseBooruGallery( html, current_url, thumb_classname )
-                
-                total_urls_found += len( urls )
-                
-                if len( urls ) == 0: break
-                else: wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
-                
-                i += 1
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except HC.NotFoundException: pass
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        return HydrusDownloading.GetDownloader( HC.SUBSCRIPTION_TYPE_BOORU, self._booru, tags )
         
     
 class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWithQueueAdvanced ):
@@ -1897,7 +1865,7 @@ class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWit
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -1929,7 +1897,7 @@ class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWit
             
             example_url = gallery_url + '0'
             
-            connection = CC.AdvancedHTTPConnection( url = example_url )
+            connection = HC.AdvancedHTTPConnection( url = example_url )
             
             i = 0
             
@@ -1987,7 +1955,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
         
         ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
         
-        if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+        if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
         
         connection = self._connections[ ( scheme, host, port ) ]
         
@@ -2028,9 +1996,9 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 
-                tag_import_info = self._advanced_tag_options.GetInfo()
+                advanced_tag_options = self._advanced_tag_options.GetInfo()
                 
-                if len( tag_import_info ) > 0:
+                if len( advanced_tag_options ) > 0:
                     
                     try:
                         
@@ -2051,7 +2019,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -2085,7 +2053,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
             
             example_url = gallery_url + '0'
             
-            connection = CC.AdvancedHTTPConnection( url = example_url )
+            connection = HC.AdvancedHTTPConnection( url = example_url )
             
             i = 0
             
@@ -2194,9 +2162,9 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 
-                tag_import_info = self._advanced_tag_options.GetInfo()
+                advanced_tag_options = self._advanced_tag_options.GetInfo()
                 
-                if len( tag_import_info ) > 0:
+                if len( advanced_tag_options ) > 0:
                     
                     html = self._page_connection.geturl( url )
                     
@@ -2219,7 +2187,7 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -2242,8 +2210,8 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
         
         try:
             
-            self._search_connection = CC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
-            self._page_connection = CC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
+            self._search_connection = HC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
+            self._page_connection = HC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with hentai foundry' )
             
@@ -2461,9 +2429,9 @@ class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueu
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 
-                tag_import_info = self._advanced_tag_options.GetInfo()
+                advanced_tag_options = self._advanced_tag_options.GetInfo()
                 
-                if len( tag_import_info ) > 0:
+                if len( advanced_tag_options ) > 0:
                     
                     html = self._page_connection.geturl( url )
                     
@@ -2478,9 +2446,9 @@ class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueu
                 
                 HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
                 
-                tag_import_info = self._advanced_tag_options.GetInfo()
+                advanced_tag_options = self._advanced_tag_options.GetInfo()
                 
-                if len( tag_import_info ) > 0:
+                if len( advanced_tag_options ) > 0:
                     
                     html = self._page_connection.geturl( url )
                     
@@ -2492,7 +2460,7 @@ class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueu
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -2518,8 +2486,8 @@ class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueu
         
         try:
             
-            self._search_connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
-            self._page_connection = CC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+            self._search_connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+            self._page_connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with pixiv' )
             
@@ -2739,9 +2707,9 @@ class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQue
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 
-                tag_import_info = self._advanced_tag_options.GetInfo()
+                advanced_tag_options = self._advanced_tag_options.GetInfo()
                 
-                if len( tag_import_info ) > 0: self._DoRedundantTagContentUpdates( hash, tags )
+                if len( advanced_tag_options ) > 0: self._DoRedundantTagContentUpdates( hash, tags )
                 
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
                 
@@ -2753,7 +2721,7 @@ class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQue
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -2786,7 +2754,7 @@ class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQue
             
             example_url = search_url.replace( '%start%', '0' )
             
-            connection = CC.AdvancedHTTPConnection( url = example_url )
+            connection = HC.AdvancedHTTPConnection( url = example_url )
             
             i = 0
             
@@ -2895,7 +2863,7 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -2929,7 +2897,7 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'Connecting to address' )
             
-            try: connection = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+            try: connection = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
             except: raise Exception( 'Could not connect to server' )
             
             try: html = connection.geturl( url )
@@ -3024,7 +2992,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         try:
             
-            connection = CC.AdvancedHTTPConnection( url = url )
+            connection = HC.AdvancedHTTPConnection( url = url )
             
             raw_json = connection.geturl( url )
             
@@ -3104,7 +3072,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                     
                     ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                     
-                    if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = CC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                    if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
                     
                     connection = self._connections[ ( scheme, host, port ) ]
                     
@@ -3357,13 +3325,13 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             hashes = self._current_petition.GetPetitionHashes()
             
-            content_updates = [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes ) ]
+            content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes ) ]
             
         elif isinstance( self._current_petition, HC.ServerMappingPetition ):
             
             ( reason, tag, hashes ) = self._current_petition.GetPetitionInfo()
             
-            content_updates = [ HC.ContentUpdate( CC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes, tag ) ]
+            content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes, tag ) ]
             
         
         wx.GetApp().Write( 'content_updates', content_updates )
@@ -3453,7 +3421,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
         
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, CC.NULL_SERVICE_IDENTIFIER, self._page.GetMedia )
+        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, HC.NULL_SERVICE_IDENTIFIER, self._page.GetMedia )
         
         self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
         self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )

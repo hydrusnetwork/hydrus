@@ -88,8 +88,6 @@ class Controller( wx.App ):
             
             self.MaintainDB()
             
-            threading.Thread( target = self._db.THREADResizeThumbnails, name = 'Resize Thumbnails' ).start()
-            
         
     
     def EventPubSub( self, event ):
