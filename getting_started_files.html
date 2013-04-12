@@ -19,7 +19,7 @@
 			<p>On booting the client for the first time, you will be faced with a blank screen and little idea of what to do next. I advise you simply drag-and-drop a folder with a hundred or so images onto the main window. After a little parsing, a dialog will appear affirming what you want to import. Ok that and a new page will open. Thumbnails will stream in as the software processes each file.</p>
 			<p><a href="import.png"><img src="import.png" width="683" height="384" /></a></p>
 			<p>The files are being imported into the client's database. <a href="faq.html#filenames">The client discards their filenames.</a></p>
-			<p>Notice your original folder and its files are untouched. You can move the originals somewhere else, delete them, and the client will still return searches fine. In the same way, you can delete from the client, and the original files will remain unchanged; import is a <b>copy</b>, not a move, operation. The client performs all its operations on its internal database. If you find yourself enjoying using the client and decide to completely switch over, you may delete the original files you import without worry. You can always export them back again later (albeit with different filenames).</p>
+			<p>Notice your original folder and its files are untouched. You can move the originals somewhere else, delete them, and the client will still return searches fine. In the same way, you can delete from the client, and the original files will remain unchanged; import is a <b>copy</b>, not a move, operation. The client performs all its operations on its internal database. If you find yourself enjoying using the client and decide to completely switch over, you may delete the original files you import without worry. You can always export them back again later.</p>
 			<p>Now:</p>
 			<ul class="bulletpoint">
 				<li>Click on a thumbnail; see what happens.</li>
@@ -49,6 +49,7 @@
 				<li><b>image/png</b> (.png)</li>
 				<li><b>image/jpeg</b> (.jpg)</li>
 				<li><b>application/x-shockwave-flash</b> (.swf)</li>
+				<li><b>application/pdf</b> (.pdf)</li>
 				<li><b>video/x-flv</b> (.flv)</li>
 			</ul>
 			<p>The client can also download files from several websites, including 4chan, many boorus, and gallery sites like deviant art. The different options are under F9->download.</p>
@@ -78,19 +79,20 @@
 			<ul>
 				<li>
 					<p><b>raw export</b></p>
-					<p>Right clicking some files and selecting 'export all' will copy all those files from the database to your export folder, which is set in <i>file->options</i> and easily accessed in <i>file->open export folder</i>.</p>
-					<p>The files will have ugly filenames. It is on my to-do list to make them better, perhaps tag-based.</p>
-					<p>This is an ugly operation, but it is quick. It is best when you want to mass-export many thousands of files.</p>
+					<p>Right clicking some files and selecting 'export all' will open this dialog:</p>
+					<p><img src="export.png" /></p>
+					<p>Which lets you export (copy) the selected files wherever you like in your filesystem. The default export location is your export folder, which is set in <i>file->options</i>.</p>
+					<p>You can do a lot with this, so have a play with it. It'll start off trying to export by the files' hashes, which is fairly ugly, but once you learn about tags and namespaces, you'll be able to generate much cleverer and prettier filenames.</p>
 				</li>
 				<li>
 					<p><b>copy->copy all</b></p>
-					<p>Right clicking some files and selecting 'copy all' from the copy submenu will export the files to a temporary folder and copy their paths to your clipboard. You can then paste them wherever you like, just as with normal files. They will have the same ugly filenames as with a normal export.</p>
+					<p>Right clicking some files and selecting 'copy all' from the copy submenu will export the files to a temporary folder and copy their paths to your clipboard. You can then paste them wherever you like, just as with normal files. They will have their hashes for filenames.</p>
 					<p>This is a very quick operation, and can also be triggered by hitting Ctrl+C. It is best when you want to export just a few files somewhere for a temporary job.</p>
 				</li>
 				<li>
 					<p><b>copy->hash/hashes</b></p>
 					<p>Right clicking some files and selecting 'copy hash/hashes' will copy the files' unique identifiers to your clipboard.</p>
-					<p>You will not have to do this often. It is best when you want to tell someone else about a number of files without giving them the files.</p>
+					<p>You will not have to do this often. It is best when you want to tell someone else <i>about</i> a number of files without giving them the files.</p>
 				</li>
 				<li>
 					<p><b>copy->copy path/local url</b></p>
@@ -116,7 +118,7 @@
 			<p>The hydrus network has a service that lets clients share files anonymously, called a <i>file repository</i>.</p>
 			<p>It simply stores files in a big pool. Anyone who has an access key to the repository can see the pool's thumbnails and download anything they like. They may have permission to to upload to it as well. Admins can delete. I run a download-only file repository, which you are welcome to connect to to get a feel for the interface. Go <i>services->add, remove or edit services</i>.</p>
 			<p><img src="edit_repos_file_repo.png" /></p>
-			<ul><li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5@98.214.1.156:45872</li></ul>
+			<ul><li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5@hydrus.no-ip.org:45872</li></ul>
 			<p>Then go <i>services->review services</i> to see your client synchronise with the repository's file list.</p>
 			<p><img src="review_services.png" /></p>
 			<p>Hit F9, and you'll see a new "files->" page. It works exactly like a local search, it just uses a different file list. Files you do not have will be drawn with a dark background, those you do will be drawn as normal:</p>
