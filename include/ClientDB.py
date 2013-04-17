@@ -47,7 +47,7 @@ class FileDB():
         self.pub( 'new_thumbnails', [ hash for ( hash, thumbnail ) in thumbnails ] )
         
     
-    def _CopyFiles( self, hashes ):
+    def _CopyFiles( self, c, hashes ):
         
         if len( hashes ) > 0:
             
@@ -2617,7 +2617,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetMime( self, c, service_id, hash_id ):
         
-        result = c.execute( 'SELECT mime FROM files_info USING ( hash_id ) WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+        result = c.execute( 'SELECT mime FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
         if result is None: raise HC.NotFoundException( 'Could not find that file\'s mime!' )
         
@@ -3147,6 +3147,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         else:
             
             ( subscriptions, ) = result
+            
+            # dict( advanced_tag_options ) is a db yaml storage bug
+            subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, dict( advanced_tag_options ), advanced_import_options, last_checked, url_cache ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
             
             return subscriptions
             
@@ -3802,6 +3805,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.execute( 'DELETE FROM subscriptions;' )
         
+        # advanced_tag_options.items() is a db yaml storage bug
+        subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
+        
         c.execute( 'INSERT INTO subscriptions ( subscriptions ) VALUES ( ? );', ( subscriptions, ) )
         
     
@@ -4431,7 +4437,15 @@ class DB( ServiceDB ):
         temp_dir = HC.TEMP_DIR
         
         try:
-            if os.path.exists( temp_dir ): shutil.rmtree( temp_dir, ignore_errors = True )
+            
+            def make_temp_files_deletable( function_called, path, traceback_gumpf ):
+                
+                os.chmod( path, stat.S_IWRITE )
+                
+                function_called( path ) # try again
+                
+            
+            if os.path.exists( temp_dir ): shutil.rmtree( temp_dir, onerror = make_temp_files_deletable )
         except: pass
         
         try:
@@ -4497,7 +4511,7 @@ class DB( ServiceDB ):
         HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 1200 )
         HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
-        HC.DAEMONWorker( 'SynchroniseRepositories', self.DAEMONSynchroniseRepositories, ( 'notify_new_permissions', ) )
+        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', self.DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
         HC.DAEMONQueue( 'FlushRepositoryUpdates', self.DAEMONFlushServiceUpdates, 'service_update_db', period = 2 )
         
     
@@ -4534,6 +4548,13 @@ class DB( ServiceDB ):
         c.execute( 'PRAGMA recursive_triggers = ON;' )
         
         return ( db, c )
+        
+    
+    def _GetBooru( self, c, name ):
+        
+        ( booru, ) = c.execute( 'SELECT booru FROM boorus WHERE name = ?;', ( name, ) ).fetchone()
+        
+        return booru
         
     
     def _GetBoorus( self, c ):
@@ -4874,6 +4895,9 @@ class DB( ServiceDB ):
             CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
             CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
             
+            CLIENT_DEFAULT_OPTIONS[ 'pause_repo_sync' ] = False
+            CLIENT_DEFAULT_OPTIONS[ 'pause_subs_sync' ] = False
+            
             c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( CLIENT_DEFAULT_OPTIONS, ) )
             
             c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
@@ -5018,47 +5042,6 @@ class DB( ServiceDB ):
                 
                 self._UpdateDBOld( c, version )
                 
-                if version < 59:
-                    
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    shortcuts = self._options[ 'shortcuts' ]
-                    
-                    shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
-                    
-                    self._options[ 'fullscreen_borderless' ] = True
-                    self._options[ 'default_collect' ] = None
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
-                    
-                
-                if version < 60:
-                    
-                    c.execute( 'CREATE TABLE pixiv_account ( pixiv_id TEXT, password TEXT );' )
-                    
-                    c.execute( 'CREATE TABLE favourite_custom_filter_actions ( name TEXT, actions TEXT_YAML );' )
-                    
-                
-                if version < 61:
-                    
-                    c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
-                    
-                
-                if version < 63:
-                    
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    system_predicates = self._options[ 'file_system_predicates' ]
-                    
-                    ( sign, size, unit ) = system_predicates[ 'size' ]
-                    
-                    system_predicates[ 'size' ] = ( sign, size, 1 )
-                    
-                    system_predicates[ 'num_words' ] = ( 0, 30000 )
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
-                    
-                
                 if version < 64:
                     
                     c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
@@ -5112,6 +5095,20 @@ class DB( ServiceDB ):
                         
                     
                     c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
+                    
+                
+                if version < 66:
+                    
+                    c.execute( 'DELETE FROM boorus;' )
+                    
+                    c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
+                    
+                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    
+                    self._options[ 'pause_repo_sync' ] = False
+                    self._options[ 'pause_subs_sync' ] = False
+                    
+                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -6073,6 +6070,47 @@ class DB( ServiceDB ):
             c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
             
         
+        if version < 59:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            shortcuts = self._options[ 'shortcuts' ]
+            
+            shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
+            
+            self._options[ 'fullscreen_borderless' ] = True
+            self._options[ 'default_collect' ] = None
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 60:
+            
+            c.execute( 'CREATE TABLE pixiv_account ( pixiv_id TEXT, password TEXT );' )
+            
+            c.execute( 'CREATE TABLE favourite_custom_filter_actions ( name TEXT, actions TEXT_YAML );' )
+            
+        
+        if version < 61:
+            
+            c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
+            
+        
+        if version < 63:
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            system_predicates = self._options[ 'file_system_predicates' ]
+            
+            ( sign, size, unit ) = system_predicates[ 'size' ]
+            
+            system_predicates[ 'size' ] = ( sign, size, 1 )
+            
+            system_predicates[ 'num_words' ] = ( 0, 30000 )
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
     
     def _UpdateDBOldPost( self, c, version ):
         
@@ -6336,9 +6374,13 @@ class DB( ServiceDB ):
                 
             except: print( traceback.format_exc() )
             
-            if limit > 10000: time.sleep( 0.10 )
-            elif limit > 1000: time.sleep( 0.5 )
-            else: time.sleep( 1 )
+            if i % 10: time.sleep( 2 )
+            else:
+                
+                if limit > 10000: time.sleep( 0.05 )
+                elif limit > 1000: time.sleep( 0.25 )
+                else: time.sleep( 0.5 )
+                
             
             i += 1
             
@@ -6575,144 +6617,277 @@ class DB( ServiceDB ):
         self.Read( 'status_num_inbox', HC.LOW_PRIORITY )
         
     
-    def DAEMONSynchroniseRepositories( self ):
+    def DAEMONSynchroniseRepositoriesAndSubscriptions( self ):
         
-        service_identifiers = self.Read( 'service_identifiers', HC.LOW_PRIORITY, HC.REPOSITORIES )
+        # repos
         
-        for service_identifier in service_identifiers:
+        if not self._options[ 'pause_repo_sync' ]:
             
-            if HC.shutdown: raise Exception( 'Application shutting down!' )
+            service_identifiers = self.Read( 'service_identifiers', HC.LOW_PRIORITY, HC.REPOSITORIES )
             
-            try:
+            for service_identifier in service_identifiers:
                 
-                name = service_identifier.GetName()
+                if HC.shutdown: raise Exception( 'Application shutting down!' )
                 
-                service_type = service_identifier.GetType()
-                
-                try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
-                except: continue
-                
-                if service.CanUpdate():
+                try:
                     
-                    connection = service.GetConnection()
+                    name = service_identifier.GetName()
                     
-                    while service.CanUpdate():
+                    service_type = service_identifier.GetType()
+                    
+                    try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                    except: continue
+                    
+                    if service.CanUpdate():
                         
-                        if HC.shutdown: raise Exception( 'Application shutting down!' )
+                        connection = service.GetConnection()
                         
-                        first_begin = service.GetFirstBegin()
-                        
-                        next_begin = service.GetNextBegin()
-                        
-                        if first_begin == 0: update_index_string = 'initial update'
-                        else: update_index_string = 'update ' + str( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
-                        
-                        HC.pubsub.pub( 'service_status', 'Downloading and parsing ' + update_index_string + ' for ' + name )
-                        
-                        update = connection.Get( 'update', begin = next_begin )
-                        
-                        if service_type == HC.TAG_REPOSITORY:
+                        while service.CanUpdate():
                             
-                            HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
+                            paused_i = 0
                             
-                            self.Write( 'generate_tag_ids', HC.LOW_PRIORITY, update.GetTags() )
+                            while self._options[ 'pause_repo_sync' ]:
+                                
+                                HC.pubsub.pub( 'service_status', 'Repository synchronisation paused' )
+                                
+                                time.sleep( 5 )
+                                
+                                if HC.shutdown: raise Exception( 'Application shutting down!' )
+                                
+                                if paused_i == 10: return
+                                
+                                paused_i += 1
+                                
+                            
+                            if HC.shutdown: raise Exception( 'Application shutting down!' )
+                            
+                            first_begin = service.GetFirstBegin()
+                            
+                            next_begin = service.GetNextBegin()
+                            
+                            if first_begin == 0: update_index_string = 'initial update'
+                            else: update_index_string = 'update ' + str( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
+                            
+                            HC.pubsub.pub( 'service_status', 'Downloading and parsing ' + update_index_string + ' for ' + name )
+                            
+                            update = connection.Get( 'update', begin = next_begin )
+                            
+                            if service_type == HC.TAG_REPOSITORY:
+                                
+                                HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
+                                
+                                self.Write( 'generate_tag_ids', HC.LOW_PRIORITY, update.GetTags() )
+                                
+                            
+                            updates = update.SplitIntoSubUpdates()
+                            
+                            num_updates = len( updates )
+                            
+                            for ( i, sub_update ) in enumerate( updates ):
+                                
+                                self.Write( 'update', HC.LOW_PRIORITY, service_identifier, sub_update )
+                                
+                                HC.pubsub.pub( 'service_status', 'Processing ' + update_index_string + ' part ' + str( i + 1 ) + '/' + str( num_updates ) + ' for ' + name )
+                                
+                                wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                                
+                                self.WaitUntilGoodTimeToUseDBThread()
+                                
+                            
+                            HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string + ' (' + HC.ConvertTimestampToPrettyTime( update.GetEnd() ) + ')' )
+                            
+                            HC.pubsub.pub( 'notify_new_pending' )
+                            
+                            now = int( time.time() )
+                            
+                            for ( news, timestamp ) in update.GetNews():
+                                
+                                if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + news )
+                                
+                            
+                            try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                            except: break
                             
                         
-                        updates = update.SplitIntoSubUpdates()
-                        
-                        num_updates = len( updates )
-                        
-                        for ( i, sub_update ) in enumerate( updates ):
-                            
-                            self.Write( 'update', HC.LOW_PRIORITY, service_identifier, sub_update )
-                            
-                            HC.pubsub.pub( 'service_status', 'Processing ' + update_index_string + ' part ' + str( i + 1 ) + '/' + str( num_updates ) + ' for ' + name )
-                            
-                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
-                            
-                            self.WaitUntilGoodTimeToUseDBThread()
-                            
-                        
-                        HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string + ' (' + HC.ConvertTimestampToPrettyTime( update.GetEnd() ) + ')' )
-                        
-                        HC.pubsub.pub( 'notify_new_pending' )
-                        
-                        now = int( time.time() )
-                        
-                        for ( news, timestamp ) in update.GetNews():
-                            
-                            if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + news )
-                            
-                        
-                        try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
-                        except: break
+                        HC.pubsub.pub( 'service_status', '' )
                         
                     
-                    HC.pubsub.pub( 'service_status', '' )
+                except Exception as e:
                     
-                
-            except Exception as e:
-                
-                error_message = 'failed to update ' + name + ':' + os.linesep + os.linesep + unicode( e )
-                
-                HC.pubsub.pub( 'log_error', 'synchronise repositories daemon', error_message )
-                
-                HC.pubsub.pub( 'service_status', error_message )
-                
-                print( error_message )
-                print( traceback.format_exc() )
+                    error_message = 'failed to update ' + name + ':' + os.linesep + os.linesep + unicode( e )
+                    
+                    HC.pubsub.pub( 'log_error', 'synchronise repositories daemon', error_message )
+                    
+                    HC.pubsub.pub( 'service_status', error_message )
+                    
+                    print( error_message )
+                    print( traceback.format_exc() )
+                    
+                    time.sleep( 3 )
+                    
                 
             
-        
-    
-    def DAEMONSynchroniseSubscriptions( self ):
-        
-        subscriptions = wx.GetApp().Read( 'subscriptions' )
-        
-        updated_subscriptions = []
-        
-        for ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions:
+            time.sleep( 5 )
             
-            try:
+        
+        # subs
+        
+        if not self._options[ 'pause_subs_sync' ]:
+            
+            subscriptions = wx.GetApp().Read( 'subscriptions' )
+            
+            updated_subscriptions = []
+            
+            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions:
                 
-                now = int( time.time() )
+                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
                 
-                do_tags = len( advanced_tag_options ) > 0
+                advanced_tag_options = dict( advanced_tag_options )
                 
-                if last_checked + ( frequency_type * frequency_number ) > now:
+                try:
                     
-                    if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU:
-                        
-                        ( booru_name, query_type ) = query_type
-                        
-                        try: booru = wx.GetApp().Read( 'booru', booru_name )
-                        except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
-                        
-                        args = ( booru, query )
-                        
-                    elif subscription_type == HC.SUBSCRIPTION_TYPE_HENTAI_FOUNTDRY: args = ( query_type, query )
-                    elif subscription_type == HC.SUBSCRIPTION_TYPE_PIXIV: args = ( query_type, query )
-                    else: args = ( query, )
+                    HC.pubsub.pub( 'service_status', 'checking ' + name + ' subscription' )
                     
-                    downloader = HydrusDownloading.GetDownloader( subscription_type, *args )
+                    now = int( time.time() )
                     
-                    all_url_args = set()
+                    do_tags = len( advanced_tag_options ) > 0
                     
-                    while len( urls.intersection( url_cache ) ) == 0:
-                        
-                        page_of_url_args = downloader.GetAnotherPage()
-                        
-                        if len( page_of_url_args ) == 0: break
-                        else: all_url_args.update( page_of_url_args )
-                        
+                    if last_checked is None: last_checked = 0
                     
-                    if len( all_url_args ) > 0:
+                    if last_checked + ( frequency_type * frequency_number ) < now:
+                        
+                        if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
+                            
+                            try: booru = wx.GetApp().Read( 'booru', booru_name )
+                            except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
+                            
+                            tags = query.split( ' ' )
+                            
+                            all_args = ( ( booru, tags ), )
+                            
+                        elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY:
+                            
+                            info = {}
+                            
+                            info[ 'rating_nudity' ] = 3
+                            info[ 'rating_violence' ] = 3
+                            info[ 'rating_profanity' ] = 3
+                            info[ 'rating_racism' ] = 3
+                            info[ 'rating_sex' ] = 3
+                            info[ 'rating_spoilers' ] = 3
+                            
+                            info[ 'rating_yaoi' ] = 1
+                            info[ 'rating_yuri' ] = 1
+                            info[ 'rating_loli' ] = 1
+                            info[ 'rating_shota' ] = 1
+                            info[ 'rating_teen' ] = 1
+                            info[ 'rating_guro' ] = 1
+                            info[ 'rating_furry' ] = 1
+                            info[ 'rating_beast' ] = 1
+                            info[ 'rating_male' ] = 1
+                            info[ 'rating_female' ] = 1
+                            info[ 'rating_futa' ] = 1
+                            info[ 'rating_other' ] = 1
+                            
+                            info[ 'filter_media' ] = 'A'
+                            info[ 'filter_order' ] = 'date_new'
+                            info[ 'filter_type' ] = 0
+                            
+                            advanced_hentai_foundry_options = info
+                            
+                            if query_type == 'artist': all_args = ( ( 'artist pictures', query, advanced_hentai_foundry_options ), ( 'artist scraps', query, advanced_hentai_foundry_options ) )
+                            else:
+                                
+                                tags = query.split( ' ' )
+                                
+                                all_args = ( ( query_type, tags, advanced_hentai_foundry_options ), )
+                                
+                            
+                        elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: all_args = ( ( query_type, query ), )
+                        else: all_args = ( ( query, ), )
+                        
+                        downloaders = [ HydrusDownloading.GetDownloader( site_download_type, *args ) for args in all_args ]
+                        
+                        downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
+                        
+                        all_url_args = []
+                        
+                        while True:
+                            
+                            paused_i = 0
+                            
+                            while self._options[ 'pause_subs_sync' ]:
+                                
+                                HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
+                                
+                                time.sleep( 5 )
+                                
+                                if HC.shutdown: return
+                                
+                                if paused_i == 10: return
+                                
+                                paused_i += 1
+                                
+                            
+                            if HC.shutdown: return
+                            
+                            downloaders_to_remove = []
+                            
+                            for downloader in downloaders:
+                                
+                                page_of_url_args = downloader.GetAnotherPage()
+                                
+                                if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                                else:
+                                    
+                                    fresh_url_args = [ url_args for url_args in page_of_url_args if url_args[0] not in url_cache ]
+                                    
+                                    # i.e. we have hit the url cache, so no need to fetch any more pages
+                                    if len( fresh_url_args ) == 0 or len( fresh_url_args ) != len( page_of_url_args ): downloaders_to_remove.append( downloader )
+                                    
+                                    all_url_args.extend( fresh_url_args )
+                                    
+                                    HC.pubsub.pub( 'service_status', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
+                                    
+                                
+                            
+                            for downloader in downloaders_to_remove: downloaders.remove( downloader )
+                            
+                            if len( downloaders ) == 0: break
+                            
+                        
+                        all_url_args.reverse() # to do oldest first, just for neatness
+                        
+                        i = 1
+                        
+                        num_new = 0
                         
                         for url_args in all_url_args:
+                            
+                            paused_i = 0
+                            
+                            while self._options[ 'pause_subs_sync' ]:
+                                
+                                HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
+                                
+                                time.sleep( 5 )
+                                
+                                if HC.shutdown: return
+                                
+                                if paused_i == 10: return
+                                
+                                paused_i += 1
+                                
+                            
+                            if HC.shutdown: return
                             
                             url = url_args[0]
                             
                             url_cache.add( url )
+                            
+                            x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
+                            
+                            HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
                             
                             ( status, hash ) = wx.GetApp().Read( 'url_status', url )
                             
@@ -6724,11 +6899,13 @@ class DB( ServiceDB ):
                                     
                                     try:
                                         
+                                        HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                        
                                         tags = downloader.GetTags( *url_args )
                                         
                                         service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                                         
-                                        content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( service_identifiers_to_tags )
+                                        content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
                                         
                                         wx.GetApp().Write( 'content_updates', content_updates )
                                         
@@ -6736,6 +6913,10 @@ class DB( ServiceDB ):
                                     
                                 
                             elif status == 'new':
+                                
+                                num_new += 1
+                                
+                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : downloading file' )
                                 
                                 if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
                                 else:
@@ -6747,25 +6928,39 @@ class DB( ServiceDB ):
                                 
                                 service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                                 
-                                wx.GetApp().Write( 'import', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
+                                
+                                wx.GetApp().Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                 
                             
+                            i += 1
+                            
+                        
+                        HC.pubsub.pub( 'log_message', 'synchronise subscriptions daemon', 'found ' + HC.ConvertIntToPrettyString( num_new ) + ' new files for ' + name )
+                        
+                        last_checked = now
                         
                     
-                    last_checked = now
+                except Exception as e:
+                    
+                    last_checked = now + HC.UPDATE_DURATION
+                    
+                    print( traceback.format_exc() )
+                    
+                    HC.pubsub.pub( 'log_error', 'synchronise subscriptions daemon', 'problem with ' + name + ' ' + unicode( e ) )
+                    
+                    time.sleep( 3 )
                     
                 
-            except:
+                HC.pubsub.pub( 'service_status', '' )
                 
-                last_checked = now + HC.UPDATE_DURATION
+                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
                 
-                # write an error to the normal log, maybe print to the text file log too
+                updated_subscriptions.append( ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) )
                 
             
-            updated_subscriptions.append( ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) )
+            wx.GetApp().Write( 'subscriptions', updated_subscriptions )
             
-        
-        wx.GetApp().Write( 'subscriptions', updated_subscriptions )
         
     
     def ProcessRequest( self, request_type, request, request_args ):
@@ -6875,6 +7070,7 @@ class DB( ServiceDB ):
         elif action == 'all_downloads': result = self._GetAllDownloads( c, *args, **kwargs )
         elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
         elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
+        elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
         elif action == 'boorus': result = self._GetBoorus( c, *args, **kwargs )
         elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
         elif action == 'do_file_query': result = self._DoFileQuery( c, *args, **kwargs )
@@ -6926,7 +7122,7 @@ class DB( ServiceDB ):
         elif action == 'archive_conversation': self._ArchiveConversation( c, *args, **kwargs )
         elif action == 'contact_associated': self._AssociateContact( c, *args, **kwargs )
         elif action == 'content_updates': self._ProcessContentUpdates( c, *args, **kwargs )
-        elif action == 'copy_files': self._CopyFiles( *args, **kwargs )
+        elif action == 'copy_files': self._CopyFiles( c, *args, **kwargs )
         elif action == 'delete_conversation': self._DeleteConversation( c, *args, **kwargs )
         elif action == 'delete_draft': self._DeleteDraft( c, *args, **kwargs )
         elif action == 'delete_orphans': self._DeleteOrphans( c, *args, **kwargs )

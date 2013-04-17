@@ -89,7 +89,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         #self._dropdown_window = wx.Panel( self )
         
-        self._dropdown_window = wx.Frame( self.GetTopLevelParent(), style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
+        self._dropdown_window = wx.Frame( self, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
         
         self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
@@ -2333,6 +2333,33 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         return info
         
     
+    def SetInfo( self, info ):
+        
+        self._rating_nudity.SetSelection( info[ 'rating_nudity' ] )
+        self._rating_violence.SetSelection( info[ 'rating_violence' ] )
+        self._rating_profanity.SetSelection( info[ 'rating_profanity' ] )
+        self._rating_racism.SetSelection( info[ 'rating_racism' ] )
+        self._rating_sex.SetSelection( info[ 'rating_sex' ] )
+        self._rating_spoilers.SetSelection( info[ 'rating_spoilers' ] )
+        
+        self._rating_yaoi.SetValue( bool( info[ 'rating_yaoi' ] ) )
+        self._rating_yuri.SetValue( bool( info[ 'rating_yuri' ] ) )
+        self._rating_loli.SetValue( bool( info[ 'rating_loli' ] ) )
+        self._rating_shota.SetValue( bool( info[ 'rating_shota' ] ) )
+        self._rating_teen.SetValue( bool( info[ 'rating_teen' ] ) )
+        self._rating_guro.SetValue( bool( info[ 'rating_guro' ] ) )
+        self._rating_furry.SetValue( bool( info[ 'rating_furry' ] ) )
+        self._rating_beast.SetValue( bool( info[ 'rating_beast' ] ) )
+        self._rating_male.SetValue( bool( info[ 'rating_male' ] ) )
+        self._rating_female.SetValue( bool( info[ 'rating_female' ] ) )
+        self._rating_futa.SetValue( bool( info[ 'rating_futa' ] ) )
+        self._rating_other.SetValue( bool( info[ 'rating_other' ] ) )
+        
+        #info[ 'filter_media' ] = 'A'
+        self._filter_order.SetSelection( info[ 'filter_order' ] )
+        #info[ 'filter_type' ] = 0
+        
+    
 class AdvancedImportOptions( AdvancedOptions ):
     
     def __init__( self, parent, initial_settings = {} ):
@@ -2347,20 +2374,12 @@ class AdvancedImportOptions( AdvancedOptions ):
         options = wx.GetApp().Read( 'options' )
         
         self._auto_archive = wx.CheckBox( panel )
-        if 'auto_archive' in self._initial_settings: self._auto_archive.SetValue( self._initial_settings[ 'auto_archive' ] )
-        else: self._auto_archive.SetValue( False )
         
         self._exclude_deleted = wx.CheckBox( panel )
-        if 'exclude_deleted_files' in self._initial_settings: self._exclude_deleted.SetValue( self._initial_settings[ 'exclude_deleted_files' ] )
-        else: self._exclude_deleted.SetValue( options[ 'exclude_deleted_files' ] )
         
         self._min_size = NoneableSpinCtrl( panel, 'minimum size (KB): ', 5120, multiplier = 1024 )
-        if 'min_size' in self._initial_settings: self._min_size.SetValue( self._initial_settings[ 'min_size' ] )
-        else: self._min_size.SetValue( None )
         
         self._min_resolution = NoneableSpinCtrl( panel, 'minimum resolution: ', ( 50, 50 ), num_dimensions = 2 )
-        if 'min_resolution' in self._initial_settings: self._min_resolution.SetValue( self._initial_settings[ 'min_resolution' ] )
-        else: self._min_resolution.SetValue( None )
         
         hbox1 = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2381,6 +2400,25 @@ class AdvancedImportOptions( AdvancedOptions ):
         
         panel.SetSizer( vbox )
         
+        self._SetControls( self._initial_settings )
+        
+    
+    def _SetControls( self, info ):
+        
+        options = wx.GetApp().Read( 'options' )
+        
+        if 'auto_archive' in info: self._auto_archive.SetValue( info[ 'auto_archive' ] )
+        else: self._auto_archive.SetValue( False )
+        
+        if 'exclude_deleted_files' in info: self._exclude_deleted.SetValue( info[ 'exclude_deleted_files' ] )
+        else: self._exclude_deleted.SetValue( options[ 'exclude_deleted_files' ] )
+        
+        if 'min_size' in info: self._min_size.SetValue( info[ 'min_size' ] )
+        else: self._min_size.SetValue( None )
+        
+        if 'min_resolution' in info: self._min_resolution.SetValue( info[ 'min_resolution' ] )
+        else: self._min_resolution.SetValue( None )
+        
     
     def GetInfo( self ):
         
@@ -2400,6 +2438,8 @@ class AdvancedImportOptions( AdvancedOptions ):
         
         return info
         
+    
+    def SetInfo( self, info ): self._SetControls( info )
     
 class AdvancedTagOptions( AdvancedOptions ):
     
@@ -2514,6 +2554,29 @@ class AdvancedTagOptions( AdvancedOptions ):
             
         
         return result
+        
+    
+    def SetInfo( self, info ):
+        
+        for ( checkbox, service_identifier ) in self._checkboxes_to_service_identifiers.items():
+            
+            if service_identifier in info:
+                
+                checkbox.SetValue( True )
+                
+                for ( namespace, namespace_checkbox ) in self._service_identifiers_to_namespaces[ service_identifier ]:
+                    
+                    if namespace in info[ service_identifier ]: namespace_checkbox.SetValue( True )
+                    else: namespace_checkbox.SetValue( False )
+                    
+                
+            else:
+                
+                checkbox.SetValue( False )
+                
+                for ( namespace, namespace_checkbox ) in self._service_identifiers_to_namespaces[ service_identifier ]: namespace_checkbox.SetValue( True )
+                
+            
         
     
 class RadioBox( StaticBox ):

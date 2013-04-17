@@ -322,14 +322,14 @@ class PageImportPixivArtist( PageImport ):
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivArtist( self._search_preview_split, self, self._page_key )
     
-class PageImportPixivTags( PageImport ):
+class PageImportPixivTag( PageImport ):
     
     def __init__( self, parent ):
         
         PageImport.__init__( self, parent )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivTags( self._search_preview_split, self, self._page_key )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivTag( self._search_preview_split, self, self._page_key )
     
 class PageImportThreadWatcher( PageImport ):
     

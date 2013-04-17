@@ -2491,7 +2491,7 @@ class DialogManageBoorus( Dialog ):
             
             self._booru = booru
             
-            ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
+            ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
             
             def InitialiseControls():
                 
@@ -2508,9 +2508,8 @@ class DialogManageBoorus( Dialog ):
                 self._search_separator.Select( self._search_separator.FindString( search_separator ) )
                 self._search_separator.Bind( wx.EVT_CHOICE, self.EventHTML )
                 
-                self._gallery_advance_num = wx.SpinCtrl( self._search_panel, min = 1, max = 1000 )
-                self._gallery_advance_num.SetValue( gallery_advance_num )
-                self._gallery_advance_num.Bind( wx.EVT_SPIN, self.EventHTML )
+                self._advance_by_page_num = wx.CheckBox( self._search_panel )
+                self._advance_by_page_num.SetValue( advance_by_page_num )
                 
                 self._thumb_classname = wx.TextCtrl( self._search_panel, value = thumb_classname )
                 self._thumb_classname.Bind( wx.EVT_TEXT, self.EventHTML )
@@ -2573,8 +2572,8 @@ class DialogManageBoorus( Dialog ):
                 gridbox.AddF( self._search_url, FLAGS_EXPAND_BOTH_WAYS )
                 gridbox.AddF( wx.StaticText( self._search_panel, label='search tag separator' ), FLAGS_MIXED )
                 gridbox.AddF( self._search_separator, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label='gallery page advance' ), FLAGS_MIXED )
-                gridbox.AddF( self._gallery_advance_num, FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.AddF( wx.StaticText( self._search_panel, label='advance by page num' ), FLAGS_MIXED )
+                gridbox.AddF( self._advance_by_page_num, FLAGS_EXPAND_BOTH_WAYS )
                 gridbox.AddF( wx.StaticText( self._search_panel, label='thumbnail classname' ), FLAGS_MIXED )
                 gridbox.AddF( self._thumb_classname, FLAGS_EXPAND_BOTH_WAYS )
                 
@@ -2635,7 +2634,7 @@ class DialogManageBoorus( Dialog ):
             
             search_separator = self._search_separator.GetStringSelection()
             
-            gallery_advance_num = self._gallery_advance_num.GetValue()
+            advance_by_page_num = self._advance_by_page_num.GetValue()
             
             thumb_classname = self._thumb_classname.GetValue()
             
@@ -2652,7 +2651,7 @@ class DialogManageBoorus( Dialog ):
             
             tag_classnames_to_namespaces = { tag_classname : namespace for ( tag_classname, namespace ) in [ self._tag_classnames_to_namespaces.GetClientData( i ) for i in range( self._tag_classnames_to_namespaces.GetCount() ) ] }
             
-            return ( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+            return ( booru_name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
             
         
         def EventAdd( self, event ):
@@ -2690,22 +2689,22 @@ class DialogManageBoorus( Dialog ):
         
         def GetBooru( self ):
             
-            ( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._GetInfo()
+            ( booru_name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._GetInfo()
             
-            return CC.Booru( booru_name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+            return CC.Booru( booru_name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
             
         
         def HasChanges( self ):
             
-            ( booru_name, my_search_url, my_search_separator, my_gallery_advance_num, my_thumb_classname, my_image_id, my_image_data, my_tag_classnames_to_namespaces ) = self._GetInfo()
+            ( booru_name, my_search_url, my_search_separator, my_advance_by_page_num, my_thumb_classname, my_image_id, my_image_data, my_tag_classnames_to_namespaces ) = self._GetInfo()
             
-            ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
+            ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
             
             if search_url != my_search_url: return True
             
             if search_separator != my_search_separator: return True
             
-            if gallery_advance_num != my_gallery_advance_num: return True
+            if advance_by_page_num != my_advance_by_page_num: return True
             
             if thumb_classname != my_thumb_classname: return True
             
@@ -2720,13 +2719,13 @@ class DialogManageBoorus( Dialog ):
         
         def Update( self, booru ):
             
-            ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
+            ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = booru.GetData()
             
             self._search_url.SetValue( search_url )
             
             self._search_separator.Select( self._search_separator.FindString( search_separator ) )
             
-            self._gallery_advance_num.SetValue( gallery_advance_num )
+            self._advance_by_page_num.SetValue( advance_by_page_num )
             
             self._thumb_classname.SetValue( thumb_classname )
             
@@ -6545,18 +6544,18 @@ class DialogManageSubscriptions( Dialog ):
             self._tumblr = ClientGUICommon.ListBook( self._listbook )
             self._tumblr.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
-            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_DEVIANT_ART ] = self._deviant_art
-            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY ] = self._hentai_foundry
-            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_GIPHY ] = self._giphy
-            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_PIXIV ] = self._pixiv
-            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_BOORU ] = self._booru
-            types_to_listbooks[ HC.SUBSCRIPTION_TYPE_TUMBLR ] = self._tumblr
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART ] = self._deviant_art
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY ] = self._hentai_foundry
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_GIPHY ] = self._giphy
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_PIXIV ] = self._pixiv
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_BOORU ] = self._booru
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_TUMBLR ] = self._tumblr
             
-            for ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in self._original_subscriptions:
+            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in self._original_subscriptions:
                 
-                listbook = types_to_listbooks[ subscription_type ]
+                listbook = types_to_listbooks[ site_download_type ]
                 
-                page_info = ( self._Panel, ( listbook, subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ), {} )
+                page_info = ( self._Panel, ( listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ), {} )
                 
                 listbook.AddPage( page_info, name )
                 
@@ -6664,17 +6663,17 @@ class DialogManageSubscriptions( Dialog ):
                     
                     if name == '': raise Exception( 'Please enter a nickname for the subscription.' )
                     
-                    if subscription_listbook == self._deviant_art: subscription_type = HC.SUBSCRIPTION_TYPE_DEVIANT_ART
-                    elif subscription_listbook == self._hentai_foundry: subscription_type = HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY
-                    elif subscription_listbook == self._giphy: subscription_type = HC.SUBSCRIPTION_TYPE_GIPHY
-                    elif subscription_listbook == self._pixiv: subscription_type = HC.SUBSCRIPTION_TYPE_PIXIV
-                    elif subscription_listbook == self._booru: subscription_type = HC.SUBSCRIPTION_TYPE_BOORU
-                    elif subscription_listbook == self._tumblr: subscription_type = HC.SUBSCRIPTION_TYPE_TUMBLR
+                    if subscription_listbook == self._deviant_art: site_download_type = HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART
+                    elif subscription_listbook == self._hentai_foundry: site_download_type = HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY
+                    elif subscription_listbook == self._giphy: site_download_type = HC.SITE_DOWNLOAD_TYPE_GIPHY
+                    elif subscription_listbook == self._pixiv: site_download_type = HC.SITE_DOWNLOAD_TYPE_PIXIV
+                    elif subscription_listbook == self._booru: site_download_type = HC.SITE_DOWNLOAD_TYPE_BOORU
+                    elif subscription_listbook == self._tumblr: site_download_type = HC.SITE_DOWNLOAD_TYPE_TUMBLR
                     
-                    if subscription_type in ( HC.SUBSCRIPTION_TYPE_DEVIANT_ART, HC.SUBSCRIPTION_TYPE_TUMBLR ): query_type = 'artist'
+                    if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): query_type = 'artist'
                     else: query_type = 'tags'
                     
-                    if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU: query_type = ( '', query_type )
+                    if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( '', query_type )
                     
                     query = ''
                     
@@ -6687,7 +6686,7 @@ class DialogManageSubscriptions( Dialog ):
                     last_checked = None
                     url_cache = set()
                     
-                    page = self._Panel( subscription_listbook, subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                    page = self._Panel( subscription_listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
                     
                     subscription_listbook.AddPage( page, name, select = True )
                     
@@ -6719,25 +6718,36 @@ class DialogManageSubscriptions( Dialog ):
             
             sub_panel = subscription_listbook.GetCurrentPage()
             
-            info = sub_panel.GetInfo()
-            
-            try:
+            if sub_panel is not None:
                 
-                with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
-                        
-                    
+                name = subscription_listbook.GetCurrentName()
                 
-            except:
+                info = sub_panel.GetInfo()
                 
-                with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.yaml', style = wx.FD_SAVE ) as dlg:
+                ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = info
+                
+                advanced_tag_options = advanced_tag_options.items() # yaml parsing bug
+                
+                info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                
+                try:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                            
+                        
+                    
+                except:
+                    
+                    with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.yaml', style = wx.FD_SAVE ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                            
                         
                     
                 
@@ -6767,6 +6777,8 @@ class DialogManageSubscriptions( Dialog ):
         
         try: wx.GetApp().Write( 'subscriptions', subscriptions )
         except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + unicode( e ) )
+        
+        HC.pubsub.pub( 'notify_new_subscriptions' )
         
         self.EndModal( wx.ID_OK )
         
@@ -6812,26 +6824,22 @@ class DialogManageSubscriptions( Dialog ):
             return
             
         
-        # do this
-        
-        return
-        
         for path in paths:
             
             try:
                 
                 with open( path, 'rb' ) as f: file = f.read()
                 
-                ( service_identifier, credentials, extra_info ) = yaml.safe_load( file )
+                ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = yaml.safe_load( file )
                 
-                name = service_identifier.GetName()
+                advanced_tag_options = dict( advanced_tag_options ) # yaml parsing bug
                 
-                service_type = service_identifier.GetType()
-                
-                if service_type == HC.TAG_REPOSITORY: services_listbook = self._tag_repositories
-                elif service_type == HC.FILE_REPOSITORY: services_listbook = self._file_repositories
-                elif service_type == HC.MESSAGE_DEPOT: services_listbook = self._message_depots
-                elif service_type == HC.SERVER_ADMIN: services_listbook = self._servers_admin
+                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: services_listbook = self._booru
+                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART: services_listbook = self._deviant_art
+                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_GIPHY: services_listbook = self._giphy
+                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: services_listbook = self._hentai_foundry
+                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: services_listbook = self._pixiv
+                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: services_listbook = self._tumblr
                 
                 self._listbook.SelectPage( services_listbook )
                 
@@ -6845,15 +6853,13 @@ class DialogManageSubscriptions( Dialog ):
                             
                             page = services_listbook.GetNameToPageDict()[ name ]
                             
-                            page.Update( service_identifier, credentials, extra_info )
+                            page.Update( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
                             
                         
                     
                 else:
                     
-                    self._edit_log.append( ( 'add', ( service_identifier, credentials, extra_info ) ) )
-                    
-                    page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
+                    page = self._Panel( services_listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
                     
                     services_listbook.AddPage( page, name, select = True )
                     
@@ -6867,96 +6873,65 @@ class DialogManageSubscriptions( Dialog ):
     
     class _Panel( wx.ScrolledWindow ):
         
-        def __init__( self, parent, subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+        def __init__( self, parent, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
             
             wx.ScrolledWindow.__init__( self, parent )
+            
+            self._reset_cache = False
             
             self.SetScrollRate( 0, 20 )
             
             self.SetMinSize( ( 540, 620 ) )
             
-            advanced_tag_options = dict( advanced_tag_options ) # db yaml storage bug
-            
-            self._original_info = ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
             
             # init controls
             
             self._name_panel = ClientGUICommon.StaticBox( self, 'name' )
             
-            self._name = wx.TextCtrl( self._name_panel, value = name )
+            self._name = wx.TextCtrl( self._name_panel )
             
             self._query_panel = ClientGUICommon.StaticBox( self, 'query' )
             
-            self._query = wx.TextCtrl( self._query_panel, value = query )
+            self._query = wx.TextCtrl( self._query_panel )
             
             self._booru_selector = wx.ListBox( self._query_panel )
             
-            if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU:
-                
-                ( booru_name, query_type ) = query_type
+            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
                 
                 boorus = wx.GetApp().Read( 'boorus' )
                 
-                i = 0
+                for booru in boorus: self._booru_selector.Append( booru.GetName(), booru )
                 
-                index_to_select = 0
-                
-                for booru in boorus:
-                    
-                    self._booru_selector.Append( booru.GetName(), booru )
-                    
-                    if booru.GetName() == booru_name: index_to_select = i
-                    
-                    i += 1
-                    
-                
-                self._booru_selector.Select( index_to_select )
-                
-                initial_index = 1
-                
-            else:
-                
-                self._booru_selector.Hide()
-                
-                if query_type == 'artist': initial_index = 0
-                elif query_type == 'tags': initial_index = 1
-                
+            else: self._booru_selector.Hide()
             
-            self._query_type = ClientGUICommon.RadioBox( self._query_panel, 'query type', ( ( 'artist', 'artist' ), ( 'tags', 'tags' ) ), initial_index = initial_index )
+            self._query_type = ClientGUICommon.RadioBox( self._query_panel, 'query type', ( ( 'artist', 'artist' ), ( 'tags', 'tags' ) ) )
             
-            if subscription_type in ( HC.SUBSCRIPTION_TYPE_BOORU, HC.SUBSCRIPTION_TYPE_DEVIANT_ART, HC.SUBSCRIPTION_TYPE_GIPHY, HC.SUBSCRIPTION_TYPE_TUMBLR ): self._query_type.Hide()
+            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): self._query_type.Hide()
             
             self._frequency_number = wx.SpinCtrl( self._query_panel )
-            self._frequency_number.SetValue( frequency_number )
             
             self._frequency_type = wx.Choice( self._query_panel )
             
-            index_to_select = None
-            i = 0
-            
-            for ( title, time ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ):
-                
-                self._frequency_type.Append( title, time )
-                
-                if frequency_type == time: index_to_select = i
-                
-                i += 1
-                
-            
-            if index_to_select is not None: self._frequency_type.Select( index_to_select )
+            for ( title, timespan ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ): self._frequency_type.Append( title, timespan )
             
             self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
             
-            if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU: namespaces = [ 'creator', 'series', 'character', '' ]
-            elif subscription_type == HC.SUBSCRIPTION_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
-            elif subscription_type == HC.SUBSCRIPTION_TYPE_GIPHY: namespaces = [ '' ]
-            elif subscription_type == HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
-            elif subscription_type == HC.SUBSCRIPTION_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
-            elif subscription_type == HC.SUBSCRIPTION_TYPE_TUMBLR: namespaces = [ '' ]
+            self._reset_cache_button = wx.Button( self._info_panel, label = '     reset cache on dialog ok     ' )
+            self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
             
-            self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send tags to ', namespaces, initial_settings = advanced_tag_options )
+            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: namespaces = [ 'creator', 'series', 'character', '' ]
+            elif site_download_type == HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
+            elif site_download_type == HC.SITE_DOWNLOAD_TYPE_GIPHY: namespaces = [ '' ]
+            elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
+            elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
+            elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: namespaces = [ '' ]
             
-            self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self, initial_settings = advanced_import_options )
+            self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send tags to ', namespaces )
+            
+            self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
+            
+            self._SetControls( *self._original_info )
             
             # init panel
             
@@ -6976,10 +6951,17 @@ class DialogManageSubscriptions( Dialog ):
             self._query_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             if last_checked is None: last_checked_message = 'not yet initialised'
-            else: last_checked_message = 'set this static text up'
+            else:
+                
+                now = int( time.time() )
+                
+                if last_checked < now: last_checked_message = HC.ConvertTimestampToPrettySync( last_checked )
+                else: last_checked_message = 'due to error, update is delayed. next check in ' + HC.ConvertTimestampToPrettyPending( last_checked )
+                
             
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), FLAGS_EXPAND_PERPENDICULAR )
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = str( len( url_cache ) ) + ' urls in cache' ), FLAGS_EXPAND_PERPENDICULAR )
+            self._info_panel.AddF( self._reset_cache_button, FLAGS_LONE_BUTTON )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -6992,15 +6974,74 @@ class DialogManageSubscriptions( Dialog ):
             self.SetSizer( vbox )
             
         
+        def _SetControls( self, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+            
+            self._name.SetValue( name )
+            
+            self._query.SetValue( query )
+            
+            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
+                
+                ( booru_name, query_type ) = query_type
+                
+                index = self._booru_selector.FindString( booru_name )
+                
+                if index != wx.NOT_FOUND: self._booru_selector.Select( index )
+                
+                initial_index = 1
+                
+            else:
+                
+                self._booru_selector.Hide()
+                
+                if query_type == 'artist': initial_index = 0
+                elif query_type == 'tags': initial_index = 1
+                
+            
+            self._query_type.SetSelection( initial_index )
+            
+            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): self._query_type.Hide()
+            
+            self._frequency_number.SetValue( frequency_number )
+            
+            index_to_select = None
+            i = 0
+            
+            for ( title, timespan ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ):
+                
+                self._frequency_type.Append( title, timespan )
+                
+                if frequency_type == timespan: index_to_select = i
+                
+                i += 1
+                
+            
+            if index_to_select is not None: self._frequency_type.Select( index_to_select )
+            
+            self._reset_cache_button.SetLabel( '     reset cache on dialog ok     ' )
+            
+            self._advanced_tag_options.SetInfo( advanced_tag_options )
+            
+            self._advanced_import_options.SetInfo( advanced_import_options )
+            
+        
+        def EventResetCache( self, event ):
+            
+            self._reset_cache = True
+            
+            self._reset_cache_button.SetLabel( 'cache will be reset on dialog ok' )
+            self._reset_cache_button.Disable()
+            
+        
         def GetInfo( self ):
             
-            ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = self._original_info
+            ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = self._original_info
             
             name = self._name.GetValue()
             
             query_type = self._query_type.GetSelectedClientData()
             
-            if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU:
+            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
                 
                 booru_name = self._booru_selector.GetStringSelection()
                 
@@ -7014,20 +7055,27 @@ class DialogManageSubscriptions( Dialog ):
             
             advanced_tag_options = self._advanced_tag_options.GetInfo()
             
-            advanced_tag_options = advanced_tag_options.items() # db yaml storage bug
-            
             advanced_import_options = self._advanced_import_options.GetInfo()
             
-            return ( subscription_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            if self._reset_cache:
+                
+                last_checked = None
+                url_cache = set()
+                
+            
+            return ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
             
         
         def GetName( self ): return self._name.GetValue()
         
         def Update( self, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
             
-            pass
+            site_download_type = self._original_info[0]
+            name = self._original_info[1]
             
-            # do this
+            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            
+            self._SetControls( *self._original_info )
             
         
     

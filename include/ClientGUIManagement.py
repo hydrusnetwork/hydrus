@@ -1359,8 +1359,6 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         
         ManagementPanelImport.__init__( self, parent, page, page_key )
         
-        self._connections = {}
-        
         self._import_cancel_button = wx.Button( self._processing_panel, label = 'that\'s enough' )
         self._import_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImport )
         self._import_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
@@ -1588,71 +1586,6 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         self.SetSizer( vbox )
         
     
-    # this could be in the advanced_tag_options class
-    def _DoRedundantTagContentUpdates( self, hash, tags ):
-        
-        advanced_tag_options = self._advanced_tag_options.GetInfo()
-        
-        if len( advanced_tag_options ) > 0:
-            
-            content_updates = []
-            
-            for ( service_identifier, namespaces ) in advanced_tag_options.items():
-                
-                if len( namespaces ) > 0:
-                    
-                    tags_to_add_here = []
-                    
-                    for namespace in namespaces:
-                        
-                        if namespace == '': tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if not ':' in tag ] )
-                        else: tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if tag.startswith( namespace + ':' ) ] )
-                        
-                    
-                    if len( tags_to_add_here ) > 0:
-                        
-                        if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: action = HC.CONTENT_UPDATE_ADD
-                        else: action = HC.CONTENT_UPDATE_PENDING
-                        
-                        edit_log = [ ( action, tag ) for tag in tags_to_add_here ]
-                        
-                        content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), info = edit_log ) )
-                        
-                    
-                
-            
-            if len( content_updates ) > 0: wx.GetApp().Write( 'content_updates', content_updates )
-            
-        
-    
-    # this should probably be in the advanced_tag_options class
-    def _GetServiceIdentifiersToTags( self, tags ):
-        
-        tags = [ tag for tag in tags if tag is not None ]
-        
-        service_identifiers_to_tags = {}
-        
-        advanced_tag_options = self._advanced_tag_options.GetInfo()
-        
-        for ( service_identifier, namespaces ) in advanced_tag_options.items():
-            
-            if len( namespaces ) > 0:
-                
-                tags_to_add_here = []
-                
-                for namespace in namespaces:
-                    
-                    if namespace == '': tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if not ':' in tag ] )
-                    else: tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if tag.startswith( namespace + ':' ) ] )
-                    
-                
-                if len( tags_to_add_here ) > 0: service_identifiers_to_tags[ service_identifier ] = tags_to_add_here
-                
-            
-        
-        return service_identifiers_to_tags
-        
-    
     def _InitExtraVboxElements( self, vbox ): pass
     
     def _SetButtons( self ):
@@ -1680,11 +1613,11 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             
         
     
-    def _THREADGetImportArgs( self, *url_args ):
+    def _THREADGetImportArgs( self, url_args ):
         
         try:
             
-            downloader = self._GetDownloader( 'example' )
+            downloader = self._GetDownloaders( 'example' )[0]
             
             advanced_tag_options = self._advanced_tag_options.GetInfo()
             
@@ -1749,25 +1682,39 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         
         try:
             
-            downloader = self._GetDownloader( raw_query )
+            downloaders = list( self._GetDownloaders( raw_query ) )
+            
+            downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
             
             total_urls_found = 0
             
             while True:
                 
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_urls_found ) + ' urls' )
+                downloaders_to_remove = []
                 
-                while self._pause_outer_queue: time.sleep( 1 )
+                for downloader in downloaders:
+                    
+                    HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_urls_found ) + ' urls' )
+                    
+                    while self._pause_outer_queue: time.sleep( 1 )
+                    
+                    if cancel_import.is_set(): break
+                    if cancel_download.is_set(): break
+                    
+                    page_of_url_args = downloader.GetAnotherPage()
+                    
+                    total_urls_found += len( page_of_url_args )
+                    
+                    if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                    else: wx.CallAfter( self.CALLBACKAddToImportQueue, page_of_url_args )
+                    
                 
                 if cancel_import.is_set(): break
                 if cancel_download.is_set(): break
                 
-                urls = downloader.GetAnotherPage()
+                for downloader in downloaders_to_remove: downloaders.remove( downloader )
                 
-                total_urls_found += len( urls )
-                
-                if len( urls ) == 0: break
-                else: wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
+                if len( downloaders ) == 0: break
                 
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
@@ -1817,11 +1764,11 @@ class ManagementPanelImportWithQueueAdvancedBooru( ManagementPanelImportWithQueu
         ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
         
     
-    def _GetDownloader( self, raw_tags ):
+    def _GetDownloaders( self, raw_tags ):
         
         tags = raw_tags.split( ' ' )
         
-        return HydrusDownloading.GetDownloader( HC.SUBSCRIPTION_TYPE_BOORU, self._booru, tags )
+        return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_BOORU, self._booru, tags ), )
         
     
 class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWithQueueAdvanced ):
@@ -1836,104 +1783,7 @@ class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWit
         self._new_queue_input.SetValue( 'artist username' )
         
     
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        try:
-            
-            ( url, tags ) = queue_object
-            
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                
-                self._DoRedundantTagContentUpdates( hash, tags )
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                file = connection.geturl( url )
-                
-                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
-                
-            
-        except HC.NotFoundException: wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = Exception( 'Cannot download full image.' ) )
-        except Exception as e:
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
-        
-    
-    def _THREADDownloadImportItems( self, artist ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            gallery_url = 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset='
-            
-            example_url = gallery_url + '0'
-            
-            connection = HC.AdvancedHTTPConnection( url = example_url )
-            
-            i = 0
-            
-            total_results_found = 0
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                current_url = gallery_url + str( i )
-                
-                html = connection.geturl( current_url )
-                
-                results = ClientParsers.ParseDeviantArtGallery( html )
-                
-                total_results_found += len( results )
-                
-                if len( results ) == 0: break
-                else: wx.CallAfter( self.CALLBACKAddToImportQueue, results )
-                
-                i += 24
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
-        
+    def _GetDownloaders( self, artist ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, artist ), )
     
 class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueueAdvanced ):
     
@@ -1947,156 +1797,7 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
         self._new_queue_input.SetValue( 'tag' )
         
     
-    def _GetAndParseTags( self, id ):
-        
-        url = 'http://giphy.com/api/gifs/' + str( id )
-        
-        parse_result = urlparse.urlparse( url )
-        
-        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-        
-        if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-        
-        connection = self._connections[ ( scheme, host, port ) ]
-        
-        try:
-            
-            raw_json = connection.geturl( url )
-            
-            json_dict = json.loads( raw_json )
-            
-            tags_data = json_dict[ 'data' ][ 'tags' ]
-            
-            tags = [ tag_data[ 'name' ] for tag_data in tags_data ]
-            
-        except:
-            
-            print( traceback.format_exc() )
-            
-            tags = []
-            
-        
-        return tags
-        
-    
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        try:
-            
-            ( url, id ) = queue_object
-            
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                
-                advanced_tag_options = self._advanced_tag_options.GetInfo()
-                
-                if len( advanced_tag_options ) > 0:
-                    
-                    try:
-                        
-                        tags = self._GetAndParseTags( id )
-                        
-                        self._DoRedundantTagContentUpdates( hash, tags )
-                        
-                    except: pass
-                    
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                file = connection.geturl( url )
-                
-                tags = self._GetAndParseTags( id )
-                
-                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
-                
-            
-        except HC.NotFoundException: wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = Exception( 'Cannot download full image.' ) )
-        except Exception as e:
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
-        
-    
-    def _THREADDownloadImportItems( self, tag ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            gallery_url = 'http://giphy.com/api/gifs?tag=' + tag.replace( ' ', '+' ) + '&page='
-            
-            example_url = gallery_url + '0'
-            
-            connection = HC.AdvancedHTTPConnection( url = example_url )
-            
-            i = 0
-            
-            total_results_found = 0
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                current_url = gallery_url + str( i )
-                
-                raw_json = connection.geturl( current_url )
-                
-                json_dict = json.loads( raw_json )
-                
-                if 'data' in json_dict:
-                    
-                    json_data = json_dict[ 'data' ]
-                    
-                    results = [ ( d[ 'image_original_url' ], d[ 'id' ] ) for d in json_data ]
-                    
-                    total_results_found += len( results )
-                    
-                    wx.CallAfter( self.CALLBACKAddToImportQueue, results )
-                    
-                else: break
-                
-                i += 1
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
-        
+    def _GetDownloaders( self, tag ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_GIPHY, tag ), )
     
 class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImportWithQueueAdvanced ):
     
@@ -2107,143 +1808,12 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
         
         ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
         
-        self._session_established = False
-        
-        self._new_queue_input.Disable()
-        
-        HC.pubsub.sub( self, 'SessionEstablished', 'import_session_established' )
-        
-        threading.Thread( target = self._THREADEstablishSession, name = 'HF Session Thread' ).start()
-        
     
     def _InitExtraVboxElements( self, vbox ):
         
         self._advanced_hentai_foundry_options = ClientGUICommon.AdvancedHentaiFoundryOptions( self )
         
         vbox.AddF( self._advanced_hentai_foundry_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-    
-    def _SetFilter( self ):
-        
-        filter = self._advanced_hentai_foundry_options.GetInfo()
-        
-        cookies = self._search_connection.GetCookies()
-        
-        raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # YII_CSRF_TOKEN=19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
-        
-        processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
-        
-        csrf_token = processed_csrf.split( '"' )[1] # the 2917... bit
-        
-        filter[ 'YII_CSRF_TOKEN' ] = csrf_token
-        
-        body = urllib.urlencode( filter )
-        
-        headers = {}
-        headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-        
-        self._search_connection.request( 'POST', '/site/filters', headers = headers, body = body )
-        
-    
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        try:
-            
-            url = queue_object
-            
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                
-                advanced_tag_options = self._advanced_tag_options.GetInfo()
-                
-                if len( advanced_tag_options ) > 0:
-                    
-                    html = self._page_connection.geturl( url )
-                    
-                    ( image_url, tags ) = ClientParsers.ParseHentaiFoundryPage( html )
-                    
-                    self._DoRedundantTagContentUpdates( hash, tags )
-                    
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
-                
-                html = self._page_connection.geturl( url )
-                
-                ( image_url, tags ) = ClientParsers.ParseHentaiFoundryPage( html )
-                
-                parse_result = urlparse.urlparse( image_url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                file = connection.geturl( image_url )
-                
-                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
-                
-            
-        except HC.NotFoundException: wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = Exception( 'Cannot download full image.' ) )
-        except Exception as e:
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
-        
-    
-    def _THREADEstablishSession( self ):
-        
-        try:
-            
-            self._search_connection = HC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
-            self._page_connection = HC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with hentai foundry' )
-            
-            # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
-            #self._search_connection.request( 'GET', '/?enterAgree=1' )
-            
-            cookies = wx.GetApp().GetWebCookies( 'hentai foundry' )
-            
-            for ( key, value ) in cookies.items():
-                
-                self._search_connection.SetCookie( key, value )
-                self._page_connection.SetCookie( key, value )
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established' )
-            
-            time.sleep( 0.5 )
-            
-            HC.pubsub.pub( 'import_session_established', self._page_key )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-    
-    def SessionEstablished( self, page_key ):
-        
-        self._new_queue_input.Enable()
-        
-        self._session_established = True
-        
-        HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established - ready to download' )
         
     
 class ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( ManagementPanelImportWithQueueAdvancedHentaiFoundry ):
@@ -2255,80 +1825,12 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( ManagementPanel
         self._new_queue_input.SetValue( 'artist username' )
         
     
-    def _THREADDownloadImportItems( self, artist ):
+    def _GetDownloaders( self, artist ):
         
-        # this is important, because we'll instantiate new objects in the eventcancel
+        pictures_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist pictures', artist, self._advanced_hentai_foundry_options.GetInfo() )
+        scraps_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist scraps', artist, self._advanced_hentai_foundry_options.GetInfo() )
         
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            self._SetFilter()
-            
-            pictures_done = False
-            scraps_done = False
-            
-            currently_doing = 'pictures'
-            
-            total_results_found = 0
-            
-            i = 1
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                if currently_doing == 'pictures': gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist
-                else: gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist + '/scraps'
-                
-                current_url = gallery_url + '/page/' + str( i )
-                
-                html = self._search_connection.geturl( current_url )
-                
-                urls = ClientParsers.ParseHentaiFoundryGallery( html )
-                
-                total_results_found += len( urls )
-                
-                wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
-                
-                if 'class="next"' not in html:
-                    
-                    if currently_doing == 'pictures': pictures_done = True
-                    else: scraps_done = True
-                    
-                
-                if pictures_done and scraps_done: break
-                
-                if currently_doing == 'pictures':
-                    
-                    if scraps_done: i += 1
-                    else: currently_doing = 'scraps'
-                    
-                else:
-                    
-                    if not pictures_done: currently_doing = 'pictures'
-                    
-                    i += 1
-                    
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except HC.NotFoundException:
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '404 - artist not found!' )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        return ( pictures_downloader, scraps_downloader )
         
     
 class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelImportWithQueueAdvancedHentaiFoundry ):
@@ -2340,58 +1842,11 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelIm
         self._new_queue_input.SetValue( 'search tags' )
         
     
-    def _THREADDownloadImportItems( self, tags_string ):
+    def _GetDownloaders( self, tags_string ):
         
-        # this is important, because we'll instantiate new objects in the eventcancel
+        tags = tags_string.split( ' ' )
         
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            self._SetFilter()
-            
-            tags = tags_string.split( ' ' )
-            
-            gallery_url = 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page='
-                # scraps = 0 hide
-                # -1 means show both
-                # 1 means scraps only. wetf
-            
-            total_results_found = 0
-            
-            i = 1
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                current_url = gallery_url + str( i )
-                
-                html = self._search_connection.geturl( current_url )
-                
-                urls = ClientParsers.ParseHentaiFoundryGallery( html )
-                
-                total_results_found += len( urls )
-                
-                if 'class="next"' not in html: break
-                else: wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
-                
-                i += 1
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'tags', tags, self._advanced_hentai_foundry_options.GetInfo() ), )
         
     
 class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueueAdvanced ):
@@ -2403,121 +1858,6 @@ class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueu
         
         ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
         
-        self._session_established = False
-        
-        self._new_queue_input.Disable()
-        
-        HC.pubsub.sub( self, 'SessionEstablished', 'import_session_established' )
-        
-        threading.Thread( target = self._THREADEstablishSession, name = 'Pixiv Session Thread' ).start()
-        
-    
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        try:
-            
-            ( url, image_url_reference_url, image_url ) = queue_object
-            
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                
-                advanced_tag_options = self._advanced_tag_options.GetInfo()
-                
-                if len( advanced_tag_options ) > 0:
-                    
-                    html = self._page_connection.geturl( url )
-                    
-                    tags = ClientParsers.ParsePixivPage( image_url, html )
-                    
-                    self._DoRedundantTagContentUpdates( hash, tags )
-                    
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
-                
-                advanced_tag_options = self._advanced_tag_options.GetInfo()
-                
-                if len( advanced_tag_options ) > 0:
-                    
-                    html = self._page_connection.geturl( url )
-                    
-                    tags = ClientParsers.ParsePixivPage( image_url, html )
-                    
-                else: tags = []
-                
-                parse_result = urlparse.urlparse( image_url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                headers = { 'Referer' : image_url_reference_url }
-                
-                file = connection.geturl( image_url, headers = headers )
-                
-                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
-                
-            
-        except HC.NotFoundException:
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = Exception( 'Cannot download full image - it is probably a manga collection.' ) )
-        except Exception as e:
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
-        
-    
-    def _THREADEstablishSession( self ):
-        
-        try:
-            
-            self._search_connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
-            self._page_connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'establishing session with pixiv' )
-            
-            cookies = wx.GetApp().GetWebCookies( 'pixiv' )
-            
-            for ( key, value ) in cookies.items():
-                
-                self._search_connection.SetCookie( key, value )
-                self._page_connection.SetCookie( key, value )
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established' )
-            
-            time.sleep( 0.5 )
-            
-            HC.pubsub.pub( 'import_session_established', self._page_key )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-    
-    def SessionEstablished( self, page_key ):
-        
-        self._new_queue_input.Enable()
-        
-        self._session_established = True
-        
-        HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'session established - ready to download' )
-        
     
 class ManagementPanelImportWithQueueAdvancedPixivArtist( ManagementPanelImportWithQueueAdvancedPixiv ):
     
@@ -2528,59 +1868,9 @@ class ManagementPanelImportWithQueueAdvancedPixivArtist( ManagementPanelImportWi
         self._new_queue_input.SetValue( 'artist id number' )
         
     
-    def _THREADDownloadImportItems( self, artist_id ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            total_results_found = 0
-            
-            i = 1
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + str( artist_id )
-                
-                current_url = gallery_url + '&p=' + str( i )
-                
-                html = self._search_connection.geturl( current_url )
-                
-                results = ClientParsers.ParsePixivGallery( html, current_url )
-                
-                total_results_found += len( results )
-                
-                wx.CallAfter( self.CALLBACKAddToImportQueue, results )
-                
-                if len( results ) == 0: break
-                
-                i += 1
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except HC.NotFoundException:
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '404 - artist not found!' )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
-        
+    def _GetDownloaders( self, query ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_PIXIV, 'artist', query ), )
     
-class ManagementPanelImportWithQueueAdvancedPixivTags( ManagementPanelImportWithQueueAdvancedPixiv ):
+class ManagementPanelImportWithQueueAdvancedPixivTag( ManagementPanelImportWithQueueAdvancedPixiv ):
     
     def __init__( self, parent, page, page_key ):
         
@@ -2589,55 +1879,7 @@ class ManagementPanelImportWithQueueAdvancedPixivTags( ManagementPanelImportWith
         self._new_queue_input.SetValue( 'search tag' )
         
     
-    def _THREADDownloadImportItems( self, tag ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            tag = urllib.quote( tag.encode( 'utf-8' ) )
-            
-            gallery_url = 'http://www.pixiv.net/search.php?word=' + tag + '&s_mode=s_tag_full&order=date_d'
-            
-            total_results_found = 0
-            
-            i = 1
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                current_url = gallery_url + '&p=' + str( i )
-                
-                html = self._search_connection.geturl( current_url )
-                
-                results = ClientParsers.ParsePixivGallery( html, current_url )
-                
-                total_results_found += len( results )
-                
-                wx.CallAfter( self.CALLBACKAddToImportQueue, results )
-                
-                if len( results ) == 0: break
-                
-                i += 1
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
-        
+    def _GetDownloaders( self, query ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_PIXIV, 'tag', query ), )
     
 class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQueueAdvanced ):
     
@@ -2651,153 +1893,15 @@ class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQue
         self._new_queue_input.SetValue( 'username' )
         
     
-    def _ParseJSON( self, raw_json ):
-        
-        processed_raw_json = raw_json.split( 'var tumblr_api_read = ' )[1][:-2] # -2 takes a couple newline chars off at the end
-        
-        json_object = json.loads( processed_raw_json )
-        
-        results = []
-        
-        if 'posts' in json_object:
-            
-            for post in json_object[ 'posts' ]:
-                
-                if 'tags' in post: tags = post[ 'tags' ]
-                else: tags = []
-                
-                post_type = post[ 'type' ]
-                
-                if post_type == 'photo':
-                    
-                    if len( post[ 'photos' ] ) == 0:
-                        
-                        try: results.append( ( post[ 'photo-url-1280' ], tags ) )
-                        except: pass
-                        
-                    else:
-                        
-                        for photo in post[ 'photos' ]:
-                            
-                            try: results.append( ( photo[ 'photo-url-1280' ], tags ) )
-                            except: pass
-                            
-                        
-                    
-                
-            
-        
-        return results
-        
-    
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        try:
-            
-            ( url, tags ) = queue_object
-            
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                
-                advanced_tag_options = self._advanced_tag_options.GetInfo()
-                
-                if len( advanced_tag_options ) > 0: self._DoRedundantTagContentUpdates( hash, tags )
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                file = connection.geturl( url )
-                
-                service_identifiers_to_tags = self._GetServiceIdentifiersToTags( tags )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
-                
-            
-        except Exception as e:
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
-        
-    
-    def _THREADDownloadImportItems( self, username ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        cancel_import = self._cancel_import_queue
-        cancel_download = self._cancel_outer_queue
-        
-        try:
-            
-            search_url = 'http://' + username + '.tumblr.com/api/read/json?start=%start%&num=50'
-            
-            results = []
-            
-            example_url = search_url.replace( '%start%', '0' )
-            
-            connection = HC.AdvancedHTTPConnection( url = example_url )
-            
-            i = 0
-            
-            total_results_found = 0
-            
-            while True:
-                
-                HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_results_found ) + ' urls' )
-                
-                while self._pause_outer_queue: time.sleep( 1 )
-                
-                if cancel_import.is_set(): break
-                if cancel_download.is_set(): break
-                
-                current_url = search_url.replace( '%start%', str( i ) )
-                
-                raw_json = connection.geturl( current_url )
-                
-                results = self._ParseJSON( raw_json )
-                
-                total_results_found += len( results )
-                
-                if len( results ) == 0: break
-                else: wx.CallAfter( self.CALLBACKAddToImportQueue, results )
-                
-                i += 50
-                
-            
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
-            
-        except HC.NotFoundException: pass
-        except Exception as e:
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
-        
+    def _GetDownloaders( self, username ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_TUMBLR, username ), )
     
 class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
     
     def __init__( self, parent, page, page_key ):
         
         ManagementPanelImportWithQueue.__init__( self, parent, page, page_key )
+        
+        self._connections = {}
         
         c_p_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2921,9 +2025,9 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         ManagementPanelImport.__init__( self, parent, page, page_key )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
         self._connections = {}
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._MakeSort( vbox )
         

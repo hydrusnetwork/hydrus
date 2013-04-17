@@ -732,7 +732,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             elif name == 'hentai foundry by tags': new_page = ClientGUIPages.PageImportHentaiFoundryTags( self._notebook )
             elif name == 'giphy': new_page = ClientGUIPages.PageImportGiphy( self._notebook )
             elif name == 'pixiv by artist': new_page = ClientGUIPages.PageImportPixivArtist( self._notebook )
-            elif name == 'pixiv by tags': new_page = ClientGUIPages.PageImportPixivTags( self._notebook )
+            elif name == 'pixiv by tag': new_page = ClientGUIPages.PageImportPixivTag( self._notebook )
             elif name == 'tumblr': new_page = ClientGUIPages.PageImportTumblr( self._notebook )
             
             self._notebook.AddPage( new_page, name, select = True )
@@ -836,6 +836,19 @@ class FrameGUI( ClientGUICommon.Frame ):
             if 'Windows' in os.environ.get( 'os' ): subprocess.Popen( [ 'explorer', export_path ] )
             else: subprocess.Popen( [ 'explorer', export_path ] )
             
+        
+    
+    def _PauseSync( self, sync_type ):
+        
+        if sync_type == 'repo': self._options[ 'pause_repo_sync' ] = not self._options[ 'pause_repo_sync' ]
+        elif sync_type == 'subs': self._options[ 'pause_subs_sync' ] = not self._options[ 'pause_subs_sync' ]
+        
+        try: wx.GetApp().Write( 'save_options' )
+        except: wx.MessageBox( traceback.format_exc() )
+        
+        self.RefreshMenuBar()
+        
+        HC.pubsub.pub( 'notify_new_subscriptions' ) # this pushes the daemon to restart if sleeping
         
     
     def _PostNews( self, service_identifier ):
@@ -1035,6 +1048,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'news': self._News( data )
                 elif command == 'open_export_folder': self._OpenExportFolder()
                 elif command == 'options': self._ManageOptions( data )
+                elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
+                elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
                 elif command == 'petitions': self._NewPagePetitions( data )
                 elif command == 'post_news': self._PostNews( data )
                 elif command == 'refresh':
@@ -1274,6 +1289,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         services = wx.Menu()
+        
+        submenu = wx.Menu()
+        
+        pause_repo_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_repo_sync' )
+        pause_subs_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_subs_sync' )
+        
+        submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
+        submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
+        
+        submenu.Check( pause_repo_sync_id, self._options[ 'pause_repo_sync' ] )
+        submenu.Check( pause_subs_sync_id, self._options[ 'pause_subs_sync' ] )
+        
+        services.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
+        
+        services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'edit_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
         if len( download_tag_service_identifiers ) > 1: services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
@@ -1596,7 +1626,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery': entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'menu', 'pixiv' ), ( 'page_import_gallery', 'tumblr' ) ]
         elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', 'hentai foundry by artist' ), ( 'page_import_gallery', 'hentai foundry by tags' ) ]
-        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', 'pixiv by artist' ), ( 'page_import_gallery', 'pixiv by tags' ) ]
+        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', 'pixiv by artist' ), ( 'page_import_gallery', 'pixiv by tag' ) ]
         elif menu_keyword == 'messages': entries = [ ( 'page_messages', identity ) for identity in self._identities ]
         elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
         

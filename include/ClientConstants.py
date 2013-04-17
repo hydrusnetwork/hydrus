@@ -270,6 +270,14 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     return m.get()
     
+def GetFilePath( hash, mime ):
+    
+    hash_encoded = hash.encode( 'hex' )
+    
+    first_two_chars = hash_encoded[:2]
+    
+    return HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded + HC.mime_ext_lookup[ mime ]
+    
 def GetMediasTagCount( pool, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER ):
     
     all_tags = []
@@ -298,9 +306,38 @@ def GetMediasTagCount( pool, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
-
+def GetThumbnailPath( hash ):
+    
+    hash_encoded = hash.encode( 'hex' )
+    
+    first_two_chars = hash_encoded[:2]
+    
+    return HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    
 def GetUnknownAccount(): return HC.Account( 0, UNKNOWN_ACCOUNT_TYPE, 0, None, ( 0, 0 ) )
 
+def IterateAllFilePaths():
+    
+    hex_chars = '0123456789abcdef'
+    
+    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+        
+        next_paths = dircache.listdir( HC.CLIENT_FILES_DIR + os.path.sep + one + two )
+        
+        for path in next_paths: yield path
+        
+    
+def IterateAllThumbnailPaths():
+    
+    hex_chars = '0123456789abcdef'
+    
+    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+        
+        next_paths = dircache.listdir( HC.CLIENT_THUMBNAIL_DIR + os.path.sep + one + two )
+        
+        for path in next_paths: yield path
+        
+    
 def MediaIntersectCDPPTagServiceIdentifiers( media, service_identifier ):
     
     all_tag_cdpps = [ m.GetTags().GetCDPP( service_identifier ) for m in media ]
@@ -451,21 +488,21 @@ class Booru( HC.HydrusYAMLBase ):
     
     yaml_tag = u'!Booru'
     
-    def __init__( self, name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ):
+    def __init__( self, name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ):
         
         self._name = name
         self._search_url = search_url
         self._search_separator = search_separator
-        self._gallery_advance_num = gallery_advance_num
+        self._advance_by_page_num = advance_by_page_num
         self._thumb_classname = thumb_classname
         self._image_id = image_id
         self._image_data = image_data
         self._tag_classnames_to_namespaces = tag_classnames_to_namespaces
         
     
-    def GetData( self ): return ( self._search_url, self._search_separator, self._gallery_advance_num, self._thumb_classname, self._image_id, self._image_data, self._tag_classnames_to_namespaces )
+    def GetData( self ): return ( self._search_url, self._search_separator, self._advance_by_page_num, self._thumb_classname, self._image_id, self._image_data, self._tag_classnames_to_namespaces )
     
-    def GetGalleryParsingInfo( self ): return ( self._search_url, self._gallery_advance_num, self._search_separator, self._thumb_classname )
+    def GetGalleryParsingInfo( self ): return ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname )
     
     def GetName( self ): return self._name
     
@@ -478,123 +515,123 @@ DEFAULT_BOORUS = []
 name = 'gelbooru'
 search_url = 'http://gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
 search_separator = '+'
-gallery_advance_num = 28
+advance_by_page_num = False
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'safebooru'
 search_url = 'http://safebooru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
 search_separator = '+'
-gallery_advance_num = 25
+advance_by_page_num = False
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'e621'
 search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
 search_separator = '%20'
-gallery_advance_num = 1
+advance_by_page_num = True
 thumb_classname = 'thumb blacklisted'
 image_id = None
 image_data = 'Download'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'rule34@paheal'
 search_url = 'http://rule34.paheal.net/post/list/%tags%/%index%'
 search_separator = '%20'
-gallery_advance_num = 1
+advance_by_page_num = True
 thumb_classname = 'thumb'
 image_id = 'main_image'
 image_data = None
 tag_classnames_to_namespaces = { 'tag_name' : '' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'danbooru'
 search_url = 'http://danbooru.donmai.us/post/index?tags=%tags%&commit=Search&page=%index%'
 search_separator = '%20'
-gallery_advance_num = 1
+advance_by_page_num = True
 thumb_classname = 'thumb blacklisted'
 image_id = 'image'
 image_data = None
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'mishimmie'
 search_url = 'http://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'
 search_separator = '%20'
-gallery_advance_num = 1
+advance_by_page_num = True
 thumb_classname = 'thumb'
 image_id = 'main_image'
 image_data = None
 tag_classnames_to_namespaces = { 'tag_name' : '' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'rule34@booru.org'
 search_url = 'http://rule34.xxx/index.php?page=post&s=list&tags=%tags%&pid=%index%'
 search_separator = '%20'
-gallery_advance_num = 25
+advance_by_page_num = False
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'furry@booru.org'
 search_url = 'http://furry.booru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
 search_separator = '+'
-gallery_advance_num = 25
+advance_by_page_num = False
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'xbooru'
 search_url = 'http://xbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
 search_separator = '+'
-gallery_advance_num = 25
+advance_by_page_num = False
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'konachan'
 search_url = 'http://konachan.com/post?page=%index%&tags=%tags%'
 search_separator = '+'
-gallery_advance_num = 1
+advance_by_page_num = True
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'View larger version'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'tbib'
 search_url = 'http://tbib.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
 search_separator = '+'
-gallery_advance_num = 25
+advance_by_page_num = False
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 class CDPPFileServiceIdentifiers():
     

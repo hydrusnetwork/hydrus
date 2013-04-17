@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import json
 import lxml
 import traceback
+import urllib
 import urlparse
 import wx
 
@@ -25,14 +26,14 @@ def ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_t
     
     return content_updates
     
-def GetDownloader( subscription_type, *args ):
+def GetDownloader( site_download_type, *args ):
     
-    if subscription_type == HC.SUBSCRIPTION_TYPE_BOORU: c = DownloaderBooru
-    elif subscription_type == HC.SUBSCRIPTION_TYPE_DEVIANT_ART: c = DownloaderDeviantArt
-    elif subscription_type == HC.SUBSCRIPTION_TYPE_GIPHY: c = DownloaderGiphy
-    elif subscription_type == HC.SUBSCRIPTION_TYPE_HENTAI_FOUNDRY: c = DownloaderHentaiFoundry
-    elif subscription_type == HC.SUBSCRIPTION_TYPE_PIXIV: c = DownloaderPixiv
-    elif subscription_type == HC.SUBSCRIPTION_TYPE_TUMBLR: c = DownloaderTumblr
+    if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: c = DownloaderBooru
+    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART: c = DownloaderDeviantArt
+    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_GIPHY: c = DownloaderGiphy
+    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: c = DownloaderHentaiFoundry
+    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: c = DownloaderPixiv
+    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: c = DownloaderTumblr
     
     return c( *args )
     
@@ -64,7 +65,11 @@ class Downloader():
     
     def __init__( self ):
         
+        self._we_are_done = False
+        
         self._connections = {}
+        
+        self._all_urls_so_far = set()
         
         self._num_pages_done = 0
         
@@ -93,6 +98,8 @@ class Downloader():
     
     def GetAnotherPage( self ):
         
+        if self._we_are_done: return []
+        
         url = self._GetNextGalleryPageURL()
         
         connection = self._GetConnection( url )
@@ -102,6 +109,14 @@ class Downloader():
         url_info = self._ParseGalleryPage( data, url )
         
         self._num_pages_done += 1
+        
+        # stop ourselves getting into an accidental infinite loop
+        
+        url_info = [ info for info in url_info if info[0] not in self._all_urls_so_far ]
+        
+        self._all_urls_so_far.update( [ info[0] for info in url_info ] )
+        
+        # now url_info only contains new url info
         
         return url_info
         
@@ -123,24 +138,31 @@ class Downloader():
     
     def GetTags( self, url ): pass
     
+    def SetupGallerySearch( self ): pass
+    
 class DownloaderBooru( Downloader ):
     
-    def __init__( self, booru, query ):
+    def __init__( self, booru, tags ):
         
         self._booru = booru
-        self._tags = query
+        self._tags = tags
         
-        ( self._search_url, self._gallery_advance_num, self._search_separator, self._thumb_classname ) = booru.GetGalleryParsingInfo()
+        self._gallery_advance_num = None
+        
+        ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname ) = booru.GetGalleryParsingInfo()
         
         Downloader.__init__( self )
         
     
     def _GetNextGalleryPageURL( self ):
         
-        if self._gallery_advance_num == 1: num_page_base = 1
+        if self._advance_by_page_num: num_page_base = 1
         else: num_page_base = 0
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', str( num_page_base + ( self._num_pages_done * self._gallery_advance_num ) ) )
+        if self._gallery_advance_num is None: gallery_advance_num = 0
+        else: gallery_advance_num = self._gallery_advance_num
+        
+        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', str( num_page_base + ( self._num_pages_done * gallery_advance_num ) ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -151,6 +173,12 @@ class DownloaderBooru( Downloader ):
         soup = bs4.BeautifulSoup( html )
         
         thumbnails = soup.find_all( class_ = self._thumb_classname )
+        
+        if self._gallery_advance_num is None:
+            
+            if len( thumbnails ) == 0: self._we_are_done = True
+            else: self._gallery_advance_num = len( thumbnails )
+            
         
         for thumbnail in thumbnails:
             
@@ -169,7 +197,7 @@ class DownloaderBooru( Downloader ):
                 if url not in urls_set:
                     
                     urls_set.add( url )
-                    urls.append( url )
+                    urls.append( ( url, ) )
                     
                 
             
@@ -179,7 +207,7 @@ class DownloaderBooru( Downloader ):
     
     def _ParseImagePage( self, html, url_base ):
         
-        ( search_url, search_separator, gallery_advance_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
+        ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
         
         soup = bs4.BeautifulSoup( html )
         
@@ -270,9 +298,7 @@ class DownloaderBooru( Downloader ):
     
 class DownloaderDeviantArt( Downloader ):
     
-    def __init__( self, query ):
-        
-        artist = query
+    def __init__( self, artist ):
         
         self._gallery_url = 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset='
         
@@ -287,7 +313,7 @@ class DownloaderDeviantArt( Downloader ):
         
         soup = bs4.BeautifulSoup( html )
         
-        thumbs_container = soup.find( class_ = 'stream stream-fh' )
+        thumbs_container = soup.find( class_ = 'zones-container' )
         
         def starts_with_thumb( classname ): return classname is not None and classname.startswith( 'thumb' )
         
@@ -299,19 +325,32 @@ class DownloaderDeviantArt( Downloader ):
             
             page_url_split = page_url.split( '-' )
             
-            deviant_art_file_id = page_url_split[-1 ]
+            deviant_art_file_id = page_url_split[-1]
             
             image_url = 'http://www.deviantart.com/download/' + deviant_art_file_id + '/' # trailing slash is important
             
-            raw_title = link[ 'title' ] # something in the form sweet dolls by ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
+            raw_title = link[ 'title' ] # sweet dolls by ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
             
-            tags = []
+            raw_title_reversed = raw_title[::-1] # yrleweJ ;tg& serutainiM ;tg& stfarC nasitrA ni 2102 ,92 beF ,CainegnA~ yb sllod teews
             
-            ( title, raw_title ) = raw_title.split( ' by ~', 1 )
+            ( creator_and_date_and_tags_reversed, title_reversed ) = raw_title_reversed.split( ' yb ', 1 )
             
-            ( creator, raw_title ) = raw_title.split( ', ', 1 )
+            creator_and_date_and_tags = creator_and_date_and_tags_reversed[::-1] # ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
             
-            ( date_gumpf, raw_category_tags ) = raw_title.split( ' in ', 1 )
+            ( creator_with_username_char, date_and_tags ) = creator_and_date_and_tags.split( ',', 1 )
+            
+            creator = creator_with_username_char[1:] # AngeniaC
+            
+            title = title_reversed[::-1] # sweet dolls
+            
+            try: ( date_gumpf, raw_category_tags ) = date_and_tags.split( ' in ', 1 )
+            except:
+                
+                print( raw_title )
+                print( date_and_tags )
+                
+                raise
+                
             
             category_tags = raw_category_tags.split( ' > ' )
             
@@ -331,16 +370,14 @@ class DownloaderDeviantArt( Downloader ):
     
 class DownloaderGiphy( Downloader ):
     
-    def __init__( self, query ):
-        
-        tag = query
+    def __init__( self, tag ):
         
         self._gallery_url = 'http://giphy.com/api/gifs?tag=' + tag.replace( ' ', '+' ) + '&page='
         
         Downloader.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url + str( self._num_pages_done )
+    def _GetNextGalleryPageURL( self ): return self._gallery_url + str( self._num_pages_done + 1 )
     
     def _ParseGalleryPage( self, data, url_base ):
         
@@ -383,10 +420,11 @@ class DownloaderGiphy( Downloader ):
     
 class DownloaderHentaiFoundry( Downloader ):
     
-    def __init__( self, query_type, query ):
+    def __init__( self, query_type, query, advanced_hentai_foundry_options ):
         
-        self._query_type = query
+        self._query_type = query_type
         self._query = query
+        self._advanced_hentai_foundry_options = advanced_hentai_foundry_options
         
         Downloader.__init__( self )
         
@@ -398,19 +436,41 @@ class DownloaderHentaiFoundry( Downloader ):
         for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
         
     
+    def _GetFileURLAndTags( self, url ):
+        
+        connection = self._GetConnection( url )
+        
+        html = connection.geturl( url )
+        
+        return self._ParseImagePage( html, url )
+        
+    
     def _GetNextGalleryPageURL( self ):
         
-        if self._query_type == 'artist':
+        if self._query_type in ( 'artist', 'artist pictures' ):
             
-            pass
+            artist = self._query
             
-            # this is slightly more difficult since it needs to manage scraps interlace
+            gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist
+            
+            return gallery_url + '/page/' + str( self._num_pages_done + 1 )
+            
+        elif self._query_type == 'artist scraps':
+            
+            artist = self._query
+            
+            gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist + '/scraps'
+            
+            return gallery_url + '/page/' + str( self._num_pages_done + 1 )
             
         elif self._query_type == 'tags':
             
             tags = self._query
             
-            return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + str( self._num_pages_done )
+            return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + str( self._num_pages_done + 1 )
+            # scraps = 0 hide
+            # -1 means show both
+            # 1 means scraps only. wetf
             
         
     
@@ -447,14 +507,17 @@ class DownloaderHentaiFoundry( Downloader ):
                 
                 urls_set.add( url )
                 
-                result_urls.append( url )
+                result_urls.append( ( url, ) )
                 
             
+        
+        # this is copied from old code. surely we can improve it?
+        if 'class="next"' not in html: self._we_are_done = True
         
         return result_urls
         
     
-    def _ParseImagePage( self, html ):
+    def _ParseImagePage( self, html, url_base ):
         
         # can't parse this easily normally because HF is a pain with the preview->click to see full size business.
         # find http://pictures.hentai-foundry.com//
@@ -528,6 +591,28 @@ class DownloaderHentaiFoundry( Downloader ):
         return tags
         
     
+    def SetupGallerySearch( self ):
+        
+        connection = self._GetConnection( 'http://www.hentai-foundry.com/site/filters' )
+        
+        cookies = connection.GetCookies()
+        
+        raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # YII_CSRF_TOKEN=19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
+        
+        processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
+        
+        csrf_token = processed_csrf.split( '"' )[1] # the 2917... bit
+        
+        self._advanced_hentai_foundry_options[ 'YII_CSRF_TOKEN' ] = csrf_token
+        
+        body = urllib.urlencode( self._advanced_hentai_foundry_options )
+        
+        headers = {}
+        headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+        
+        connection.request( 'POST', '/site/filters', headers = headers, body = body )
+        
+    
 class DownloaderPixiv( Downloader ):
     
     def __init__( self, query_type, query ):
@@ -547,8 +632,22 @@ class DownloaderPixiv( Downloader ):
     
     def _GetNextGalleryPageURL( self ):
         
-        if self._query_type == 'artist': pass
-        elif self._query_type == 'tags': pass
+        if self._query_type == 'artist':
+            
+            artist_id = self._query
+            
+            gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + str( artist_id )
+            
+        elif self._query_type == 'tag':
+            
+            tag = self._query
+            
+            tag = urllib.quote( tag.encode( 'utf-8' ) )
+            
+            gallery_url = 'http://www.pixiv.net/search.php?word=' + tag + '&s_mode=s_tag_full&order=date_d'
+            
+        
+        return gallery_url + '&p=' + str( self._num_pages_done + 1 )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -563,23 +662,33 @@ class DownloaderPixiv( Downloader ):
             
             url = urlparse.urljoin( url_base, thumbnail_link[ 'href' ] ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
             
-            image_url_reference_url = url.replace( 'medium', 'big' ) # http://www.pixiv.net/member_illust.php?mode=big&illust_id=33500690
-            
-            thumbnail_img = thumbnail_link.find( class_ = '_thumbnail' )
-            
-            thumbnail_image_url = thumbnail_img[ 'src' ] # http://i2.pixiv.net/img02/img/dnosuke/462657_s.jpg
-            
-            image_url = thumbnail_image_url.replace( '_s', '' ) # http://i2.pixiv.net/img02/img/dnosuke/462657.jpg
-            
-            results.append( ( url, image_url_reference_url, image_url ) )
+            results.append( ( url, ) )
             
         
         return results
         
     
-    def _ParseImagePage( self, html, image_url ):
+    def _ParseImagePage( self, html, page_url ):
         
         soup = bs4.BeautifulSoup( html )
+        
+        #
+        
+        # this is the page that holds the full size of the image.
+        # pixiv won't serve the image unless it thinks this page is the referrer
+        referral_url = page_url.replace( 'medium', 'big' ) # http://www.pixiv.net/member_illust.php?mode=big&illust_id=33500690
+        
+        #
+        
+        works_display = soup.find( class_ = 'works_display' )
+        
+        img = works_display.find( 'img' )
+        
+        img_url = img[ 'src' ] # http://i2.pixiv.net/img122/img/amanekukagenoyuragi/34992468_m.png
+        
+        image_url = img_url.replace( '_m.', '.' ) # http://i2.pixiv.net/img122/img/amanekukagenoyuragi/34992468.png
+        
+        #
         
         tags = soup.find( 'ul', class_ = 'tags' )
         
@@ -598,45 +707,59 @@ class DownloaderPixiv( Downloader ):
         try: tags.append( 'creator:' + image_url.split( '/' )[ -2 ] ) # http://i2.pixiv.net/img02/img/dnosuke/462657.jpg -> dnosuke
         except: pass
         
-        return tags
+        return ( referral_url, image_url, tags )
         
     
-    def GetFile( self, url, image_url_reference_url, image_url ):
+    def _GetReferralURLFileURLAndTags( self, page_url ):
+        
+        connection = self._GetConnection( page_url )
+        
+        html = connection.geturl( page_url )
+        
+        return self._ParseImagePage( html, page_url )
+        
+    
+    def GetFile( self, url ):
+        
+        ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
         
         connection = self._GetConnection( image_url )
         
-        headers = { 'Referer' : image_url_reference_url }
+        headers = { 'Referer' : referral_url }
         
         return connection.geturl( image_url, headers = headers )
         
     
-    def GetFileAndTags( self, url, image_url_reference_url, image_url ):
+    def GetFileAndTags( self, url ):
         
-        file = self.GetFile( url, image_url_reference_url, image_url )
-        tags = self.GetTags( url, image_url_reference_url, image_url )
+        ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
+        
+        connection = self._GetConnection( image_url )
+        
+        headers = { 'Referer' : referral_url }
+        
+        file = connection.geturl( image_url, headers = headers )
+        
+        return ( file, tags )
         
     
-    def GetTags( self, url, image_url_reference_url, image_url ):
+    def GetTags( self, url ):
         
-        connection = self._GetConnection( url )
+        ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
         
-        html = self._page_connection.geturl( url )
-        
-        return self._ParseImagePage( html, image_url )
+        return tags
         
     
 class DownloaderTumblr( Downloader ):
     
-    def __init__( self, query ):
-        
-        username = query
+    def __init__( self, username ):
         
         self._gallery_url = 'http://' + username + '.tumblr.com/api/read/json?start=%start%&num=50'
         
         Downloader.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return search_url.replace( '%start%', str( self._num_pages_done * 50 ) )
+    def _GetNextGalleryPageURL( self ): return self._gallery_url.replace( '%start%', str( self._num_pages_done * 50 ) )
     
     def _ParseGalleryPage( self, data, url_base ):
         
