@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 67</h3></li>
+				<ul>
+					<li>subscription db access improved</li>
+					<li>subscription 'delete subs seemingly at random' bug fixed</li>
+					<li>some nice subs help</li>
+					<li>subs and repos, if changed during a pause, will restart with new changes</li>
+					<li>subs and repos will automatically pause while their respective dialogs are open</li>
+					<li>new namespace | regex listctrl in regex dialog, instead of old sctvcp rubbish</li>
+					<li>new /aa/aa...0 file storage system for client</li>
+					<li>export and copy files now export writeable files, not read-only</li>
+					<li>rejiggered daemon db access, improving maintenance reliablity</li>
+					<li>dumper and 'show in new page' pages now process content updates correctly</li>
+				</ul>
+				<li><h3>version 66</h3></li>
+				<ul>
+					<li>subscriptions done! works for all normal download types</li>
+					<li>pause repo sync, pause subs sync</li>
+					<li>all download sites moved to the new system</li>
+					<li>lots of small changes to how download code works</li>
+					<li>pixiv tags is renamed to pixiv tag, since it only does one!</li>
+					<li>fixed DA</li>
+					<li>fixed DA again!</li>
+					<li>fixed DA tag parsing for all the diff types of username re http://help.deviantart.com/106/</li>
+					<li>fixed pixiv, somewhat</li>
+					<li>fixed giphy</li>
+					<li>fixed boorus for gallery_advance_num > 1</li>
+					<li>boorus reset in db to default</li>
+					<li>fixed copy files</li>
+					<li>fixed getmime</li>
+					<li>a silly parent assignment for A/C meant they were not closing with pages</li>
+					<li>made the cpu burn for the thumbnail resizer a bit more polite on hdd</li>
+					<li>repo sync daemon and subs sync daemon combined</li>
+					<li>some timing adjustments in sync daemon</li>
+					<li>subscription_type constant -> site_download_type</li>
+					<li>fixed temp folder being cleared on startup (a read-only issue)</li>
+					<li>advancedoptions classes now support setinfo</li>
+				</ul>
 				<li><h3>version 65</h3></li>
 				<ul>
 					<li>added subscriptions dialog</li>
