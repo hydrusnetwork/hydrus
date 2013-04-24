@@ -145,7 +145,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             display_media = self._focussed_media.GetDisplayMedia()
             
-            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + display_media.GetHash().encode( 'hex' ) + HC.mime_ext_lookup[ display_media.GetMime() ] )
+            data = wx.TextDataObject( CC.GetFilePath( display_media.GetHash(), display_media.GetMime() ) )
             
             wx.TheClipboard.SetData( data )
             

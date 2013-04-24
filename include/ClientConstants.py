@@ -270,6 +270,42 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     return m.get()
     
+def GetAllFileHashes():
+    
+    file_hashes = set()
+    
+    for path in IterateAllFilePaths():
+        
+        ( base, filename ) = os.path.split( path )
+        
+        try:
+            
+            ( hash_encoded, ext ) = filename.split( '.', 1 )
+            
+            file_hashes.add( hash_encoded.decode( 'hex' ) )
+            
+        except: continue
+        
+    
+    return file_hashes
+    
+def GetAllThumbnailHashes():
+    
+    thumbnail_hashes = set()
+    
+    for path in IterateAllThumbnailPaths():
+        
+        ( base, filename ) = os.path.split( path )
+        
+        if not filename.endswith( '_resized' ):
+            
+            try: thumbnail_hashes.add( filename.decode( 'hex' ) )
+            except: continue
+            
+        
+    
+    return thumbnail_hashes
+    
 def GetFilePath( hash, mime ):
     
     hash_encoded = hash.encode( 'hex' )
@@ -322,9 +358,11 @@ def IterateAllFilePaths():
     
     for ( one, two ) in itertools.product( hex_chars, hex_chars ):
         
-        next_paths = dircache.listdir( HC.CLIENT_FILES_DIR + os.path.sep + one + two )
+        dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
         
-        for path in next_paths: yield path
+        next_paths = dircache.listdir( dir )
+        
+        for path in next_paths: yield dir + os.path.sep + path
         
     
 def IterateAllThumbnailPaths():
@@ -333,9 +371,11 @@ def IterateAllThumbnailPaths():
     
     for ( one, two ) in itertools.product( hex_chars, hex_chars ):
         
-        next_paths = dircache.listdir( HC.CLIENT_THUMBNAIL_DIR + os.path.sep + one + two )
+        dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
         
-        for path in next_paths: yield path
+        next_paths = dircache.listdir( dir )
+        
+        for path in next_paths: yield dir + os.path.sep + path
         
     
 def MediaIntersectCDPPTagServiceIdentifiers( media, service_identifier ):

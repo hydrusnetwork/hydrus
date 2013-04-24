@@ -1168,7 +1168,7 @@ class ManagementPanelImport( ManagementPanel ):
             
             self._import_current_info.SetLabel( self._GetPreimportStatus() )
             
-            wx.GetApp().WriteLowPriority( 'import_file_from_page', self._page_key, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+            wx.GetApp().WriteDaemon( 'import_file_from_page', self._page_key, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
             
         else:
             
@@ -1644,7 +1644,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
                     
-                    wx.GetApp().Write( 'content_updates', content_updates )
+                    wx.GetApp().WriteDaemon( 'content_updates', content_updates )
                     
                 
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -2438,7 +2438,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes, tag ) ]
             
         
-        wx.GetApp().Write( 'content_updates', content_updates )
+        wx.GetApp().WriteDaemon( 'content_updates', content_updates )
         
         self._current_petition = None
         

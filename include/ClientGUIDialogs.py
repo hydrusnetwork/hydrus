@@ -662,6 +662,74 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def SetTag( self, tag ): self._tag_value.SetValue( tag )
     
+class DialogInputNamespaceRegex( Dialog ):
+    
+    def __init__( self, parent, namespace = '', regex = '' ):
+        
+        def InitialiseControls():
+            
+            self._namespace = wx.TextCtrl( self )
+            self._namespace.SetValue( namespace )
+            
+            self._regex = wx.TextCtrl( self )
+            self._regex.SetValue( regex )
+            
+            self._shortcuts = ClientGUICommon.RegexButton( self )
+            
+            self._ok = wx.Button( self, label='Ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            control_box = wx.BoxSizer( wx.HORIZONTAL )
+            
+            control_box.AddF( self._namespace, FLAGS_EXPAND_BOTH_WAYS )
+            control_box.AddF( wx.StaticText( self, label = ':' ), FLAGS_MIXED )
+            control_box.AddF( self._regex, FLAGS_EXPAND_BOTH_WAYS )
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( control_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._shortcuts, FLAGS_LONE_BUTTON )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'configure quick namespace' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    
+    def GetInfo( self ):
+        
+        namespace = self._namespace.GetValue()
+        
+        regex = self._regex.GetValue()
+        
+        return ( namespace, regex )
+        
+    
 class DialogInputNewAccounts( Dialog ):
     
     def __init__( self, parent, service_identifier ):
@@ -6555,9 +6623,9 @@ class DialogManageSubscriptions( Dialog ):
                 
                 listbook = types_to_listbooks[ site_download_type ]
                 
-                page_info = ( self._Panel, ( listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ), {} )
+                page = self._Panel( listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
                 
-                listbook.AddPage( page_info, name )
+                listbook.AddPage( page, name )
                 
             
             self._listbook.AddPage( self._deviant_art, 'deviant art' )
@@ -6777,8 +6845,6 @@ class DialogManageSubscriptions( Dialog ):
         
         try: wx.GetApp().Write( 'subscriptions', subscriptions )
         except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + unicode( e ) )
-        
-        HC.pubsub.pub( 'notify_new_subscriptions' )
         
         self.EndModal( wx.ID_OK )
         
@@ -7008,8 +7074,6 @@ class DialogManageSubscriptions( Dialog ):
             i = 0
             
             for ( title, timespan ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ):
-                
-                self._frequency_type.Append( title, timespan )
                 
                 if frequency_type == timespan: index_to_select = i
                 
@@ -8071,37 +8135,11 @@ class DialogPathsToTagsRegex( Dialog ):
     
     class _Panel( wx.Panel ):
         
-        ID_REGEX_WHITESPACE = 0
-        ID_REGEX_NUMBER = 1
-        ID_REGEX_ALPHANUMERIC = 2
-        ID_REGEX_ANY = 3
-        ID_REGEX_BEGINNING = 4
-        ID_REGEX_END = 5
-        ID_REGEX_0_OR_MORE_GREEDY = 6
-        ID_REGEX_1_OR_MORE_GREEDY = 7
-        ID_REGEX_0_OR_1_GREEDY = 8
-        ID_REGEX_0_OR_MORE_MINIMAL = 9
-        ID_REGEX_1_OR_MORE_MINIMAL = 10
-        ID_REGEX_0_OR_1_MINIMAL = 11
-        ID_REGEX_EXACTLY_M = 12
-        ID_REGEX_M_TO_N_GREEDY = 13
-        ID_REGEX_M_TO_N_MINIMAL = 14
-        ID_REGEX_LOOKAHEAD = 15
-        ID_REGEX_NEGATIVE_LOOKAHEAD = 16
-        ID_REGEX_LOOKBEHIND = 17
-        ID_REGEX_NEGATIVE_LOOKBEHIND = 18
-        ID_REGEX_NUMBER_WITHOUT_ZEROES = 19
-        ID_REGEX_NUMBER_EXT = 20
-        ID_REGEX_AUTHOR = 21
-        ID_REGEX_BACKSPACE = 22
-        ID_REGEX_SET = 23
-        ID_REGEX_NOT_SET = 24
-        
         def __init__( self, parent, service_identifier, paths ):
             
             def InitialiseControls():
                 
-                self._paths_list = ClientGUICommon.SaneListCtrl( self, 300, [ ( 'path', 400 ), ( 'tags', -1 ) ] )
+                self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( 'path', 400 ), ( 'tags', -1 ) ] )
                 
                 self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -8110,18 +8148,18 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
                 
-                self._page_regex = wx.TextCtrl( self._quick_namespaces_panel )
-                self._chapter_regex = wx.TextCtrl( self._quick_namespaces_panel )
-                self._volume_regex = wx.TextCtrl( self._quick_namespaces_panel )
-                self._title_regex = wx.TextCtrl( self._quick_namespaces_panel )
-                self._series_regex = wx.TextCtrl( self._quick_namespaces_panel )
-                self._creator_regex = wx.TextCtrl( self._quick_namespaces_panel )
+                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ] )
                 
-                self._update_button = wx.Button( self._quick_namespaces_panel, label='update' )
-                self._update_button.Bind( wx.EVT_BUTTON, self.EventUpdate )
+                self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
+                self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
                 
-                self._regex_shortcuts = wx.Button( self._quick_namespaces_panel, label = 'regex shortcuts' )
-                self._regex_shortcuts.Bind( wx.EVT_BUTTON, self.EventRegexShortcuts )
+                self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
+                self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
+                
+                self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
+                self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
+                
+                self._regex_shortcuts = ClientGUICommon.RegexButton( self._quick_namespaces_panel )
                 
                 self._regex_link = wx.HyperlinkCtrl( self._quick_namespaces_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
                 
@@ -8166,25 +8204,14 @@ class DialogPathsToTagsRegex( Dialog ):
             
             def InitialisePanel():
                 
-                gridbox = wx.FlexGridSizer( 0, 2 )
+                button_box = wx.BoxSizer( wx.HORIZONTAL )
                 
-                gridbox.AddGrowableCol( 1, 1 )
+                button_box.AddF( self._add_quick_namespace_button, FLAGS_MIXED )
+                button_box.AddF( self._edit_quick_namespace_button, FLAGS_MIXED )
+                button_box.AddF( self._delete_quick_namespace_button, FLAGS_MIXED )
                 
-                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Page regex ' ), FLAGS_MIXED )
-                gridbox.AddF( self._page_regex, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Chapter regex ' ), FLAGS_MIXED )
-                gridbox.AddF( self._chapter_regex, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Volume regex ' ), FLAGS_MIXED )
-                gridbox.AddF( self._volume_regex, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Title regex ' ), FLAGS_MIXED )
-                gridbox.AddF( self._title_regex, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Series regex ' ), FLAGS_MIXED )
-                gridbox.AddF( self._series_regex, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._quick_namespaces_panel, label='Creator regex ' ), FLAGS_MIXED )
-                gridbox.AddF( self._creator_regex, FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._quick_namespaces_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                self._quick_namespaces_panel.AddF( self._update_button, FLAGS_LONE_BUTTON )
+                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, FLAGS_EXPAND_PERPENDICULAR )
+                self._quick_namespaces_panel.AddF( button_box, FLAGS_BUTTON_SIZERS )
                 self._quick_namespaces_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
                 self._quick_namespaces_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
                 
@@ -8221,8 +8248,6 @@ class DialogPathsToTagsRegex( Dialog ):
             
             InitialisePanel()
             
-            self.Bind( wx.EVT_MENU, self.EventMenu )
-            
         
         
         def _GetTags( self, path ):
@@ -8247,26 +8272,17 @@ class DialogPathsToTagsRegex( Dialog ):
                 except: pass
                 
             
-            namespaced_regexes = []
-            
-            namespaced_regexes.append( ( self._page_regex, 'page:' ) )
-            namespaced_regexes.append( ( self._chapter_regex, 'chapter:' ) )
-            namespaced_regexes.append( ( self._volume_regex, 'volume:' ) )
-            namespaced_regexes.append( ( self._title_regex, 'title:' ) )
-            namespaced_regexes.append( ( self._series_regex, 'series:' ) )
-            namespaced_regexes.append( ( self._creator_regex, 'creator:' ) )
-            
-            for ( control, prefix ) in namespaced_regexes:
+            for ( namespace, regex ) in self._quick_namespaces_list.GetClientData():
                 
                 try:
                     
-                    m = re.search( control.GetValue(), path )
+                    m = re.search( regex, path )
                     
                     if m is not None:
                         
                         match = m.group()
                         
-                        if len( match ) > 0: tags.append( prefix + match )
+                        if len( match ) > 0: tags.append( namespace + ':' + match )
                         
                     
                 except: pass
@@ -8343,6 +8359,48 @@ class DialogPathsToTagsRegex( Dialog ):
                 
             
         
+        def EventAddQuickNamespace( self, event ):
+            
+            with DialogInputNamespaceRegex( self ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( namespace, regex ) = dlg.GetInfo()
+                    
+                    self._quick_namespaces_list.Append( ( namespace, regex ), ( namespace, regex ) )
+                    
+                    self._RefreshFileList()
+                    
+                
+            
+        
+        def EventDeleteQuickNamespace( self, event ):
+            
+            self._quick_namespaces_list.RemoveAllSelected()
+            
+            self._RefreshFileList()
+            
+        
+        def EventEditQuickNamespace( self, event ):
+            
+            for index in self._quick_namespaces_list.GetAllSelected():
+                
+                ( namespace, regex ) = self._quick_namespaces_list.GetClientData( index = index )
+                
+                with DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( namespace, regex ) = dlg.GetInfo()
+                        
+                        self._quick_namespaces_list.UpdateRow( index, ( namespace, regex ), ( namespace, regex ) )
+                        
+                    
+                
+            
+            self._RefreshFileList()
+            
+        
         def EventItemSelected( self, event ):
             
             single_tags = set()
@@ -8369,101 +8427,6 @@ class DialogPathsToTagsRegex( Dialog ):
             self._single_tags.SetTags( single_tags )
             
         
-        def EventMenu( self, event ):
-            
-            id = event.GetId()
-            
-            phrase = None
-            
-            if id == self.ID_REGEX_WHITESPACE: phrase = r'\s'
-            elif id == self.ID_REGEX_NUMBER: phrase = r'\d'
-            elif id == self.ID_REGEX_ALPHANUMERIC: phrase = r'\w'
-            elif id == self.ID_REGEX_ANY: phrase = r'.'
-            elif id == self.ID_REGEX_BACKSPACE: phrase = r'\\'
-            elif id == self.ID_REGEX_BEGINNING: phrase = r'^'
-            elif id == self.ID_REGEX_END: phrase = r'$'
-            elif id == self.ID_REGEX_SET: phrase = r'[...]'
-            elif id == self.ID_REGEX_NOT_SET: phrase = r'[^...]'
-            elif id == self.ID_REGEX_0_OR_MORE_GREEDY: phrase = r'*'
-            elif id == self.ID_REGEX_1_OR_MORE_GREEDY: phrase = r'+'
-            elif id == self.ID_REGEX_0_OR_1_GREEDY: phrase = r'?'
-            elif id == self.ID_REGEX_0_OR_MORE_MINIMAL: phrase = r'*?'
-            elif id == self.ID_REGEX_1_OR_MORE_MINIMAL: phrase = r'+?'
-            elif id == self.ID_REGEX_0_OR_1_MINIMAL: phrase = r'*'
-            elif id == self.ID_REGEX_EXACTLY_M: phrase = r'{m}'
-            elif id == self.ID_REGEX_M_TO_N_GREEDY: phrase = r'{m,n}'
-            elif id == self.ID_REGEX_M_TO_N_MINIMAL: phrase = r'{m,n}?'
-            elif id == self.ID_REGEX_LOOKAHEAD: phrase = r'(?=...)'
-            elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = r'(?!...)'
-            elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
-            elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
-            elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
-            elif id == self.ID_REGEX_NUMBER_EXT: phrase = r'[1-9]+\d*(?=.{4}$)'
-            elif id == self.ID_REGEX_AUTHOR: phrase = r'[^\\][\w\s]*(?=\s-)'
-            else: event.Skip()
-            
-            if phrase is not None:
-                
-                if wx.TheClipboard.Open():
-                    
-                    data = wx.TextDataObject( phrase )
-                    
-                    wx.TheClipboard.SetData( data )
-                    
-                    wx.TheClipboard.Close()
-                    
-                else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-                
-            
-        
-        def EventRegexShortcuts( self, event ):
-            
-            menu = wx.Menu()
-            
-            menu.Append( -1, 'click on a phrase to copy to clipboard' )
-            
-            menu.AppendSeparator()
-            
-            menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
-            menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
-            menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
-            menu.Append( self.ID_REGEX_ANY, r'any character - .' )
-            menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
-            menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
-            menu.Append( self.ID_REGEX_END, r'end of line - $' )
-            menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
-            menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
-            
-            menu.AppendSeparator()
-            
-            menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
-            menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
-            menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
-            menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
-            menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
-            menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
-            menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
-            menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
-            menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
-            
-            menu.AppendSeparator()
-            
-            menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
-            menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
-            menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
-            menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
-            
-            menu.AppendSeparator()
-            
-            menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-            menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
-            menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
-            
-            self.PopupMenu( menu )
-            
-            menu.Destroy()
-            
-        
         def EventRemoveRegex( self, event ):
             
             selection = self._regexes.GetSelection()
@@ -8477,8 +8440,6 @@ class DialogPathsToTagsRegex( Dialog ):
                 self._RefreshFileList()
                 
             
-        
-        def EventUpdate( self, event ): self._RefreshFileList()
         
         def GetServiceIdentifier( self ): return self._service_identifier
         

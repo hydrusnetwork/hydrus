@@ -30,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 66
+SOFTWARE_VERSION = 67
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -42,6 +42,7 @@ expirations = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ),
 
 shutdown = False
 is_first_start = False
+repos_or_subs_changed = False
 
 # Enums
 

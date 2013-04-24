@@ -502,11 +502,17 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _EditServices( self ):
         
+        original_pause_status = self._options[ 'pause_repo_sync' ]
+        
+        self._options[ 'pause_repo_sync' ] = True
+        
         try:
             
             with ClientGUIDialogs.DialogManageServices( self ) as dlg: dlg.ShowModal()
             
         except: wx.MessageBox( traceback.format_exc() )
+        
+        self._options[ 'pause_repo_sync' ] = original_pause_status
         
     
     def _FetchIP( self, service_identifier ):
@@ -646,11 +652,17 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _ManageSubscriptions( self ):
         
+        original_pause_status = self._options[ 'pause_subs_sync' ]
+        
+        self._options[ 'pause_subs_sync' ] = True
+        
         try:
             
             with ClientGUIDialogs.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        
+        self._options[ 'pause_subs_sync' ] = original_pause_status
         
     
     def _ManageTagServicePrecedence( self ):
@@ -1796,11 +1808,17 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     def EventEdit( self, event ):
         
+        original_pause_status = self._options[ 'pause_repo_sync' ]
+        
+        self._options[ 'pause_repo_sync' ] = True
+        
         try:
             
             with ClientGUIDialogs.DialogManageServices( self ) as dlg: dlg.ShowModal()
             
         except: wx.MessageBox( traceback.format_exc() )
+        
+        self._options[ 'pause_repo_sync' ] = original_pause_status
         
     
     def EventOk( self, event ): self.Destroy()

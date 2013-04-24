@@ -419,7 +419,7 @@ class Canvas():
                             
                             file_hash = self._current_display_media.GetHash()
                             
-                            self._media_window.movie = HC.CLIENT_FILES_DIR + os.path.sep + file_hash.encode( 'hex' ) + '.swf'
+                            self._media_window.movie = CC.GetFilePath( file_hash, HC.APPLICATION_FLASH )
                             
                         elif self._current_display_media.GetMime() == HC.VIDEO_FLV:
                             
@@ -428,7 +428,7 @@ class Canvas():
                             file_hash = self._current_display_media.GetHash()
                             
                             flash_vars = []
-                            flash_vars.append( ( 'flv', HC.CLIENT_FILES_DIR + os.path.sep + file_hash.encode( 'hex' ) + '.flv' ) )
+                            flash_vars.append( ( 'flv', CC.GetFilePath( file_hash, HC.VIDEO_FLV ) ) )
                             flash_vars.append( ( 'margin', '0' ) )
                             flash_vars.append( ( 'autoload', '1' ) )
                             flash_vars.append( ( 'autoplay', '1' ) )
@@ -980,7 +980,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._current_media.GetHash().encode( 'hex' ) + HC.mime_ext_lookup[ self._current_media.GetMime() ] )
+            data = wx.TextDataObject( CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) )
             
             wx.TheClipboard.SetData( data )
             
@@ -1247,7 +1247,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( HC.CLIENT_FILES_DIR + os.path.sep + self._current_media.GetHash().encode( 'hex' ) + HC.mime_ext_lookup[ self._current_media.GetMime() ] )
+            data = wx.TextDataObject( CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) )
             
             wx.TheClipboard.SetData( data )
             
@@ -2942,7 +2942,7 @@ class PDFButton( wx.Button ):
     
     def EventButton( self, event ):
         
-        path = HC.CLIENT_FILES_DIR + os.path.sep + self._hash.encode( 'hex' ) + '.pdf'
+        path = CC.GetFilePath( self._hash, HC.APPLICATION_PDF )
         
         # os.system( 'start ' + path )
         subprocess.call( 'start "" "' + path + '"', shell = True )

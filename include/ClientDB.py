@@ -35,9 +35,9 @@ class FileDB():
             
             hash_id = self._GetHashId( c, hash )
             
-            thumbnail_path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
+            thumbnail_path = CC.GetThumbnailPath( hash )
             
-            with open( thumbnail_path_to, 'wb' ) as f: f.write( thumbnail )
+            with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
             phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail )
             
@@ -67,11 +67,13 @@ class FileDB():
                     
                     mime = self._GetMime( c, self._local_file_service_id, hash_id )
                     
-                    path_from = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                    path_from = CC.GetFilePath( hash, mime )
                     
                     path_to = export_path + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
                     shutil.copy( path_from, path_to )
+                    
+                    os.chmod( path_to, stat.S_IWRITE )
                     
                     paths.append( path_to )
                     
@@ -115,11 +117,13 @@ class FileDB():
                     
                     mime = self._GetMime( c, self._local_file_service_id, hash_id )
                     
-                    path_from = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                    path_from = CC.GetFilePath( hash, mime )
                     
                     path_to = export_path + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
                     shutil.copy( path_from, path_to )
+                    
+                    os.chmod( path_to, stat.S_IWRITE )
                     
                     if cancel_event.isSet(): break
                     
@@ -158,7 +162,7 @@ class FileDB():
             
             with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
             
-            with open( HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ], 'rb' ) as f: file = f.read()
+            with open( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
             
         except MemoryError: print( 'Memory error!' )
         except: raise Exception( 'Could not find that file!' )
@@ -226,33 +230,29 @@ class FileDB():
     
     def _GetThumbnail( self, hash, full_size = False ):
         
-        if full_size:
+        path = CC.GetThumbnailPath( hash )
+        
+        if not full_size:
             
-            path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
+            fullsize_path = path
             
-            with open( path_to, 'rb' ) as f: thumbnail = f.read()
+            path = fullsize_path + '_resized'
             
-        else:
-            
-            path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' ) + '_resized'
-            
-            if os.path.exists( path_to ):
+            if not os.path.exists( path ):
                 
-                with open( path_to, 'rb' ) as f: thumbnail = f.read()
-                
-            else:
-                
-                path_to_full = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
-                
-                with open( path_to_full, 'rb' ) as f: thumbnail_full = f.read()
+                with open( fullsize_path, 'rb' ) as f: thumbnail_full = f.read()
                 
                 thumbnail_dimensions = self._options[ 'thumbnail_dimensions' ]
                 
                 thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail_full, thumbnail_dimensions )
                 
-                with open( path_to, 'wb' ) as f: f.write( thumbnail )
+                with open( path, 'wb' ) as f: f.write( thumbnail )
+                
+                return thumbnail
                 
             
+        
+        with open( path, 'rb' ) as f: thumbnail = f.read()
         
         return thumbnail
         
@@ -1724,30 +1724,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         deletee_hashes = set( self._GetHashes( c, deletee_hash_ids ) )
         
-        cached_filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
-        
-        local_files_hashes = set()
-        
-        hashes_to_filenames = {}
-        
-        for filename in cached_filenames:
-            
-            try:
-                
-                ( hash, ext ) = filename.split( '.' )
-                
-                hash = hash.decode( 'hex' )
-                
-                local_files_hashes.add( hash ) # this try ... except is for weird files that might have got into the directory by accident
-                
-                hashes_to_filenames[ hash ] = filename
-                
-            except: pass
-            
+        local_files_hashes = CC.GetAllFileHashes()
         
         for hash in local_files_hashes & deletee_hashes:
             
-            path = HC.CLIENT_FILES_DIR + os.path.sep + hashes_to_filenames[ hash ]
+            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+            
+            path = CC.GetFilePath( hash, mime )
             
             os.chmod( path, stat.S_IWRITE )
             
@@ -1764,26 +1747,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HC.SplayListForDB( perceptual_deletees ) + ';' )
         
-        all_thumbnail_filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
-        
-        thumbnails_i_have = set()
-        
-        for filename in all_thumbnail_filenames:
-            
-            if not filename.endswith( '_resized' ):
-                
-                try: thumbnails_i_have.add( filename.decode( 'hex' ) ) # this try ... except is for weird files that might have got into the directory by accident
-                except: pass
-                
-            
+        local_thumbnail_hashes = CC.GetAllThumbnailHashes()
         
         hashes = set( self._GetHashes( c, hash_ids ) )
         
-        thumbnail_deletees = thumbnails_i_have - hashes
+        thumbnail_deletees = local_thumbnail_hashes - hashes
         
         for hash in thumbnail_deletees:
             
-            path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
+            path = CC.GetThumbnailPath( hash )
             resized_path = path + '_resized'
             
             os.remove( path )
@@ -2960,7 +2932,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
                         
-                        thumbnails_i_have = { path.decode( 'hex' ) for path in dircache.listdir( HC.CLIENT_THUMBNAILS_DIR ) if not path.endswith( '_resized' ) }
+                        thumbnails_i_have = CC.GetAllThumbnailHashes()
                         
                         hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
                         
@@ -3141,18 +3113,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetSubscriptions( self, c ):
         
-        result = c.execute( 'SELECT subscriptions FROM subscriptions;', ).fetchone()
+        subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, dict( advanced_tag_options ), advanced_import_options, last_checked, url_cache ) for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) ) in c.execute( 'SELECT site_download_type, name, info FROM subscriptions;', ) ]
         
-        if result is None: return []
-        else:
-            
-            ( subscriptions, ) = result
-            
-            # dict( advanced_tag_options ) is a db yaml storage bug
-            subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, dict( advanced_tag_options ), advanced_import_options, last_checked, url_cache ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
-            
-            return subscriptions
-            
+        return subscriptions
         
     
     def _GetTagServicePrecedence( self, c ):
@@ -3325,7 +3288,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             timestamp = int( time.time() )
             
-            dest_path = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+            dest_path = CC.GetFilePath( hash, mime )
             
             if not os.path.exists( dest_path ):
                 
@@ -3338,15 +3301,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( file, HC.UNSCALED_THUMBNAIL_DIMENSIONS )
                 
-                thumbnail_path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
+                thumbnail_path = CC.GetThumbnailPath( hash )
                 
-                with open( thumbnail_path_to, 'wb' ) as f: f.write( thumbnail )
+                with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
                 
                 thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
                 
-                thumbnail_resized_path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' ) + '_resized'
+                thumbnail_resized_path = thumbnail_path + '_resized'
                 
-                with open( thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
+                with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
                 
                 phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail )
                 
@@ -3801,14 +3764,28 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.execute( 'INSERT INTO pixiv_account ( pixiv_id, password ) VALUES ( ?, ? );', ( pixiv_id, password ) )
         
     
+    def _SetSubscription( self, c, subscription ):
+        
+        ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = subscription
+        
+        info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache ]
+        
+        c.execute( 'DELETE FROM subscriptions WHERE site_download_type = ? AND name = ?;', ( site_download_type, name ) )
+        
+        c.execute( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', ( site_download_type, name, info ) )
+        
+    
     def _SetSubscriptions( self, c, subscriptions ):
+        
+        HC.repos_or_subs_changed = True
+        
+        inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
         
         c.execute( 'DELETE FROM subscriptions;' )
         
-        # advanced_tag_options.items() is a db yaml storage bug
-        subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
+        c.executemany( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', inserts )
         
-        c.execute( 'INSERT INTO subscriptions ( subscriptions ) VALUES ( ? );', ( subscriptions, ) )
+        self.pub( 'notify_new_subscriptions' )
         
     
     def _SetTagServicePrecedence( self, c, service_identifiers ):
@@ -4117,6 +4094,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
     
     def _UpdateServices( self, c, edit_log ):
+        
+        HC.repos_or_subs_changed = True
         
         recalc_active_mappings = False
         
@@ -4446,10 +4425,13 @@ class DB( ServiceDB ):
                 
             
             if os.path.exists( temp_dir ): shutil.rmtree( temp_dir, onerror = make_temp_files_deletable )
+            
         except: pass
         
         try:
+            
             if not os.path.exists( temp_dir ): os.mkdir( temp_dir )
+            
         except: pass
         
         # clean up if last connection closed badly
@@ -4604,6 +4586,19 @@ class DB( ServiceDB ):
             if not os.path.exists( HC.CLIENT_FILES_DIR ): os.mkdir( HC.CLIENT_FILES_DIR )
             if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
             
+            hex_chars = '0123456789abcdef'
+            
+            for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                
+                dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
+                
+                if not os.path.exists( dir ): os.mkdir( dir )
+                
+                dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+                
+                if not os.path.exists( dir ): os.mkdir( dir )
+                
+            
             ( db, c ) = self._GetDBCursor()
             
             c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
@@ -4753,7 +4748,7 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX statuses_status_index ON statuses ( status );' )
             
-            c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
+            c.execute( 'CREATE TABLE subscriptions ( site_download_type INTEGER, name TEXT, info TEXT_YAML, PRIMARY KEY( site_download_type, name ) );' )
             
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
             
@@ -4930,9 +4925,9 @@ class DB( ServiceDB ):
         
         if resize_thumbs:
             
-            thumbnail_paths = [ path for path in dircache.listdir( HC.CLIENT_THUMBNAILS_DIR ) if path.endswith( '_resized' ) ]
+            thumbnail_paths = [ path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) ]
             
-            for path in thumbnail_paths: os.remove( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + path )
+            for path in thumbnail_paths: os.remove( path )
             
             self.pub( 'thumbnail_resize' )
             
@@ -5109,6 +5104,89 @@ class DB( ServiceDB ):
                     self._options[ 'pause_subs_sync' ] = False
                     
                     c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    
+                
+                if version < 67:
+                    
+                    result = c.execute( 'SELECT subscriptions FROM subscriptions;' ).fetchone()
+                    
+                    if result is None: subscriptions = []
+                    else: ( subscriptions, ) = result
+                    
+                    c.execute( 'DROP TABLE subscriptions;' )
+                    
+                    c.execute( 'CREATE TABLE subscriptions ( site_download_type INTEGER, name TEXT, info TEXT_YAML, PRIMARY KEY( site_download_type, name ) );' )
+                    
+                    inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
+                    
+                    c.executemany( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', inserts )
+                    
+                    #
+                    
+                    wx.GetApp().SetSplashText( 'creating new db directories' )
+                    
+                    hex_chars = '0123456789abcdef'
+                    
+                    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                        
+                        dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
+                        
+                        if not os.path.exists( dir ): os.mkdir( dir )
+                        
+                        dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+                        
+                        if not os.path.exists( dir ): os.mkdir( dir )
+                        
+                    
+                    wx.GetApp().SetSplashText( 'generating file cache' )
+                    
+                    filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
+                    
+                    i = 1
+                    
+                    for filename in filenames:
+                        
+                        try:
+                            
+                            source_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
+                            
+                            first_two_chars = filename[:2]
+                            
+                            destination_path = HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + filename
+                            
+                            shutil.move( source_path, destination_path )
+                            
+                        except: continue
+                        
+                        i += 1
+                        
+                        if i % 100 == 0: wx.GetApp().SetSplashText( 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                        
+                    
+                    wx.GetApp().SetSplashText( 'generating thumbnail cache' )
+                    
+                    filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+                    
+                    i = 1
+                    
+                    for filename in filenames:
+                        
+                        try:
+                            
+                            source_path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + filename
+                            
+                            first_two_chars = filename[:2]
+                            
+                            destination_path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + filename
+                            
+                            shutil.move( source_path, destination_path )
+                            
+                        except: continue
+                        
+                        i += 1
+                        
+                        if i % 100 == 0: wx.GetApp().SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                        
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -6241,7 +6319,7 @@ class DB( ServiceDB ):
     
     def DAEMONDownloadFiles( self ):
         
-        all_downloads = self.Read( 'all_downloads', HC.LOW_PRIORITY )
+        all_downloads = wx.GetApp().ReadDaemon( 'all_downloads' )
         
         num_downloads = sum( [ len( hashes ) for ( service_identifier, hashes ) in all_downloads.items() ] ) 
         
@@ -6249,7 +6327,7 @@ class DB( ServiceDB ):
             
             try:
                 
-                try: file_repository = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                try: file_repository = wx.GetApp().ReadDaemon( 'service', service_identifier )
                 except: continue
                 
                 HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
@@ -6270,7 +6348,7 @@ class DB( ServiceDB ):
                         
                         HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
                         
-                        self.Write( 'import_file', HC.LOW_PRIORITY, file )
+                        wx.GetApp().WriteDaemon( 'import_file', file )
                         
                         HC.pubsub.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
                         HC.pubsub.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
@@ -6290,19 +6368,19 @@ class DB( ServiceDB ):
     
     def DAEMONDownloadThumbnails( self ):
         
-        service_identifiers = self.Read( 'service_identifiers', HC.LOW_PRIORITY, ( HC.FILE_REPOSITORY, ) )
+        service_identifiers = wx.GetApp().ReadDaemon( 'service_identifiers', ( HC.FILE_REPOSITORY, ) )
         
-        thumbnail_hashes_i_have = { path.decode( 'hex' ) for path in dircache.listdir( HC.CLIENT_THUMBNAILS_DIR ) if not path.endswith( '_resized' ) }
+        thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
         
         for service_identifier in service_identifiers:
             
-            thumbnail_hashes_i_should_have = self.Read( 'thumbnail_hashes_i_should_have', HC.LOW_PRIORITY, service_identifier )
+            thumbnail_hashes_i_should_have = wx.GetApp().ReadDaemon( 'thumbnail_hashes_i_should_have', service_identifier )
             
             thumbnail_hashes_i_need = list( thumbnail_hashes_i_should_have - thumbnail_hashes_i_have )
             
             if len( thumbnail_hashes_i_need ) > 0:
                 
-                try: file_repository = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                try: file_repository = wx.GetApp().ReadDaemon( 'service', service_identifier )
                 except: continue
                 
                 if file_repository.CanDownload():
@@ -6323,7 +6401,7 @@ class DB( ServiceDB ):
                             
                             wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
                             
-                            self.Write( 'thumbnails', HC.LOW_PRIORITY, thumbnails )
+                            wx.GetApp().WriteDaemon( 'thumbnails', thumbnails )
                             
                             self.pub( 'add_thumbnail_count', service_identifier, len( thumbnails ) )
                             
@@ -6340,19 +6418,17 @@ class DB( ServiceDB ):
             
         
     
-    def DAEMONFlushServiceUpdates( self, update_log ): self.Write( 'service_updates', HC.HIGH_PRIORITY, update_log )
+    def DAEMONFlushServiceUpdates( self, update_log ): wx.GetApp().WriteDaemon( 'service_updates', update_log )
     
     def DAEMONResizeThumbnails( self ):
         
-        all_thumbnail_paths = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+        all_thumbnail_paths = [ path for path in CC.IterateAllThumbnailPaths() ]
         
         full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
         
         resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
         
-        thumbnail_paths_to_render = full_size_thumbnail_paths.difference( resized_thumbnail_paths )
-        
-        thumbnail_paths_to_render = list( thumbnail_paths_to_render )
+        thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
         
         random.shuffle( thumbnail_paths_to_render )
         
@@ -6364,13 +6440,13 @@ class DB( ServiceDB ):
             
             try:
                 
-                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+                with open( thumbnail_path, 'rb' ) as f: thumbnail = f.read()
                 
                 thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
                 
-                thumbnail_resized_path_to = thumbnail_path + '_resized'
+                thumbnail_resized_path = thumbnail_path + '_resized'
                 
-                with open( HC.CLIENT_THUMBNAILS_DIR + os.path.sep + thumbnail_resized_path_to, 'wb' ) as f: f.write( thumbnail_resized )
+                with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
                 
             except: print( traceback.format_exc() )
             
@@ -6392,7 +6468,7 @@ class DB( ServiceDB ):
     
     def DAEMONSynchroniseAccounts( self ):
         
-        services = self.Read( 'services', HC.LOW_PRIORITY, HC.RESTRICTED_SERVICES )
+        services = wx.GetApp().ReadDaemon( 'services', HC.RESTRICTED_SERVICES )
         
         do_notify = False
         
@@ -6432,7 +6508,7 @@ class DB( ServiceDB ):
     
     def DAEMONSynchroniseMessages( self ):
         
-        service_identifiers = self.Read( 'service_identifiers', HC.LOW_PRIORITY, ( HC.MESSAGE_DEPOT, ) )
+        service_identifiers = wx.GetApp().ReadDaemon( 'service_identifiers', ( HC.MESSAGE_DEPOT, ) )
         
         for service_identifier in service_identifiers:
             
@@ -6442,7 +6518,7 @@ class DB( ServiceDB ):
                 
                 service_type = service_identifier.GetType()
                 
-                try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
                 except: continue
                 
                 if service.CanCheck():
@@ -6463,9 +6539,9 @@ class DB( ServiceDB ):
                             
                             connection.Post( 'contact', public_key = public_key )
                             
-                            self.Write( 'contact_associated', HC.HIGH_PRIORITY, service_identifier )
+                            wx.GetApp().WriteDaemon( 'contact_associated', service_identifier )
                             
-                            service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                            service = wx.GetApp().ReadDaemon( 'service', service_identifier )
                             
                             contact = service.GetContact()
                             
@@ -6493,7 +6569,7 @@ class DB( ServiceDB ):
                     
                     new_last_check = int( time.time() ) - 5
                     
-                    self.Write( 'message_info_since', HC.LOW_PRIORITY, service_identifier, message_keys, decrypted_statuses, new_last_check )
+                    wx.GetApp().WriteDaemon( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
                     
                     if len( message_keys ) > 0: HC.pubsub.pub( 'log_message', 'synchronise messages daemon', 'checked ' + service_identifier.GetName() + ' up to ' + HC.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + str( len( message_keys ) ) + ' new messages' )
                     
@@ -6504,7 +6580,7 @@ class DB( ServiceDB ):
                 
                 if service.CanDownload():
                     
-                    serverside_message_keys = self.Read( 'message_keys_to_download', HC.LOW_PRIORITY, service_identifier )
+                    serverside_message_keys = wx.GetApp().ReadDaemon( 'message_keys_to_download', service_identifier )
                     
                     if len( serverside_message_keys ) > 0:
                         
@@ -6524,7 +6600,7 @@ class DB( ServiceDB ):
                                 
                                 message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
                                 
-                                self.Write( 'message', HC.LOW_PRIORITY, message, serverside_message_key = serverside_message_key )
+                                wx.GetApp().WriteDaemon( 'message', message, serverside_message_key = serverside_message_key )
                                 
                                 num_processed += 1
                                 
@@ -6551,15 +6627,15 @@ class DB( ServiceDB ):
                 
             
         
-        self.Write( 'flush_message_statuses', HC.LOW_PRIORITY )
+        wx.GetApp().WriteDaemon( 'flush_message_statuses' )
         
         # send messages to recipients and update my status to sent/failed
         
-        messages_to_send = self.Read( 'messages_to_send', HC.LOW_PRIORITY )
+        messages_to_send = wx.GetApp().ReadDaemon( 'messages_to_send' )
         
         for ( message_key, contacts_to ) in messages_to_send:
             
-            message = self.Read( 'transport_message', HC.LOW_PRIORITY, message_key )
+            message = wx.GetApp().ReadDaemon( 'transport_message', message_key )
             
             contact_from = message.GetContactFrom()
             
@@ -6570,7 +6646,7 @@ class DB( ServiceDB ):
                 my_public_key = contact_from.GetPublicKey()
                 my_contact_key = contact_from.GetContactKey()
                 
-                my_message_depot = self.Read( 'service', HC.LOW_PRIORITY, contact_from )
+                my_message_depot = wx.GetApp().ReadDaemon( 'service', contact_from )
                 
                 from_connection = my_message_depot.GetConnection()
                 
@@ -6611,19 +6687,19 @@ class DB( ServiceDB ):
             
             if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
             
-            self.Write( 'message_statuses', HC.LOW_PRIORITY, message_key, local_status_updates )
+            wx.GetApp().WriteDaemon( 'message_statuses', message_key, local_status_updates )
             
         
-        self.Read( 'status_num_inbox', HC.LOW_PRIORITY )
+        wx.GetApp().ReadDaemon( 'status_num_inbox' )
         
     
     def DAEMONSynchroniseRepositoriesAndSubscriptions( self ):
         
-        # repos
+        HC.repos_or_subs_changed = False
         
         if not self._options[ 'pause_repo_sync' ]:
             
-            service_identifiers = self.Read( 'service_identifiers', HC.LOW_PRIORITY, HC.REPOSITORIES )
+            service_identifiers = wx.GetApp().ReadDaemon( 'service_identifiers', HC.REPOSITORIES )
             
             for service_identifier in service_identifiers:
                 
@@ -6635,7 +6711,7 @@ class DB( ServiceDB ):
                     
                     service_type = service_identifier.GetType()
                     
-                    try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                    try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
                     except: continue
                     
                     if service.CanUpdate():
@@ -6643,8 +6719,6 @@ class DB( ServiceDB ):
                         connection = service.GetConnection()
                         
                         while service.CanUpdate():
-                            
-                            paused_i = 0
                             
                             while self._options[ 'pause_repo_sync' ]:
                                 
@@ -6654,9 +6728,12 @@ class DB( ServiceDB ):
                                 
                                 if HC.shutdown: raise Exception( 'Application shutting down!' )
                                 
-                                if paused_i == 10: return
-                                
-                                paused_i += 1
+                                if HC.repos_or_subs_changed:
+                                    
+                                    HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
+                                    
+                                    return
+                                    
                                 
                             
                             if HC.shutdown: raise Exception( 'Application shutting down!' )
@@ -6676,7 +6753,7 @@ class DB( ServiceDB ):
                                 
                                 HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
                                 
-                                self.Write( 'generate_tag_ids', HC.LOW_PRIORITY, update.GetTags() )
+                                wx.GetApp().WriteDaemon( 'generate_tag_ids', update.GetTags() )
                                 
                             
                             updates = update.SplitIntoSubUpdates()
@@ -6685,7 +6762,7 @@ class DB( ServiceDB ):
                             
                             for ( i, sub_update ) in enumerate( updates ):
                                 
-                                self.Write( 'update', HC.LOW_PRIORITY, service_identifier, sub_update )
+                                wx.GetApp().WriteDaemon( 'update', service_identifier, sub_update )
                                 
                                 HC.pubsub.pub( 'service_status', 'Processing ' + update_index_string + ' part ' + str( i + 1 ) + '/' + str( num_updates ) + ' for ' + name )
                                 
@@ -6705,7 +6782,7 @@ class DB( ServiceDB ):
                                 if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + news )
                                 
                             
-                            try: service = self.Read( 'service', HC.LOW_PRIORITY, service_identifier )
+                            try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
                             except: break
                             
                         
@@ -6734,9 +6811,7 @@ class DB( ServiceDB ):
         
         if not self._options[ 'pause_subs_sync' ]:
             
-            subscriptions = wx.GetApp().Read( 'subscriptions' )
-            
-            updated_subscriptions = []
+            subscriptions = wx.GetApp().ReadDaemon( 'subscriptions' )
             
             for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions:
                 
@@ -6758,7 +6833,7 @@ class DB( ServiceDB ):
                         
                         if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
                             
-                            try: booru = wx.GetApp().Read( 'booru', booru_name )
+                            try: booru = wx.GetApp().ReadDaemon( 'booru', booru_name )
                             except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
                             
                             tags = query.split( ' ' )
@@ -6814,8 +6889,6 @@ class DB( ServiceDB ):
                         
                         while True:
                             
-                            paused_i = 0
-                            
                             while self._options[ 'pause_subs_sync' ]:
                                 
                                 HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
@@ -6824,9 +6897,12 @@ class DB( ServiceDB ):
                                 
                                 if HC.shutdown: return
                                 
-                                if paused_i == 10: return
-                                
-                                paused_i += 1
+                                if HC.repos_or_subs_changed:
+                                    
+                                    HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
+                                    
+                                    return
+                                    
                                 
                             
                             if HC.shutdown: return
@@ -6864,8 +6940,6 @@ class DB( ServiceDB ):
                         
                         for url_args in all_url_args:
                             
-                            paused_i = 0
-                            
                             while self._options[ 'pause_subs_sync' ]:
                                 
                                 HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
@@ -6874,9 +6948,12 @@ class DB( ServiceDB ):
                                 
                                 if HC.shutdown: return
                                 
-                                if paused_i == 10: return
-                                
-                                paused_i += 1
+                                if HC.repos_or_subs_changed:
+                                    
+                                    HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
+                                    
+                                    return
+                                    
                                 
                             
                             if HC.shutdown: return
@@ -6889,7 +6966,7 @@ class DB( ServiceDB ):
                             
                             HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
                             
-                            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+                            ( status, hash ) = wx.GetApp().ReadDaemon( 'url_status', url )
                             
                             if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
                             
@@ -6956,11 +7033,13 @@ class DB( ServiceDB ):
                 
                 if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
                 
-                updated_subscriptions.append( ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) )
+                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                
+                wx.GetApp().Write( 'subscription', subscription )
                 
             
-            wx.GetApp().Write( 'subscriptions', updated_subscriptions )
-            
+        
+        HC.pubsub.pub( 'service_status', '' )
         
     
     def ProcessRequest( self, request_type, request, request_args ):
@@ -6973,7 +7052,7 @@ class DB( ServiceDB ):
                 
                 hash = request_args[ 'hash' ]
                 
-                file = self.Read( 'file', HC.HIGH_PRIORITY, hash )
+                file = wx.GetApp().ReadDaemon( 'file', hash )
                 
                 mime = HC.GetMimeFromString( file )
                 
@@ -6983,7 +7062,7 @@ class DB( ServiceDB ):
                 
                 hash = request_args[ 'hash' ]
                 
-                thumbnail = self.Read( 'thumbnail', HC.HIGH_PRIORITY, hash )
+                thumbnail = wx.GetApp().ReadDaemon( 'thumbnail', hash )
                 
                 mime = HC.GetMimeFromString( thumbnail )
                 
@@ -7149,6 +7228,7 @@ class DB( ServiceDB ):
         elif action == 'session': self._AddSession( c, *args, **kwargs )
         elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
         elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
+        elif action == 'subscription': self._SetSubscription( c, *args, **kwargs )
         elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
         elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
         elif action == 'update': self._AddUpdate( c, *args, **kwargs )

@@ -1955,6 +1955,137 @@ class OnOffButton( wx.Button ):
     
     def IsOn( self ): return self._on
     
+class RegexButton( wx.Button ):
+    
+    ID_REGEX_WHITESPACE = 0
+    ID_REGEX_NUMBER = 1
+    ID_REGEX_ALPHANUMERIC = 2
+    ID_REGEX_ANY = 3
+    ID_REGEX_BEGINNING = 4
+    ID_REGEX_END = 5
+    ID_REGEX_0_OR_MORE_GREEDY = 6
+    ID_REGEX_1_OR_MORE_GREEDY = 7
+    ID_REGEX_0_OR_1_GREEDY = 8
+    ID_REGEX_0_OR_MORE_MINIMAL = 9
+    ID_REGEX_1_OR_MORE_MINIMAL = 10
+    ID_REGEX_0_OR_1_MINIMAL = 11
+    ID_REGEX_EXACTLY_M = 12
+    ID_REGEX_M_TO_N_GREEDY = 13
+    ID_REGEX_M_TO_N_MINIMAL = 14
+    ID_REGEX_LOOKAHEAD = 15
+    ID_REGEX_NEGATIVE_LOOKAHEAD = 16
+    ID_REGEX_LOOKBEHIND = 17
+    ID_REGEX_NEGATIVE_LOOKBEHIND = 18
+    ID_REGEX_NUMBER_WITHOUT_ZEROES = 19
+    ID_REGEX_NUMBER_EXT = 20
+    ID_REGEX_AUTHOR = 21
+    ID_REGEX_BACKSPACE = 22
+    ID_REGEX_SET = 23
+    ID_REGEX_NOT_SET = 24
+    
+    def __init__( self, parent ):
+        
+        wx.Button.__init__( self, parent, label = 'regex shortcuts' )
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def EventButton( self, event ):
+        
+        menu = wx.Menu()
+        
+        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
+        menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
+        menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
+        menu.Append( self.ID_REGEX_ANY, r'any character - .' )
+        menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
+        menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
+        menu.Append( self.ID_REGEX_END, r'end of line - $' )
+        menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
+        menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
+        menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
+        menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
+        menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
+        menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
+        menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
+        menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
+        menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
+        menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
+        menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
+        menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
+        menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
+        menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
+        menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
+        
+        self.PopupMenu( menu )
+        
+        menu.Destroy()
+        
+    
+    def EventMenu( self, event ):
+        
+        id = event.GetId()
+        
+        phrase = None
+        
+        if id == self.ID_REGEX_WHITESPACE: phrase = r'\s'
+        elif id == self.ID_REGEX_NUMBER: phrase = r'\d'
+        elif id == self.ID_REGEX_ALPHANUMERIC: phrase = r'\w'
+        elif id == self.ID_REGEX_ANY: phrase = r'.'
+        elif id == self.ID_REGEX_BACKSPACE: phrase = r'\\'
+        elif id == self.ID_REGEX_BEGINNING: phrase = r'^'
+        elif id == self.ID_REGEX_END: phrase = r'$'
+        elif id == self.ID_REGEX_SET: phrase = r'[...]'
+        elif id == self.ID_REGEX_NOT_SET: phrase = r'[^...]'
+        elif id == self.ID_REGEX_0_OR_MORE_GREEDY: phrase = r'*'
+        elif id == self.ID_REGEX_1_OR_MORE_GREEDY: phrase = r'+'
+        elif id == self.ID_REGEX_0_OR_1_GREEDY: phrase = r'?'
+        elif id == self.ID_REGEX_0_OR_MORE_MINIMAL: phrase = r'*?'
+        elif id == self.ID_REGEX_1_OR_MORE_MINIMAL: phrase = r'+?'
+        elif id == self.ID_REGEX_0_OR_1_MINIMAL: phrase = r'*'
+        elif id == self.ID_REGEX_EXACTLY_M: phrase = r'{m}'
+        elif id == self.ID_REGEX_M_TO_N_GREEDY: phrase = r'{m,n}'
+        elif id == self.ID_REGEX_M_TO_N_MINIMAL: phrase = r'{m,n}?'
+        elif id == self.ID_REGEX_LOOKAHEAD: phrase = r'(?=...)'
+        elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = r'(?!...)'
+        elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
+        elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
+        elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
+        elif id == self.ID_REGEX_NUMBER_EXT: phrase = r'[1-9]+\d*(?=.{4}$)'
+        elif id == self.ID_REGEX_AUTHOR: phrase = r'[^\\][\w\s]*(?=\s-)'
+        else: event.Skip()
+        
+        if phrase is not None:
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject( phrase )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def __init__( self, parent, height, columns ):

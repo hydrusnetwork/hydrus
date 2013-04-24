@@ -233,9 +233,7 @@ class Controller( wx.App ):
     
     def ProcessServerRequest( self, *args, **kwargs ): return self._db.ProcessRequest( *args, **kwargs )
     
-    def Read( self, action, *args, **kwargs ):
-        
-        self._last_idle_time = int( time.time() )
+    def _Read( self, action, *args, **kwargs ):
         
         if action == 'options': return self._options
         elif action == 'tag_service_precedence': return self._tag_service_precedence
@@ -243,6 +241,15 @@ class Controller( wx.App ):
         elif action == 'thumbnail': return self._db.ReadThumbnail( *args, **kwargs )
         else: return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
         
+    
+    def Read( self, action, *args, **kwargs ):
+        
+        self._last_idle_time = int( time.time() )
+        
+        return self._Read( action, *args, **kwargs )
+        
+    
+    def ReadDaemon( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
     
     def SetSplashText( self, text ):
         
@@ -262,15 +269,16 @@ class Controller( wx.App ):
             
         
     
+    def _Write( self, action, priority, *args, **kwargs ): self._db.Write( action, priority, *args, **kwargs )
+    
     def Write( self, action, *args, **kwargs ):
         
         self._last_idle_time = int( time.time() )
         
-        self._db.Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        self._Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
         
     
-    def WriteLowPriority( self, action, *args, **kwargs ):
-        
-        self._db.Write( action, HC.LOW_PRIORITY, *args, **kwargs )
-        
+    def WriteDaemon( self, action, *args, **kwargs ): self._Write( action, HC.LOW_PRIORITY, *args, **kwargs )
+    
+    def WriteLowPriority( self, action, *args, **kwargs ): self._Write( action, HC.LOW_PRIORITY, *args, **kwargs )
     

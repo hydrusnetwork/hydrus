@@ -1,0 +1,34 @@
+<html>
+	<head>
+		<title>getting started - subscriptions</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<p><a href="getting_started_tags.html"><--- Back to tags</a></p>
+			<h3>what are subs?</h3>
+			<p>Subscriptions are a way of telling the client to regularly check a particular web search. Any new files will be downloaded and imported, and their tags optionally parsed.</p>
+			<p>You can set up a subscription for any of the gallery websites in the normal <i>new page->download->gallery</i> menu.</p>
+			<p>Here's the dialog, which is under <i>services->manage subscriptions</i>:</p>
+			<p><img src="subs_dialog.png" /></p>
+			<p>Here I have one subscription for Deviant Art, for the artist ChaoyuanXu. The client is set to check this artist for new files to import every seven days, and it will parse the respective creator and title tags and send them to the tag repository called 'public tag repo'.</p>
+			<p>The subscription synchronisation daemon (the subroutine that checks and imports from the websites) works very much like the one that synchronises hydrus repositories. It works in the background, and reports its current status similarly. When it is time for it to do some work, it will put a little text in the client's statusbar, like so:</p>
+			<p><img src="subs_status.png" /></p>
+			<p>You don't really have to care about this all that much; it just lets you know what it is doing.</p>
+			<p>Errors will be recovered from as gracefully as possible, and details written to the log. The subs daemon will retry the next day.</p>
+			<p>Here's the result of the subscription I set up above:</p>
+			<p><img src="subs_import_done.png" /></p>
+			<p>It took about two minutes to download all that, and it all happened quietly in the background. Notice the 146 pending tags, up top.</p>
+			<h3>how could this possibly go wrong?</h3>
+			<p>This is quite a powerful tool, and if you are silly, you will end up spamming a server and likely upsetting someone or breaking something.</p>
+			<p>To initialise a subscription, the daemon will parse every single gallery and image page for that particular search. This is fine for the example above, which had 4 gallery pages and 73 image pages, but the search "short hair" on safebooru has about 6,400 gallery pages encompassing >250,000 results! Trying a search like that will take a tremendous amount of time for you and cause a non-trivial CPU and data hit to their server.</p>
+			<p><i>Remember: If you are going to scrape another's site, be polite about it!</i></p>
+			<p>So, I advise you start with artist searches to begin with. These usually top out at about 1,000 files, and hence don't take all that long to do. Once you are more confident, try doing multiple-tag queries. I suggest you leave simple single-tag queries for the manual download page, where you can hit 'that's enough' after ten or twenty pages.</p>
+			<h3>help! it won't stop!</h3>
+			<p>If you <i>do</i> put in a huge search, and the 'found x new files for subscription y' message is climbing terrifyingly higher and higher with no end in sight, you can pause the subscriptions daemon with <i>services->pause->subscriptions synchronisation</i>.</p>
+			<p>This will give you a breather to edit your subscriptions in the dialog. Just unpause to continue with your new subs.</p>
+			<p class="right"><a href="index.html">Go back to the index ---></a></p>
+		</div>
+	</body>
+</html>

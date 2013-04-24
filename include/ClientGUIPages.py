@@ -364,7 +364,13 @@ class PageQuery( PageWithMedia ):
     def _InitMediaPanel( self ):
         
         if len( self._initial_media_results ) == 0: self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
-        else: self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_predicates, self._initial_media_results )
+        else:
+            
+            file_query_result = CC.FileQueryResult( self._file_service_identifier, self._initial_predicates, self._initial_media_results )
+            
+            self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_predicates, file_query_result )
+            
+        
     
 class PageThreadDumper( PageWithMedia ):
     
@@ -382,10 +388,12 @@ class PageThreadDumper( PageWithMedia ):
         
         self._media_results = filter( self._imageboard.IsOkToPost, self._media_results )
         
+        self._file_query_result = CC.FileQueryResult( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
+        
         PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._file_query_result )
     
