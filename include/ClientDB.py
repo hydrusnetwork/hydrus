@@ -1728,13 +1728,38 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for hash in local_files_hashes & deletee_hashes:
             
-            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+            with self._hashes_to_mimes_lock:
+                
+                # not sure why I'm ever getting a key error here, but let's recover from it anyway!
+                
+                if hash in self._hashes_to_mimes: mime = self._hashes_to_mimes[ hash ]
+                else: mime = None
+                
             
-            path = CC.GetFilePath( hash, mime )
-            
-            os.chmod( path, stat.S_IWRITE )
-            
-            os.remove( path )
+            if mime is None:
+                
+                for mime in HC.ALLOWED_MIMES:
+                    
+                    path = CC.GetFilePath( hash, mime )
+                    
+                    if os.path.exists( path ):
+                        
+                        os.chmod( path, stat.S_IWRITE )
+                        
+                        os.remove( path )
+                        
+                        break
+                        
+                    
+                
+            else:
+                
+                path = CC.GetFilePath( hash, mime )
+                
+                os.chmod( path, stat.S_IWRITE )
+                
+                os.remove( path )
+                
             
         
         # perceptual_hashes and thumbs
