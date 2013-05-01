@@ -17,6 +17,7 @@ import urllib
 import urlparse
 import wx
 import wx.lib.scrolledpanel
+import zipfile
 
 CAPTCHA_FETCH_EVENT_TYPE = wx.NewEventType()
 CAPTCHA_FETCH_EVENT = wx.PyEventBinder( CAPTCHA_FETCH_EVENT_TYPE )
@@ -1303,10 +1304,11 @@ class ManagementPanelImport( ManagementPanel ):
     
 class ManagementPanelImportHDD( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key, paths, advanced_import_options = {}, paths_to_tags = {} ):
+    def __init__( self, parent, page, page_key, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False ):
         
         self._advanced_import_options = advanced_import_options
         self._paths_to_tags = paths_to_tags
+        self._delete_after_success = delete_after_success
         
         ManagementPanelImport.__init__( self, parent, page, page_key )
         
@@ -1325,16 +1327,31 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
         
         self.SetSizer( vbox )
         
-        self.CALLBACKAddToImportQueue( paths )
+        self.CALLBACKAddToImportQueue( paths_info )
         
     
     def _THREADGetImportArgs( self, queue_object ):
         
         try:
             
-            path = queue_object
+            self._last_queue_object = queue_object
             
-            with open( path, 'rb' ) as f: file = f.read()
+            ( path_type, path_info ) = queue_object
+            
+            if path_type == 'path':
+                
+                path = path_info
+                
+                with open( path, 'rb' ) as f: file = f.read()
+                
+            elif path_type == 'zip':
+                
+                ( zip_path, name ) = path_info
+                
+                path = zip_path + os.path.sep + name
+                
+                with zipfile.ZipFile( zip_path, 'r' ) as z: file = z.read( name )
+                
             
             if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
             else: service_identifiers_to_tags = {}
@@ -1351,6 +1368,27 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
         status = 'reading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
         
         return status
+        
+    
+    def ImportDone( self, page_key, result, exception = None ):
+        
+        if page_key == self._page_key:
+            
+            ManagementPanelImport.ImportDone( self, page_key, result, exception = exception )
+            
+            if self._delete_after_success and result in ( 'successful', 'redundant' ):
+                
+                ( path_type, path_info ) = self._last_queue_object
+                
+                if path_type == 'path':
+                    
+                    path = path_info
+                    
+                    try: os.remove( path )
+                    except: pass
+                    
+                
+            
         
     
 class ManagementPanelImportWithQueue( ManagementPanelImport ):
@@ -1418,6 +1456,9 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         
         self._cancel_import_queue.set()
         self._cancel_outer_queue.set()
+        
+        self._import_cancel_button.Disable()
+        self._import_pause_button.Disable()
         
         if self._pause_import: self.EventPauseImport( event )
         if self._pause_outer_queue: self.EventPauseOuterQueue( event )
@@ -1730,6 +1771,9 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
     def EventCancelOuterQueue( self, event ):
         
         self._cancel_outer_queue.set()
+        
+        self._outer_queue_cancel_button.Disable()
+        self._outer_queue_pause_button.Disable()
         
         if self._pause_outer_queue: self.EventPauseOuterQueue( event )
         

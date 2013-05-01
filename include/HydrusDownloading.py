@@ -156,13 +156,14 @@ class DownloaderBooru( Downloader ):
     
     def _GetNextGalleryPageURL( self ):
         
-        if self._advance_by_page_num: num_page_base = 1
-        else: num_page_base = 0
+        if self._advance_by_page_num: index = 1 + self._num_pages_done
+        else:
+            
+            if self._gallery_advance_num is None: index = 0
+            else: index = self._num_pages_done * self._gallery_advance_num
+            
         
-        if self._gallery_advance_num is None: gallery_advance_num = 0
-        else: gallery_advance_num = self._gallery_advance_num
-        
-        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', str( num_page_base + ( self._num_pages_done * gallery_advance_num ) ) )
+        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', str( index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -172,7 +173,10 @@ class DownloaderBooru( Downloader ):
         
         soup = bs4.BeautifulSoup( html )
         
-        thumbnails = soup.find_all( class_ = self._thumb_classname )
+        # this catches 'post-preview' along with 'post-preview not-approved' sort of bullshit
+        def starts_with_classname( classname ): return classname is not None and classname.startswith( self._thumb_classname )
+        
+        thumbnails = soup.find_all( class_ = starts_with_classname )
         
         if self._gallery_advance_num is None:
             
@@ -323,12 +327,6 @@ class DownloaderDeviantArt( Downloader ):
             
             page_url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
             
-            page_url_split = page_url.split( '-' )
-            
-            deviant_art_file_id = page_url_split[-1]
-            
-            image_url = 'http://www.deviantart.com/download/' + deviant_art_file_id + '/' # trailing slash is important
-            
             raw_title = link[ 'title' ] # sweet dolls by ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
             
             raw_title_reversed = raw_title[::-1] # yrleweJ ;tg& serutainiM ;tg& stfarC nasitrA ni 2102 ,92 beF ,CainegnA~ yb sllod teews
@@ -360,10 +358,47 @@ class DownloaderDeviantArt( Downloader ):
             tags.append( 'creator:' + creator )
             tags.extend( category_tags )
             
-            results.append( ( image_url, tags ) )
+            results.append( ( page_url, tags ) )
             
         
         return results
+        
+    
+    def _ParseImagePage( self, html ):
+        
+        soup = bs4.BeautifulSoup( html )
+        
+        # if can find download link:
+        if False:
+            
+            pass # go fetch the popup page using tokens as appropriate. feels like it needs the GET token and a referrer, as middle click just redirects back to image page
+            
+        else:
+            
+            img = soup.find( id = 'gmi-ResViewSizer_fullimg' )
+            
+            src = img[ 'src' ]
+            
+            return src
+            
+        
+    
+    def _GetFileURL( self, url ):
+        
+        connection = self._GetConnection( url )
+        
+        html = connection.geturl( url )
+        
+        return self._ParseImagePage( html )
+        
+    
+    def GetFile( self, url, tags ):
+        
+        file_url = self._GetFileURL( url )
+        
+        connection = self._GetConnection( file_url )
+        
+        return connection.geturl( file_url )
         
     
     def GetTags( self, url, tags ): return tags

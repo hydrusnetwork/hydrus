@@ -826,6 +826,18 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
         
     
+    def AddMediaResult( self, page_key, media_result ):
+        
+        if page_key == self._page_key:
+            
+            ClientGUIMixins.ListeningMediaList.AddMediaResult( self, media_result )
+            
+            self._DrawBackgroundBitmap()
+            
+            self._DrawCurrentMedia()
+            
+        
+    
     def Archive( self, hashes ):
         
         next_media = self._GetNext( self._current_media )
@@ -959,6 +971,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if first_hash is None: self.SetMedia( self._GetFirst() )
         else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
+        
+        HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
     def _Archive( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )
@@ -1226,6 +1240,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         self.SetMedia( self._GetFirst() )
+        
+        HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
     def _Archive( self ): wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( self._current_media.GetHash(), ) ) ] )

@@ -4,6 +4,7 @@ import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusServer
+import itertools
 import os
 import Queue
 import shutil
@@ -15,6 +16,39 @@ import traceback
 import yaml
 import wx
 
+def GetPath( file_type, hash ):
+    
+    if file_type == 'file': directory = HC.SERVER_FILES_DIR
+    elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
+    elif file_type == 'update': directory = HC.SERVER_UPDATES_DIR
+    elif file_type == 'message': directory = HC.SERVER_MESSAGES_DIR
+    
+    hash_encoded = hash.encode( 'hex' )
+    
+    first_two_chars = hash_encoded[:2]
+    
+    return directory + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    
+def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllFilePaths( file_type ) }
+
+def IterateAllFilePaths( file_type ):
+    
+    if file_type == 'file': directory = HC.SERVER_FILES_DIR
+    elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
+    elif file_type == 'update': directory = HC.SERVER_UPDATES_DIR
+    elif file_type == 'message': directory = HC.SERVER_MESSAGES_DIR
+    
+    hex_chars = '0123456789abcdef'
+    
+    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+        
+        dir = directory + os.path.sep + one + two
+        
+        next_paths = dircache.listdir( dir )
+        
+        for path in next_paths: yield dir + os.path.sep + path
+        
+    
 class FileDB():
     
     def _AddFile( self, c, service_id, account_id, file_dict ):
@@ -57,7 +91,7 @@ class FileDB():
                 if current_storage + size > max_storage: raise HC.ForbiddenException( 'The service is full! It cannot take any more files!' )
                 
             
-            dest_path = HC.SERVER_FILES_DIR + os.path.sep + hash.encode( 'hex' )
+            dest_path = GetPath( 'file', hash )
             
             if not os.path.exists( dest_path ):
                 
@@ -68,7 +102,7 @@ class FileDB():
             
             if 'thumbnail' in file_dict:
                 
-                thumbnail_dest_path = HC.SERVER_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
+                thumbnail_dest_path = GetPath( 'thumbnail', hash )
                 
                 if not os.path.exists( thumbnail_dest_path ):
                     
@@ -171,7 +205,9 @@ class FileDB():
         
         try:
             
-            with open( HC.SERVER_FILES_DIR + os.path.sep + hash.encode( 'hex' ), 'rb' ) as f: file = f.read()
+            path = GetPath( 'file', hash )
+            
+            with open( path, 'rb' ) as f: file = f.read()
             
         except: raise HC.NotFoundException( 'Could not find that file!' )
         
@@ -275,7 +311,9 @@ class FileDB():
         
         try:
             
-            with open( HC.SERVER_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' ), 'rb' ) as f: thumbnail = f.read()
+            path = GetPath( 'thumbnail', hash )
+            
+            with open( path, 'rb' ) as f: thumbnail = f.read()
             
             return thumbnail
             
@@ -300,7 +338,7 @@ class MessageDB():
         
         c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, int( time.time() ) ) )
         
-        dest_path = HC.SERVER_MESSAGES_DIR + os.path.sep + message_key.encode( 'hex' )
+        dest_path = GetPath( 'message', message_key )
         
         with open( dest_path, 'wb' ) as f: f.write( message )
         
@@ -340,7 +378,9 @@ class MessageDB():
         
         try:
             
-            with open( HC.SERVER_MESSAGES_DIR + os.path.sep + message_key.encode( 'hex' ), 'rb' ) as f: message = f.read()
+            path = GetPath( 'message', message_key )
+            
+            with open( path, 'rb' ) as f: message = f.read()
             
         except: raise HC.NotFoundException( 'Could not find that message!' )
         
@@ -741,7 +781,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         ( update_key, ) = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND begin = ?;', ( service_id, begin ) ).fetchone()
         
-        with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
+        update_key_bytes = update_key.decode( 'hex' )
+        
+        path = GetPath( 'update', update_key_bytes )
+        
+        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
         c.execute( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND begin = ?;', ( False, service_id, begin ) )
         
@@ -764,7 +808,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         update_key = update_key_bytes.encode( 'hex' )
         
-        with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
+        path = GetPath( 'update', update_key_bytes )
+        
+        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
         c.execute( 'INSERT OR REPLACE INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, False ) )
         
@@ -779,11 +825,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             deletee_hashes = set( self._GetHashes( c, deletees ) )
             
-            local_files_hashes = { hash.decode( 'hex' ) for hash in dircache.listdir( HC.SERVER_FILES_DIR ) }
-            thumbnails_hashes = { hash.decode( 'hex' ) for hash in dircache.listdir( HC.SERVER_THUMBNAILS_DIR ) }
+            local_files_hashes = GetAllHashes( 'file' )
+            thumbnails_hashes = GetAllHashes( 'thumbnail' )
             
-            for hash in local_files_hashes & deletee_hashes: os.remove( HC.SERVER_FILES_DIR + os.path.sep + hash.encode( 'hex' ) )
-            for hash in thumbnails_hashes & deletee_hashes: os.remove( HC.SERVER_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' ) )
+            for hash in local_files_hashes & deletee_hashes: os.remove( GetPath( 'file', hash ) )
+            for hash in thumbnails_hashes & deletee_hashes: os.remove( GetPath( 'thumbnail', hash ) )
             
             c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( deletees ) + ';' )
             
@@ -792,11 +838,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         required_message_keys = { message_key for ( message_key, ) in c.execute( 'SELECT DISTINCT message_key FROM messages;' ) }
         
-        existing_message_keys = { key.decode( 'hex' ) for key in dircache.listdir( HC.SERVER_MESSAGES_DIR ) }
+        existing_message_keys = GetAllHashes( 'message' )
         
         deletees = existing_message_keys - required_message_keys
         
-        for message_key in deletees: os.remove( HC.SERVER_MESSAGES_DIR + os.path.sep + message_key.encode( 'hex' ) )
+        for message_key in deletees: os.remove( GetPath( 'message', message_key ) )
         
     
     def _FlushRequestsMade( self, c, all_services_requests ):
@@ -1015,7 +1061,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         ( update_key, ) = result
         
-        with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'rb' ) as f: update = f.read()
+        update_key_bytes = update_key.decode( 'hex' )
+        
+        path = GetPath( 'update', update_key_bytes )
+        
+        with open( path, 'rb' ) as f: update = f.read()
         
         return update
         
@@ -1232,7 +1282,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                     
                     update_key = update_key_bytes.encode( 'hex' )
                     
-                    with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( yaml.safe_dump( update )  )
+                    path = GetPath( 'update', update_key_bytes )
+                    
+                    with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update )  )
                     
                     c.execute( 'INSERT INTO update_cache ( service_id, begin, end, update_key ) VALUES ( ?, ?, ?, ? );', ( service_id, begin, end, update_key ) )
                     
@@ -1672,6 +1724,40 @@ class DB( ServiceDB ):
                     
                     c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, access_key BLOB_BYTES, expiry INTEGER );' )
                     c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
+                    
+                
+                if version < 68:
+                    
+                    dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR, HC.SERVER_MESSAGES_DIR )
+                    
+                    hex_chars = '0123456789abcdef'
+                    
+                    for dir in dirs:
+                        
+                        for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                            
+                            new_dir = dir + os.path.sep + one + two
+                            
+                            if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                            
+                        
+                        filenames = dircache.listdir( dir )
+                        
+                        for filename in filenames:
+                            
+                            try:
+                                
+                                source_path = dir + os.path.sep + filename
+                                
+                                first_two_chars = filename[:2]
+                                
+                                destination_path = dir + os.path.sep + first_two_chars + os.path.sep + filename
+                                
+                                shutil.move( source_path, destination_path )
+                                
+                            except: continue
+                            
+                        
                     
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )

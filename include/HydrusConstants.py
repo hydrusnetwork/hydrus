@@ -30,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 67
+SOFTWARE_VERSION = 68
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -172,6 +172,8 @@ IMAGE_ICON = 7
 TEXT_HTML = 8
 VIDEO_FLV = 9
 APPLICATION_PDF = 10
+APPLICATION_ZIP = 11
+APPLICATION_HYDRUS_ENCRYPTED_ZIP = 12
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -179,9 +181,11 @@ ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
 
-APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF )
+APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF, APPLICATION_ZIP )
 
 NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV )
+
+ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
 MIMES_WITH_THUMBNAILS = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
 
@@ -200,6 +204,8 @@ mime_enum_lookup[ 'application/x-shockwave-flash' ] = APPLICATION_FLASH
 mime_enum_lookup[ 'application/octet-stream' ] = APPLICATION_OCTET_STREAM
 mime_enum_lookup[ 'application/x-yaml' ] = APPLICATION_YAML
 mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
+mime_enum_lookup[ 'application/zip' ] = APPLICATION_ZIP
+mime_enum_lookup[ 'application/hydrus-encrypted-zip' ] = APPLICATION_HYDRUS_ENCRYPTED_ZIP
 mime_enum_lookup[ 'application' ] = APPLICATIONS
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
@@ -218,6 +224,8 @@ mime_string_lookup[ APPLICATION_FLASH ] = 'application/x-shockwave-flash'
 mime_string_lookup[ APPLICATION_OCTET_STREAM ] = 'application/octet-stream'
 mime_string_lookup[ APPLICATION_YAML ] = 'application/x-yaml'
 mime_string_lookup[ APPLICATION_PDF ] = 'application/pdf'
+mime_string_lookup[ APPLICATION_ZIP ] = 'application/zip'
+mime_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
 mime_string_lookup[ APPLICATIONS ] = 'application'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
@@ -235,6 +243,8 @@ mime_ext_lookup[ APPLICATION_FLASH ] = '.swf'
 mime_ext_lookup[ APPLICATION_OCTET_STREAM ] = '.bin'
 mime_ext_lookup[ APPLICATION_YAML ] = '.yaml'
 mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
+mime_ext_lookup[ APPLICATION_ZIP ] = '.zip'
+mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
@@ -251,7 +261,9 @@ header_and_mime = [
     ( 'CWS', APPLICATION_FLASH ),
     ( 'FWS', APPLICATION_FLASH ),
     ( 'FLV', VIDEO_FLV ),
-    ( '%PDF', APPLICATION_PDF )
+    ( '%PDF', APPLICATION_PDF ),
+    ( 'PK\x03\x04', APPLICATION_ZIP ),
+    ( 'hydrus encrypted zip', APPLICATION_HYDRUS_ENCRYPTED_ZIP )
     ]
 
 PREDICATE_TYPE_SYSTEM = 0
@@ -882,13 +894,19 @@ def GetMimeFromFilePointer( f ):
         
         return GetMimeFromString( header )
         
-    except: raise Exception( 'I could not identify the mime of the file' )
+    except:
+        wx.MessageBox( traceback.format_exc() )
+        raise Exception( 'I could not identify the mime of the file' )
     
 def GetMimeFromString( file ):
     
+    bit_to_check = file[:256]
+    
+    if type( bit_to_check ) == unicode: bit_to_check = str( bit_to_check )
+    
     for ( header, mime ) in header_and_mime:
         
-        if file.startswith( header ):
+        if bit_to_check.startswith( header ):
             
             return mime
             

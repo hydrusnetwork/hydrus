@@ -6,6 +6,7 @@ import itertools
 import HydrusConstants as HC
 import HydrusDocumentHandling
 import HydrusDownloading
+import HydrusEncryption
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusMessageHandling
@@ -434,7 +435,7 @@ class MessageDB():
         
         private_key = service.GetPrivateKey()
         
-        public_key = HydrusMessageHandling.GetPublicKey( private_key )
+        public_key = HydrusEncryption.GetPublicKey( private_key )
         
         contact_key = hashlib.sha256( public_key ).digest()
         
@@ -1460,7 +1461,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     ( identity_name, check_period, private_key, receive_anon ) = extra_info
                     
-                    public_key = HydrusMessageHandling.GetPublicKey( private_key )
+                    public_key = HydrusEncryption.GetPublicKey( private_key )
                     
                     contact_key = hashlib.sha256( public_key ).digest()
                     
@@ -3220,6 +3221,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if size == 0: can_add = False
         
+        if HC.GetMimeFromString( file ) not in HC.ALLOWED_MIMES: can_add = False
+        
         if 'min_size' in advanced_import_options:
             
             min_size = advanced_import_options[ 'min_size' ]
@@ -3264,7 +3267,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if can_add:
             
-            mime = HC.GetMimeFromString( file[:256] )
+            mime = HC.GetMimeFromString( file )
             
             width = None
             height = None
@@ -4075,7 +4078,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 credentials = CC.Credentials( host, service_port, access_key )
                 
-                if service_type == HC.MESSAGE_DEPOT: extra_info = ( 'identity@' + service_name, 180, HydrusMessageHandling.GenerateNewPrivateKey(), True )
+                if service_type == HC.MESSAGE_DEPOT: extra_info = ( 'identity@' + service_name, 180, HydrusEncryption.GenerateNewPrivateKey(), True )
                 else: extra_info = None
                 
                 self._AddService( c, client_service_identifier, credentials, extra_info )
@@ -4912,6 +4915,8 @@ class DB( ServiceDB ):
             
             CLIENT_DEFAULT_OPTIONS[ 'shortcuts' ] = shortcuts
             
+            CLIENT_DEFAULT_OPTIONS[ 'confirm_client_exit' ] = False
+            
             CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
             CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
             
@@ -5211,6 +5216,50 @@ class DB( ServiceDB ):
                         i += 1
                         
                         if i % 100 == 0: wx.GetApp().SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                        
+                    
+                
+                if version < 68:
+                    
+                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    
+                    self._options[ 'confirm_client_exit' ] = False
+                    
+                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    
+                    #
+                    
+                    boorus = []
+                    
+                    name = 'e621'
+                    search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+                    search_separator = '%20'
+                    advance_by_page_num = True
+                    thumb_classname = 'thumb blacklist'
+                    image_id = None
+                    image_data = 'Download'
+                    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+                    
+                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+                    
+                    name = 'danbooru'
+                    search_url = 'http://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
+                    search_separator = '%20'
+                    advance_by_page_num = True
+                    thumb_classname = 'post-preview'
+                    image_id = 'image'
+                    image_data = None
+                    tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
+                    
+                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+                    
+                    for booru in boorus:
+                        
+                        name = booru.GetName()
+                        
+                        c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
+                        
+                        c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
                         
                     
                 
@@ -6560,7 +6609,7 @@ class DB( ServiceDB ):
                         
                         try:
                             
-                            public_key = HydrusMessageHandling.GetPublicKey( private_key )
+                            public_key = HydrusEncryption.GetPublicKey( private_key )
                             
                             connection.Post( 'contact', public_key = public_key )
                             
@@ -6957,7 +7006,7 @@ class DB( ServiceDB ):
                             if len( downloaders ) == 0: break
                             
                         
-                        all_url_args.reverse() # to do oldest first, just for neatness
+                        all_url_args.reverse() # to do oldest first, which means we can save incrementally
                         
                         i = 1
                         
@@ -7036,6 +7085,21 @@ class DB( ServiceDB ):
                                 
                             
                             i += 1
+                            
+                            if i % 20 == 0:
+                                
+                                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
+                                
+                                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                                
+                                wx.GetApp().Write( 'subscription', subscription )
+                                
+                                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
+                                
+                            
+                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                            
+                            self.WaitUntilGoodTimeToUseDBThread()
                             
                         
                         HC.pubsub.pub( 'log_message', 'synchronise subscriptions daemon', 'found ' + HC.ConvertIntToPrettyString( num_new ) + ' new files for ' + name )

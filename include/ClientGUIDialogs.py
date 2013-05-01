@@ -1,6 +1,6 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
-import HydrusMessageHandling
+import HydrusEncryption
 import ClientConstants as CC
 import ClientConstantsMessages
 import ClientGUICommon
@@ -14,6 +14,7 @@ import traceback
 import urllib
 import wx
 import yaml
+import zipfile
 
 # Option Enums
 
@@ -4322,6 +4323,9 @@ class DialogManageOptionsLocal( Dialog ):
             self._gui_page = wx.Panel( self._listbook )
             self._gui_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
+            self._confirm_client_exit = wx.CheckBox( self._gui_page )
+            self._confirm_client_exit.SetValue( self._options[ 'confirm_client_exit' ] )
+            
             self._gui_capitalisation = wx.CheckBox( self._gui_page )
             self._gui_capitalisation.SetValue( self._options[ 'gui_capitalisation' ] )
             
@@ -4585,6 +4589,9 @@ class DialogManageOptionsLocal( Dialog ):
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Confirm client exit:' ), FLAGS_MIXED )
+            gridbox.AddF( self._confirm_client_exit, FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self._gui_page, label = 'Default tag service in manage tag dialogs:' ), FLAGS_MIXED )
             gridbox.AddF( self._default_tag_repository, FLAGS_MIXED )
@@ -4905,6 +4912,7 @@ class DialogManageOptionsLocal( Dialog ):
     
     def EventOK( self, event ):
         
+        self._options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
         self._options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
         self._options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
         self._options[ 'fullscreen_borderless' ] = self._fullscreen_borderless.GetValue()
@@ -6153,7 +6161,7 @@ class DialogManageServices( Dialog ):
                         
                         identity_name = 'identity@' + name
                         check_period = 180
-                        private_key = HydrusMessageHandling.GenerateNewPrivateKey()
+                        private_key = HydrusEncryption.GenerateNewPrivateKey()
                         receive_anon = True
                         
                         extra_info = ( identity_name, check_period, private_key, receive_anon )
@@ -8105,27 +8113,17 @@ class DialogPathsToTagsRegex( Dialog ):
     
     def GetInfo( self ):
         
-        paths_to_tags = {}
+        paths_to_tags = collections.defaultdict( dict )
         
         try:
             
-            for path in self._paths:
+            for page in self._tag_repositories.GetNameToPageDict().values():
                 
-                all_tags = {}
+                page_of_paths_to_tags = page.GetInfo()
                 
-                for page in self._tag_repositories.GetNameToPageDict().values():
-                    
-                    tags = page.GetTags( path )
-                    
-                    if len( tags ) > 0:
-                        
-                        service_identifier = page.GetServiceIdentifier()
-                        
-                        all_tags[ service_identifier ] = tags
-                        
-                    
+                service_identifier = page.GetServiceIdentifier()
                 
-                if len( all_tags ) > 0: paths_to_tags[ path ] = all_tags
+                for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_identifier ] = tags
                 
             
         except Exception as e: wx.MessageBox( 'Saving pending mapping changes to DB raised this error: ' + unicode( e ) )
@@ -8139,7 +8137,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
             def InitialiseControls():
                 
-                self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( 'path', 400 ), ( 'tags', -1 ) ] )
+                self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
                 
                 self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -8175,6 +8173,13 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 #
                 
+                self._num_panel = ClientGUICommon.StaticBox( self, '#' )
+                
+                self._num_namespace = wx.TextCtrl( self._num_panel )
+                self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
+                
+                #
+                
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
                 self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
@@ -8192,13 +8197,15 @@ class DialogPathsToTagsRegex( Dialog ):
                 self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 self._single_tag_box.Disable()
                 
-                for path in self._paths:
+                for ( num, path ) in enumerate( self._paths, 1 ):
                     
-                    tags = self._GetTags( path )
+                    pretty_num = HC.ConvertIntToPrettyString( num )
+                    
+                    tags = self._GetTags( num, path )
                     
                     tags_string = ', '.join( tags )
                     
-                    self._paths_list.Append( ( path, tags_string ), ( path, tags ) )
+                    self._paths_list.Append( ( pretty_num, path, tags_string ), ( num, path, tags ) )
                     
                 
             
@@ -8215,8 +8222,24 @@ class DialogPathsToTagsRegex( Dialog ):
                 self._quick_namespaces_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
                 self._quick_namespaces_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
                 
+                #
+                
                 self._regexes_panel.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
                 self._regexes_panel.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), FLAGS_MIXED )
+                hbox.AddF( self._num_namespace, FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._num_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                second_vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                second_vbox.AddF( self._regexes_panel, FLAGS_EXPAND_BOTH_WAYS )
+                second_vbox.AddF( self._num_panel, FLAGS_EXPAND_PERPENDICULAR )
+                
+                #
                 
                 self._tags_panel.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
                 self._tags_panel.AddF( self._tag_box, FLAGS_EXPAND_PERPENDICULAR )
@@ -8227,7 +8250,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 hbox.AddF( self._quick_namespaces_panel, FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( self._regexes_panel, FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( second_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 hbox.AddF( self._tags_panel, FLAGS_EXPAND_BOTH_WAYS )
                 hbox.AddF( self._single_tags_panel, FLAGS_EXPAND_BOTH_WAYS )
                 
@@ -8250,7 +8273,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
         
         
-        def _GetTags( self, path ):
+        def _GetTags( self, num, path ):
             
             tags = []
             
@@ -8290,6 +8313,13 @@ class DialogPathsToTagsRegex( Dialog ):
             
             if path in self._paths_to_single_tags: tags.extend( self._paths_to_single_tags[ path ] )
             
+            num_namespace = self._num_namespace.GetValue()
+            
+            if num_namespace != '':
+                
+                tags.append( num_namespace + ':' + str( num ) )
+                
+            
             tags = [ HC.CleanTag( tag ) for tag in tags ]
             
             return tags
@@ -8297,17 +8327,19 @@ class DialogPathsToTagsRegex( Dialog ):
         
         def _RefreshFileList( self ):
             
-            for ( index, ( path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
+            for ( index, ( num, path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
                 
                 # when doing regexes, make sure not to include '' results, same for system: and - started tags.
                 
-                tags = self._GetTags( path )
+                tags = self._GetTags( num, path )
                 
                 if tags != old_tags:
                     
+                    pretty_num = HC.ConvertIntToPrettyString( num )
+                    
                     tags_string = ', '.join( tags )
                     
-                    self._paths_list.UpdateRow( index, ( path, tags_string ), ( path, tags ) )
+                    self._paths_list.UpdateRow( index, ( pretty_num, path, tags_string ), ( num, path, tags ) )
                     
                 
             
@@ -8336,7 +8368,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 for index in indices:
                     
-                    ( path, old_tags ) = self._paths_list.GetClientData( index )
+                    ( num, path, old_tags ) = self._paths_list.GetClientData( index )
                     
                     if tag not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( tag )
                     
@@ -8411,7 +8443,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 for index in indices:
                     
-                    path = self._paths_list.GetClientData( index )[0]
+                    path = self._paths_list.GetClientData( index )[1]
                     
                     if path in self._paths_to_single_tags: single_tags.update( self._paths_to_single_tags[ path ] )
                     
@@ -8427,6 +8459,8 @@ class DialogPathsToTagsRegex( Dialog ):
             self._single_tags.SetTags( single_tags )
             
         
+        def EventNumNamespaceChanged( self, event ): self._RefreshFileList()
+        
         def EventRemoveRegex( self, event ):
             
             selection = self._regexes.GetSelection()
@@ -8441,10 +8475,9 @@ class DialogPathsToTagsRegex( Dialog ):
                 
             
         
-        def GetServiceIdentifier( self ): return self._service_identifier
+        def GetInfo( self ): return { path : tags for ( num, path, tags ) in self._paths_list.GetClientData() }
         
-        # this prob needs to be made cleverer if I do the extra column
-        def GetTags( self, path ): return self._GetTags( path )
+        def GetServiceIdentifier( self ): return self._service_identifier
         
         def SetTagBoxFocus( self ): self._tag_box.SetFocus()
         
@@ -8454,7 +8487,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
             for index in indices:
                 
-                ( path, old_tags ) = self._paths_list.GetClientData( index )
+                ( num, path, old_tags ) = self._paths_list.GetClientData( index )
                 
                 if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
                 
@@ -8866,6 +8899,8 @@ class DialogSelectLocalFiles( Dialog ):
             self._close_button.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._close_button.SetForegroundColour( ( 128, 0, 0 ) )
             
+            self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
+            
             self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
             
             self._add_files_button = wx.Button( self, label='Add Files' )
@@ -8898,6 +8933,7 @@ class DialogSelectLocalFiles( Dialog ):
             vbox.AddF( self._paths_list, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
             vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._delete_after_success, FLAGS_LONE_BUTTON )
             vbox.AddF( ( 0, 5 ), FLAGS_NONE )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
@@ -8922,34 +8958,29 @@ class DialogSelectLocalFiles( Dialog ):
     
     def _AddPathsToList( self, paths ):
         
-        good_paths = CC.ParseImportablePaths( paths )
+        good_paths_info = CC.ParseImportablePaths( paths )
         
         odd_paths = False
         
-        for path in good_paths:
+        for ( path_type, mime, size, path_info ) in good_paths_info:
             
-            mime = HC.GetMimeFromPath( path )
+            pretty_size = HC.ConvertIntToBytes( size )
             
-            if mime in HC.ALLOWED_MIMES:
+            if path_type == 'path': pretty_path = path_info
+            elif path_type == 'zip':
                 
-                info = os.lstat( path )
+                ( zip_path, name ) = path_info
                 
-                size = info[6]
+                pretty_path = zip_path + os.path.sep + name
                 
-                if size > 0:
-                    
-                    pretty_size = HC.ConvertIntToBytes( size )
-                    
-                    self._paths_list.Append( ( path, HC.mime_string_lookup[ mime ], pretty_size ), ( path, HC.mime_string_lookup[ mime ], size ) )
-                    
-                
-            else: odd_paths = True
+            
+            self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
             
         
         if odd_paths: wx.MessageBox( 'At present hydrus can handle only jpegs, pngs, bmps, gifs, swfs, flvs and pdfs. The other files have not been added.' )
         
     
-    def _GetPaths( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
+    def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
     
     def EventAddPaths( self, event ):
         
@@ -8981,13 +9012,15 @@ class DialogSelectLocalFiles( Dialog ):
     
     def EventOK( self, event ):
         
-        paths = self._GetPaths()
+        paths_info = self._GetPathsInfo()
         
-        if len( paths ) > 0:
+        if len( paths_info ) > 0:
             
             advanced_import_options = self._advanced_import_options.GetInfo()
             
-            HC.pubsub.pub( 'new_hdd_import', paths, advanced_import_options = advanced_import_options )
+            delete_after_success = self._delete_after_success.GetValue()
+            
+            HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, delete_after_success = delete_after_success )
             
             self.EndModal( wx.ID_OK )
             
@@ -8999,19 +9032,36 @@ class DialogSelectLocalFiles( Dialog ):
         
         try:
             
-            paths = self._GetPaths()
+            paths_info = self._GetPathsInfo()
             
-            if len( paths ) > 0:
+            if len( paths_info ) > 0:
                 
                 advanced_import_options = self._advanced_import_options.GetInfo()
                 
-                with DialogPathsToTagsRegex( self, paths ) as dlg:
+                paths_to_send_to_dialog = []
+                
+                for ( path_type, path_info ) in paths_info:
+                    
+                    if path_type == 'path': pretty_path = path_info
+                    elif path_type == 'zip':
+                        
+                        ( zip_path, name ) = path_info
+                        
+                        pretty_path = zip_path + os.path.sep + name
+                        
+                    
+                    paths_to_send_to_dialog.append( pretty_path )
+                    
+                
+                with DialogPathsToTagsRegex( self, paths_to_send_to_dialog ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
+                        delete_after_success = self._delete_after_success.GetValue()
+                        
                         paths_to_tags = dlg.GetInfo()
                         
-                        HC.pubsub.pub( 'new_hdd_import', paths, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags )
+                        HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                         
                         self.EndModal( wx.ID_OK )
                         
@@ -9365,6 +9415,13 @@ class DialogSetupExport( Dialog ):
             self._open_location = wx.Button( self, label = 'open this location' )
             self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
             
+            self._zip_name = wx.TextCtrl( self )
+            self._zip_name.SetValue( 'archive name.zip' )
+            
+            self._export_to_zip = wx.CheckBox( self, label = 'export to zip' )
+            
+            self._export_encrypted = wx.CheckBox( self, label = 'encrypt zip' )
+            
             self._pattern = wx.TextCtrl( self )
             self._pattern.SetValue( '{hash}' )
             
@@ -9392,6 +9449,12 @@ class DialogSetupExport( Dialog ):
             destination_hbox.AddF( self._directory_picker, FLAGS_EXPAND_BOTH_WAYS )
             destination_hbox.AddF( self._open_location, FLAGS_MIXED )
             
+            zip_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            zip_hbox.AddF( self._zip_name, FLAGS_EXPAND_BOTH_WAYS )
+            zip_hbox.AddF( self._export_to_zip, FLAGS_MIXED )
+            zip_hbox.AddF( self._export_encrypted, FLAGS_MIXED )
+            
             pattern_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             pattern_hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
@@ -9405,6 +9468,7 @@ class DialogSetupExport( Dialog ):
             
             vbox.AddF( top_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             vbox.AddF( destination_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( zip_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( pattern_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._cancel, FLAGS_LONE_BUTTON )
             
@@ -9476,11 +9540,14 @@ class DialogSetupExport( Dialog ):
                 
             
         
+        if self._export_to_zip.GetValue() == True: zip_path = self._zip_name.GetValue() + os.path.sep
+        else: zip_path = ''
+        
         mime = media.GetMime()
         
         ext = HC.mime_ext_lookup[ mime ]
         
-        return directory + os.path.sep + filename + ext
+        return directory + os.path.sep + zip_path + filename + ext
         
     
     def _RecalcPaths( self ):
@@ -9595,21 +9662,55 @@ class DialogSetupExport( Dialog ):
             return
             
         
-        for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
+        if self._export_to_zip.GetValue() == True:
             
-            try:
+            directory = self._directory_picker.GetPath()
+            
+            zip_path = directory + os.path.sep + self._zip_name.GetValue()
+            
+            with zipfile.ZipFile( zip_path, mode = 'w', compression = zipfile.ZIP_DEFLATED ) as z:
                 
-                hash = media.GetHash()
+                for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
+                    
+                    try:
+                        
+                        hash = media.GetHash()
+                        
+                        file = wx.GetApp().Read( 'file', hash )
+                        
+                        ( gumpf, filename ) = os.path.split( path )
+                        
+                        z.writestr( filename, file )
+                        
+                    except:
+                        
+                        wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + '.' + os.linesep + os.linesep + traceback.format_exc() )
+                        
+                        break
+                        
+                    
                 
-                file = wx.GetApp().Read( 'file', hash )
+            
+            if self._export_encrypted.GetValue() == True: HydrusEncryption.EncryptAESFile( zip_path, preface = 'hydrus encrypted zip' )
+            
+        else:
+            
+            for ( ( ordering_index, media ), mime, path ) in self._paths.GetClientData():
                 
-                with open( path, 'wb' ) as f: f.write( file )
-                
-            except:
-                
-                wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + '.' + os.linesep + + os.linesep + traceback.format_exc() )
-                
-                break
+                try:
+                    
+                    hash = media.GetHash()
+                    
+                    file = wx.GetApp().Read( 'file', hash )
+                    
+                    with open( path, 'wb' ) as f: f.write( file )
+                    
+                except:
+                    
+                    wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + '.' + os.linesep + os.linesep + traceback.format_exc() )
+                    
+                    break
+                    
                 
             
         

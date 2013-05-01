@@ -285,15 +285,15 @@ class PageImportGiphy( PageImport ):
     
 class PageImportHDD( PageImport ):
     
-    def __init__( self, parent, paths, **kwargs ):
+    def __init__( self, parent, paths_info, **kwargs ):
         
-        self._paths = paths
+        self._paths_info = paths_info
         self._kwargs = kwargs
         
         PageImport.__init__( self, parent )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportHDD( self._search_preview_split, self, self._page_key, self._paths, **self._kwargs )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportHDD( self._search_preview_split, self, self._page_key, self._paths_info, **self._kwargs )
     
 class PageImportHentaiFoundryArtist( PageImport ):
     

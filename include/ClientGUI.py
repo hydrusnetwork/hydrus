@@ -500,21 +500,6 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e: wx.MessageBox( unicode( e ) )
         
     
-    def _EditServices( self ):
-        
-        original_pause_status = self._options[ 'pause_repo_sync' ]
-        
-        self._options[ 'pause_repo_sync' ] = True
-        
-        try:
-            
-            with ClientGUIDialogs.DialogManageServices( self ) as dlg: dlg.ShowModal()
-            
-        except: wx.MessageBox( traceback.format_exc() )
-        
-        self._options[ 'pause_repo_sync' ] = original_pause_status
-        
-    
     def _FetchIP( self, service_identifier ):
         
         with wx.TextEntryDialog( self, 'File Hash' ) as dlg:
@@ -641,13 +626,28 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e: wx.MessageBox( unicode( e ) )
         
     
-    def _ManageServices( self, service_identifier ):
+    def _ManageServer( self, service_identifier ):
         
         try:
             
             with ClientGUIDialogs.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        
+    
+    def _ManageServices( self ):
+        
+        original_pause_status = self._options[ 'pause_repo_sync' ]
+        
+        self._options[ 'pause_repo_sync' ] = True
+        
+        try:
+            
+            with ClientGUIDialogs.DialogManageServices( self ) as dlg: dlg.ShowModal()
+            
+        except: wx.MessageBox( traceback.format_exc() )
+        
+        self._options[ 'pause_repo_sync' ] = original_pause_status
         
     
     def _ManageSubscriptions( self ):
@@ -981,6 +981,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventExit( self, event ):
         
+        if self._options[ 'confirm_client_exit' ]:
+            
+            message = 'Are you sure you want to exit the client?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO: return
+                
+            
+        
         page = self._notebook.GetCurrentPage()
         
         if page is not None and self.IsMaximized():
@@ -1031,7 +1041,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'close_page': self._CloseCurrentPage()
                 elif command == 'debug_options': wx.MessageBox( str( wx.GetApp().Read( 'options' ) ) )
                 elif command == 'delete_pending': self._DeletePending( data )
-                elif command == 'edit_services': self._EditServices()
                 elif command == 'exit': self.EventExit( event )
                 elif command == 'fetch_ip': self._FetchIP( data )
                 elif command == 'forum': webbrowser.open( 'http://hydrus.x10.mx/forum' )
@@ -1045,7 +1054,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'manage_contacts': self._ManageContacts()
                 elif command == 'manage_imageboards': self._ManageImageboards()
                 elif command == 'manage_pixiv_account': self._ManagePixivAccount()
-                elif command == 'manage_services': self._ManageServices( data )
+                elif command == 'manage_server_services': self._ManageServer( data )
+                elif command == 'manage_services': self._ManageServices()
                 elif command == 'manage_subscriptions': self._ManageSubscriptions()
                 elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
                 elif command == 'modify_account': self._ModifyAccount( data )
@@ -1145,9 +1155,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPageImportGallery( self, name ): self._NewPageImportGallery( name )
     
-    def NewPageImportHDD( self, paths, **kwargs ):
+    def NewPageImportHDD( self, paths_info, **kwargs ):
         
-        new_page = ClientGUIPages.PageImportHDD( self._notebook, paths, **kwargs )
+        new_page = ClientGUIPages.PageImportHDD( self._notebook, paths_info, **kwargs )
         
         self._notebook.AddPage( new_page, 'import', select = True )
         
@@ -1317,7 +1327,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'edit_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
         if len( download_tag_service_identifiers ) > 1: services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
@@ -1393,7 +1403,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', s_i ), p( '&Options' ), p( 'Set the server\'s options.' ) )
                 submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', s_i ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
                 
                 admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )

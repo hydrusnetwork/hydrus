@@ -4,6 +4,7 @@ import gc
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusEncryption
 import HydrusImageHandling
 import HydrusMessageHandling
 import itertools
@@ -19,6 +20,7 @@ import urlparse
 import urllib
 import yaml
 import wx
+import zipfile
 import zlib
 
 ID_NULL = wx.NewId()
@@ -396,7 +398,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     if include_subdirs: title = 'Parsing files and subdirectories'
     else: title = 'Parsing files'
     
-    progress = wx.ProgressDialog( title, u'Preparing', 1000, None, style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    progress = wx.ProgressDialog( title, u'Preparing', 1000, wx.GetApp().GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
     
     try:
         
@@ -448,12 +450,12 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     
     progress.Destroy()
     
-    good_paths = []
+    good_paths_info = []
     odd_paths = []
     
     num_file_paths = len( file_paths )
     
-    progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, None, style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, wx.GetApp().GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
     
     for ( i, path ) in enumerate( file_paths ):
         
@@ -469,7 +471,96 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
             
             size = info[6]
             
-            if size > 0: good_paths.append( path )
+            if size > 0: good_paths_info.append( ( 'path', mime, size, path ) )
+            
+        elif mime in HC.ARCHIVES:
+            
+            ( should_continue, skip ) = progress.Update( i, u'Found an archive; parsing\u2026' )
+            
+            if mime == HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP:
+                
+                aes_key = None
+                iv = None
+                
+                if '.encrypted' in path:
+                    
+                    try:
+                        
+                        potential_key_path = path.replace( '.encrypted', '.key' )
+                        
+                        if os.path.exists( potential_key_path ):
+                            
+                            with open( potential_key_path, 'rb' ) as f: key_text = f.read()
+                            
+                            ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
+                            
+                        
+                    except: wx.MessageBox( 'Tried to read a key, but did not understand it.' )
+                    
+                
+                while aes_key is None:
+                    
+                    with wx.TextEntryDialog( wx.GetApp().GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
+                        
+                        result = dlg.ShowModal()
+                        
+                        if result == wx.ID_OK:
+                            
+                            try:
+                                
+                                key_text = dlg.GetValue()
+                                
+                                ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
+                                
+                            except: wx.MessageBox( 'Did not understand that key!' )
+                            
+                        elif result == wx.ID_CANCEL: break
+                        
+                    
+                
+                if aes_key is not None:
+                    
+                    path_to = HydrusEncryption.DecryptAESFile( aes_key, iv, path )
+                    
+                    path = path_to
+                    mime = HC.APPLICATION_ZIP
+                    
+                
+            
+            if mime == HC.APPLICATION_ZIP:
+                
+                try:
+                    
+                    with zipfile.ZipFile( path, 'r' ) as z:
+                        
+                        if z.testzip() is not None: raise Exception()
+                        
+                        for name in z.namelist():
+                            
+                            # I originally had zip.open and hc.getmimefromfilepointer, but:
+                            # zip is deflate, which means have to read the whole file to read any of the file, so:
+                            # the file pointer returned by open doesn't support seek, lol!
+                            # so, might as well open the whole damn file
+                            file = z.read( name )
+                            
+                            name_mime = HC.GetMimeFromString( file )
+                            
+                            if name_mime in HC.ALLOWED_MIMES:
+                                
+                                size = z.getinfo( name ).file_size
+                                
+                                if size > 0: good_paths_info.append( ( 'zip', name_mime, size, ( path, name ) ) )
+                                
+                            
+                        
+                    
+                except:
+                    
+                    odd_paths.append( path )
+                    
+                    continue
+                    
+                
             
         else: odd_paths.append( path )
         
@@ -484,7 +575,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
         wx.MessageBox( 'The ' + str( len( odd_paths ) ) + ' files that were not jpegs, pngs, bmps or gifs will not be added. If you are interested, their paths have been written to the log.' )
         
     
-    return good_paths
+    return good_paths_info
     
 class AutocompleteMatches():
     
@@ -578,7 +669,7 @@ name = 'e621'
 search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
 search_separator = '%20'
 advance_by_page_num = True
-thumb_classname = 'thumb blacklisted'
+thumb_classname = 'thumb'
 image_id = None
 image_data = 'Download'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
@@ -597,13 +688,13 @@ tag_classnames_to_namespaces = { 'tag_name' : '' }
 DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
 name = 'danbooru'
-search_url = 'http://danbooru.donmai.us/post/index?tags=%tags%&commit=Search&page=%index%'
+search_url = 'http://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
 search_separator = '%20'
 advance_by_page_num = True
-thumb_classname = 'thumb blacklisted'
+thumb_classname = 'post-preview'
 image_id = 'image'
 image_data = None
-tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
 
 DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
 
@@ -1352,6 +1443,8 @@ class DataCache():
         return self._keys_to_data[ key ]
         
     
+    def GetKeys( self ): return self._keys_to_data.keys()
+    
     def HasData( self, key ): return key in self._keys_to_data
     
 class FileQueryResult():
@@ -1361,7 +1454,8 @@ class FileQueryResult():
         self._file_service_identifier = file_service_identifier
         self._predicates = predicates
         self._hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-        self._hashes = { hash for hash in self._hashes_to_media_results.keys() }
+        self._hashes_ordered = [ media_result.GetHash() for media_result in media_results ]
+        self._hashes = set( self._hashes_ordered )
         
         HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
         HC.pubsub.sub( self, 'ProcessServiceUpdate', 'service_update_data' )
@@ -1369,10 +1463,10 @@ class FileQueryResult():
     
     def __iter__( self ):
         
-        for media_result in self._hashes_to_media_results.values(): yield media_result
+        for hash in self._hashes_ordered: yield self._hashes_to_media_results[ hash ]
         
     
-    def __len__( self ): return len( self._hashes )
+    def __len__( self ): return len( self._hashes_ordered )
     
     def _Remove( self, hashes ):
         
@@ -1381,6 +1475,8 @@ class FileQueryResult():
             if hash in self._hashes_to_media_results:
                 
                 del self._hashes_to_media_results[ hash ]
+                
+                self._hashes_ordered.remove( hash )
                 
             
         
@@ -1395,6 +1491,8 @@ class FileQueryResult():
         
         self._hashes_to_media_results[ hash ] = media_result
         
+        self._hashes_ordered.append( hash )
+        
         self._hashes.add( hash )
         
     
@@ -1402,7 +1500,7 @@ class FileQueryResult():
     
     def GetMediaResult( self, hash ): return self._hashes_to_media_results[ hash ]
     
-    def GetMediaResults( self ): return self._hashes_to_media_results.values()
+    def GetMediaResults( self ): return [ self._hashes_to_media_results[ hash ] for hash in self._hashes_ordered ]
     
     def ProcessContentUpdates( self, content_updates ):
         
@@ -2561,24 +2659,32 @@ class ThumbnailCache():
     def GetNotFoundThumbnail( self ): return self._not_found
     def GetPDFThumbnail( self ): return self._pdf
     
-    def GetThumbnail( self, service_identifier, hash ):
+    def GetThumbnail( self, hash ):
         
-        service_identifier_and_hash = ( service_identifier, hash )
-        
-        if not self._data_cache.HasData( service_identifier_and_hash ):
+        if not self._data_cache.HasData( hash ):
             
             try: hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( wx.GetApp().Read( 'thumbnail', hash ) )
             except:
                 print( traceback.format_exc() )
                 return self._not_found
             
-            self._data_cache.AddData( service_identifier_and_hash, hydrus_bitmap )
+            self._data_cache.AddData( hash, hydrus_bitmap )
             
         
-        return self._data_cache.GetData( service_identifier_and_hash )
+        return self._data_cache.GetData( hash )
         
     
-    def PrefetchThumbnails( self, hashes ): self._db.PrefetchThumbnails( hashes )
+    def Prefetch( self, hashes ):
+        
+        hashes_to_get = hashes.intersection( self._data_cache.GetKeys() )
+        
+        if len( hashes_to_get ) > 0: threading.Thread( target = self.THREADPrefetch, args = ( hashes_to_get, ) ).start()
+        
+    
+    def THREADPrefetch( self, hashes ):
+        
+        for hash in hashes: wx.GetApp().ReadDaemon( 'thumbnail', hash )
+        
     
 class VPTreeNode():
     

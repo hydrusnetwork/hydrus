@@ -36,6 +36,8 @@ class MediaList():
     
     def _GetFirst( self ): return self._sorted_media[ 0 ]
     
+    def _GetHashes( self ): return HC.IntelligentMassUnion( [ media.GetHashes() for media in self._sorted_media ] )
+    
     def _GetLast( self ): return self._sorted_media[ -1 ]
     
     def _GetMedia( self, hashes, discriminator = None ):

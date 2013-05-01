@@ -13,7 +13,7 @@ import wx
 
 def ConvertToPngIfBmp( file ):
     
-    if HC.GetMimeFromString( file[:256] ) == HC.IMAGE_BMP:
+    if HC.GetMimeFromString( file ) == HC.IMAGE_BMP:
         
         pil_image = GeneratePILImageFromFile( file )
         

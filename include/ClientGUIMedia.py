@@ -257,7 +257,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             if first_media is not None and first_media.GetFileServiceIdentifiersCDPP().HasLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
             
-            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, media_results, first_hash )
+            file_query_result = CC.FileQueryResult( self._file_service_identifier, self._predicates, media_results )
+            
+            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, file_query_result, first_hash )
             
         
     
@@ -271,8 +273,6 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             except: wx.MessageBox( traceback.format_exc() )
             
         
-    
-    def _GetHashes( self ): return HC.IntelligentMassUnion( [ media.GetHashes() for media in self._sorted_media ] )
     
     def _GetNumSelected( self ): return sum( [ media.GetNumFiles() for media in self._selected_media ] )
     
@@ -757,6 +757,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
         MediaPanel.__init__( self, parent, page_key, file_service_identifier, predicates, file_query_result )
         
+        self._last_animation_frame_time = 0.0
+        
         self._num_columns = 1
         self._num_rows_in_client_height = 0
         self._last_visible_row = 0
@@ -996,6 +998,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._thumbnails_to_waterfall = thumbnails_to_render_later
             self._thumbnails_being_faded_in = {}
+            
+            hashes_to_waterfall = { thumbnail.GetHash() for thumbnail in self._thumbnails_to_waterfall }
+            
+            wx.GetApp().GetThumbnailCache().Prefetch( hashes_to_waterfall )
             
             random.shuffle( self._thumbnails_to_waterfall )
             
@@ -1530,66 +1536,75 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventTimerAnimation( self, event ):
         
-        ( thumbnail_width, thumbnail_height ) = self._thumbnail_span_dimensions
+        now = time.clock()
         
-        ( start_x, start_y ) = self.GetViewStart()
-        
-        ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
-        
-        ( width, height ) = self.GetClientSize()
-        
-        min_y = ( start_y * y_unit ) - thumbnail_height
-        max_y = ( start_y * y_unit ) + height + thumbnail_height
-        
-        dc = self._GetScrolledDC()
-        
-        all_info = self._thumbnails_being_faded_in.items()
-        
-        for ( key, ( alpha_bmp, num_frames_rendered ) ) in all_info:
+        if now - self._last_animation_frame_time > 1.0 / 60:
             
-            ( bmp, x, y ) = key
+            ( thumbnail_width, thumbnail_height ) = self._thumbnail_span_dimensions
             
-            if num_frames_rendered == 0:
+            ( start_x, start_y ) = self.GetViewStart()
+            
+            ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
+            
+            ( width, height ) = self.GetClientSize()
+            
+            min_y = ( start_y * y_unit ) - thumbnail_height
+            max_y = ( start_y * y_unit ) + height + thumbnail_height
+            
+            dc = self._GetScrolledDC()
+            
+            all_info = self._thumbnails_being_faded_in.items()
+            
+            for ( key, ( alpha_bmp, num_frames_rendered ) ) in all_info:
                 
-                image = bmp.ConvertToImage()
+                ( bmp, x, y ) = key
                 
-                image.InitAlpha()
+                if num_frames_rendered == 0:
+                    
+                    image = bmp.ConvertToImage()
+                    
+                    image.InitAlpha()
+                    
+                    image = image.AdjustChannels( 1, 1, 1, 0.25 )
+                    
+                    alpha_bmp = wx.BitmapFromImage( image, 32 )
+                    
                 
-                image = image.AdjustChannels( 1, 1, 1, 0.33 )
+                num_frames_rendered += 1
                 
-                alpha_bmp = wx.BitmapFromImage( image, 32 )
+                self._thumbnails_being_faded_in[ key ] = ( alpha_bmp, num_frames_rendered )
+                
+                if y < min_y or y > max_y or num_frames_rendered == 9:
+                    
+                    bmp_to_use = bmp
+                    
+                    del self._thumbnails_being_faded_in[ key ]
+                    
+                else:
+                    
+                    bmp_to_use = alpha_bmp
+                    
+                
+                dc.DrawBitmap( bmp_to_use, x, y, True )
                 
             
-            num_frames_rendered += 1
-            
-            self._thumbnails_being_faded_in[ key ] = ( alpha_bmp, num_frames_rendered )
-            
-            if y < min_y or y > max_y or num_frames_rendered == 5:
-                
-                bmp_to_use = bmp
-                
-                del self._thumbnails_being_faded_in[ key ]
-                
-            else:
-                
-                bmp_to_use = alpha_bmp
-                
-            
-            dc.DrawBitmap( bmp_to_use, x, y, True )
+            self._last_animation_frame_time = now
             
         
-        if len( self._thumbnails_being_faded_in ) > 0: self._timer_animation.Start( 16, wx.TIMER_ONE_SHOT )
+        if len( self._thumbnails_being_faded_in ) > 0: self._timer_animation.Start( 6, wx.TIMER_ONE_SHOT )
         
     
     def EventTimerWaterfall( self, event ):
         
-        how_many = random.randint( 12, 24 )
+        ( min, max, milliseconds ) = ( 5, 10, 8 )
+        
+        how_many = random.randint( min, max )
         
         for thumbnail in self._thumbnails_to_waterfall[-how_many:]: self._BlitThumbnail( thumbnail )
         
         self._thumbnails_to_waterfall = self._thumbnails_to_waterfall[:-how_many]
         
-        if len( self._thumbnails_to_waterfall ) > 0: self._timer_waterfall.Start( 33, wx.TIMER_ONE_SHOT )
+        if len( self._thumbnails_to_waterfall ) > 0: self._timer_waterfall.Start( milliseconds, wx.TIMER_ONE_SHOT )
         
     
     def NewThumbnails( self, hashes ):
@@ -1765,16 +1780,7 @@ class Thumbnail( Selectable ):
         
         mime = self.GetDisplayMedia().GetMime()
         
-        if mime in HC.IMAGES:
-            
-            my_file_service_identifiers = self.GetFileServiceIdentifiersCDPP().GetCurrent()
-            
-            if HC.LOCAL_FILE_SERVICE_IDENTIFIER in my_file_service_identifiers: thumbnail_file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER
-            elif len( my_file_service_identifiers ) > 0: thumbnail_file_service_identifier = list( my_file_service_identifiers )[0]
-            else: thumbnail_file_service_identifier = self._file_service_identifier
-            
-            self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetThumbnail( thumbnail_file_service_identifier, display_hash )
-            
+        if mime in HC.IMAGES: self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetThumbnail( display_hash )
         elif mime == HC.APPLICATION_FLASH: self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetFlashThumbnail()
         elif mime == HC.APPLICATION_PDF: self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetPDFThumbnail()
         elif mime == HC.VIDEO_FLV: self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetFLVThumbnail()

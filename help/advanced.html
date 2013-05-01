@@ -23,12 +23,20 @@
 			<p>Here is a particularly zoomed out view, after importing volume 2:</p>
 			<p><img src="gunnerkrigg_volume.png"/></p>
 			<p>Importing with tags is great for long-running series with well-formatted filenames, and will save you literally hours' finicky tagging.</p>
+			<h3>export to zip and encrypted</h3>
+			<p>The export dialog now supports exporting to zip, and, further, encrypting it:</p>
+			<p><img src="export_zip.png" /></p>
+			<p>The zip will work as normal. The .encrypted file is essentially a byte-for-byte AES-256 encryption of the zip. It is a hydrus-specific filetype, so is only useful for importing to other hydrus clients. I added it in the case you wish to send files from one place to another, or host them publicly, completely secretly. I would have just used passworded zip files, but my library <i>zipfile</i> doesn't support it!</p>
+			<p>To move the encrypted file securely, just send it as you would any other way; ftp it, put it on a file hosting service, whatever you like. You don't have to worry about anyone seeing the .encrypted file alone. The important thing is to send the .key file in a private way, either over a known encrypted channel or by passing it using a usb stick or similar.</p>
+			<p>To import the .encrypted file, just drag it on the client like any other. If the .key file is in the same folder, the client automatically decrypt the .encrytped back to a zip and try importing that. If not, it'll show a dialog where you can manually paste the raw key - which is just 96 characters of hex.</p>
+			<p>Although I can't guarantee my cyptography is absolutely perfect, I feel fairly confident saying that it will be extremely difficult for someone to see the zip without the associated key.</p>
 			<h3>custom filter</h3>
 			<p>Once you are comfortable with the client's tagging and rating, you may be interested in performing a <i>custom filter</i>, which is essentially the fullscreen browser with custom shortcuts. You select it from the regular thumbnail right-click menu. First, it will show you a dialog:</p>
 			<p><img src="custom_filter_parent.png" /></p>
 			<p>Which has a sub-dialog to add and edit actions:</p>
 			<p><img src="custom_filter_child.png" /></p>
 			<p>You can reassign the default shortcuts for regular things, like archive/delete and opening tag/ratings dialogs, and also add shortcuts for adding/removing a tag or setting/unsetting a rating. Shortcuts do not yet combine; they overwrite.</p>
+			<p>On the left of the parent dialog, you can save and load favourite patterns of shortcuts.</p>
 			<p>Once you hit ok on the parent dialog, the fullscreen browser will launch. Navigation and zooming happens as normal with the mouse and keyboard, unless you have overwritten a shortcut! Hitting any of the shortcuts you declared should carry out the action. Tags will pend/rescind pend or petition/rescind petition or add/delete as appropriate to the type of tag service and the tag's status for the particular file.</p>
 			<p>The shortcuts you set will be active only for that session; they will be forgotten as soon as you close the browser. This behaviour may change, if people desire it. <span class="warning">(remembering the last settings, or having favourites, maybe? send me your thoughts.)</span></p>
 			<h3>finding duplicates</h3>
