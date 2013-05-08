@@ -316,6 +316,11 @@ class Canvas():
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
+            if self._current_display_media.GetMime() in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ):
+                
+                my_width -= 1
+                
+            
             if media_width > my_width or media_height > my_height:
                 
                 width_zoom = my_width / float( media_width )

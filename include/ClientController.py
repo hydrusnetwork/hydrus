@@ -18,6 +18,17 @@ ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
 
 class Controller( wx.App ):
     
+    def _Read( self, action, *args, **kwargs ):
+        
+        if action == 'options': return self._options
+        elif action == 'tag_service_precedence': return self._tag_service_precedence
+        elif action == 'file': return self._db.ReadFile( *args, **kwargs )
+        elif action == 'thumbnail': return self._db.ReadThumbnail( *args, **kwargs )
+        else: return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        
+    
+    def _Write( self, action, priority, *args, **kwargs ): self._db.Write( action, priority, *args, **kwargs )
+    
     def ClearCaches( self ):
         
         self._thumbnail_cache.Clear()
@@ -120,9 +131,11 @@ class Controller( wx.App ):
     
     def GetSessionKey( self, service_identifier ): return self._session_manager.GetSessionKey( service_identifier )
     
-    def GetWebCookies( self, name ): return self._web_session_manager.GetCookies( name )
+    def GetTagSiblingsManager( self ): return self._tag_siblings_manager
     
     def GetThumbnailCache( self ): return self._thumbnail_cache
+    
+    def GetWebCookies( self, name ): return self._web_session_manager.GetCookies( name )
     
     def MaintainDB( self ):
         
@@ -131,7 +144,8 @@ class Controller( wx.App ):
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > 86400 * 5: self.Write( 'vacuum' )
-        if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE ] > 50000: self.Write( 'fatten_autocomplete_cache' )
+        # try no fatten, since we made the recent A/C changes
+        #if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE ] > 50000: self.Write( 'fatten_autocomplete_cache' )
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > 86400 * 3: self.Write( 'delete_orphans' )
         
     
@@ -157,6 +171,7 @@ class Controller( wx.App ):
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()
+            self._tag_siblings_manager = CC.TagSiblingsManager()
             
             self.SetSplashText( 'caches' )
             
@@ -233,15 +248,6 @@ class Controller( wx.App ):
     
     def ProcessServerRequest( self, *args, **kwargs ): return self._db.ProcessRequest( *args, **kwargs )
     
-    def _Read( self, action, *args, **kwargs ):
-        
-        if action == 'options': return self._options
-        elif action == 'tag_service_precedence': return self._tag_service_precedence
-        elif action == 'file': return self._db.ReadFile( *args, **kwargs )
-        elif action == 'thumbnail': return self._db.ReadThumbnail( *args, **kwargs )
-        else: return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-        
-    
     def Read( self, action, *args, **kwargs ):
         
         self._last_idle_time = int( time.time() )
@@ -268,8 +274,6 @@ class Controller( wx.App ):
             else: time.sleep( 0.04 )
             
         
-    
-    def _Write( self, action, priority, *args, **kwargs ): self._db.Write( action, priority, *args, **kwargs )
     
     def Write( self, action, *args, **kwargs ):
         

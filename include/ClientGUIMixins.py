@@ -493,6 +493,8 @@ class MediaCollection( MediaList, Media ):
     
     def GetDuration( self ): return self._duration
     
+    def GetHash( self ): return self.GetDisplayMedia().GetHash()
+    
     def GetHashes( self, discriminant = None, not_uploaded_to = None ):
         
         if discriminant is None and not_uploaded_to is None: return self._hashes

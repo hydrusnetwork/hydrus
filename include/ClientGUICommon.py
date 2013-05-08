@@ -119,8 +119,6 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         tlp.Bind( wx.EVT_MOVE, self.EventMove )
         
-        self._initialised = False
-        
     
     def _BroadcastChoice( self, predicate ): pass
     
@@ -242,12 +240,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventSetFocus( self, event ):
         
-        if not self._initialised:
-            
-            self._UpdateList()
-            
-            self._initialised = True
-            
+        self._UpdateList()
         
         self._ShowDropdownIfFocussed()
         
@@ -423,7 +416,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        if len( service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known files' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known files' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 'local files' )
         
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service_identifier ), service_identifier.GetName() )
@@ -495,7 +488,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        if len( service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known tags' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known tags' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.LOCAL_TAG_SERVICE_IDENTIFIER ), 'local tags' )
         
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service_identifier ), service_identifier.GetName() )
@@ -769,24 +762,39 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._first_letters = half_complete_tag
                     
-                    self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text )
+                    self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, do_siblings_collapse = False )
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
                 
             else: matches = []
             
-            predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ), 0 )
+            # now do the 'put whatever they typed in at the top, whether it has count or not'
+            # now with sibling support!
             
-            try:
-                
-                predicate = matches[ matches.index( predicate ) ]
-                
-                matches.remove( predicate )
-                
-            except: pass
+            top_predicates = []
             
-            matches.insert( 0, predicate )
+            top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ), 0 ) )
+            
+            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            
+            sibling = siblings_manager.GetSibling( search_text )
+            
+            if sibling is not None: top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', sibling ), 0 ) )
+            
+            for predicate in top_predicates:
+                
+                try:
+                    
+                    predicate = matches[ matches.index( predicate ) ]
+                    
+                    matches.remove( predicate )
+                    
+                except: pass
+                
+                
+                matches.insert( 0, predicate )
+                
             
         
         return matches
@@ -1436,7 +1444,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def __len__( self ): return len( self._ordered_strings )
     
-    def _Activate( self, tag ): pass
+    def _Activate( self, s, term ): pass
     
     def _DrawTexts( self ):
         
@@ -1564,7 +1572,14 @@ class ListBox( wx.ScrolledWindow ):
         
         index = self._GetIndexUnderMouse( event )
         
-        if index is not None and index == self._current_selected_index: self._Activate( self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ] )
+        if index is not None and index == self._current_selected_index:
+            
+            s = self._ordered_strings[ self._current_selected_index ]
+            
+            term = self._strings_to_terms[ s ]
+            
+            self._Activate( s, term )
+            
         
     
     def EventKeyDown( self, event ):
@@ -1573,7 +1588,14 @@ class ListBox( wx.ScrolledWindow ):
         
         if self._current_selected_index is not None:
             
-            if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ): self._Activate( self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ] )
+            if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                s = self._ordered_strings[ self._current_selected_index ]
+                
+                term = self._strings_to_terms[ s ]
+                
+                self._Activate( s, term )
+                
             elif key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Select( self._current_selected_index - 1 )
             elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._Select( self._current_selected_index + 1 )
             elif key_code == wx.WXK_PAGEUP: self._Select( self._current_selected_index - self._num_rows_per_page )
@@ -1705,7 +1727,7 @@ class ListBoxMessagesActiveOnly( ListBoxMessages ):
         self._matches = {}
         
     
-    def _Activate( self, tag ): self._callable( tag )
+    def _Activate( self, s, term ): self._callable( term )
     
     def SetTerms( self, matches ):
         
@@ -1751,7 +1773,7 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
             
         
     
-    def _Activate( self, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
+    def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
     
     def ActivatePredicate( self, term ):
         
@@ -2146,7 +2168,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
             data_indicies = [ self.GetItemData( index ) for index in range( self.GetItemCount() ) ]
             
-            datas = [ self.itemDataMap[ data_index ] for data_index in data_indicies ]
+            datas = [ tuple( self.itemDataMap[ data_index ] ) for data_index in data_indicies ]
             
             return datas
             
@@ -2154,7 +2176,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
             data_index = self.GetItemData( index )
             
-            return self.itemDataMap[ data_index ]
+            return tuple( self.itemDataMap[ data_index ] )
             
         
     
@@ -2790,11 +2812,38 @@ class TagsBoxActiveOnly( TagsBox ):
         self._predicates = {}
         
     
-    def _Activate( self, predicate ): self._callable( predicate )
+    def _Activate( self, s, term ): self._callable( term )
     
     def SetPredicates( self, predicates ):
         
-        if predicates != self._predicates:
+        # need to do a clever compare, since normal predicate compare doesn't take count into account
+        
+        they_are_the_same = True
+        
+        if len( predicates ) == len( self._predicates ):
+            
+            p_list_1 = list( predicates )
+            p_list_2 = list( self._predicates )
+            
+            p_list_1.sort()
+            p_list_2.sort()
+            
+            for index in range( len( p_list_1 ) ):
+                
+                p_1 = p_list_1[ index ]
+                p_2 = p_list_2[ index ]
+                
+                if p_1 != p_2 or p_1.GetCount() != p_2.GetCount():
+                    
+                    they_are_the_same = False
+                    
+                    break
+                    
+                
+            
+        else: they_are_the_same = False
+        
+        if not they_are_the_same:
             
             self._predicates = predicates
             
@@ -2836,9 +2885,9 @@ class TagsBoxCPP( TagsBox ):
         HC.pubsub.sub( self, 'ChangeTagRepository', 'change_tag_repository' )
         
     
-    def _Activate( self, tag ):
+    def _Activate( self, s, term ):
         
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), None )
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ), None )
         
         HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
         
@@ -2882,6 +2931,10 @@ class TagsBoxCPP( TagsBox ):
     
     def SetTags( self, current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ):
         
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+        
         if current_tags_to_count != self._current_tags_to_count or pending_tags_to_count != self._pending_tags_to_count or petitioned_tags_to_count != self._petitioned_tags_to_count:
             
             self._current_tags_to_count = current_tags_to_count
@@ -2900,6 +2953,10 @@ class TagsBoxCPP( TagsBox ):
                 if tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
                 if tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
                 if tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+                
+                sibling = siblings_manager.GetSibling( tag )
+                
+                if sibling is not None: tag_string += ' (' + sibling + ')'
                 
                 self._ordered_strings.append( tag_string )
                 self._strings_to_terms[ tag_string ] = tag
@@ -2968,38 +3025,57 @@ class TagsBoxFlat( TagsBox ):
         TagsBox.__init__( self, parent )
         
         self._removed_callable = removed_callable
+        self._tags = []
         
     
     def _RecalcTags( self ):
         
-        self._ordered_strings = self._strings_to_terms.values()
+        self._strings_to_terms = {}
+        
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        for tag in self._tags:
+            
+            tag_string = tag
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: tag_string += ' (' + sibling + ')'
+            
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
+        self._ordered_strings = self._strings_to_terms.keys()
         
         self._ordered_strings.sort()
         
         self._TextsHaveChanged()
         
     
-    def _Activate( self, tag ):
+    def _Activate( self, s, term ):
         
-        del self._strings_to_terms[ tag ]
-        
-        self._RecalcTags()
-        
-        self._removed_callable( tag )
+        if term in self._tags:
+            
+            self._tags.remove( term )
+            
+            self._RecalcTags()
+            
+            self._removed_callable( tag )
+            
         
     
     def AddTag( self, tag ):
         
-        self._strings_to_terms[ tag ] = tag
+        self._tags.append( tag )
         
         self._RecalcTags()
         
     
-    def GetTags( self ): return self._strings_to_terms.values()
+    def GetTags( self ): return self._tags
     
     def SetTags( self, tags ):
         
-        self._strings_to_terms = { t : t for t in tags }
+        self._tags = tags
         
         self._RecalcTags()
         
@@ -3022,9 +3098,11 @@ class TagsBoxManage( TagsBox ):
         self._RebuildTagStrings()
         
     
-    def _Activate( self, tag ): self._callable( tag )
+    def _Activate( self, s, term ): self._callable( term )
     
     def _RebuildTagStrings( self ):
+        
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
         
         if self._show_deleted_tags: all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
         else: all_tags = self._current_tags | self._pending_tags | self._petitioned_tags
@@ -3038,6 +3116,10 @@ class TagsBoxManage( TagsBox ):
             elif tag in self._current_tags: tag_string = tag
             elif tag in self._pending_tags: tag_string = '(+) ' + tag
             else: tag_string = '(X) ' + tag
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: tag_string += ' (' + sibling + ')'
             
             self._ordered_strings.append( tag_string )
             self._strings_to_terms[ tag_string ] = tag
@@ -3104,7 +3186,7 @@ class TagsBoxOptions( TagsBox ):
         self._TextsHaveChanged()
         
     
-    def _Activate( self, tag ): self.RemoveNamespace( tag )
+    def _Activate( self, s, term ): self.RemoveNamespace( term )
     
     def _GetNamespaceColours( self ): return self._namespace_colours
     
@@ -3183,7 +3265,7 @@ class TagsBoxPredicates( TagsBox ):
             
         
     
-    def _Activate( self, predicate ): HC.pubsub.pub( 'remove_predicate', self._page_key, predicate )
+    def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
     
     def AddPredicate( self, predicate ):
         

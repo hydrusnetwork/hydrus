@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 69</h3></li>
+				<ul>
+					<li>first dialog for tag siblings</li>
+					<li>tag siblings db table</li>
+					<li>tag siblings manager in controller</li>
+					<li>tag siblings display in tagsboxcpp</li>
+					<li>tag siblings display in tagsboxflat</li>
+					<li>tag siblings display in tagsboxmanage</li>
+					<li>tag siblings display in tagsboxactiveonly, via A/C dropdowns, for both read and write</li>
+					<li>top result sibling switcheroo in A/C write</li>
+					<li>A/C db fetch now does siblings too</li>
+					<li>db tag search does siblings</li>
+					<li>siblings help, with some nice mini-charts</li>
+					<li>I fixed collections, which were typo-broke; I'll make sure it doesn't happen again</li>
+					<li>more granular subs error handling, meaning individual file failures won't crash an entire sub</li>
+					<li>individual subs can now be paused</li>
+					<li>e621 fixed for real this time</li>
+					<li>A/C improvement that slows tag updates a little but should stop A/C lag after an update</li>
+					<li>as a result, trying out dropping the CPU-intensive fatten_ac_cache maintenance call</li>
+					<li>A/C read will now update system preds every time you click on it, so inbex/archive counts will stay accurate</li>
+					<li>A/C "all known files + tags" will no longer show the mega-laggy total file count</li>
+					<li>a list -> tuple convenience fix in sanelistctrl</li>
+					<li>if you don't have any pixiv credentials set up, you will now no longer get the option to start downloading pixiv stuff</li>
+					<li>fixed a tiny typo in the thumbnail resizer that made it wait far more politely than was intended</li>
+					<li>slight change to ratio system pred that fixes some lockups, sometimes, I think</li>
+					<li>fullscreen flash and video will get a pixel of whitespace on the right</li>
+				</ul>
 				<li><h3>version 68</h3></li>
 				<ul>
 					<li>fullscreen view now takes addmediaresult</li>

@@ -1289,7 +1289,21 @@ class TagDB():
         
         result = c.execute( 'SELECT 1 FROM existing_tags WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ).fetchone()
         
-        if result is None: c.execute( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', ( namespace_id, tag_id ) )
+        if result is None:
+            
+            c.execute( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', ( namespace_id, tag_id ) )
+            
+            tag_service_identifiers = self._GetServiceIdentifiers( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            file_service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+            
+            tag_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+            file_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+            
+            tag_service_ids = [ self._GetServiceId( c, service_identifier ) for service_identifier in tag_service_identifiers ]
+            file_service_ids = [ self._GetServiceId( c, service_identifier ) for service_identifier in file_service_identifiers ]
+            
+            c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, file_service_id ) in itertools.product( tag_service_ids, file_service_ids ) ] )
+            
         
         return ( namespace_id, tag_id )
         
@@ -2050,7 +2064,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return all_downloads
         
     
-    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, file_service_identifier = HC.NULL_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True ):
+    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, file_service_identifier = HC.NULL_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True, do_siblings_collapse = True ):
         
         if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
@@ -2139,6 +2153,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         results = { result for result in c.execute( 'SELECT namespace_id, tag_id FROM existing_tags WHERE ' + predicates_phrase + ';' ) }
         
+        # now fetch siblings, add to results set
+        
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
+        
+        sibling_results = [ self._GetNamespaceIdTagId( c, sibling_tag ) for sibling_tag in all_associated_sibling_tags ]
+        
+        results.update( sibling_results )
+        
         # fetch what we can from cache
         
         cache_results = []
@@ -2187,7 +2211,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             [ tags_to_count.update( { ( 1, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results if namespace_id != 1 and tag_id in unnamespaced_tag_ids ]
             
         
-        matches = CC.AutocompleteMatchesPredicates( [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', self._GetNamespaceTag( c, namespace_id, tag_id ) ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ] )
+        matches = CC.AutocompleteMatchesPredicates( [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', self._GetNamespaceTag( c, namespace_id, tag_id ) ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ], do_siblings_collapse = do_siblings_collapse )
         
         return matches
         
@@ -2254,7 +2278,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetHashIdsFromTag( self, c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ):
         
-        hash_ids = set()
+        # this does siblings too!
         
         if file_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
@@ -2304,17 +2328,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             
         
-        if ':' in tag:
+        hash_ids = set()
+        
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        tags = siblings_manager.GetAllSiblings( tag )
+        
+        for tag in tags:
             
-            ( namespace, tag ) = tag.split( ':', 1 )
-            
-            if include_current_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM namespaces, ( tags, ' + current_tables_phrase + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE ' + current_predicates_phrase + 'namespace = ? AND tag = ?;', ( namespace, tag ) ) ] )
-            if include_pending_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM namespaces, ( tags, ' + pending_tables_phrase + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE ' + pending_predicates_phrase + 'namespace = ? AND tag = ?;', ( namespace, tag ) ) ] )
-            
-        else:
-            
-            if include_current_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM tags, ' + current_tables_phrase + ' USING ( tag_id ) WHERE ' + current_predicates_phrase + 'tag = ?;', ( tag, ) ) ] )
-            if include_pending_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM tags, ' + pending_tables_phrase + ' USING ( tag_id ) WHERE ' + pending_predicates_phrase + 'tag = ?;', ( tag, ) ) ] )
+            if ':' in tag:
+                
+                ( namespace, tag ) = tag.split( ':', 1 )
+                
+                if include_current_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM namespaces, ( tags, ' + current_tables_phrase + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE ' + current_predicates_phrase + 'namespace = ? AND tag = ?;', ( namespace, tag ) ) ] )
+                if include_pending_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM namespaces, ( tags, ' + pending_tables_phrase + ' USING ( tag_id ) ) USING ( namespace_id ) WHERE ' + pending_predicates_phrase + 'namespace = ? AND tag = ?;', ( namespace, tag ) ) ] )
+                
+            else:
+                
+                if include_current_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM tags, ' + current_tables_phrase + ' USING ( tag_id ) WHERE ' + current_predicates_phrase + 'tag = ?;', ( tag, ) ) ] )
+                if include_pending_tags: hash_ids.update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM tags, ' + pending_tables_phrase + ' USING ( tag_id ) WHERE ' + pending_predicates_phrase + 'tag = ?;', ( tag, ) ) ] )
+                
             
         
         return hash_ids
@@ -3025,7 +3058,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         predicates = []
         
-        if service_type in ( HC.NULL_SERVICE, HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
+        if service_type == HC.NULL_SERVICE: predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
+        elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
             service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
@@ -3139,7 +3173,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetSubscriptions( self, c ):
         
-        subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, dict( advanced_tag_options ), advanced_import_options, last_checked, url_cache ) for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) ) in c.execute( 'SELECT site_download_type, name, info FROM subscriptions;', ) ]
+        subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, dict( advanced_tag_options ), advanced_import_options, last_checked, url_cache, paused ) for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) ) in c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' ) ]
         
         return subscriptions
         
@@ -3151,6 +3185,37 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         # the first service_id is the most important
         
         return [ self._GetServiceIdentifier( c, service_id ) for service_id in service_ids ]
+        
+    
+    def _GetTagSiblings( self, c, service_identifier = None ):
+        
+        if service_identifier is None:
+            
+            results = HC.BuildKeyToListDict( ( ( service_id, ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id  ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_siblings;' ) ) )
+            
+            processed_results = {}
+            
+            for ( service_id, n_t_ids ) in results.items():
+                
+                service_identifier = self._GetServiceIdentifier( c, service_id )
+                
+                n_ts = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in n_t_ids ]
+                
+                processed_results[ service_identifier ] = n_ts
+                
+            
+            return processed_results
+            
+        else:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            n_t_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_siblings WHERE service_id = ?;', ( service_id, ) ).fetchall()
+            
+            n_ts = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in n_t_ids ]
+            
+            return n_ts
+            
         
     
     def _GetThumbnailHashesIShouldHave( self, c, service_identifier ):
@@ -3794,9 +3859,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _SetSubscription( self, c, subscription ):
         
-        ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = subscription
+        ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = subscription
         
-        info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache ]
+        info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache, paused ]
         
         c.execute( 'DELETE FROM subscriptions WHERE site_download_type = ? AND name = ?;', ( site_download_type, name ) )
         
@@ -3807,7 +3872,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         HC.repos_or_subs_changed = True
         
-        inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
+        inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache, paused ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions ]
         
         c.execute( 'DELETE FROM subscriptions;' )
         
@@ -4430,6 +4495,38 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
+    def _UpdateTagSiblings( self, c, edit_log ):
+        
+        for ( service_identifier, sub_edit_log ) in edit_log:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            for ( action, data ) in sub_edit_log:
+                
+                if action == HC.ADD:
+                    
+                    ( old_tag, new_tag ) = data
+                    
+                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                    
+                    ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                    
+                    c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) )
+                    
+                elif action == HC.DELETE:
+                    
+                    ( old_tag, new_tag ) = data
+                    
+                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                    
+                    c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
+                    
+                
+            
+        
+        self.pub( 'notify_new_siblings' )
+        
+    
 class DB( ServiceDB ):
     
     def __init__( self ):
@@ -4518,7 +4615,7 @@ class DB( ServiceDB ):
         
         HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
         HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
-        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 1200 )
+        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 600 )
         HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
         HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', self.DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
@@ -4779,6 +4876,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE subscriptions ( site_download_type INTEGER, name TEXT, info TEXT_YAML, PRIMARY KEY( site_download_type, name ) );' )
             
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
+            
+            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
             
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
@@ -5235,7 +5334,7 @@ class DB( ServiceDB ):
                     search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
                     search_separator = '%20'
                     advance_by_page_num = True
-                    thumb_classname = 'thumb blacklist'
+                    thumb_classname = 'thumb'
                     image_id = None
                     image_data = 'Download'
                     tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
@@ -5261,6 +5360,64 @@ class DB( ServiceDB ):
                         
                         c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
                         
+                    
+                
+                if version < 69:
+                    
+                    boorus = []
+                    
+                    name = 'e621'
+                    search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+                    search_separator = '%20'
+                    advance_by_page_num = True
+                    thumb_classname = 'thumb'
+                    image_id = None
+                    image_data = 'Download'
+                    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+                    
+                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+                    
+                    for booru in boorus:
+                        
+                        name = booru.GetName()
+                        
+                        c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
+                        
+                        c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
+                        
+                    
+                    #
+                    
+                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
+                    
+                    #
+                    
+                    subscriptions = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' ).fetchall()
+                    
+                    paused = False
+                    
+                    for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) ) in subscriptions:
+                        
+                        updated_info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ]
+                        
+                        c.execute( 'UPDATE subscriptions SET info = ? WHERE site_download_type = ? AND name = ?;', ( updated_info, site_download_type, name ) )
+                        
+                    
+                    #
+                    
+                    wx.GetApp().SetSplashText( 'generating A/C cache' )
+                    
+                    try:
+                        
+                        tag_service_identifiers = self._GetServiceIdentifiers( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+                        file_service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+                        
+                        tag_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+                        file_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+                        
+                        for ( tag_service_identifier, file_service_identifier ) in itertools.product( tag_service_identifiers, file_service_identifiers ): self._GetAutocompleteTags( c, tag_service_identifier = tag_service_identifier, file_service_identifier = file_service_identifier )
+                        
+                    except: pass
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -6524,7 +6681,7 @@ class DB( ServiceDB ):
                 
             except: print( traceback.format_exc() )
             
-            if i % 10: time.sleep( 2 )
+            if i % 10 == 0: time.sleep( 2 )
             else:
                 
                 if limit > 10000: time.sleep( 0.05 )
@@ -6887,7 +7044,9 @@ class DB( ServiceDB ):
             
             subscriptions = wx.GetApp().ReadDaemon( 'subscriptions' )
             
-            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions:
+            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions:
+                
+                if paused: continue
                 
                 if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
                 
@@ -7032,56 +7191,66 @@ class DB( ServiceDB ):
                             
                             if HC.shutdown: return
                             
-                            url = url_args[0]
-                            
-                            url_cache.add( url )
-                            
-                            x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
-                            
-                            HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
-                            
-                            ( status, hash ) = wx.GetApp().ReadDaemon( 'url_status', url )
-                            
-                            if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
-                            
-                            if status == 'redundant':
+                            try:
                                 
-                                if do_tags:
+                                url = url_args[0]
+                                
+                                url_cache.add( url )
+                                
+                                x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
+                                
+                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
+                                
+                                ( status, hash ) = wx.GetApp().ReadDaemon( 'url_status', url )
+                                
+                                if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
+                                
+                                if status == 'redundant':
                                     
-                                    try:
+                                    if do_tags:
                                         
-                                        HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                        try:
+                                            
+                                            HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                            
+                                            tags = downloader.GetTags( *url_args )
+                                            
+                                            service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                            
+                                            content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
+                                            
+                                            wx.GetApp().Write( 'content_updates', content_updates )
+                                            
+                                        except: pass
                                         
-                                        tags = downloader.GetTags( *url_args )
+                                    
+                                elif status == 'new':
+                                    
+                                    num_new += 1
+                                    
+                                    HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : downloading file' )
+                                    
+                                    if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
+                                    else:
                                         
-                                        service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                        file = downloader.GetFile( *url_args )
                                         
-                                        content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
+                                        tags = []
                                         
-                                        wx.GetApp().Write( 'content_updates', content_updates )
-                                        
-                                    except: pass
+                                    
+                                    service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                    
+                                    HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
+                                    
+                                    wx.GetApp().Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                     
                                 
-                            elif status == 'new':
+                            except Exception as e:
                                 
-                                num_new += 1
+                                print( 'while trying to execute a subscription, the url ' + url + ' caused this problem:' )
+                                print( unicode( e ) )
                                 
-                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : downloading file' )
-                                
-                                if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
-                                else:
-                                    
-                                    file = downloader.GetFile( *url_args )
-                                    
-                                    tags = []
-                                    
-                                
-                                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                                
-                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
-                                
-                                wx.GetApp().Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                HC.pubsub.pub( 'log_error', 'synchronise subscriptions daemon', 'problem with ' + name + ' ' + unicode( e ) )
                                 
                             
                             i += 1
@@ -7090,7 +7259,7 @@ class DB( ServiceDB ):
                                 
                                 if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
                                 
-                                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
                                 
                                 wx.GetApp().Write( 'subscription', subscription )
                                 
@@ -7122,7 +7291,7 @@ class DB( ServiceDB ):
                 
                 if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
                 
-                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
                 
                 wx.GetApp().Write( 'subscription', subscription )
                 
@@ -7271,6 +7440,7 @@ class DB( ServiceDB ):
         elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
         elif action == 'subscriptions': result = self._GetSubscriptions( c, *args, **kwargs )
         elif action == 'tag_service_precedence': result = self._tag_service_precedence
+        elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
         elif action == 'thumbnail': result = self._GetThumbnail( *args, **kwargs )
         elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( c, *args, **kwargs )
         elif action == 'transport_message': result = self._GetTransportMessage( c, *args, **kwargs )
@@ -7319,6 +7489,7 @@ class DB( ServiceDB ):
         elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
         elif action == 'subscription': self._SetSubscription( c, *args, **kwargs )
         elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
+        elif action == 'tag_siblings': self._UpdateTagSiblings( c, *args, **kwargs )
         elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
         elif action == 'update': self._AddUpdate( c, *args, **kwargs )
         elif action == 'update_boorus': self._UpdateBoorus( c, *args, **kwargs )

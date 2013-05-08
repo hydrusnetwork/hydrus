@@ -30,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 68
+SOFTWARE_VERSION = 69
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -983,15 +983,24 @@ def SearchEntryMatchesPredicate( search_entry, predicate ):
     
 def SearchEntryMatchesTag( search_entry, tag ):
     
-    # note that at no point is the namespace checked against the search_entry!
+    sibling_manager = wx.GetApp().GetTagSiblingsManager()
     
-    if ':' in tag:
+    tags = sibling_manager.GetAllSiblings( tag )
+    
+    for tag in tags:
         
-        ( n, t ) = tag.split( ':', 1 )
+        if ':' in tag:
+            
+            ( n, t ) = tag.split( ':', 1 )
+            
+            comparee = t
+            
+        else: comparee = tag
         
-        return t.startswith( search_entry )
+        if comparee.startswith( search_entry ): return True
         
-    else: return tag.startswith( search_entry )
+    
+    return False
     
 def SplayListForDB( xs ): return '(' + ','.join( [ '"' + str( x ) + '"' for x in xs ] ) + ')'
 
@@ -1896,6 +1905,10 @@ class Predicate():
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
+    def AddToCount( self, count ): self._count += count
+    
+    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._count )
+    
     def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, None )
     
     def GetCount( self ): return self._count
@@ -2029,6 +2042,8 @@ class Predicate():
                     
                 
             
+            if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            
         elif self._predicate_type == PREDICATE_TYPE_TAG:
             
             ( operator, tag ) = self._value
@@ -2037,6 +2052,14 @@ class Predicate():
             elif operator == '+': base = u''
             
             base += tag
+            
+            if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            
+            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: base += u' (' + sibling + u')'
             
         elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
             
@@ -2048,8 +2071,18 @@ class Predicate():
             base += namespace + u':*'
             
         
-        if self._count is None: return base
-        else: return base + u' (' + ConvertIntToPrettyString( self._count ) + u')'
+        return base
+        
+    
+    def GetTag( self ):
+        
+        if self._predicate_type == PREDICATE_TYPE_TAG:
+            
+            ( operator, tag ) = self._value
+            
+            return tag
+            
+        else: return 'no tag'
         
     
     def GetValue( self ): return self._value

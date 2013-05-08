@@ -674,6 +674,15 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
     
+    def _ManageTagSiblings( self ):
+        
+        try:
+            
+            with ClientGUIDialogs.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
+            
+        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        
+    
     def _ModifyAccount( self, service_identifier ):
         
         service = wx.GetApp().Read( 'service', service_identifier )
@@ -1058,6 +1067,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'manage_services': self._ManageServices()
                 elif command == 'manage_subscriptions': self._ManageSubscriptions()
                 elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
+                elif command == 'manage_tag_siblings': self._ManageTagSiblings()
                 elif command == 'modify_account': self._ModifyAccount( data )
                 elif command == 'new_accounts': self._NewAccounts( data )
                 elif command == 'new_import_booru': self._NewPageImportBooru()
@@ -1328,7 +1338,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
-        if len( download_tag_service_identifiers ) > 1: services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
+        services.AppendSeparator()
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
+        #services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
@@ -1646,7 +1659,16 @@ class FramePageChooser( ClientGUICommon.Frame ):
             entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
             
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
-        elif menu_keyword == 'gallery': entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'menu', 'pixiv' ), ( 'page_import_gallery', 'tumblr' ) ]
+        elif menu_keyword == 'gallery':
+            
+            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ) ]
+            
+            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+            
+            if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
+            
+            entries.extend( [ ( 'page_import_gallery', 'tumblr' ) ] )
+            
         elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', 'hentai foundry by artist' ), ( 'page_import_gallery', 'hentai foundry by tags' ) ]
         elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', 'pixiv by artist' ), ( 'page_import_gallery', 'pixiv by tag' ) ]
         elif menu_keyword == 'messages': entries = [ ( 'page_messages', identity ) for identity in self._identities ]

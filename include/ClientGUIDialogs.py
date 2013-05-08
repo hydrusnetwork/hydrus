@@ -5425,7 +5425,7 @@ class DialogManageRatings( Dialog ):
             
             if len( content_updates ) > 0: wx.GetApp().Write( 'content_updates', content_updates )
             
-        except Exception as e: wx.MessageBox( 'Saving pending mapping changes to DB raised this error: ' + unicode( e ) )
+        except Exception as e: wx.MessageBox( 'Saving ratings changes to DB raised this error: ' + unicode( e ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -6627,11 +6627,11 @@ class DialogManageSubscriptions( Dialog ):
             types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_BOORU ] = self._booru
             types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_TUMBLR ] = self._tumblr
             
-            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in self._original_subscriptions:
+            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in self._original_subscriptions:
                 
                 listbook = types_to_listbooks[ site_download_type ]
                 
-                page = self._Panel( listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                page = self._Panel( listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
                 
                 listbook.AddPage( page, name )
                 
@@ -6746,6 +6746,18 @@ class DialogManageSubscriptions( Dialog ):
                     elif subscription_listbook == self._booru: site_download_type = HC.SITE_DOWNLOAD_TYPE_BOORU
                     elif subscription_listbook == self._tumblr: site_download_type = HC.SITE_DOWNLOAD_TYPE_TUMBLR
                     
+                    if site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV:
+                        
+                        ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+                        
+                        if id == '' and password == '':
+                            
+                            wx.MessageBox( 'You need to set up your pixiv credentials before you can add a pixiv subscription!' )
+                            
+                            return
+                            
+                        
+                    
                     if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): query_type = 'artist'
                     else: query_type = 'tags'
                     
@@ -6762,7 +6774,9 @@ class DialogManageSubscriptions( Dialog ):
                     last_checked = None
                     url_cache = set()
                     
-                    page = self._Panel( subscription_listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                    paused = False
+                    
+                    page = self._Panel( subscription_listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
                     
                     subscription_listbook.AddPage( page, name, select = True )
                     
@@ -6947,7 +6961,7 @@ class DialogManageSubscriptions( Dialog ):
     
     class _Panel( wx.ScrolledWindow ):
         
-        def __init__( self, parent, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+        def __init__( self, parent, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ):
             
             wx.ScrolledWindow.__init__( self, parent )
             
@@ -6957,7 +6971,7 @@ class DialogManageSubscriptions( Dialog ):
             
             self.SetMinSize( ( 540, 620 ) )
             
-            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
             
             # init controls
             
@@ -6990,6 +7004,8 @@ class DialogManageSubscriptions( Dialog ):
             for ( title, timespan ) in ( ( 'days', 86400 ), ( 'weeks', 86400 * 7 ), ( 'months', 86400 * 30 ) ): self._frequency_type.Append( title, timespan )
             
             self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
+            
+            self._paused = wx.CheckBox( self._info_panel, label = 'paused' )
             
             self._reset_cache_button = wx.Button( self._info_panel, label = '     reset cache on dialog ok     ' )
             self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
@@ -7035,6 +7051,7 @@ class DialogManageSubscriptions( Dialog ):
             
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), FLAGS_EXPAND_PERPENDICULAR )
             self._info_panel.AddF( wx.StaticText( self._info_panel, label = str( len( url_cache ) ) + ' urls in cache' ), FLAGS_EXPAND_PERPENDICULAR )
+            self._info_panel.AddF( self._paused, FLAGS_LONE_BUTTON )
             self._info_panel.AddF( self._reset_cache_button, FLAGS_LONE_BUTTON )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
@@ -7048,7 +7065,7 @@ class DialogManageSubscriptions( Dialog ):
             self.SetSizer( vbox )
             
         
-        def _SetControls( self, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+        def _SetControls( self, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ):
             
             self._name.SetValue( name )
             
@@ -7090,6 +7107,8 @@ class DialogManageSubscriptions( Dialog ):
             
             if index_to_select is not None: self._frequency_type.Select( index_to_select )
             
+            self._paused.SetValue( paused )
+            
             self._reset_cache_button.SetLabel( '     reset cache on dialog ok     ' )
             
             self._advanced_tag_options.SetInfo( advanced_tag_options )
@@ -7107,7 +7126,7 @@ class DialogManageSubscriptions( Dialog ):
         
         def GetInfo( self ):
             
-            ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = self._original_info
+            ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = self._original_info
             
             name = self._name.GetValue()
             
@@ -7135,20 +7154,358 @@ class DialogManageSubscriptions( Dialog ):
                 url_cache = set()
                 
             
-            return ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            paused = self._paused.GetValue()
+            
+            return ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
             
         
         def GetName( self ): return self._name.GetValue()
         
-        def Update( self, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ):
+        def Update( self, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ):
             
             site_download_type = self._original_info[0]
             name = self._original_info[1]
             
-            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
             
             self._SetControls( *self._original_info )
             
+        
+    
+
+class DialogManageTagSiblings( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._tag_repositories = ClientGUICommon.ListBook( self )
+            self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+            
+            #services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            
+            #for service in services:
+            #    
+            #    account = service.GetAccount()
+            #    
+            #    if account.HasPermission( HC.POST_DATA ):
+            #        
+            #        service_identifier = service.GetServiceIdentifier()
+            #        
+            #        page_info = ( self._Panel, ( self._tag_repositories, service_identifier, paths ), {} )
+            #        
+            #        name = service_identifier.GetName()
+            #        
+            #        self._tag_repositories.AddPage( page_info, name )
+            #        
+            #    
+            
+            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+            
+            name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
+            
+            self._tag_repositories.AddPage( page, name )
+            
+            #default_tag_repository = self._options[ 'default_tag_repository' ]
+            
+            #self._tag_repositories.Select( default_tag_repository.GetName() )
+            
+            self._ok_button = wx.Button( self, label='ok' )
+            self._ok_button.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._close_button = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._close_button.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._close_button.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok_button, FLAGS_SMALL_INDENT )
+            buttons.AddF( self._close_button, FLAGS_SMALL_INDENT )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            self.SetInitialSize( ( 450, 680 ) )
+            
+        
+        Dialog.__init__( self, parent, 'tag siblings' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+        interested_actions = [ 'set_search_focus' ]
+        
+        entries = []
+        
+        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        page.SetTagBoxFocus()
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventMenu( self, event ):
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            try:
+                
+                ( command, data ) = action
+                
+                if command == 'set_search_focus': self._SetSearchFocus()
+                else: event.Skip()
+                
+            except Exception as e:
+                
+                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( traceback.format_exc() )
+                
+            
+        
+    
+    def EventOK( self, event ):
+        
+        edit_log = []
+        
+        try:
+            
+            for page in self._tag_repositories.GetNameToPageDict().values(): edit_log.append( page.GetChanges() )
+            
+            if len( edit_log ) > 0: wx.GetApp().Write( 'tag_siblings', edit_log )
+            
+        except Exception as e: wx.MessageBox( 'Saving tag sibling changes to DB raised this error: ' + unicode( e ) )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventServiceChanged( self, event ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        wx.CallAfter( page.SetTagBoxFocus )
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_identifier ):
+            
+            def InitialiseControls():
+                
+                self._tag_siblings = ClientGUICommon.SaneListCtrl( self, 250, [ ( 'old', 160 ), ( 'new', -1 ) ] )
+                
+                for ( old, new ) in self._original_pairs: self._tag_siblings.Append( ( old, new ), ( old, new ) )
+                
+                self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+                self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+                
+                self._old_text = wx.StaticText( self )
+                self._new_text = wx.StaticText( self )
+                
+                self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetOld, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                
+                self._add = wx.Button( self, label = 'add' )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                self._add.Disable()
+                
+                self._remove = wx.Button( self, label = 'remove' )
+                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+                self._remove.Disable()
+                
+            
+            def InitialisePanel():
+                
+                button_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                button_box.AddF( self._add, FLAGS_MIXED )
+                button_box.AddF( self._remove, FLAGS_MIXED )
+                
+                text_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                text_box.AddF( self._old_text, FLAGS_EXPAND_BOTH_WAYS )
+                text_box.AddF( self._new_text, FLAGS_EXPAND_BOTH_WAYS )
+                
+                input_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                input_box.AddF( self._old_input, FLAGS_EXPAND_BOTH_WAYS )
+                input_box.AddF( self._new_input, FLAGS_EXPAND_BOTH_WAYS )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._tag_siblings, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( button_box, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( text_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                vbox.AddF( input_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                self.SetSizer( vbox )
+                
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_identifier = service_identifier
+            
+            self._added = set()
+            self._removed = set()
+            
+            self._original_pairs = [ tuple( pair ) for pair in wx.GetApp().Read( 'tag_siblings', service_identifier ) ]
+            
+            self._current_pairs = set( self._original_pairs )
+            
+            self._current_new = None
+            self._current_old = None
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
+        
+        def _SetButtonStatus( self ):
+            
+            all_selected = self._tag_siblings.GetAllSelected()
+            
+            if len( all_selected ) == 0: self._remove.Disable()
+            else: self._remove.Enable()
+            
+            if self._current_new is None or self._current_old is None: self._add.Disable()
+            else: self._add.Enable()
+            
+        
+        def EventAdd( self, event ):
+            
+            pair = ( self._current_old, self._current_new )
+            
+            if pair in self._current_pairs:
+                
+                wx.MessageBox( 'That relationship already exists!' )
+                
+                return
+                
+            
+            self._current_olds = { old for ( old, new ) in self._current_pairs }
+            
+            # test for ambiguity
+            
+            if self._current_old in self._current_olds:
+                
+                wx.MessageBox( 'There already is a relationship set for the tag ' + self._current_new + '.' )
+                
+                return
+                
+            
+            # test for loops
+            
+            if self._current_new in self._current_olds:
+                
+                d = dict( self._current_pairs )
+                
+                next_new = self._current_new
+                
+                while next_new in d:
+                    
+                    next_new = d[ next_new ]
+                    
+                    if next_new == self._current_old:
+                        
+                        wx.MessageBox( 'Adding that pair would create a loop!' )
+                        
+                        return
+                        
+                    
+                
+            
+            # if we got here, we are great to do it
+            
+            self._added.add( pair )
+            self._removed.discard( pair )
+            
+            self._current_pairs.add( pair )
+            
+            self._tag_siblings.Append( pair, pair )
+            
+            self.SetOld( None )
+            self.SetNew( None )
+            
+        
+        def EventItemSelected( self, event ):
+            
+            self._SetButtonStatus()
+            
+        
+        def EventRemove( self, event ):
+            
+            all_selected = self._tag_siblings.GetAllSelected()
+            
+            for selected in all_selected:
+                
+                pair = self._tag_siblings.GetClientData( selected )
+                
+                self._removed.add( pair )
+                self._added.discard( pair )
+                
+                self._current_pairs.discard( pair )
+                
+            
+            self._tag_siblings.RemoveAllSelected()
+            
+        
+        def GetChanges( self ):
+            
+            edit_log = []
+            
+            if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                
+                edit_log += [ ( HC.ADD, pair ) for pair in self._added ]
+                edit_log += [ ( HC.DELETE, pair ) for pair in self._removed ]
+                
+            
+            return ( self._service_identifier, edit_log )
+            
+        
+        def SetNew( self, tag ):
+            
+            if tag is not None and tag == self._current_old: self.SetOld( None )
+            
+            self._current_new = tag
+            
+            if tag is None: self._new_text.SetLabel( '' )
+            else: self._new_text.SetLabel( tag )
+            
+            self._SetButtonStatus()
+            
+        
+        def SetOld( self, tag ):
+            
+            if tag is not None and tag == self._current_new: self.SetNew( None )
+            
+            self._current_old = tag
+            
+            if tag is None: self._old_text.SetLabel( '' )
+            else: self._old_text.SetLabel( tag )
+            
+            self._SetButtonStatus()
+            
+        
+        def SetTagBoxFocus( self ): self._old_input.SetFocus()
         
     
 class DialogManageTagServicePrecedence( Dialog ):
@@ -7395,7 +7752,7 @@ class DialogManageTags( Dialog ):
             
             if len( content_updates ) > 0: wx.GetApp().Write( 'content_updates', content_updates )
             
-        except Exception as e: wx.MessageBox( 'Saving pending mapping changes to DB raised this error: ' + unicode( e ) )
+        except Exception as e: wx.MessageBox( 'Saving mapping changes to DB raised this error: ' + unicode( e ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -8126,7 +8483,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_identifier ] = tags
                 
             
-        except Exception as e: wx.MessageBox( 'Saving pending mapping changes to DB raised this error: ' + unicode( e ) )
+        except Exception as e: wx.MessageBox( 'Saving regex tags to DB raised this error: ' + unicode( e ) )
         
         return paths_to_tags
         

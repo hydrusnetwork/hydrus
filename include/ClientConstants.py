@@ -604,9 +604,13 @@ class AutocompleteMatchesCounted():
     
 class AutocompleteMatchesPredicates():
     
-    def __init__( self, predicates ):
+    def __init__( self, predicates, do_siblings_collapse = True ):
         
         self._predicates = predicates
+        
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        if do_siblings_collapse: self._predicates = siblings_manager.CollapsePredicates( self._predicates )
         
         def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
         
@@ -1902,7 +1906,7 @@ class FileSystemPredicates():
     
     def OkFirstRound( self, width, height ):
         
-        if len( self._predicates[ self.RATIO ] ) > 0 and ( width is None or height is None ): return False
+        if len( self._predicates[ self.RATIO ] ) > 0 and ( width is None or height is None or width == 0 or height == 0): return False
         
         if False in ( function( float( width ) / float( height ), arg ) for ( function, arg ) in self._predicates[ self.RATIO ] ): return False
         
@@ -2620,6 +2624,214 @@ class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
     def ReceivesAnon( self ): return self._receive_anon
     
     def Decrypt( self, encrypted_message ): return HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, self._private_key )
+    
+class TagSiblingsManager():
+    
+    def __init__( self ):
+        
+        self._tag_service_precedence = wx.GetApp().Read( 'tag_service_precedence' )
+        
+        # I should offload this to a thread (rather than the gui thread), and have an event to say when it is ready
+        
+        self._RefreshSiblings()
+        
+        self._lock = threading.Lock()
+        
+        HC.pubsub.sub( self, 'RefreshSiblings', 'notify_new_siblings' )
+        
+    
+    def _RefreshSiblings( self ):
+        
+        unprocessed_siblings = wx.GetApp().Read( 'tag_siblings' )
+        
+        t_s_p = list( self._tag_service_precedence )
+        
+        t_s_p.reverse()
+        
+        processed_siblings = {}
+        
+        for service_identifier in t_s_p:
+            
+            if service_identifier in unprocessed_siblings: processed_siblings.update( unprocessed_siblings[ service_identifier ] )
+            
+        
+        # now to collapse chains
+        # A -> B and B -> C goes to A -> C and B -> C
+        
+        self._siblings = {}
+        
+        for ( old_tag, new_tag ) in processed_siblings.items():
+            
+            # adding A -> B
+            
+            if new_tag in self._siblings: # B -> C already added, so add A -> C
+                
+                new_tag = self._siblings[ new_tag ]
+                
+                self._siblings[ old_tag ] = new_tag
+                
+            else:
+                
+                while new_tag in processed_siblings: # while B -> C, C -> D, D -> E in preprocessed list, pursue endpoint F
+                    
+                    new_tag = processed_siblings[ new_tag ]
+                    
+                    if new_tag == old_tag: break # we have a loop!
+                    
+                
+                if old_tag != new_tag: self._siblings[ old_tag ] = new_tag
+                
+            
+        
+        self._reverse_lookup = collections.defaultdict( list )
+        
+        for ( old_tag, new_tag ) in self._siblings.items(): self._reverse_lookup[ new_tag ].append( old_tag )
+        
+        HC.pubsub.pub( 'new_siblings_gui' )
+        
+    
+    def GetAutocompleteSiblings( self, half_complete_tag ):
+        
+        key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if HC.SearchEntryMatchesTag( half_complete_tag, key ) }
+        
+        value_based_matching_values = { value for value in self._siblings.values() if HC.SearchEntryMatchesTag( half_complete_tag, value ) }
+        
+        matching_values = key_based_matching_values.union( value_based_matching_values )
+        
+        # all the matching values have a matching sibling somewhere in their network
+        # so now fetch the networks
+        
+        lists_of_matching_keys = [ self._reverse_lookup[ value ] for value in matching_values ]
+        
+        matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
+        
+        matches = matching_values.union( matching_keys )
+        
+        return matches
+        
+    
+    def GetSibling( self, tag ):
+        
+        with self._lock:
+            
+            if tag in self._siblings: return self._siblings[ tag ]
+            else: return None
+            
+        
+    
+    def GetAllSiblings( self, tag ):
+        
+        with self._lock:
+            
+            if tag in self._siblings:
+                
+                new_tag = self._siblings[ tag ]
+                
+            elif tag in self._reverse_lookup: new_tag = tag
+            else: return [ tag ]
+            
+            all_siblings = list( self._reverse_lookup[ new_tag ] )
+            
+            all_siblings.append( new_tag )
+            
+            return all_siblings
+            
+        
+    
+    def RefreshSiblings( self ):
+        
+        with self._lock: self._RefreshSiblings()
+        
+    
+    def CollapseCountedTagList( self, tag_list ):
+        
+        with self._lock:
+            
+            results = collections.Counter()
+            
+            for ( tag, count ) in tag_list:
+                
+                if tag in self._siblings: tag = self._siblings[ tag ]
+                
+                results[ tag ] += count
+                
+            
+            results = results.items()
+            
+            return results
+            
+        
+    
+    def CollapsePredicates( self, predicates ):
+        
+        with self._lock:
+            
+            results = [ predicate for predicate in predicates if predicate.GetPredicateType() != HC.PREDICATE_TYPE_TAG ]
+            
+            tag_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG ]
+            
+            tags_to_predicates = { predicate.GetTag() : predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG }
+            
+            tags = tags_to_predicates.keys()
+            
+            tags_to_include_in_results = set()
+            
+            for tag in tags:
+                
+                if tag in self._siblings:
+                    
+                    old_tag = tag
+                    old_predicate = tags_to_predicates[ old_tag ]
+                    
+                    new_tag = self._siblings[ old_tag ]
+                    
+                    if new_tag not in tags_to_predicates:
+                        
+                        ( old_operator, old_tag ) = old_predicate.GetValue()
+                        
+                        new_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( old_operator, new_tag ), 0 )
+                        
+                        tags_to_predicates[ new_tag ] = new_predicate
+                        
+                        tags_to_include_in_results.add( new_tag )
+                        
+                    
+                    new_predicate = tags_to_predicates[ new_tag ]
+                    
+                    count = old_predicate.GetCount()
+                    
+                    new_predicate.AddToCount( count )
+                    
+                else: tags_to_include_in_results.add( tag )
+                
+            
+            results.extend( [ tags_to_predicates[ tag ] for tag in tags_to_include_in_results ] )
+            
+            return results
+            
+        
+    
+    def CollapseTagList( self, tags ):
+        
+        with self._lock: return { self._siblings[ tag ] if tag in self._siblings else tag for tag in tags }
+        
+    
+    def CollapseTagsToCount( self, tags_to_count ):
+        
+        with self._lock:
+            
+            results = collections.Counter()
+            
+            for ( tag, count ) in tags_to_count.items():
+                
+                if tag in self._siblings: tag = self._siblings[ tag ]
+                
+                results[ tag ] += count
+                
+            
+            return results
+            
+        
     
 class ThumbnailCache():
     
