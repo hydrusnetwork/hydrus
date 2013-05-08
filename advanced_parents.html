@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<title>advanced - parents</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<p class="warning">This is a draft document. None of this code actually exists yet!</p>
+			<h3>what's the problem?</h3>
+			<p>Tags often fall into certain heirarchies. Files with one particular tag often always have certain other tags, and it is annoying and time-consuming to add them all individually every time.</p>
+			<p>For example, whenever you tag a file with <i>ak-47</i>, you probably also want to tag it <i>assault rifle</i>, and maybe even <i>firearm</i> as well.</p>
+			<p><img src="tag_parents_venn.png" /></p>
+			<p>Another time, you might tag a file <i>character:eddard stark</i>, and then also have to type in <i>house stark</i> and then <i>series:game of thrones</i>. (you might also think <i>series:game of thrones</i> should actually be <i>series:a song of ice and fire</i>, but that is an issue for <a href="advanced_siblings.html">siblings</a>)</p>
+			<p>Drawing more relationships would make a significantly more complicated venn diagram, so let's draw it like a family tree instead:</p>
+			<p><img src="tag_parents_got.png" /></p>
+			<p>If we were to search for the tag <i>house stark</i>, we would expect our results to include all the images of any of the Starks. Even so, it is tedious to have to remember to tag every image of a character with their house affiliation or other parent tags. You may not even remember.</p>
+			<p>Wouldn't it be great if we could add these sorts of tags at the same time?</p>
+			<h3>tag parents</h3>
+			<p>Let's define the relationship 'tag P is tag C's parent' as saying that tag P is the semantic superset of tag C. All files that have C should have P. Let's say that when the user tries to add a tag to a file, the tag's parents are added recursively.</p>
+			<p>Let's expand our weapon example:</p>
+			<p><img src="tag_parents_firearms.png" /></p>
+			<p>In that graph, adding <i>ar-15</i> to a file would also add <i>semi-automatic rifle</i>, <i>rifle</i>, and <i>firearm</i>. Searching for <i>handgun</i> would everything with <i>m1911</i> and <i>smith and wesson model 10</i>.</p>
+			<p>Although characters are an obvious and convenient step, we need to be careful to make sure we only link characters to series if they have unique names, and only if they are <i>inextricably</i> linked with their series. Series with crossovers and spinoffs (like CSI) make this difficult.</p>
+			<h3>how you do it</h3>
+			<p>services->manage tag parents</p>
+			<p>picture of dialog</p>
+			<p>when you add a tag, all of its parents will be added. This is transitive, so grandparents and great-grandparents and so on are also added.</p>
+			<p>parents are not cast-iron. from time to time, even the simplest and most seemingly-obvious of relationships can be broken. Rule 63 will often break a 'character x is a male' relationship, for example. so, you can de-pend and petition parents without the children being similarly removed. (screenshot?)</p>
+		</div>
+	</body>
+</html>
