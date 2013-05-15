@@ -34,6 +34,7 @@ def GetDownloader( site_download_type, *args ):
     elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: c = DownloaderHentaiFoundry
     elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: c = DownloaderPixiv
     elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: c = DownloaderTumblr
+    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS: c = DownloaderNewgrounds
     
     return c( *args )
     
@@ -73,8 +74,6 @@ class Downloader():
         
         self._num_pages_done = 0
         
-        example_url = self._GetNextGalleryPageURL()
-        
     
     def _EstablishSession( self, connection ): pass
     
@@ -96,27 +95,34 @@ class Downloader():
         return self._connections[ ( scheme, host, port ) ]
         
     
+    def _GetNextGalleryPageURLs( self ): return ( self._GetNextGalleryPageURL(), )
+    
     def GetAnotherPage( self ):
         
         if self._we_are_done: return []
         
-        url = self._GetNextGalleryPageURL()
+        urls = self._GetNextGalleryPageURLs()
         
-        connection = self._GetConnection( url )
+        url_info = []
         
-        data = connection.geturl( url )
-        
-        url_info = self._ParseGalleryPage( data, url )
+        for url in urls:
+            
+            connection = self._GetConnection( url )
+            
+            data = connection.geturl( url )
+            
+            page_of_url_info = self._ParseGalleryPage( data, url )
+            
+            # stop ourselves getting into an accidental infinite loop
+            
+            url_info += [ info for info in page_of_url_info if info[0] not in self._all_urls_so_far ]
+            
+            self._all_urls_so_far.update( [ info[0] for info in url_info ] )
+            
+            # now url_info only contains new url info
+            
         
         self._num_pages_done += 1
-        
-        # stop ourselves getting into an accidental infinite loop
-        
-        url_info = [ info for info in url_info if info[0] not in self._all_urls_so_far ]
-        
-        self._all_urls_so_far.update( [ info[0] for info in url_info ] )
-        
-        # now url_info only contains new url info
         
         return url_info
         
@@ -646,6 +652,178 @@ class DownloaderHentaiFoundry( Downloader ):
         headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
         connection.request( 'POST', '/site/filters', headers = headers, body = body )
+        
+    
+class DownloaderNewgrounds( Downloader ):
+    
+    def __init__( self, query ):
+        
+        self._query = query
+        
+        Downloader.__init__( self )
+        
+    
+    def _GetFileURLAndTags( self, url ):
+        
+        connection = self._GetConnection( url )
+        
+        html = connection.geturl( url )
+        
+        return self._ParseImagePage( html, url )
+        
+    
+    def _GetNextGalleryPageURLs( self ):
+        
+        artist = self._query
+        
+        gallery_urls = []
+        
+        gallery_urls.append( 'http://' + artist + '.newgrounds.com/games/' )
+        gallery_urls.append( 'http://' + artist + '.newgrounds.com/movies/' )
+        
+        self._we_are_done = True
+        
+        return gallery_urls
+        
+    
+    def _ParseGalleryPage( self, html, url_base ):
+        
+        soup = bs4.BeautifulSoup( html )
+        
+        fatcol = soup.find( 'div', class_ = 'fatcol' )
+        
+        links = fatcol.find_all( 'a' )
+        
+        urls_set = set()
+        
+        result_urls = []
+        
+        for link in links:
+            
+            try:
+                
+                url = link[ 'href' ]
+                
+                if url not in urls_set:
+                    
+                    if url.startswith( 'http://www.newgrounds.com/portal/view/' ): 
+                        
+                        urls_set.add( url )
+                        
+                        result_urls.append( ( url, ) )
+                        
+                    
+                
+            except: pass
+            
+        
+        return result_urls
+        
+    
+    def _ParseImagePage( self, html, url_base ):
+        
+        soup = bs4.BeautifulSoup( html )
+        
+        tags = []
+        
+        author_links = soup.find( 'ul', class_ = 'authorlinks' )
+        
+        if author_links is not None:
+            
+            authors = set()
+            
+            links = author_links.find_all( 'a' )
+            
+            for link in links:
+                
+                try:
+                    
+                    href = link[ 'href' ] # http://warlord-of-noodles.newgrounds.com
+                    
+                    creator = href.replace( 'http://', '' ).replace( '.newgrounds.com', '' )
+                    
+                    tags.append( 'creator:' + creator )
+                    
+                except: pass
+                
+            
+        
+        try:
+            
+            title = soup.find( 'title' )
+            
+            tags.append( 'title:' + title )
+            
+        except: pass
+        
+        all_links = soup.find_all( 'a' )
+        
+        for link in all_links:
+            
+            try:
+                
+                href = link[ 'href' ]
+                
+                if '/browse/tag/' in href: tags.append( link.string )
+                
+            except: pass
+            
+        
+        #
+        
+        try:
+            
+            components = html.split( '"src"' )
+            
+            # there is sometimes another bit of api flash earlier on that we don't want
+            # it is called http://uploads.ungrounded.net/apiassets/sandbox.swf
+            
+            if len( components ) == 2: flash_url = components[1]
+            else: flash_url = components[2]
+            
+            #"src":							"http:\/\/flash.ngfiles.com\/video_player\/videoplayer.swf",
+            #"width":						"100%",
+            
+            #"src":							"http:\/\/uploads.ungrounded.net\/593000\/593806_Kitty.swf",
+            #"width":						"100%",
+            
+            flash_url = flash_url.split( '"width"', 1 )[0]
+            
+            flash_url = flash_url.split( '"' )[1]
+            flash_url = flash_url.replace( '\\/', '/' )
+            
+        except: raise Exception( 'Could not find the swf file!' )
+        
+        if flash_url == 'http://flash.ngfiles.com/video_player/videoplayer.swf': raise Exception( 'It was an mp4 movie, not a swf!' )
+        
+        return ( flash_url, tags )
+        
+    
+    def GetFile( self, url ):
+        
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
+        
+        connection = self._GetConnection( file_url )
+        
+        return connection.geturl( file_url )
+        
+    
+    def GetFileAndTags( self, url ):
+        
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
+        
+        connection = self._GetConnection( file_url )
+        
+        file = connection.geturl( file_url )
+        
+        return ( file, tags )
+        
+    
+    def GetTags( self, url ):
+        
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
+        
+        return tags
         
     
 class DownloaderPixiv( Downloader ):

@@ -30,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 69
+SOFTWARE_VERSION = 70
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -269,6 +269,7 @@ header_and_mime = [
 PREDICATE_TYPE_SYSTEM = 0
 PREDICATE_TYPE_TAG = 1
 PREDICATE_TYPE_NAMESPACE = 2
+PREDICATE_TYPE_PARENT = 3
 
 SITE_DOWNLOAD_TYPE_DEVIANT_ART = 0
 SITE_DOWNLOAD_TYPE_GIPHY = 1
@@ -276,6 +277,7 @@ SITE_DOWNLOAD_TYPE_PIXIV = 2
 SITE_DOWNLOAD_TYPE_BOORU = 3
 SITE_DOWNLOAD_TYPE_TUMBLR = 4
 SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY = 5
+SITE_DOWNLOAD_TYPE_NEWGROUNDS = 6
 
 SYSTEM_PREDICATE_TYPE_EVERYTHING = 0
 SYSTEM_PREDICATE_TYPE_INBOX = 1
@@ -658,7 +660,7 @@ def ConvertTimestampToPrettyAge( timestamp ):
     
 def ConvertTimestampToPrettyAgo( timestamp ):
     
-    if timestamp == 0: return 'unknown when'
+    if timestamp == 0: return 'unknown time'
     
     age = int( time.time() ) - timestamp
     
@@ -997,7 +999,7 @@ def SearchEntryMatchesTag( search_entry, tag ):
             
         else: comparee = tag
         
-        if comparee.startswith( search_entry ): return True
+        if comparee.startswith( search_entry ) or ' ' + search_entry in comparee: return True
         
     
     return False
@@ -2060,6 +2062,16 @@ class Predicate():
             sibling = siblings_manager.GetSibling( tag )
             
             if sibling is not None: base += u' (' + sibling + u')'
+            
+        elif self._predicate_type == PREDICATE_TYPE_PARENT:
+            
+            base = '    '
+            
+            tag = self._value
+            
+            base += tag
+            
+            if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
             
         elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
             

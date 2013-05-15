@@ -1233,7 +1233,14 @@ class TagDB():
             tags_not_in_db.difference_update( [ tag for ( tag, ) in c.execute( 'SELECT tag FROM tags WHERE tag IN (' + ','.join( '?' * len( tags_subset ) ) + ');', [ tag for tag in tags_subset ] ) ] )
             
         
-        if len( tags_not_in_db ) > 0: c.executemany( 'INSERT INTO tags( tag ) VALUES( ? );', [ ( tag, ) for tag in tags_not_in_db ] )
+        if len( tags_not_in_db ) > 0:
+            
+            inserts = [ ( tag, ) for tag in tags_not_in_db ]
+            
+            c.executemany( 'INSERT INTO tags ( tag ) VALUES ( ? );', inserts )
+            
+            c.executemany( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags WHERE tag = ?;', inserts )
+            
         
     
     def _GetNamespaceTag( self, c, namespace_id, tag_id ):
@@ -1284,6 +1291,8 @@ class TagDB():
             c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
             
             tag_id = c.lastrowid
+            
+            c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
             
         else: ( tag_id, ) = result
         
@@ -1457,7 +1466,40 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     c.execute( 'INSERT OR IGNORE INTO repositories ( service_id, first_begin, next_begin ) VALUES ( ?, ?, ? );', ( service_id, 0, 0 ) )
                     
-                    if service_type == HC.TAG_REPOSITORY: c.execute( 'INSERT INTO tag_service_precedence ( service_id, precedence ) SELECT ?, CASE WHEN MAX( precedence ) NOT NULL THEN MAX( precedence ) + 1 ELSE 0 END FROM tag_service_precedence;', ( service_id, ) )
+                    if service_type == HC.TAG_REPOSITORY:
+                        
+                        c.execute( 'INSERT INTO tag_service_precedence ( service_id, precedence ) SELECT ?, CASE WHEN MAX( precedence ) NOT NULL THEN MAX( precedence ) + 1 ELSE 0 END FROM tag_service_precedence;', ( service_id, ) )
+                        
+                        self._RebuildTagServicePrecedence( c )
+                        
+                        #
+                        
+                        file_service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+                        
+                        file_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+                        
+                        file_service_ids = [ self._GetServiceId( c, service_identifier ) for service_identifier in file_service_identifiers ]
+                        
+                        existing_tag_ids = c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
+                        
+                        inserts = ( ( file_service_id, service_id, namespace_id, tag_id, 0, 0 ) for ( file_service_id, ( namespace_id, tag_id ) ) in itertools.product( file_service_ids, existing_tag_ids ) )
+                        
+                        c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
+                        
+                    elif service_type == HC.FILE_REPOSITORY:
+                        
+                        tag_service_identifiers = self._GetServiceIdentifiers( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+                        
+                        tag_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+                        
+                        tag_service_ids = [ self._GetServiceId( c, service_identifier ) for service_identifier in tag_service_identifiers ]
+                        
+                        existing_tag_ids = c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
+                        
+                        inserts = ( ( service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, ( namespace_id, tag_id ) ) in itertools.product( tag_service_ids, existing_tag_ids ) )
+                        
+                        c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
+                        
                     elif service_type == HC.RATING_LIKE_REPOSITORY:
                         
                         ( like, dislike ) = extra_info
@@ -2064,7 +2106,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return all_downloads
         
     
-    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, file_service_identifier = HC.NULL_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True, do_siblings_collapse = True ):
+    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, file_service_identifier = HC.NULL_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
         
         if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
             
@@ -2133,7 +2175,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         ( namespace_id, ) = result
                         
-                        possible_tag_ids = [ tag_id for ( tag_id, ) in c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( half_complete_tag + '%', ) ) ]
+                        #possible_tag_ids = [ tag_id for ( tag_id, ) in c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( half_complete_tag + '%', ) ) ]
+                        
+                        possible_tag_ids = [ tag_id for ( tag_id, ) in c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
                         
                         predicates_phrase = 'namespace_id = ' + str( namespace_id ) + ' AND tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
                         
@@ -2141,7 +2185,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             else:
                 
-                possible_tag_ids = [ tag_id for ( tag_id, ) in c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( half_complete_tag + '%', ) ) ]
+                #possible_tag_ids = [ tag_id for ( tag_id, ) in c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( half_complete_tag + '%', ) ) ]
+                
+                possible_tag_ids = [ tag_id for ( tag_id, ) in c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
                 
                 predicates_phrase = 'tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
                 
@@ -2211,7 +2257,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             [ tags_to_count.update( { ( 1, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results if namespace_id != 1 and tag_id in unnamespaced_tag_ids ]
             
         
-        matches = CC.AutocompleteMatchesPredicates( [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', self._GetNamespaceTag( c, namespace_id, tag_id ) ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ], do_siblings_collapse = do_siblings_collapse )
+        matches = CC.AutocompleteMatchesPredicates( tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', self._GetNamespaceTag( c, namespace_id, tag_id ) ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ], collapse = collapse )
         
         return matches
         
@@ -3178,6 +3224,37 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return subscriptions
         
     
+    def _GetTagParents( self, c, service_identifier = None ):
+        
+        if service_identifier is None:
+            
+            results = HC.BuildKeyToListDict( ( ( service_id, ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_parents;' ) ) )
+            
+            processed_results = {}
+            
+            for ( service_id, pair_ids ) in results.items():
+                
+                service_identifier = self._GetServiceIdentifier( c, service_id )
+                
+                pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
+                
+                processed_results[ service_identifier ] = pairs
+                
+            
+            return processed_results
+            
+        else:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            pair_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_parents WHERE service_id = ?;', ( service_id, ) ).fetchall()
+            
+            pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
+            
+            return pairs
+            
+        
+    
     def _GetTagServicePrecedence( self, c ):
         
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence ASC;' ) ]
@@ -3195,13 +3272,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             processed_results = {}
             
-            for ( service_id, n_t_ids ) in results.items():
+            for ( service_id, pair_ids ) in results.items():
                 
                 service_identifier = self._GetServiceIdentifier( c, service_id )
                 
-                n_ts = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in n_t_ids ]
+                pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
                 
-                processed_results[ service_identifier ] = n_ts
+                processed_results[ service_identifier ] = pairs
                 
             
             return processed_results
@@ -3210,11 +3287,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            n_t_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_siblings WHERE service_id = ?;', ( service_id, ) ).fetchall()
+            pair_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_siblings WHERE service_id = ?;', ( service_id, ) ).fetchall()
             
-            n_ts = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in n_t_ids ]
+            pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
             
-            return n_ts
+            return pairs
             
         
     
@@ -3752,6 +3829,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence DESC;' ) ]
         
+        t = time.clock()
+        
         c.execute( 'DELETE FROM active_mappings;' )
         c.execute( 'DELETE FROM active_pending_mappings;' )
         
@@ -3762,18 +3841,24 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             c.execute( 'INSERT OR IGNORE INTO active_mappings SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ?;', ( service_id, ) )
             c.execute( 'INSERT OR IGNORE INTO active_pending_mappings SELECT namespace_id, tag_id, hash_id FROM pending_mappings WHERE service_id = ?;', ( service_id, ) )
             
-            # is this incredibly inefficient?
-            # if this is O( n-squared ) or whatever, just rewrite it as two queries using indices
             if not first_round:
                 
-                c.execute( 'DELETE FROM active_mappings WHERE namespace_id || "," || tag_id || "," || hash_id IN ( SELECT namespace_id || "," || tag_id || "," || hash_id FROM deleted_mappings WHERE service_id = ? );', ( service_id, ) )
-                c.execute( 'DELETE FROM active_pending_mappings WHERE namespace_id || "," || tag_id || "," || hash_id IN ( SELECT namespace_id || "," || tag_id || "," || hash_id FROM deleted_mappings WHERE service_id = ? );', ( service_id, ) )
+                ids_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM deleted_mappings WHERE service_id = ?;', ( service_id, ) ) ] )
+                
+                c.executemany( 'DELETE FROM active_mappings WHERE namespace_id = ? AND tag_id = ? AND hash_id = ?;', ( ( namespace_id, tag_id, hash_id ) for ( ( namespace_id, tag_id ), hash_id ) in ids_dict.items() ) )
+                c.executemany( 'DELETE FROM active_pending_mappings WHERE namespace_id = ? AND tag_id = ? AND hash_id = ?;', ( ( namespace_id, tag_id, hash_id ) for ( ( namespace_id, tag_id ), hash_id ) in ids_dict.items() ) )
                 
             
             first_round = False
             
         
         c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IS NULL;' )
+        
+        file_service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+        
+        file_service_identifiers.add( HC.NULL_SERVICE_IDENTIFIER )
+        
+        for file_service_identifier in file_service_identifiers: self._GetAutocompleteTags( c, file_service_identifier = file_service_identifier )
         
     
     def _RecalcActivePendingMappings( self, c ):
@@ -3788,9 +3873,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             c.execute( 'INSERT OR IGNORE INTO active_pending_mappings SELECT namespace_id, tag_id, hash_id FROM pending_mappings WHERE service_id = ?;', ( service_id, ) )
             
-            # is this incredibly inefficient?
-            # if this is O( n-squared ) or whatever, just rewrite it as two queries using indices
-            if not first_round: c.execute( 'DELETE FROM active_pending_mappings WHERE namespace_id || "," || tag_id || "," || hash_id IN ( SELECT namespace_id || "," || tag_id || "," || hash_id FROM deleted_mappings WHERE service_id = ? );', ( service_id, ) )
+            if not first_round:
+                
+                ids_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM deleted_mappings WHERE service_id = ?;', ( service_id, ) ) ] )
+                
+                c.executemany( 'DELETE FROM active_pending_mappings WHERE namespace_id = ? AND tag_id = ? AND hash_id = ?;', ( ( namespace_id, tag_id, hash_id ) for ( ( namespace_id, tag_id ), hash_id ) in ids_dict.items() ) )
+                
             
             first_round = False
             
@@ -3826,7 +3914,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
-        if service_type == HC.TAG_REPOSITORY: self._RecalcActiveMappings( c )
+        if service_type == HC.TAG_REPOSITORY:
+            
+            self._RebuildTagServicePrecedence( c )
+            
+            self._RecalcActiveMappings( c )
+            
         
         self._AddService( c, new_service_identifier, credentials, extra_info )
         
@@ -3881,17 +3974,24 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub( 'notify_new_subscriptions' )
         
     
-    def _SetTagServicePrecedence( self, c, service_identifiers ):
+    def _RebuildTagServicePrecedence( self, c ):
         
         del self._tag_service_precedence[:]
         
+        service_identifiers = self._GetTagServicePrecedence( c )
+        
         self._tag_service_precedence.extend( service_identifiers )
         
-        service_ids = [ self._GetServiceId( c, service_identifier ) for service_identifier in service_identifiers ]
+    
+    def _SetTagServicePrecedence( self, c, service_identifiers ):
         
         c.execute( 'DELETE FROM tag_service_precedence;' )
         
+        service_ids = [ self._GetServiceId( c, service_identifier ) for service_identifier in service_identifiers ]
+        
         c.executemany( 'INSERT INTO tag_service_precedence ( service_id, precedence ) VALUES ( ?, ? );', [ ( service_id, precedence ) for ( precedence, service_id ) in enumerate( service_ids ) ] )
+        
+        self._RebuildTagServicePrecedence( c )
         
         self._RecalcActiveMappings( c )
         
@@ -4180,7 +4280,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if recalc_active_mappings: self._RecalcActiveMappings( c )
+        if recalc_active_mappings:
+            
+            self._RebuildTagServicePrecedence( c )
+            
+            self._RecalcActiveMappings( c )
+            
         
         self.pub( 'notify_new_pending' )
         self.pub( 'notify_new_services' )
@@ -4279,7 +4384,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if recalc_active_mappings: self._RecalcActiveMappings( c )
+        if recalc_active_mappings:
+            
+            self._RebuildTagServicePrecedence( c )
+            
+            self._RecalcActiveMappings( c )
+            
         
         self.pub( 'notify_new_pending' )
         self.pub( 'notify_new_services' )
@@ -4495,6 +4605,54 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
+    def _UpdateTagParents( self, c, edit_log ):
+        
+        pending_updated = False
+        
+        for ( service_identifier, sub_edit_log ) in edit_log:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            for ( action, data ) in sub_edit_log:
+                
+                if action == HC.ADD:
+                    
+                    ( old_tag, new_tag ) = data
+                    
+                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                    
+                    ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                    
+                    c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) )
+                    
+                    #
+                    
+                    existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ?;', ( service_id, old_namespace_id, new_tag_id ) ) ]
+                    
+                    new_mapping_ids = [ ( new_namespace_id, new_tag_id, existing_hash_ids ) ]
+                    
+                    self._UpdateMappings( c, service_id, new_mapping_ids, [] )
+                    
+                    # also catch up pending, for remote
+                    # this is a process content update thing, right?
+                    # I should extract it to a new self._UpdatePendingMappings function
+                    
+                elif action == HC.DELETE:
+                    
+                    ( old_tag, new_tag ) = data
+                    
+                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                    
+                    ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                    
+                    c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND new_namespace_id = ? AND new_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) )
+                    
+                
+            
+        
+        self.pub( 'notify_new_parents' )
+        
+    
     def _UpdateTagSiblings( self, c, edit_log ):
         
         for ( service_identifier, sub_edit_log ) in edit_log:
@@ -4570,6 +4728,21 @@ class DB( ServiceDB ):
         self._UpdateDB( c )
         
         # ####### put a temp db update here! ######
+        
+        c.execute( 'BEGIN IMMEDIATE' )
+        
+        try:
+            
+            c.execute( 'COMMIT' )
+            
+        except:
+            
+            print( traceback.format_exc() )
+            
+            c.execute( 'ROLLBACK' )
+            
+            raise
+            
         
         # ###### ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ######
         
@@ -4877,10 +5050,15 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
             
+            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER );' )
+            c.execute( 'CREATE UNIQUE INDEX tag_parents_all_index ON tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id );' )
+            
             c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
             
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
+            
+            c.execute( 'CREATE VIRTUAL TABLE tags_fts4 USING fts4( tag );' )
             
             c.execute( 'CREATE TABLE urls ( url TEXT PRIMARY KEY, hash_id INTEGER );' )
             c.execute( 'CREATE INDEX urls_hash_id ON urls ( hash_id );' )
@@ -5166,158 +5344,6 @@ class DB( ServiceDB ):
                 
                 self._UpdateDBOld( c, version )
                 
-                if version < 64:
-                    
-                    c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
-                    
-                    c.execute( 'UPDATE ADDRESSES SET host = ? WHERE host = ?;', ( 'hydrus.no-ip.org', '98.214.1.156' ) )
-                    
-                    c.execute( 'DELETE FROM service_info WHERE info_type IN ( 6, 7 );' ) # resetting thumb count, to see if it breaks again
-                    
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    shortcuts = self._options[ 'shortcuts' ]
-                    
-                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
-                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'
-                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
-                    shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
-                    
-                
-                if version < 65:
-                    
-                    wx.GetApp().SetSplashText( 'renaming db files' )
-                    
-                    filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
-                    
-                    i = 1
-                    
-                    for filename in filenames:
-                        
-                        if '.' not in filename:
-                            
-                            try:
-                                
-                                old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
-                                
-                                mime = HC.GetMimeFromPath( old_path )
-                                
-                                new_path = old_path + HC.mime_ext_lookup[ mime ]
-                                
-                                shutil.move( old_path, new_path )
-                                
-                                os.chmod( new_path, stat.S_IREAD )
-                                
-                            except: pass
-                            
-                        
-                        i += 1
-                        
-                        if i % 250 == 0: wx.GetApp().SetSplashText( 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
-                        
-                    
-                    c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
-                    
-                
-                if version < 66:
-                    
-                    c.execute( 'DELETE FROM boorus;' )
-                    
-                    c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
-                    
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    self._options[ 'pause_repo_sync' ] = False
-                    self._options[ 'pause_subs_sync' ] = False
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
-                    
-                
-                if version < 67:
-                    
-                    result = c.execute( 'SELECT subscriptions FROM subscriptions;' ).fetchone()
-                    
-                    if result is None: subscriptions = []
-                    else: ( subscriptions, ) = result
-                    
-                    c.execute( 'DROP TABLE subscriptions;' )
-                    
-                    c.execute( 'CREATE TABLE subscriptions ( site_download_type INTEGER, name TEXT, info TEXT_YAML, PRIMARY KEY( site_download_type, name ) );' )
-                    
-                    inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
-                    
-                    c.executemany( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', inserts )
-                    
-                    #
-                    
-                    wx.GetApp().SetSplashText( 'creating new db directories' )
-                    
-                    hex_chars = '0123456789abcdef'
-                    
-                    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
-                        
-                        dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
-                        
-                        if not os.path.exists( dir ): os.mkdir( dir )
-                        
-                        dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
-                        
-                        if not os.path.exists( dir ): os.mkdir( dir )
-                        
-                    
-                    wx.GetApp().SetSplashText( 'generating file cache' )
-                    
-                    filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
-                    
-                    i = 1
-                    
-                    for filename in filenames:
-                        
-                        try:
-                            
-                            source_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
-                            
-                            first_two_chars = filename[:2]
-                            
-                            destination_path = HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + filename
-                            
-                            shutil.move( source_path, destination_path )
-                            
-                        except: continue
-                        
-                        i += 1
-                        
-                        if i % 100 == 0: wx.GetApp().SetSplashText( 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
-                        
-                    
-                    wx.GetApp().SetSplashText( 'generating thumbnail cache' )
-                    
-                    filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
-                    
-                    i = 1
-                    
-                    for filename in filenames:
-                        
-                        try:
-                            
-                            source_path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + filename
-                            
-                            first_two_chars = filename[:2]
-                            
-                            destination_path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + filename
-                            
-                            shutil.move( source_path, destination_path )
-                            
-                        except: continue
-                        
-                        i += 1
-                        
-                        if i % 100 == 0: wx.GetApp().SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
-                        
-                    
-                
                 if version < 68:
                     
                     ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
@@ -5418,6 +5444,17 @@ class DB( ServiceDB ):
                         for ( tag_service_identifier, file_service_identifier ) in itertools.product( tag_service_identifiers, file_service_identifiers ): self._GetAutocompleteTags( c, tag_service_identifier = tag_service_identifier, file_service_identifier = file_service_identifier )
                         
                     except: pass
+                    
+                
+                if version < 70:
+                    
+                    c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER );' )
+                    c.execute( 'CREATE UNIQUE INDEX tag_parents_all_index ON tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id );' )
+                    
+                    #
+                    
+                    c.execute( 'CREATE VIRTUAL TABLE tags_fts4 USING fts4( tag );' )
+                    c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags;' )
                     
                 
                 unknown_account = CC.GetUnknownAccount()
@@ -6418,6 +6455,158 @@ class DB( ServiceDB ):
             system_predicates[ 'num_words' ] = ( 0, 30000 )
             
             c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 64:
+            
+            c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
+            
+            c.execute( 'UPDATE ADDRESSES SET host = ? WHERE host = ?;', ( 'hydrus.no-ip.org', '98.214.1.156' ) )
+            
+            c.execute( 'DELETE FROM service_info WHERE info_type IN ( 6, 7 );' ) # resetting thumb count, to see if it breaks again
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            shortcuts = self._options[ 'shortcuts' ]
+            
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
+            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 65:
+            
+            wx.GetApp().SetSplashText( 'renaming db files' )
+            
+            filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
+            
+            i = 1
+            
+            for filename in filenames:
+                
+                if '.' not in filename:
+                    
+                    try:
+                        
+                        old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
+                        
+                        mime = HC.GetMimeFromPath( old_path )
+                        
+                        new_path = old_path + HC.mime_ext_lookup[ mime ]
+                        
+                        shutil.move( old_path, new_path )
+                        
+                        os.chmod( new_path, stat.S_IREAD )
+                        
+                    except: pass
+                    
+                
+                i += 1
+                
+                if i % 250 == 0: wx.GetApp().SetSplashText( 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                
+            
+            c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
+            
+        
+        if version < 66:
+            
+            c.execute( 'DELETE FROM boorus;' )
+            
+            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
+            
+            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            self._options[ 'pause_repo_sync' ] = False
+            self._options[ 'pause_subs_sync' ] = False
+            
+            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            
+        
+        if version < 67:
+            
+            result = c.execute( 'SELECT subscriptions FROM subscriptions;' ).fetchone()
+            
+            if result is None: subscriptions = []
+            else: ( subscriptions, ) = result
+            
+            c.execute( 'DROP TABLE subscriptions;' )
+            
+            c.execute( 'CREATE TABLE subscriptions ( site_download_type INTEGER, name TEXT, info TEXT_YAML, PRIMARY KEY( site_download_type, name ) );' )
+            
+            inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) in subscriptions ]
+            
+            c.executemany( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', inserts )
+            
+            #
+            
+            wx.GetApp().SetSplashText( 'creating new db directories' )
+            
+            hex_chars = '0123456789abcdef'
+            
+            for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                
+                dir = HC.CLIENT_FILES_DIR + os.path.sep + one + two
+                
+                if not os.path.exists( dir ): os.mkdir( dir )
+                
+                dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+                
+                if not os.path.exists( dir ): os.mkdir( dir )
+                
+            
+            wx.GetApp().SetSplashText( 'generating file cache' )
+            
+            filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
+            
+            i = 1
+            
+            for filename in filenames:
+                
+                try:
+                    
+                    source_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
+                    
+                    first_two_chars = filename[:2]
+                    
+                    destination_path = HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + filename
+                    
+                    shutil.move( source_path, destination_path )
+                    
+                except: continue
+                
+                i += 1
+                
+                if i % 100 == 0: wx.GetApp().SetSplashText( 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                
+            
+            wx.GetApp().SetSplashText( 'generating thumbnail cache' )
+            
+            filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
+            
+            i = 1
+            
+            for filename in filenames:
+                
+                try:
+                    
+                    source_path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + filename
+                    
+                    first_two_chars = filename[:2]
+                    
+                    destination_path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + filename
+                    
+                    shutil.move( source_path, destination_path )
+                    
+                except: continue
+                
+                i += 1
+                
+                if i % 100 == 0: wx.GetApp().SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                
             
         
     
@@ -7440,6 +7629,7 @@ class DB( ServiceDB ):
         elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
         elif action == 'subscriptions': result = self._GetSubscriptions( c, *args, **kwargs )
         elif action == 'tag_service_precedence': result = self._tag_service_precedence
+        elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
         elif action == 'thumbnail': result = self._GetThumbnail( *args, **kwargs )
         elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( c, *args, **kwargs )
@@ -7489,6 +7679,7 @@ class DB( ServiceDB ):
         elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
         elif action == 'subscription': self._SetSubscription( c, *args, **kwargs )
         elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
+        elif action == 'tag_parents': self._UpdateTagParents( c, *args, **kwargs )
         elif action == 'tag_siblings': self._UpdateTagSiblings( c, *args, **kwargs )
         elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
         elif action == 'update': self._AddUpdate( c, *args, **kwargs )

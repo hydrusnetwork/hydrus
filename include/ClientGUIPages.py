@@ -313,6 +313,15 @@ class PageImportHentaiFoundryTags( PageImport ):
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( self._search_preview_split, self, self._page_key )
     
+class PageImportNewgrounds( PageImport ):
+    
+    def __init__( self, parent ):
+        
+        PageImport.__init__( self, parent )
+        
+    
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedNewgrounds( self._search_preview_split, self, self._page_key )
+    
 class PageImportPixivArtist( PageImport ):
     
     def __init__( self, parent ):

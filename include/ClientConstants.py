@@ -604,20 +604,39 @@ class AutocompleteMatchesCounted():
     
 class AutocompleteMatchesPredicates():
     
-    def __init__( self, predicates, do_siblings_collapse = True ):
+    def __init__( self, service_identifier, predicates, collapse = True ):
         
+        self._service_identifier = service_identifier
         self._predicates = predicates
+        self._collapse = collapse
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        # do siblings
         
-        if do_siblings_collapse: self._predicates = siblings_manager.CollapsePredicates( self._predicates )
+        if self._collapse:
+            
+            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            
+            self._predicates = siblings_manager.CollapsePredicates( self._predicates )
+            
         
         def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
         
         self._predicates.sort( cmp = cmp_func, reverse = True )
         
     
-    def GetMatches( self, search ): return [ predicate for predicate in self._predicates if HC.SearchEntryMatchesPredicate( search, predicate ) ]
+    def GetMatches( self, search ):
+        
+        matches = [ predicate for predicate in self._predicates if HC.SearchEntryMatchesPredicate( search, predicate ) ]
+        
+        if not self._collapse:
+            
+            parents_manager = wx.GetApp().GetTagParentsManager()
+            
+            matches = parents_manager.ExpandPredicates( self._service_identifier, matches )
+            
+        
+        return matches
+        
     
 class Booru( HC.HydrusYAMLBase ):
     
@@ -2625,6 +2644,98 @@ class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
     
     def Decrypt( self, encrypted_message ): return HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, self._private_key )
     
+class TagParentsManager():
+    
+    def __init__( self ):
+        
+        self._RefreshParents()
+        
+        self._lock = threading.Lock()
+        
+        HC.pubsub.sub( self, 'RefreshParents', 'notify_new_parents' )
+        
+    
+    def _GetParents( self, service_identifier, tag ):
+        
+        if service_identifier == HC.NULL_SERVICE_IDENTIFIER: return []
+        
+        if tag in self._parents[ service_identifier ]: still_to_process = list( self._parents[ service_identifier ][ tag ] )
+        else: still_to_process = []
+        
+        parents = []
+        parents_set = set()
+        
+        while len( still_to_process ) > 0:
+            
+            parent = still_to_process.pop()
+            
+            if parent in parents_set: continue
+            
+            parents.append( parent )
+            
+            parents_set.add( parent )
+            
+            if parent in self._parents[ service_identifier ]:
+                
+                grandparents = list( self._parents[ service_identifier ][ parent ] )
+                
+                still_to_process.extend( grandparents )
+                
+            
+        
+        return parents
+        
+    
+    def _RefreshParents( self ):
+        
+        raw_parents = wx.GetApp().Read( 'tag_parents' )
+        
+        self._parents = collections.defaultdict( dict )
+        
+        for ( service_identifier, pairs ) in raw_parents.items(): self._parents[ service_identifier ] = HC.BuildKeyToListDict( pairs )
+        
+    
+    def ExpandPredicates( self, service_identifier, predicates ):
+        
+        if service_identifier == HC.NULL_SERVICE_IDENTIFIER: return predicates
+        
+        results = []
+        
+        with self._lock:
+            
+            for predicate in predicates:
+                
+                results.append( predicate )
+                
+                if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG:
+                    
+                    tag = predicate.GetTag()
+                    
+                    parents = self._GetParents( service_identifier, tag )
+                    
+                    for parent in parents:
+                        
+                        parent_predicate = HC.Predicate( HC.PREDICATE_TYPE_PARENT, parent, None )
+                        
+                        results.append( parent_predicate )
+                        
+                    
+                
+            
+            return results
+            
+        
+    
+    def GetParents( self, service_identifier, tag ):
+        
+        with self._lock: return self._GetParents( service_identifier, tag )
+        
+    
+    def RefreshParents( self ):
+        
+        with self._lock: self._RefreshParents()
+        
+    
 class TagSiblingsManager():
     
     def __init__( self ):
@@ -2871,26 +2982,60 @@ class ThumbnailCache():
     def GetNotFoundThumbnail( self ): return self._not_found
     def GetPDFThumbnail( self ): return self._pdf
     
-    def GetThumbnail( self, hash ):
+    def GetThumbnail( self, media ):
         
-        if not self._data_cache.HasData( hash ):
-            
-            try: hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( wx.GetApp().Read( 'thumbnail', hash ) )
-            except:
-                print( traceback.format_exc() )
-                return self._not_found
-            
-            self._data_cache.AddData( hash, hydrus_bitmap )
-            
+        mime = media.GetDisplayMedia().GetMime()
         
-        return self._data_cache.GetData( hash )
+        if mime in HC.IMAGES:
+            
+            hash = media.GetDisplayMedia().GetHash()
+            
+            if not self._data_cache.HasData( hash ):
+                
+                try: hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( wx.GetApp().Read( 'thumbnail', hash ) )
+                except:
+                    print( traceback.format_exc() )
+                    return self._not_found
+                
+                self._data_cache.AddData( hash, hydrus_bitmap )
+                
+            
+            return self._data_cache.GetData( hash )
+            
+        elif mime == HC.APPLICATION_FLASH: return self._flash
+        elif mime == HC.APPLICATION_PDF: return self._pdf
+        elif mime == HC.VIDEO_FLV: return self._flv
+        else: return self._not_found
         
     
     def Prefetch( self, hashes ):
         
-        hashes_to_get = hashes.intersection( self._data_cache.GetKeys() )
+        hashes_to_get = hashes.difference( self._data_cache.GetKeys() )
         
         if len( hashes_to_get ) > 0: threading.Thread( target = self.THREADPrefetch, args = ( hashes_to_get, ) ).start()
+        
+    
+    def Waterfall( self, page_key, medias ): threading.Thread( target = self.THREADWaterfall, args = ( page_key, medias ) ).start()
+    
+    def THREADWaterfall( self, page_key, medias ):
+        
+        random.shuffle( medias )
+        
+        last_paused = time.clock()
+        
+        for media in medias:
+            
+            thumbnail = self.GetThumbnail( media )
+            
+            HC.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
+            
+            if time.clock() - last_paused > 0.005:
+                
+                time.sleep( 0.0001 )
+                
+                last_paused = time.clock()
+                
+            
         
     
     def THREADPrefetch( self, hashes ):

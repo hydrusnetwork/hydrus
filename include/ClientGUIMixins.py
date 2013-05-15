@@ -522,7 +522,7 @@ class MediaCollection( MediaList, Media ):
     
     def GetNumWords( self ): return sum( [ media.GetNumWords() for media in self._sorted_media ] )
     
-    def GetPrettyAge( self ): return HC.ConvertTimestampToPrettyAge( self._timestamp )
+    def GetPrettyAge( self ): return 'imported ' + HC.ConvertTimestampToPrettyAgo( self._timestamp )
     
     def GetPrettyInfo( self ):
         
@@ -637,7 +637,7 @@ class MediaSingleton( Media ):
         else: return timestamp
         
     
-    def GetPrettyAge( self ): return HC.ConvertTimestampToPrettyAge( self._media_result.GetTimestamp() )
+    def GetPrettyAge( self ): return 'imported ' + HC.ConvertTimestampToPrettyAgo( self._media_result.GetTimestamp() )
     
     def GetPrettyInfo( self ):
         

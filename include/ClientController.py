@@ -131,6 +131,8 @@ class Controller( wx.App ):
     
     def GetSessionKey( self, service_identifier ): return self._session_manager.GetSessionKey( service_identifier )
     
+    def GetTagParentsManager( self ): return self._tag_parents_manager
+    
     def GetTagSiblingsManager( self ): return self._tag_siblings_manager
     
     def GetThumbnailCache( self ): return self._thumbnail_cache
@@ -171,6 +173,7 @@ class Controller( wx.App ):
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()
+            self._tag_parents_manager = CC.TagParentsManager()
             self._tag_siblings_manager = CC.TagSiblingsManager()
             
             self.SetSplashText( 'caches' )

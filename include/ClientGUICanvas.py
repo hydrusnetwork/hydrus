@@ -255,7 +255,7 @@ class Canvas():
     
     def _GetInfoString( self ):
         
-        info_string = self._current_media.GetPrettyInfo()
+        info_string = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
         
         return info_string
         
@@ -641,7 +641,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
     def _GetInfoString( self ):
         
-        info_string = self._current_media.GetPrettyInfo() + ' ' + HC.ConvertZoomToPercentage( self._current_zoom )
+        info_string = self._current_media.GetPrettyInfo() + ' | ' + HC.ConvertZoomToPercentage( self._current_zoom ) + ' | ' + self._current_media.GetPrettyAge()
         
         return info_string
         
@@ -1056,6 +1056,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
             elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
             elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
             elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+            elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
             else:
                 
                 ( modifier, key ) = HC.GetShortcutFromEvent( event )
@@ -1088,6 +1090,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                     ( command, data ) = action
                     
                     if command == 'archive': self._Archive()
+                    elif command == 'copy_files':
+                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                     elif command == 'copy_path': self._CopyPathToClipboard()
                     elif command == 'delete': self._Delete()
@@ -1196,8 +1200,13 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         menu.AppendSeparator()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'copy path' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'copy local url' )
+        copy_menu = wx.Menu()
+        
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
+        
+        menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
         menu.AppendSeparator()
         
@@ -1379,6 +1388,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                 elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
                 elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
                 elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+                elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
                 else: event.Skip()
                 
             
@@ -1399,6 +1410,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     ( command, data ) = action
                     
                     if command == 'archive': self._Archive()
+                    elif command == 'copy_files':
+                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                     elif command == 'copy_path': self._CopyPathToClipboard()
                     elif command == 'delete': self._Delete()
@@ -1486,8 +1499,13 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         menu.AppendSeparator()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'copy path' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'copy local url' )
+        copy_menu = wx.Menu()
+        
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
+        
+        menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
         menu.AppendSeparator()
         
@@ -1587,6 +1605,8 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                                 
                             except: wx.MessageBox( traceback.format_exc() )
                             
+                            self._current_media = self._GetFirst() # so the pubsub on close is better
+                            
                         
                         CanvasFullscreenMediaList.EventClose( self, event )
                         
@@ -1620,6 +1640,8 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             elif event.KeyCode == wx.WXK_BACK: self.EventBack( event )
             elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
+            elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
             elif not event.ShiftDown() and event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
                 
@@ -2375,6 +2397,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         elif event.KeyCode in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ): self._ProcessAction( 'right' )
         elif event.KeyCode == wx.WXK_BACK: self._GoBack()
         elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+        elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+            with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
         else: event.Skip()
         
     
@@ -2683,6 +2707,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                     if event.KeyCode in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
                     elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
                     elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
+                    elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     else: self.GetParent().ProcessEvent( event )
                     
             

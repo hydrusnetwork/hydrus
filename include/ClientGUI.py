@@ -665,6 +665,15 @@ class FrameGUI( ClientGUICommon.Frame ):
         self._options[ 'pause_subs_sync' ] = original_pause_status
         
     
+    def _ManageTagParents( self ):
+        
+        try:
+            
+            with ClientGUIDialogs.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
+            
+        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        
+    
     def _ManageTagServicePrecedence( self ):
         
         try:
@@ -752,6 +761,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             elif name == 'hentai foundry by artist': new_page = ClientGUIPages.PageImportHentaiFoundryArtist( self._notebook )
             elif name == 'hentai foundry by tags': new_page = ClientGUIPages.PageImportHentaiFoundryTags( self._notebook )
             elif name == 'giphy': new_page = ClientGUIPages.PageImportGiphy( self._notebook )
+            elif name == 'newgrounds': new_page = ClientGUIPages.PageImportNewgrounds( self._notebook )
             elif name == 'pixiv by artist': new_page = ClientGUIPages.PageImportPixivArtist( self._notebook )
             elif name == 'pixiv by tag': new_page = ClientGUIPages.PageImportPixivTag( self._notebook )
             elif name == 'tumblr': new_page = ClientGUIPages.PageImportTumblr( self._notebook )
@@ -1066,6 +1076,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'manage_server_services': self._ManageServer( data )
                 elif command == 'manage_services': self._ManageServices()
                 elif command == 'manage_subscriptions': self._ManageSubscriptions()
+                elif command == 'manage_tag_parents': self._ManageTagParents()
                 elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
                 elif command == 'manage_tag_siblings': self._ManageTagSiblings()
                 elif command == 'modify_account': self._ModifyAccount( data )
@@ -1340,6 +1351,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
         #services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
         services.AppendSeparator()
@@ -1661,7 +1673,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
             
-            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ) ]
+            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', 'newgrounds' ) ]
             
             ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
             
@@ -2262,7 +2274,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
     
     def EventServiceReset( self, event ):
         
-        message = 'This will remove all cached information for ' + self._service_identifier.GetName() + ' from the database. It will take time to resynchronise.'
+        message = 'This will remove all cached information for ' + self._service_identifier.GetName() + ' from the database. It will take a minute for the database to finish the operation, during which time the gui may freeze.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             

@@ -1626,6 +1626,8 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         
         self.SetSizer( vbox )
         
+        wx.CallAfter( self._new_queue_input.SelectAll )
+        
     
     def _InitExtraVboxElements( self, vbox ): pass
     
@@ -1893,6 +1895,20 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelIm
         return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'tags', tags, self._advanced_hentai_foundry_options.GetInfo() ), )
         
     
+class ManagementPanelImportWithQueueAdvancedNewgrounds( ManagementPanelImportWithQueueAdvanced ):
+    
+    def __init__( self, parent, page, page_key ):
+        
+        name = 'newgrounds'
+        namespaces = [ 'creator', 'title', '' ]
+        
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        
+        self._new_queue_input.SetValue( 'artist' )
+        
+    
+    def _GetDownloaders( self, artist ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS, artist ), )
+    
 class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueueAdvanced ):
     
     def __init__( self, parent, page, page_key ):
@@ -2106,10 +2122,13 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._thread_panel.AddF( self._thread_pause_button, FLAGS_EXPAND_PERPENDICULAR )
         
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send to ', [ 'filename' ] )
+        
         self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
         
         vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._thread_panel, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
@@ -2148,7 +2167,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             posts_list = json_dict[ 'posts' ]
             
-            image_infos = [ ( post[ 'md5' ].decode( 'base64' ), str( post[ 'tim' ] ), post[ 'ext' ] ) for post in posts_list if 'md5' in post ]
+            image_infos = [ ( post[ 'md5' ].decode( 'base64' ), str( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
             
             image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in self._image_infos_already_added ]
             
@@ -2182,7 +2201,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         try:
             
-            ( md5, image_name, ext ) = queue_object
+            ( md5, image_name, ext, filename ) = queue_object
             
             ( status, hash ) = wx.GetApp().Read( 'md5_status', md5 )
             
@@ -2228,7 +2247,11 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                     
                     advanced_import_options = self._advanced_import_options.GetInfo()
                     
-                    service_identifiers_to_tags = {}
+                    advanced_tag_options = self._advanced_tag_options.GetInfo()
+                    
+                    tags = [ 'filename:' + filename + ext ]
+                    
+                    service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                     
                     wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
                     

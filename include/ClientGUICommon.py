@@ -252,10 +252,8 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         num_chars = len( self.GetValue() )
         
         if num_chars == 0: lag = 0
-        elif num_chars == 1: lag = 400
-        elif num_chars == 2: lag = 200
-        else: lag = 100
-        
+        else: lag = 150
+        #lag = 0
         self._lag_timer.Start( lag, wx.TIMER_ONE_SHOT )
         
     
@@ -397,7 +395,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
-    def _InitCachedResults( self ): return CC.AutocompleteMatchesCounted( {} )
+    def _InitCachedResults( self ): return CC.AutocompleteMatchesPredicates( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [] )
     
     def _InitDropDownList( self ): return TagsBoxActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
@@ -636,7 +634,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         tags_to_count = collections.Counter( absolutely_all_tags_flat )
                         
-                        self._cached_results = CC.AutocompleteMatchesPredicates( [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
+                        self._cached_results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
                         
                     
                 
@@ -705,15 +703,17 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _BroadcastChoice( self, predicate ):
         
-        if predicate is None: broadcast = None
+        if predicate is None: self._chosen_tag_callable( None )
         else:
             
             ( operator, tag ) = predicate.GetValue()
             
-            broadcast = tag
+            parent_manager = wx.GetApp().GetTagParentsManager()
             
-        
-        self._chosen_tag_callable( broadcast )
+            parents = parent_manager.GetParents( self._tag_service_identifier, tag )
+            
+            self._chosen_tag_callable( tag, parents )
+            
         
     
     def _GenerateMatches( self ):
@@ -753,24 +753,23 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 half_complete_tag = search_text
                 
             
-            # this bit obviously now needs an overhaul; we want to change to broader search domains automatically, based on what the user has selected
-            # (and hopefully show that in the buttons, temporarily)
-            
             if len( half_complete_tag ) >= num_first_letters:
                 
                 if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
                     
                     self._first_letters = half_complete_tag
                     
-                    self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, do_siblings_collapse = False )
+                    self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, collapse = False )
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
                 
             else: matches = []
             
-            # now do the 'put whatever they typed in at the top, whether it has count or not'
+            # do the 'put whatever they typed in at the top, whether it has count or not'
             # now with sibling support!
+            # and parent support!
+            # this is getting pretty ugly, and I should really move it into the matches processing, I think!
             
             top_predicates = []
             
@@ -784,14 +783,42 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             for predicate in top_predicates:
                 
+                parents = []
+                
                 try:
                     
-                    predicate = matches[ matches.index( predicate ) ]
+                    index = matches.index( predicate )
+                    
+                    predicate = matches[ index ]
                     
                     matches.remove( predicate )
                     
-                except: pass
+                    while matches[ index ].GetPredicateType() == HC.PREDICATE_TYPE_PARENT:
+                        
+                        parent = matches[ index ]
+                        
+                        matches.remove( parent )
+                        
+                        parents.append( parent )
+                        
+                    
+                except:
+                    
+                    if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG:
+                        
+                        tag = predicate.GetTag()
+                        
+                        parents_manager = wx.GetApp().GetTagParentsManager()
+                        
+                        raw_parents = parents_manager.GetParents( self._tag_service_identifier, tag )
+                        
+                        parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent, None ) for raw_parent in raw_parents ]
+                        
+                    
                 
+                parents.reverse()
+                
+                for parent in parents: matches.insert( 0, parent )
                 
                 matches.insert( 0, predicate )
                 
@@ -2792,6 +2819,7 @@ class TagsBox( ListBox ):
             if namespace.startswith( '(+) ' ): namespace = namespace[4:]
             if namespace.startswith( '(-) ' ): namespace = namespace[4:]
             if namespace.startswith( '(X) ' ): namespace = namespace[4:]
+            if namespace.startswith( '    ' ): namespace = namespace[4:]
             
             if namespace in namespace_colours: ( r, g, b ) = namespace_colours[ namespace ]
             else: ( r, g, b ) = namespace_colours[ None ]
@@ -2813,6 +2841,37 @@ class TagsBoxActiveOnly( TagsBox ):
         
     
     def _Activate( self, s, term ): self._callable( term )
+    
+    def _Select( self, index ):
+        
+        if index is not None:
+            
+            if self._current_selected_index is None: direction = 1
+            elif index - self._current_selected_index in ( -1, 1 ): direction = index - self._current_selected_index
+            else: direction = 1
+            
+            if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
+            elif index == len( self._ordered_strings ) or index < -1: index = 0
+            
+            s = self._ordered_strings[ index ]
+            
+            new_term = self._strings_to_terms[ s ]
+            
+            while new_term.GetPredicateType() == HC.PREDICATE_TYPE_PARENT:
+                
+                index += direction
+                
+                if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
+                elif index == len( self._ordered_strings ) or index < -1: index = 0
+                
+                s = self._ordered_strings[ index ]
+                
+                new_term = self._strings_to_terms[ s ]
+                
+            
+        
+        ListBox._Select( self, index )
+        
     
     def SetPredicates( self, predicates ):
         

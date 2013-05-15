@@ -661,7 +661,7 @@ class DialogInputCustomFilterAction( Dialog ):
         return ( ( pretty_modifier, pretty_key, pretty_service_identifier, self._pretty_action ), ( modifier, key, self._service_identifier, self._action ) )
         
     
-    def SetTag( self, tag ): self._tag_value.SetValue( tag )
+    def SetTag( self, tag, parents = [] ): self._tag_value.SetValue( tag )
     
 class DialogInputNamespaceRegex( Dialog ):
     
@@ -3453,23 +3453,30 @@ class DialogManage4chanPass( Dialog ):
             token = self._token.GetValue()
             pin = self._pin.GetValue()
             
-            form_fields = {}
-            
-            form_fields[ 'act' ] = 'do_login'
-            form_fields[ 'id' ] = token
-            form_fields[ 'pin' ] = pin
-            form_fields[ 'long_login' ] = 'yes'
-            
-            ( ct, body ) = CC.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
-            
-            headers = {}
-            headers[ 'Content-Type' ] = ct
-            
-            connection = HC.AdvancedHTTPConnection( url = 'https://sys.4chan.org/', accept_cookies = True )
-            
-            response = connection.request( 'POST', '/auth', headers = headers, body = body )
-            
-            self._timeout = int( time.time() ) + 365 * 24 * 3600
+            if token == '' and pin == '':
+                
+                self._timeout = 0
+                
+            else:
+                
+                form_fields = {}
+                
+                form_fields[ 'act' ] = 'do_login'
+                form_fields[ 'id' ] = token
+                form_fields[ 'pin' ] = pin
+                form_fields[ 'long_login' ] = 'yes'
+                
+                ( ct, body ) = CC.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
+                
+                headers = {}
+                headers[ 'Content-Type' ] = ct
+                
+                connection = HC.AdvancedHTTPConnection( url = 'https://sys.4chan.org/', accept_cookies = True )
+                
+                response = connection.request( 'POST', '/auth', headers = headers, body = body )
+                
+                self._timeout = int( time.time() ) + 365 * 24 * 3600
+                
             
             wx.GetApp().Write( '4chan_pass', token, pin, self._timeout )
             
@@ -6611,6 +6618,9 @@ class DialogManageSubscriptions( Dialog ):
             self._giphy = ClientGUICommon.ListBook( self._listbook )
             self._giphy.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
+            self._newgrounds = ClientGUICommon.ListBook( self._listbook )
+            self._newgrounds.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            
             self._pixiv = ClientGUICommon.ListBook( self._listbook )
             self._pixiv.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
@@ -6626,6 +6636,7 @@ class DialogManageSubscriptions( Dialog ):
             types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_PIXIV ] = self._pixiv
             types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_BOORU ] = self._booru
             types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_TUMBLR ] = self._tumblr
+            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ] = self._newgrounds
             
             for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in self._original_subscriptions:
                 
@@ -6639,6 +6650,7 @@ class DialogManageSubscriptions( Dialog ):
             self._listbook.AddPage( self._deviant_art, 'deviant art' )
             self._listbook.AddPage( self._hentai_foundry, 'hentai foundry' )
             self._listbook.AddPage( self._giphy, 'giphy' )
+            self._listbook.AddPage( self._newgrounds, 'newgrounds' )
             self._listbook.AddPage( self._pixiv, 'pixiv' )
             self._listbook.AddPage( self._booru, 'booru' )
             self._listbook.AddPage( self._tumblr, 'tumblr' )
@@ -6745,6 +6757,7 @@ class DialogManageSubscriptions( Dialog ):
                     elif subscription_listbook == self._pixiv: site_download_type = HC.SITE_DOWNLOAD_TYPE_PIXIV
                     elif subscription_listbook == self._booru: site_download_type = HC.SITE_DOWNLOAD_TYPE_BOORU
                     elif subscription_listbook == self._tumblr: site_download_type = HC.SITE_DOWNLOAD_TYPE_TUMBLR
+                    elif subscription_listbook == self._newgrounds: site_download_type = HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS
                     
                     if site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV:
                         
@@ -6758,7 +6771,7 @@ class DialogManageSubscriptions( Dialog ):
                             
                         
                     
-                    if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): query_type = 'artist'
+                    if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_TUMBLR, HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ): query_type = 'artist'
                     else: query_type = 'tags'
                     
                     if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( '', query_type )
@@ -6862,6 +6875,7 @@ class DialogManageSubscriptions( Dialog ):
         all_pages.extend( self._pixiv.GetNameToPageDict().values() )
         all_pages.extend( self._booru.GetNameToPageDict().values() )
         all_pages.extend( self._tumblr.GetNameToPageDict().values() )
+        all_pages.extend( self._newgrounds.GetNameToPageDict().values() )
         
         subscriptions = [ page.GetInfo() for page in all_pages ]
         
@@ -6928,6 +6942,7 @@ class DialogManageSubscriptions( Dialog ):
                 elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: services_listbook = self._hentai_foundry
                 elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: services_listbook = self._pixiv
                 elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: services_listbook = self._tumblr
+                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS: services_listbook = self._newgrounds
                 
                 self._listbook.SelectPage( services_listbook )
                 
@@ -6995,7 +7010,7 @@ class DialogManageSubscriptions( Dialog ):
             
             self._query_type = ClientGUICommon.RadioBox( self._query_panel, 'query type', ( ( 'artist', 'artist' ), ( 'tags', 'tags' ) ) )
             
-            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): self._query_type.Hide()
+            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR, HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ): self._query_type.Hide()
             
             self._frequency_number = wx.SpinCtrl( self._query_panel )
             
@@ -7016,6 +7031,7 @@ class DialogManageSubscriptions( Dialog ):
             elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
             elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
             elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: namespaces = [ '' ]
+            elif site_download_type == HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
             
             self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send tags to ', namespaces )
             
@@ -7091,7 +7107,7 @@ class DialogManageSubscriptions( Dialog ):
             
             self._query_type.SetSelection( initial_index )
             
-            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR ): self._query_type.Hide()
+            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR, HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ): self._query_type.Hide()
             
             self._frequency_number.SetValue( frequency_number )
             
@@ -7172,7 +7188,332 @@ class DialogManageSubscriptions( Dialog ):
             
         
     
-
+class DialogManageTagParents( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._tag_repositories = ClientGUICommon.ListBook( self )
+            self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+            
+            #services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            
+            #for service in services:
+            #    
+            #    account = service.GetAccount()
+            #    
+            #    if account.HasPermission( HC.POST_DATA ):
+            #        
+            #        service_identifier = service.GetServiceIdentifier()
+            #        
+            #        page_info = ( self._Panel, ( self._tag_repositories, service_identifier, paths ), {} )
+            #        
+            #        name = service_identifier.GetName()
+            #        
+            #        self._tag_repositories.AddPage( page_info, name )
+            #        
+            #    
+            
+            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+            
+            name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
+            
+            self._tag_repositories.AddPage( page, name )
+            
+            #default_tag_repository = self._options[ 'default_tag_repository' ]
+            
+            #self._tag_repositories.Select( default_tag_repository.GetName() )
+            
+            self._ok_button = wx.Button( self, label='ok' )
+            self._ok_button.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._close_button = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._close_button.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._close_button.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok_button, FLAGS_SMALL_INDENT )
+            buttons.AddF( self._close_button, FLAGS_SMALL_INDENT )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            self.SetInitialSize( ( 450, 680 ) )
+            
+        
+        Dialog.__init__( self, parent, 'tag parents' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+        interested_actions = [ 'set_search_focus' ]
+        
+        entries = []
+        
+        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        page.SetTagBoxFocus()
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventMenu( self, event ):
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            try:
+                
+                ( command, data ) = action
+                
+                if command == 'set_search_focus': self._SetSearchFocus()
+                else: event.Skip()
+                
+            except Exception as e:
+                
+                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( traceback.format_exc() )
+                
+            
+        
+    
+    def EventOK( self, event ):
+        
+        edit_log = []
+        
+        try:
+            
+            for page in self._tag_repositories.GetNameToPageDict().values(): edit_log.append( page.GetChanges() )
+            
+            if len( edit_log ) > 0: wx.GetApp().Write( 'tag_parents', edit_log )
+            
+        except Exception as e: wx.MessageBox( 'Saving tag parent changes to DB raised this error: ' + unicode( e ) )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventServiceChanged( self, event ):
+        
+        page = self._tag_repositories.GetCurrentPage()
+        
+        wx.CallAfter( page.SetTagBoxFocus )
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_identifier ):
+            
+            def InitialiseControls():
+                
+                self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( 'child', 160 ), ( 'parent', -1 ) ] )
+                
+                for ( child, parent ) in self._original_pairs: self._tag_parents.Append( ( child, parent ), ( child, parent ) )
+                
+                self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+                self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+                
+                self._child_text = wx.StaticText( self )
+                self._parent_text = wx.StaticText( self )
+                
+                self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetChild, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetParent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                
+                self._add = wx.Button( self, label = 'add' )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                self._add.Disable()
+                
+                self._remove = wx.Button( self, label = 'remove' )
+                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+                self._remove.Disable()
+                
+            
+            def InitialisePanel():
+                
+                button_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                button_box.AddF( self._add, FLAGS_MIXED )
+                button_box.AddF( self._remove, FLAGS_MIXED )
+                
+                text_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                text_box.AddF( self._child_text, FLAGS_EXPAND_BOTH_WAYS )
+                text_box.AddF( self._parent_text, FLAGS_EXPAND_BOTH_WAYS )
+                
+                input_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                input_box.AddF( self._child_input, FLAGS_EXPAND_BOTH_WAYS )
+                input_box.AddF( self._parent_input, FLAGS_EXPAND_BOTH_WAYS )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._tag_parents, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( button_box, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( text_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                vbox.AddF( input_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                self.SetSizer( vbox )
+                
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_identifier = service_identifier
+            
+            self._added = set()
+            self._removed = set()
+            
+            self._original_pairs = [ tuple( pair ) for pair in wx.GetApp().Read( 'tag_parents', service_identifier ) ]
+            
+            self._current_pairs = set( self._original_pairs )
+            
+            self._current_parent = None
+            self._current_child = None
+            
+            InitialiseControls()
+            
+            InitialisePanel()
+            
+        
+        def _SetButtonStatus( self ):
+            
+            all_selected = self._tag_parents.GetAllSelected()
+            
+            if len( all_selected ) == 0: self._remove.Disable()
+            else: self._remove.Enable()
+            
+            if self._current_parent is None or self._current_child is None: self._add.Disable()
+            else: self._add.Enable()
+            
+        
+        def EventAdd( self, event ):
+            
+            pair = ( self._current_child, self._current_parent )
+            
+            if pair in self._current_pairs:
+                
+                wx.MessageBox( 'That relationship already exists!' )
+                
+                return
+                
+            
+            current_children = { child for ( child, parent ) in self._current_pairs }
+            
+            # test for loops
+            
+            if self._current_parent in current_children:
+                
+                d = dict( self._current_pairs )
+                
+                next_parent = self._current_parent
+                
+                while next_parent in d:
+                    
+                    next_parent = d[ next_parent ]
+                    
+                    if next_parent == self._current_child:
+                        
+                        wx.MessageBox( 'Adding that pair would create a loop!' )
+                        
+                        return
+                        
+                    
+                
+            
+            # if we got here, we are great to do it
+            
+            self._added.add( pair )
+            self._removed.discard( pair )
+            
+            self._current_pairs.add( pair )
+            
+            self._tag_parents.Append( pair, pair )
+            
+            self.SetChild( None )
+            self.SetParent( None )
+            
+        
+        def EventItemSelected( self, event ):
+            
+            self._SetButtonStatus()
+            
+        
+        def EventRemove( self, event ):
+            
+            all_selected = self._tag_parents.GetAllSelected()
+            
+            for selected in all_selected:
+                
+                pair = self._tag_parents.GetClientData( selected )
+                
+                self._removed.add( pair )
+                self._added.discard( pair )
+                
+                self._current_pairs.discard( pair )
+                
+            
+            self._tag_parents.RemoveAllSelected()
+            
+        
+        def GetChanges( self ):
+            
+            edit_log = []
+            
+            if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                
+                edit_log += [ ( HC.ADD, pair ) for pair in self._added ]
+                edit_log += [ ( HC.DELETE, pair ) for pair in self._removed ]
+                
+            
+            return ( self._service_identifier, edit_log )
+            
+        
+        def SetParent( self, tag, parents = [] ):
+            
+            if tag is not None and tag == self._current_child: self.SetChild( None )
+            
+            self._current_parent = tag
+            
+            if tag is None: self._parent_text.SetLabel( '' )
+            else: self._parent_text.SetLabel( tag )
+            
+            self._SetButtonStatus()
+            
+        
+        def SetChild( self, tag, parents = [] ):
+            
+            if tag is not None and tag == self._current_parent: self.SetParent( None )
+            
+            self._current_child = tag
+            
+            if tag is None: self._child_text.SetLabel( '' )
+            else: self._child_text.SetLabel( tag )
+            
+            self._SetButtonStatus()
+            
+        
+        def SetTagBoxFocus( self ): self._child_input.SetFocus()
+        
+    
 class DialogManageTagSiblings( Dialog ):
     
     def __init__( self, parent ):
@@ -7401,11 +7742,11 @@ class DialogManageTagSiblings( Dialog ):
                 return
                 
             
-            self._current_olds = { old for ( old, new ) in self._current_pairs }
+            current_olds = { old for ( old, new ) in self._current_pairs }
             
             # test for ambiguity
             
-            if self._current_old in self._current_olds:
+            if self._current_old in current_olds:
                 
                 wx.MessageBox( 'There already is a relationship set for the tag ' + self._current_new + '.' )
                 
@@ -7414,7 +7755,7 @@ class DialogManageTagSiblings( Dialog ):
             
             # test for loops
             
-            if self._current_new in self._current_olds:
+            if self._current_new in current_olds:
                 
                 d = dict( self._current_pairs )
                 
@@ -7481,7 +7822,7 @@ class DialogManageTagSiblings( Dialog ):
             return ( self._service_identifier, edit_log )
             
         
-        def SetNew( self, tag ):
+        def SetNew( self, tag, parents = [] ):
             
             if tag is not None and tag == self._current_old: self.SetOld( None )
             
@@ -7493,7 +7834,7 @@ class DialogManageTagSiblings( Dialog ):
             self._SetButtonStatus()
             
         
-        def SetOld( self, tag ):
+        def SetOld( self, tag, parents = [] ):
             
             if tag is not None and tag == self._current_new: self.SetNew( None )
             
@@ -7859,100 +8200,96 @@ class DialogManageTags( Dialog ):
             InitialisePanel()
             
         
-        def AddTag( self, tag ):
+        def _AddTag( self, tag, only_add = False ):
             
-            if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ok' ) ) )
+            if self._i_am_local_tag_service:
+                
+                if tag in self._pending_tags:
+                    
+                    if only_add: return
+                    
+                    self._pending_tags.remove( tag )
+                    
+                    self._tags_box.RescindPend( tag )
+                    
+                elif tag in self._petitioned_tags:
+                    
+                    self._petitioned_tags.remove( tag )
+                    
+                    self._tags_box.RescindPetition( tag )
+                    
+                elif tag in self._current_tags:
+                    
+                    if only_add: return
+                    
+                    self._petitioned_tags.append( tag )
+                    
+                    self._tags_box.PetitionTag( tag )
+                    
+                else:
+                    
+                    self._pending_tags.append( tag )
+                    
+                    self._tags_box.PendTag( tag )
+                    
+                
+                self._edit_log = []
+                
+                self._edit_log.extend( [ ( HC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
+                self._edit_log.extend( [ ( HC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
+                
             else:
                 
-                if self._i_am_local_tag_service:
+                if tag in self._pending_tags:
                     
-                    if tag in self._pending_tags:
+                    if only_add: return
+                    
+                    self._pending_tags.remove( tag )
+                    
+                    self._tags_box.RescindPend( tag )
+                    
+                    self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
+                    
+                elif tag in self._petitioned_tags:
+                    
+                    self._petitioned_tags.remove( tag )
+                    
+                    self._tags_box.RescindPetition( tag )
+                    
+                    self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
+                    
+                elif tag in self._current_tags:
+                    
+                    if only_add: return
+                    
+                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                         
-                        self._pending_tags.remove( tag )
-                        
-                        self._tags_box.RescindPend( tag )
-                        
-                    elif tag in self._petitioned_tags:
-                        
-                        self._petitioned_tags.remove( tag )
-                        
-                        self._tags_box.RescindPetition( tag )
-                        
-                    elif tag in self._current_tags:
+                        self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
                         
                         self._petitioned_tags.append( tag )
                         
                         self._tags_box.PetitionTag( tag )
                         
-                    else:
+                    elif self._account.HasPermission( HC.POST_PETITIONS ):
                         
-                        self._pending_tags.append( tag )
+                        message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
                         
-                        self._tags_box.PendTag( tag )
-                        
-                    
-                    self._edit_log = []
-                    
-                    self._edit_log.extend( [ ( HC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
-                    self._edit_log.extend( [ ( HC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
-                    
-                else:
-                    
-                    if tag in self._pending_tags:
-                        
-                        self._pending_tags.remove( tag )
-                        
-                        self._tags_box.RescindPend( tag )
-                        
-                        self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
-                        
-                    elif tag in self._petitioned_tags:
-                        
-                        self._petitioned_tags.remove( tag )
-                        
-                        self._tags_box.RescindPetition( tag )
-                        
-                        self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
-                        
-                    elif tag in self._current_tags:
-                        
-                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+                        with wx.TextEntryDialog( self, message ) as dlg:
                             
-                            self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
-                            
-                            self._petitioned_tags.append( tag )
-                            
-                            self._tags_box.PetitionTag( tag )
-                            
-                        elif self._account.HasPermission( HC.POST_PETITIONS ):
-                            
-                            message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
-                            
-                            with wx.TextEntryDialog( self, message ) as dlg:
+                            if dlg.ShowModal() == wx.ID_OK:
                                 
-                                if dlg.ShowModal() == wx.ID_OK:
-                                    
-                                    self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
-                                    
-                                    self._petitioned_tags.append( tag )
-                                    
-                                    self._tags_box.PetitionTag( tag )
-                                    
+                                self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
+                                
+                                self._petitioned_tags.append( tag )
+                                
+                                self._tags_box.PetitionTag( tag )
                                 
                             
                         
-                    elif tag in self._deleted_tags:
-                        
-                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
-                            
-                            self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
-                            
-                            self._pending_tags.append( tag )
-                            
-                            self._tags_box.PendTag( tag )
-                            
-                        
-                    else:
+                    
+                elif tag in self._deleted_tags:
+                    
+                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                         
                         self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
                         
@@ -7961,6 +8298,25 @@ class DialogManageTags( Dialog ):
                         self._tags_box.PendTag( tag )
                         
                     
+                else:
+                    
+                    self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
+                    
+                    self._pending_tags.append( tag )
+                    
+                    self._tags_box.PendTag( tag )
+                    
+                
+            
+        
+        def AddTag( self, tag, parents = [] ):
+            
+            if tag is None: wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ok' ) ) )
+            else:
+                
+                self._AddTag( tag )
+                
+                for parent in parents: self._AddTag( parent, only_add = True )
                 
             
         
