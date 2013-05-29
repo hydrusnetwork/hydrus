@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 71</h3></li>
+				<ul>
+					<li>collapsed the four mappings tables into two tables</li>
+					<li>merged the two active_mappings tables into the mappings table</li>
+					<li>made a _great_ number of changes to how mappings and active_mappings are stored and processed throughout</li>
+					<li>'active' and 'null' nomenclature is now 'combined'; null service_ids are now just ints</li>
+					<li>improved deletepending so it isn't so tough on the a/c cache</li>
+					<li>tags regex dialog entries 'for all files' and 'just for this file' was all broke</li>
+					<li>A/C read now bumps the exact match of the entry to the top of the list, if its count is non-zero</li>
+					<li>fixed A/C for weird-character queries, like '['</li>
+					<li>the dumper now makes success/error noises as appropriate</li>
+					<li>you can turn these noises off in the new sound tab in file->options</li>
+					<li>screwed around with garbage collection while checking mimetypes during pre-import</li>
+					<li>adding a tag parent will spam-add the actual parent tags to every child instance for the appropriate service</li>
+					<li>updated db diagrams</li>
+					<li>revised my sibling chain collapsing algorithm</li>
+					<li>locked db on init dialog message is improved a little</li>
+					<li>system:limit added to combined file service searches</li>
+					<li>num pending menu counts now split into with (pending/petitioned)</li>
+					<li>corrected a server db index oversight</li>
+					<li>newgrounds title tag fixed</li>
+				</ul>
 				<li><h3>version 70</h3></li>
 				<ul>
 					<li>tag parents db stuff</li>
