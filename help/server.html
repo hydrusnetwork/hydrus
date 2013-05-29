@@ -1,0 +1,81 @@
+<html>
+	<head>
+		<title>running your own server</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>setting up a server</h3>
+			<p>Would you—</p>
+			<ul>
+				<li>like to share your image collection between your computers, creating a simultaneous backup?</li>
+				<li>like to share images amongst friends?</li>
+				<li>like to publish regular manga or comic updates through a system that plugs natively into hydrus?</li>
+				<li>like to tag all these images, possibly with others' help, according to a specific format that you determine?</li>
+				<li>like to be a cool dude in cyberspace, respected by all the other console jockeys?</li>
+			</ul>
+			<p>If so, you may wish to try running your own server. But first:</p>
+			<ul>
+				<li>
+					<p>I—the person who writes all the code and administrates the public tag repository—have no way of knowing where other servers or services are being run, nor who runs them, nor what is being stored on them. The servers never phone home. Feel free to check and run from source if you are paranoid.</p>
+					<ul>
+						<li>Corollary: If you have a problem with something on some dude's server, please, <span class="warning">do not come to me</span>, as I can in no way help with your problem. If your ex-gf's nudes have leaked onto the internet, or you find something terribly offensive, or you just plain hate the free flow of information, I cannot help you at all. IT IS THE DAWN OF 20XX. WELCOME TO INTERNET</li>
+					</ul>
+				</li>
+				<li>This is not for noobs. If you are wholly unfamiliar with NAT (opening ports on firewalls) and setting up servers in general, this may be a step too far. If you get stuck, drag a nerd away from Xel'Naga Caverns to give you a hand.</li>
+				<li>If you want your services to thrive in a community, you shall have to manage them. If you throw out a hundred uploader keys and go on a long vacation, do not expect your long-crafted thirteen-point 'Superman vs Goku ONLY!!!!!' ruleset to be upheld. Your repositories will clog with unrelated rubbish and your bandwidth will disappear. Banning worthless people and pruning worthless content is an important part of any online ecosystem.</li>
+				<li>There are legal issues with running a file-hosting service. If you plan to do this on any kind of large scale, <span class="warning">especially</span> if you plan to sell access keys for cash-money, familiarise yourself with your legal rights and responsibilities. You may—without even meaning to—make yourself liable for others' sins.</li>
+			</ul>
+			<h3>still keen?</h3>
+			<p><b><i>If this stuff be-fuzzles you, and you just want a simple server set up on the same computer you run the client, you can now go </i>help->i don't know what I am doing->just set up the server on this computer, please<i> and you _should_ be all set up with an admin service and tag/file repos automatically.</i></b></p>
+			<p>In discussing the hydrus network's server, I shall use two terms, <i>server</i> and <i>service</i>, to mean two distinct concepts:</p>
+			<ul>
+				<li>A <b>server</b> is an instantiation of the executable process, server.exe. It has a complicated and flexible database that can run many different services in parallel.</li>
+				<li>A <b>service</b> sits on a port (e.g. 45871) and responds to certain http requests (e.g. /file or /update) that the hydrus client can plug into. A service might be a repository for a certain kind of data, the administration interface to manage what services run on a server, or anything else.</li>
+			</ul>
+			<p>Setting up a hydrus server is easy compared to, say, Apache. There are no .conf files to mess about with, and everything is controlled through the client. When started, the server does nothing more visible than placing an icon in your system tray. Right click that, and you only get an option to exit.</p>
+			<p>The basic process for setting up a server is thus:</p>
+			<ul>
+				<li>Start the server.</li>
+				<li>Set up your client with its address and initialise the administration interface</li>
+				<li>Set the server's options and services.</li>
+				<li>Make some access keys for your users.</li>
+				<li>???</li>
+				<li>Profit</li>
+			</ul>
+			<p>Let us look at these steps in more detail:</p>
+			<h3>start the server</h3>
+			<p>Since the server and client have so much common code, I have packaged them together. If you have the client, you have the server. To start it, you can hit the shortcut in your start menu or just go straight for server.exe/.pyw in the install directory. It will first try to take port 45870 or its administration interface, so make sure that is free. Open your firewall as appropriate.</p>
+			<h3>set up the client</h3>
+			<p>In the <i>add, remove or edit services</i> dialog, go to the <i>servers admin</i> tab, give your server admin interface a nickname and set the credentials to whatever-hostname:45870. Don't enter any access key. Ok those changes, and go to <i>review services</i>.</p>
+			<p>On the tab+page for your new server, hit the initialise button. If you have everything set right, the server should generate its first administrator account and return the access key, which the client will set for you. It will also try to save the key inside a text file.</p>
+			<p class="warning">YOU'LL WANT TO SAVE THAT FILE IN A SAFE PLACE</p>
+			<p>If you lose your admin access key, there is no way to get it back, and if you are not sqlite-proficient, you'll have to restart from the beginning by deleting your server's database files.</p>
+			<p>If the client can't connect to the server, it is either not running or you have a firewall/port-mapping problem. Google will help you with NAT. If you want a quick way to test the server's visibility, just put its host:port into your browser; if working, it should return some simple html identifying itself.</p>
+			<h3>set up the server</h3>
+			<p>You should notice a new menu, 'admin', in the client gui. This is where you control most server-wide stuff. <i>admin->your server->options</i> does exactly what you think.</p>
+			<p><i>admin->your server->manage services</i> lets you add, edit, and delete the services your server runs. Every time you add one, you should also be added as that service's first administrator, with the same access key as for the admin interface.</i>
+			<p>Once you add a new service, the admin menu should give you another entry. Everything is fairly self-explanatory.</p>
+			<h3>making accounts</h3>
+			<p>Go <i>admin->your service->create new accounts</i>. You can then create x registration keys of account type y and try to save them to a text file. Send the registration keys to the users you want to give these new accounts. Remember that a registration key will only work once, so if you want to give several people the same account, they will have to share the access key amongst themselves once one of them has registered the account. (Or, you can register the account yourself and send them all the access key. Do what you like!)</p>
+			<p>Go <i>admin->manage account types</i> to add, remove, or edit account types. Make sure everyone has at least downloader (get_data) permissions so they can stay synchronised.</p>
+			<p>You can create as many accounts of whatever kind you like, and distribute them the same. Depending on your usage scenario, you may want to have all uploaders, one uploader and many downloaders, or just a single administrator. There are many combinations.</p>
+			<p>It is your server, so do what you like.</p>
+			<p>On that note: python is simple enough that changes to the source are easy. If you want to auto-ban anyone who does not fit a certain quota, it is not that hard to find where the magic happens and alter it. Just do not test your changes on a live repository!</p>
+			<h3>???</h3>
+			<p>The most important part is to have fun! There are no losers on the INFORMATION SUPERHIGHWAY.</p>
+			<h3>profit</h3>
+			<p>I honestly hope you can get some benefit out of my code, whether just as a backup or as part of a far more complex system. Please mail me your comments as I am keen to make improvements.</p>
+			<h3>btw, how to backup a repo's db</h3>
+			<p>All of a server's files and options are stored in its accompanying .db file and respective subdirectories, which are created on first startup (just like with the client). You can backup and restore these files just by copying them about, but you have to be careful how you do it with a server; when it is running, it has a live connection to its database, and all sorts of things could be written or read at any time. If you just try to copy the .db somewhere and someone uploads a file, something might break. Instead, you have two options:</p>
+			<ul>
+				<li>Shut down the server, copy the .db files, then restart it. This is the only way, currently, to restore a db.</li>
+				<li>Hit admin->your server->make a backup. This will lock the db server-side while it makes a copy right in the /db directory. The .db file will be tidied up and copied to .db.backup and the subdirectories will be copied to _backup as well. When the operation is complete, you can ftp/batch-copy/whatever these backup files wherever you like.</li>
+			</ul>
+			<h3>OMG EVERYTHING WENT WRONG</h3>
+			<p>If you get to a point where you can no longer boot the repository, try running SQLite Studio and opening server.db. If the issue is simple—like manually changing the port number—you may be in luck. Send me an email if it is tricky.</p>
+			<p>If you somehow damage your computer and want to blame me, try taking some responsibility for your mistakes. Everything is breaking all the time. Make backups.</p>
+		</div>
+	</body>
+</html>

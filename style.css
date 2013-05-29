@@ -2,8 +2,7 @@ a { color: #222; text-decoration: none; font-weight: bold; }
 a:hover { color: #555 }
 body { font-family: "Calibri", Arial, sans-serif; color: #555; line-height: 1.5; }
 h3 { color: #222; }
-ul li { list-style: none; margin: 1.0em 0em; }
-ul.bulletpoint li { list-style: disc; margin: 1.0em 0em; }
+li { list-style: none; margin: 1.0em 0em; }
 th { text-align: center; }
 tr { text-align: center; }
 
