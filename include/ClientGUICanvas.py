@@ -100,11 +100,12 @@ class Canvas():
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             
-            tags_cdpp = self._current_media.GetTags()
+            tags_manager = self._current_media.GetTagsManager()
             
-            ( current, deleted, pending, petitioned ) = tags_cdpp.GetUnionCDPP()
+            current = tags_manager.GetCurrent()
+            pending = tags_manager.GetPending()
             
-            tags_i_want_to_display = list( current.union( pending ).union( petitioned ) )
+            tags_i_want_to_display = list( current.union( pending ) )
             
             tags_i_want_to_display.sort()
             
@@ -116,7 +117,6 @@ class Canvas():
                 
                 if tag in current: display_string = tag
                 elif tag in pending: display_string = '(+) ' + tag
-                elif tag in petitioned: display_string = '(-) ' + tag
                 
                 if ':' in tag:
                     
@@ -568,7 +568,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         collections_string = ''
         
-        ( creators, series, titles, volumes, chapters, pages ) = self._current_media.GetTags().GetCSTVCP()
+        ( creators, series, titles, volumes, chapters, pages ) = self._current_media.GetTagsManager().GetCSTVCP()
         
         if len( creators ) > 0:
             
@@ -1340,9 +1340,11 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                     if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                         
-                        tags = self._current_media.GetTags()
+                        tags_manager = self._current_media.GetTagsManager()
                         
-                        ( current, deleted, pending, petitioned ) = tags.GetCDPP( service_identifier )
+                        current = tags_manager.GetCurrent()
+                        pending = tags_manager.GetPending()
+                        petitioned = tags_manager.GetPetitioned()
                         
                         if service_type == HC.LOCAL_TAG:
                             

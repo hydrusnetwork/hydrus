@@ -1,4 +1,5 @@
 import HydrusConstants as HC
+import HydrusAudioHandling
 import HydrusDownloading
 import HydrusImageHandling
 import ClientConstants as CC
@@ -352,6 +353,8 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
+        self._options = wx.GetApp().Read( 'options' )
+        
         self.SetupScrolling()
         
         #self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
@@ -360,7 +363,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page = page
         self._page_key = page_key
         self._file_service_identifier = file_service_identifier
-        self._tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER
+        self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
         
         HC.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
         
@@ -628,7 +631,10 @@ class ManagementPanelDumper( ManagementPanel ):
         
         for ( service_identifier, namespaces ) in advanced_tag_options.items():
             
-            ( current, deleted, pending, petitioned ) = media.GetTags().GetCDPP( service_identifier )
+            tags = media.GetTagsManager()
+            
+            current = tags_manager.GetCurrent( service_identifier )
+            pending = tags_manager.GetPending( service_identifier )
             
             tags = current.union( pending )
             
@@ -742,6 +748,12 @@ class ManagementPanelDumper( ManagementPanel ):
     def CALLBACKDoneDump( self, media_to_dump, post_field_info, status, phrase ):
         
         self._actually_dumping = False
+        
+        if self._options[ 'play_dumper_noises' ]:
+            
+            if status == 'success': HydrusAudioHandling.PlayNoise( 'success' )
+            else: HydrusAudioHandling.PlayNoise( 'error' )
+            
         
         if status == 'success':
             
@@ -2592,7 +2604,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
         
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, HC.NULL_SERVICE_IDENTIFIER, self._page.GetMedia )
+        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, HC.COMBINED_TAG_SERVICE_IDENTIFIER, self._page.GetMedia )
         
         self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
         self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )

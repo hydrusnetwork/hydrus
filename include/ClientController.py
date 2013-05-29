@@ -5,6 +5,7 @@ import HydrusSessions
 import ClientConstants as CC
 import ClientDB
 import ClientGUI
+import ClientGUIDialogs
 import os
 import sqlite3
 import threading
@@ -157,6 +158,8 @@ class Controller( wx.App ):
         
         try:
             
+            self._options = {} # this is for the db locked dialog
+            
             self._splash = ClientGUI.FrameSplash()
             
             self.SetSplashText( 'log' )
@@ -165,7 +168,31 @@ class Controller( wx.App ):
             
             self.SetSplashText( 'db' )
             
-            self._db = ClientDB.DB()
+            db_initialised = False
+            
+            while not db_initialised:
+                
+                try:
+                    
+                    self._db = ClientDB.DB()
+                    
+                    db_initialised = True
+                    
+                except HC.DBAccessException as e:
+                    
+                    print( unicode( e ) )
+                    
+                    message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
+                    message += os.linesep + os.linesep
+                    message += 'If the old instance does not close for a very long time, you can usually safely force-close it from task manager.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'quit now' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
+                        else: return False
+                        
+                    
+                
             
             self._options = self._db.Read( 'options', HC.HIGH_PRIORITY )
             
@@ -217,11 +244,13 @@ class Controller( wx.App ):
             self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
             self._maintenance_event_timer.Start( 20 * 60000, wx.TIMER_CONTINUOUS )
             
-        except sqlite3.OperationalError:
-            
-            message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
+        except sqlite3.OperationalError as e:
+            print( traceback.format_exc() )
+            message = 'Database error!'
             message += os.linesep + os.linesep
-            message += 'This instance will now close. You can either wait a while and try again, or force-close the old instance through task manager and try again immediately.'
+            message += unicode( e )
+            
+            print message
             
             wx.MessageBox( message )
             
@@ -274,7 +303,7 @@ class Controller( wx.App ):
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
             elif pubsubs_queue.qsize() == 0: return
-            else: time.sleep( 0.04 )
+            else: time.sleep( 0.0001 )
             
         
     

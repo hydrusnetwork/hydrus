@@ -316,14 +316,14 @@ def GetFilePath( hash, mime ):
     
     return HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded + HC.mime_ext_lookup[ mime ]
     
-def GetMediasTagCount( pool, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER ):
+def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
     
-    all_tags = []
+    tags_managers = []
     
     for media in pool:
         
-        if media.IsCollection(): all_tags.extend( media.GetSingletonsTags() )
-        else: all_tags.append( media.GetTags() )
+        if media.IsCollection(): tags_managers.extend( media.GetSingletonsTagsManagers() )
+        else: tags_managers.append( media.GetTagsManager() )
         
     
     current_tags_to_count = collections.Counter()
@@ -331,15 +331,16 @@ def GetMediasTagCount( pool, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER
     pending_tags_to_count = collections.Counter()
     petitioned_tags_to_count = collections.Counter()
     
-    for tags in all_tags:
+    for tags_manager in tags_managers:
         
-        if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: ( current, deleted, pending, petitioned ) = tags.GetUnionCDPP()
-        else: ( current, deleted, pending, petitioned ) = tags.GetCDPP( tag_service_identifier )
+        statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_identifier )
         
-        current_tags_to_count.update( current )
-        deleted_tags_to_count.update( pending )
-        pending_tags_to_count.update( pending )
-        petitioned_tags_to_count.update( petitioned )
+        current_tags_to_count.update( statuses_to_tags[ HC.CURRENT ] )
+        deleted_tags_to_count.update( statuses_to_tags[ HC.DELETED ] )
+        deleted_tags_to_count.update( statuses_to_tags[ HC.DELETED_PENDING ] )
+        pending_tags_to_count.update( statuses_to_tags[ HC.DELETED_PENDING ] )
+        pending_tags_to_count.update( statuses_to_tags[ HC.PENDING ] )
+        petitioned_tags_to_count.update( statuses_to_tags[ HC.PETITIONED ] )
         
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
@@ -380,16 +381,46 @@ def IterateAllThumbnailPaths():
         for path in next_paths: yield dir + os.path.sep + path
         
     
-def MediaIntersectCDPPTagServiceIdentifiers( media, service_identifier ):
+def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
     
-    all_tag_cdpps = [ m.GetTags().GetCDPP( service_identifier ) for m in media ]
-    
-    current = list( HC.IntelligentMassIntersect( ( cdpp[0] for cdpp in all_tag_cdpps ) ) )
-    deleted = list( HC.IntelligentMassIntersect( ( cdpp[1] for cdpp in all_tag_cdpps ) ) )
-    pending = list( HC.IntelligentMassIntersect( ( cdpp[2] for cdpp in all_tag_cdpps ) ) )
-    petitioned = list( HC.IntelligentMassIntersect( ( cdpp[3] for cdpp in all_tag_cdpps ) ) )
+    current = list( HC.IntelligentMassIntersect( ( tags_manager.GetCurrent( service_identifier ) for tags_manager in tags_managers ) ) )
+    deleted = list( HC.IntelligentMassIntersect( ( tags_manager.GetDeleted( service_identifier ) for tags_manager in tags_managers ) ) )
+    pending = list( HC.IntelligentMassIntersect( ( tags_manager.GetPending( service_identifier ) for tags_manager in tags_managers ) ) )
+    petitioned = list( HC.IntelligentMassIntersect( ( tags_manager.GetPetitioned( service_identifier ) for tags_manager in tags_managers ) ) )
     
     return ( current, deleted, pending, petitioned )
+    
+def MergeTags( tags_managers ):
+    
+    # [[( s_i, s_t_t )]]
+    s_i_s_t_t_tupled = ( tags_manager.GetServiceIdentifiersToStatusesToTags().items() for tags_manager in tags_managers )
+    
+    # [(s_i, s_t_t)]
+    flattened_s_i_s_t_t = itertools.chain.from_iterable( s_i_s_t_t_tupled )
+    
+    # s_i : [s_t_t]
+    s_i_s_t_t_dict = HC.BuildKeyToListDict( flattened_s_i_s_t_t )
+    
+    # now let's merge so we have s_i : s_t_t
+    
+    merged_tags = {}
+    
+    for ( service_identifier, several_statuses_to_tags ) in s_i_s_t_t_dict.items():
+        
+        # [[( status, tags )]]
+        s_t_t_tupled = ( s_t_t.items() for s_t_t in several_statuses_to_tags )
+        
+        # [( status, tags )]
+        flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
+        
+        statuses_to_tags = collections.defaultdict( set )
+        
+        for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
+        
+        merged_tags[ service_identifier ] = statuses_to_tags
+        
+    
+    return TagsManager( wx.GetApp().Read( 'tag_service_precedence' ), merged_tags )
     
 def ParseImportablePaths( raw_paths, include_subdirs = True ):
     
@@ -450,6 +481,8 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     
     progress.Destroy()
     
+    gc.collect()
+    
     good_paths_info = []
     odd_paths = []
     
@@ -458,6 +491,8 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, wx.GetApp().GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
     
     for ( i, path ) in enumerate( file_paths ):
+        
+        if i % 500 == 0: gc.collect()
         
         ( should_continue, skip ) = progress.Update( i, 'Done ' + str( i ) + '/' + str( num_file_paths ) )
         
@@ -858,217 +893,6 @@ class CDPPFileServiceIdentifiers():
         self._current.discard( service_identifier )
         self._deleted.discard( service_identifier )
         self._petitioned.discard( service_identifier )
-        
-    
-class CDPPTagServiceIdentifiers():
-    
-    def __init__( self, tag_service_precedence, service_identifiers_to_cdpp ):
-        
-        self._tag_service_precedence = tag_service_precedence
-        
-        self._service_identifiers_to_cdpp = service_identifiers_to_cdpp
-        
-        self._Recalc()
-        
-    
-    def _Recalc( self ):
-        
-        self._current = set()
-        self._deleted = set()
-        self._pending = set()
-        self._petitioned = set()
-        
-        t_s_p = list( self._tag_service_precedence )
-        
-        t_s_p.reverse()
-        
-        for service_identifier in t_s_p:
-            
-            if service_identifier in self._service_identifiers_to_cdpp:
-                
-                ( current, deleted, pending, petitioned ) = self._service_identifiers_to_cdpp[ service_identifier ]
-                
-                # the difference_update stuff is making active_mappings from tag_service_precedence
-                
-                self._current.update( current )
-                self._current.difference_update( deleted )
-                
-                self._deleted.update( deleted )
-                self._deleted.difference_update( current )
-                
-                self._pending.update( pending )
-                self._pending.difference_update( deleted )
-                
-                self._petitioned.update( petitioned )
-                self._petitioned.difference_update( current )
-                
-            
-        
-        self._creators = set()
-        self._series = set()
-        self._titles = set()
-        self._volumes = set()
-        self._chapters = set()
-        self._pages = set()
-        
-        for tag in self._current | self._pending:
-            
-            if tag.startswith( 'creator:' ): self._creators.add( tag.split( 'creator:', 1 )[1] )
-            elif tag.startswith( 'series:' ): self._series.add( tag.split( 'series:', 1 )[1] )
-            elif tag.startswith( 'title:' ): self._titles.add( tag.split( 'title:', 1 )[1] )
-            elif tag.startswith( 'volume:' ): self._volumes.add( int( tag.split( 'volume:', 1 )[1] ) )
-            elif tag.startswith( 'chapter:' ): self._chapters.add( int( tag.split( 'chapter:', 1 )[1] ) )
-            elif tag.startswith( 'page:' ): self._pages.add( int( tag.split( 'page:', 1 )[1] ) )
-            
-        
-    
-    def GetCSTVCP( self ): return ( self._creators, self._series, self._titles, self._volumes, self._chapters, self._pages )
-    
-    def DeletePending( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_cdpp:
-            
-            ( current, deleted, pending, petitioned ) = self._service_identifiers_to_cdpp[ service_identifier ]
-            
-            if len( pending ) > 0 or len( petitioned ) > 0:
-                
-                self._service_identifiers_to_cdpp[ service_identifier ] = ( current, deleted, set(), set() )
-                
-                self._Recalc()
-                
-            
-        
-    
-    def GetCDPP( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_cdpp: return self._service_identifiers_to_cdpp[ service_identifier ]
-        else: return ( set(), set(), set(), set() )
-        
-    
-    def GetNamespaceSlice( self, namespaces ): return frozenset( [ tag for tag in list( self._current ) + list( self._pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ] )
-    
-    def GetNumTags( self, tag_service_identifier, include_current_tags = True, include_pending_tags = False ):
-        
-        num_tags = 0
-        
-        if tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
-            
-            if include_current_tags: num_tags += len( self._current )
-            if include_pending_tags: num_tags += len( self._pending )
-            
-        else:
-            
-            ( current, deleted, pending, petitioned ) = self.GetCDPP( tag_service_identifier )
-            
-            if include_current_tags: num_tags += len( current )
-            if include_pending_tags: num_tags += len( pending )
-            
-        
-        return num_tags
-        
-    
-    def GetServiceIdentifiersToCDPP( self ): return self._service_identifiers_to_cdpp
-    
-    def GetUnionCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
-    
-    def HasTag( self, tag ): return tag in self._current or tag in self._pending
-    
-    def ProcessContentUpdate( self, content_update ):
-        
-        service_identifier = content_update.GetServiceIdentifier()
-        
-        if service_identifier in self._service_identifiers_to_cdpp: ( current, deleted, pending, petitioned ) = self._service_identifiers_to_cdpp[ service_identifier ]
-        else:
-            
-            ( current, deleted, pending, petitioned ) = ( set(), set(), set(), set() )
-            
-            self._service_identifiers_to_cdpp[ service_identifier ] = ( current, deleted, pending, petitioned )
-            
-        
-        action = content_update.GetAction()
-        
-        if action == HC.CONTENT_UPDATE_ADD:
-            
-            tag = content_update.GetInfo()
-            
-            current.add( tag )
-            
-            deleted.discard( tag )
-            pending.discard( tag )
-            
-        elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            tag = content_update.GetInfo()
-            
-            deleted.add( tag )
-            
-            current.discard( tag )
-            petitioned.discard( tag )
-            
-        elif action == HC.CONTENT_UPDATE_EDIT_LOG:
-            
-            edit_log = content_update.GetInfo()
-            
-            for ( action, info ) in edit_log:
-                
-                if action == HC.CONTENT_UPDATE_ADD:
-                    
-                    tag = info
-                    
-                    current.add( tag )
-                    
-                    deleted.discard( tag )
-                    pending.discard( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_DELETE:
-                    
-                    tag = info
-                    
-                    deleted.add( tag )
-                    
-                    current.discard( tag )
-                    petitioned.discard( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_PENDING:
-                    
-                    tag = info
-                    
-                    if tag not in current: pending.add( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
-                    
-                    tag = info
-                    
-                    pending.discard( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_PETITION:
-                    
-                    ( tag, reason ) = info
-                    
-                    if tag not in deleted: petitioned.add( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                    
-                    tag = info
-                    
-                    petitioned.discard( tag )
-                    
-                
-            
-        
-        self._Recalc()
-        
-    
-    def ResetService( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_cdpp:
-            
-            ( current, deleted, pending, petitioned ) = self._service_identifiers_to_cdpp[ service_identifier ]
-            
-            self._service_identifiers_to_cdpp[ service_identifier ] = ( set(), set(), pending, set() )
-            
-            self._Recalc()
-            
         
     
 class LocalRatings():
@@ -1482,6 +1306,7 @@ class FileQueryResult():
         
         HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
         HC.pubsub.sub( self, 'ProcessServiceUpdate', 'service_update_data' )
+        HC.pubsub.sub( self, 'RecalcCombinedTags', 'new_tag_service_precedence' )
         
     
     def __iter__( self ):
@@ -1574,7 +1399,7 @@ class FileQueryResult():
     
 class FileSearchContext():
     
-    def __init__( self, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
+    def __init__( self, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
         
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = tag_service_identifier
@@ -2145,7 +1970,7 @@ class MediaResult():
     
     def __init__( self, tuple ):
         
-        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings
+        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings
         
         self._tuple = tuple
         
@@ -2154,9 +1979,9 @@ class MediaResult():
         
         service_type = service_identifier.GetType()
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
         
-        if service_type == HC.TAG_REPOSITORY: tag_service_identifiers_cdpp.DeletePending( service_identifier )
+        if service_type == HC.TAG_REPOSITORY: tags_manager.DeletePending( service_identifier )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ): file_service_identifiers_cdpp.DeletePending( service_identifier )
         
     
@@ -2180,7 +2005,7 @@ class MediaResult():
     
     def GetSize( self ): return self._tuple[2]
     
-    def GetTags( self ): return self._tuple[10]
+    def GetTagsManager( self ): return self._tuple[10]
     
     def GetTimestamp( self ): return self._tuple[4]
     
@@ -2188,13 +2013,13 @@ class MediaResult():
     
     def ProcessContentUpdate( self, content_update ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
         
         service_identifier = content_update.GetServiceIdentifier()
         
         service_type = service_identifier.GetType()
         
-        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tag_service_identifiers_cdpp.ProcessContentUpdate( content_update )
+        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
             
             if service_type == HC.LOCAL_FILE:
@@ -2206,7 +2031,7 @@ class MediaResult():
                 elif action == HC.CONTENT_UPDATE_INBOX: inbox = True
                 elif action == HC.CONTENT_UPDATE_DELETE: inbox = False
                 
-                self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings )
+                self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings )
                 
             
             file_service_identifiers_cdpp.ProcessContentUpdate( content_update )
@@ -2222,9 +2047,9 @@ class MediaResult():
         
         service_type = service_identifier.GetType()
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tag_service_identifiers_cdpp, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
         
-        if service_type == HC.TAG_REPOSITORY: tag_service_identifiers_cdpp.ResetService( service_identifier )
+        if service_type in ( HC.TAG_REPOSITORY, HC.COMBINED_TAG ): tags_manager.ResetService( service_identifier )
         elif service_type == HC.FILE_REPOSITORY: file_service_identifiers_cdpp.ResetService( service_identifier )
         
     
@@ -2644,6 +2469,324 @@ class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
     
     def Decrypt( self, encrypted_message ): return HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, self._private_key )
     
+class TagsManager():
+    
+    def __init__( self, tag_service_precedence, service_identifiers_to_statuses_to_tags ):
+        
+        self._tag_service_precedence = tag_service_precedence
+        
+        self._service_identifiers_to_statuses_to_tags = service_identifiers_to_statuses_to_tags
+        
+        self._cstvcp_initialised = False
+        
+    
+    def _RecalcCombined( self ):
+        
+        t_s_p = list( self._tag_service_precedence )
+        
+        t_s_p.reverse()
+        
+        combined_current = set()
+        combined_pending = set()
+        
+        for service_identifier in t_s_p:
+            
+            if service_identifier in self._service_identifiers_to_statuses_to_tags:
+                
+                statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+                
+                combined_current.update( statuses_to_tags[ HC.CURRENT ] )
+                combined_current.difference_update( statuses_to_tags[ HC.DELETED ] )
+                combined_current.difference_update( statuses_to_tags[ HC.DELETED_PENDING ] )
+                
+                combined_pending.update( statuses_to_tags[ HC.DELETED_PENDING ] )
+                combined_pending.update( statuses_to_tags[ HC.PENDING ] )
+                
+            
+        
+        combined_statuses_to_tags = collections.defaultdict( set )
+        
+        combined_statuses_to_tags[ HC.CURRENT ] = combined_current
+        combined_statuses_to_tags[ HC.PENDING ] = combined_pending
+        
+        self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ] = combined_statuses_to_tags
+        
+        if self._cstvcp_initialised: self._RecalcCSTVCP()
+        
+    
+    def _RecalcCSTVCP( self ):
+        
+        self._creators = set()
+        self._series = set()
+        self._titles = set()
+        self._volumes = set()
+        self._chapters = set()
+        self._pages = set()
+        
+        if HC.COMBINED_TAG_SERVICE_IDENTIFIER in self._service_identifiers_to_statuses_to_tags:
+            
+            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+            
+            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+            
+            for tag in combined_current.union( combined_pending ):
+                
+                if ':' in tag:
+                    
+                    ( namespace, tag ) = tag.split( ':', 1 )
+                    
+                    if namespace == 'creator': self._creators.add( tag )
+                    elif namespace == 'series': self._series.add( tag )
+                    elif namespace == 'title': self._titles.add( tag )
+                    elif namespace in ( 'volume', 'chapter', 'page' ):
+                        
+                        try: tag = int( tag )
+                        except: pass
+                        
+                        if namespace == 'volume': self._volumes.add( tag )
+                        elif namespace == 'chapter': self._chapters.add( tag )
+                        elif namespace == 'page': self._pages.add( tag )
+                        
+                    
+                
+            
+        
+        self._cstvcp_initialised = True
+        
+    
+    def GetCSTVCP( self ):
+        
+        if not self._cstvcp_initialised: self._RecalcCSTVCP()
+        
+        return ( self._creators, self._series, self._titles, self._volumes, self._chapters, self._pages )
+        
+    
+    def DeletePending( self, service_identifier ):
+        
+        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+            
+            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.DELETED_PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
+                
+                statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED_PENDING ] )
+                
+                statuses_to_tags[ HC.PENDING ] = set()
+                statuses_to_tags[ HC.DELETED_PENDING ] = set()
+                statuses_to_tags[ HC.PETITIONED ] = set()
+                
+                self._RecalcCombined()
+                
+            
+        
+    
+    def GetCurrent( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+        
+        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+            
+            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            return set( statuses_to_tags[ HC.CURRENT ] )
+            
+        else: return set()
+        
+    
+    def GetDeleted( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+        
+        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+            
+            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            return statuses_to_tags[ HC.DELETED ].union( statuses_to_tags[ HC.DELETED_PENDING ] )
+            
+        else: return set()
+        
+    
+    def GetNamespaceSlice( self, namespaces ):
+        
+        if HC.COMBINED_TAG_SERVICE_IDENTIFIER in self._service_identifiers_to_statuses_to_tags:
+            
+            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+            
+            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+            
+            return frozenset( [ tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ] )
+            
+        else: return frozenset()
+        
+    
+    def GetNumTags( self, tag_service_identifier, include_current_tags = True, include_pending_tags = False ):
+        
+        num_tags = 0
+        
+        statuses_to_tags = self.GetStatusesToTags( tag_service_identifier )
+        
+        if include_current_tags: num_tags += len( statuses_to_tags[ HC.CURRENT ] )
+        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.DELETED_PENDING ] ) + len( statuses_to_tags[ HC.PENDING ] )
+        
+        return num_tags
+        
+    
+    def GetPending( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+        
+        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+            
+            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            return statuses_to_tags[ HC.DELETED_PENDING ].union( statuses_to_tags[ HC.PENDING ] )
+            
+        else: return set()
+        
+    
+    def GetPetitioned( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+        
+        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+            
+            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            return set( statuses_to_tags[ HC.PETITIONED ] )
+            
+        else: return set()
+        
+    
+    def GetServiceIdentifiersToStatusesToTags( self ): return self._service_identifiers_to_statuses_to_tags
+    
+    def GetStatusesToTags( self, service_identifier ):
+        
+        if service_identifier in self._service_identifiers_to_statuses_to_tags: return self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        else: return collections.defaultdict( set )
+        
+    
+    def HasTag( self, tag ):
+        
+        if HC.COMBINED_TAG_SERVICE_IDENTIFIER in self._service_identifiers_to_statuses_to_tags:
+            
+            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+            
+            return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
+            
+        else: return False
+        
+    
+    def ProcessContentUpdate( self, content_update ):
+        
+        service_identifier = content_update.GetServiceIdentifier()
+        
+        if service_identifier not in self._service_identifiers_to_statuses_to_tags: self._service_identifiers_to_statuses_to_tags[ service_identifier ] = collections.defaultdict( set )
+        
+        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        
+        action = content_update.GetAction()
+        
+        if action == HC.CONTENT_UPDATE_ADD:
+            
+            tag = content_update.GetInfo()
+            
+            statuses_to_tags[ HC.CURRENT ].add( tag )
+            
+            statuses_to_tags[ HC.DELETED ].discard( tag )
+            statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
+            statuses_to_tags[ HC.PENDING ].discard( tag )
+            
+        elif action == HC.CONTENT_UPDATE_DELETE:
+            
+            tag = content_update.GetInfo()
+            
+            if tag in statuses_to_tags[ HC.PENDING ]:
+                
+                statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
+                statuses_to_tags[ HC.PENDING ].discard( tag )
+                
+            else:
+                
+                statuses_to_tags[ HC.DELETED ].add( tag )
+                statuses_to_tags[ HC.CURRENT ].discard( tag )
+                
+            
+            statuses_to_tags[ HC.PETITIONED ].discard( tag )
+            
+        elif action == HC.CONTENT_UPDATE_EDIT_LOG:
+            
+            edit_log = content_update.GetInfo()
+            
+            for ( action, info ) in edit_log:
+                
+                if action == HC.CONTENT_UPDATE_ADD:
+                    
+                    tag = info
+                    
+                    statuses_to_tags[ HC.CURRENT ].add( tag )
+                    
+                    statuses_to_tags[ HC.DELETED ].discard( tag )
+                    statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
+                    statuses_to_tags[ HC.PENDING ].discard( tag )
+                    
+                elif action == HC.CONTENT_UPDATE_DELETE:
+                    
+                    tag = info
+                    
+                    if tag in statuses_to_tags[ HC.PENDING ]:
+                        
+                        statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
+                        statuses_to_tags[ HC.PENDING ].discard( tag )
+                        
+                    else:
+                        
+                        statuses_to_tags[ HC.DELETED ].add( tag )
+                        statuses_to_tags[ HC.CURRENT ].discard( tag )
+                        
+                    
+                    statuses_to_tags[ HC.PETITIONED ].discard( tag )
+                    
+                elif action == HC.CONTENT_UPDATE_PENDING:
+                    
+                    tag = info
+                    
+                    if tag in statuses_to_tags[ HC.DELETED ]:
+                        
+                        statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
+                        statuses_to_tags[ HC.DELETED ].discard( tag )
+                        
+                    else: statuses_to_tags[ HC.PENDING ].add( tag )
+                    
+                elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
+                    
+                    tag = info
+                    
+                    if tag in statuses_to_tags[ HC.DELETED_PENDING ]:
+                        
+                        statuses_to_tags[ HC.DELETED ].add( tag )
+                        statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
+                        
+                    else: statuses_to_tags[ HC.PENDING ].discard( tag )
+                    
+                elif action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    ( tag, reason ) = info
+                    
+                    statuses_to_tags[ HC.PETITIONED ].add( tag )
+                    
+                elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                    
+                    tag = info
+                    
+                    statuses_to_tags[ HC.PETITIONED ].discard( tag )
+                    
+                
+            
+        
+        self._RecalcCombined()
+        
+    
+    def ResetService( self, service_identifier ):
+        
+        self._service_identifiers_to_statuses_to_tags[ service_identifier ] = collections.defaultdict[ set ]
+        
+        self._RecalcCombined()
+        
+    
 class TagParentsManager():
     
     def __init__( self ):
@@ -2657,7 +2800,7 @@ class TagParentsManager():
     
     def _GetParents( self, service_identifier, tag ):
         
-        if service_identifier == HC.NULL_SERVICE_IDENTIFIER: return []
+        if service_identifier == HC.COMBINED_TAG_SERVICE_IDENTIFIER: return []
         
         if tag in self._parents[ service_identifier ]: still_to_process = list( self._parents[ service_identifier ][ tag ] )
         else: still_to_process = []
@@ -2697,7 +2840,7 @@ class TagParentsManager():
     
     def ExpandPredicates( self, service_identifier, predicates ):
         
-        if service_identifier == HC.NULL_SERVICE_IDENTIFIER: return predicates
+        if service_identifier == HC.COMBINED_TAG_SERVICE_IDENTIFIER: return predicates
         
         results = []
         
@@ -2757,13 +2900,44 @@ class TagSiblingsManager():
         
         t_s_p = list( self._tag_service_precedence )
         
-        t_s_p.reverse()
-        
         processed_siblings = {}
+        
+        # first combine the services
+        # go from high precedence to low, writing A -> B
+        # if A map already exists, don't overwrite
+        # if A -> B forms a loop, don't write it
         
         for service_identifier in t_s_p:
             
-            if service_identifier in unprocessed_siblings: processed_siblings.update( unprocessed_siblings[ service_identifier ] )
+            if service_identifier in unprocessed_siblings:
+                
+                some_siblings = unprocessed_siblings[ service_identifier ]
+                
+                for ( old, new ) in some_siblings:
+                    
+                    if old not in processed_siblings:
+                        
+                        next_new = new
+                        
+                        we_have_a_loop = False
+                        
+                        while next_new in processed_siblings:
+                            
+                            next_new = processed_siblings[ next_new ]
+                            
+                            if next_new == old:
+                                
+                                we_have_a_loop = True
+                                
+                                break
+                                
+                            
+                        
+                        if not we_have_a_loop: processed_siblings[ old ] = new
+                        
+                    
+                
+                processed_siblings.update( unprocessed_siblings[ service_identifier ] )
             
         
         # now to collapse chains
@@ -2775,22 +2949,17 @@ class TagSiblingsManager():
             
             # adding A -> B
             
-            if new_tag in self._siblings: # B -> C already added, so add A -> C
+            if new_tag in self._siblings:
                 
-                new_tag = self._siblings[ new_tag ]
+                # B -> F already calculated and added, so add A -> F
                 
-                self._siblings[ old_tag ] = new_tag
+                self._siblings[ old_tag ] = self._siblings[ new_tag ]
                 
             else:
                 
-                while new_tag in processed_siblings: # while B -> C, C -> D, D -> E in preprocessed list, pursue endpoint F
-                    
-                    new_tag = processed_siblings[ new_tag ]
-                    
-                    if new_tag == old_tag: break # we have a loop!
-                    
+                while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
                 
-                if old_tag != new_tag: self._siblings[ old_tag ] = new_tag
+                self._siblings[ old_tag ] = new_tag
                 
             
         

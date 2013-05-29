@@ -2,6 +2,7 @@ import collections
 import HydrusConstants as HC
 import ClientConstants as CC
 import ClientGUIMixins
+import itertools
 import os
 import random
 import time
@@ -380,14 +381,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = tag_service_identifier
         
-        if self._file_service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known files'
-        else: name = self._file_service_identifier.GetName()
+        name = self._file_service_identifier.GetName()
         
         self._file_repo_button = wx.Button( self._dropdown_window, label = name )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
         
-        if self._tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known tags'
-        else: name = self._tag_service_identifier.GetName()
+        name = self._tag_service_identifier.GetName()
         
         self._tag_repo_button = wx.Button( self._dropdown_window, label = name )
         self._tag_repo_button.Bind( wx.EVT_BUTTON, self.EventTagButton )
@@ -410,12 +409,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventFileButton( self, event ):
         
-        service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.FILE_REPOSITORY, ) )
+        service_identifiers = []
+        service_identifiers.append( HC.COMBINED_FILE_SERVICE_IDENTIFIER )
+        service_identifiers.append( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        service_identifiers.extend( wx.GetApp().Read( 'service_identifiers', ( HC.FILE_REPOSITORY, ) ) )
         
         menu = wx.Menu()
-        
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known files' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 'local files' )
         
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service_identifier ), service_identifier.GetName() )
         
@@ -440,8 +439,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                     
                     self._file_service_identifier = service_identifier
                     
-                    if service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known files'
-                    else: name = service_identifier.GetName()
+                    name = service_identifier.GetName()
                     
                     self._file_repo_button.SetLabel( name )
                     
@@ -453,8 +451,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                     
                     self._tag_service_identifier = service_identifier
                     
-                    if service_identifier == HC.NULL_SERVICE_IDENTIFIER: name = 'all known tags'
-                    else: name = service_identifier.GetName()
+                    name = service_identifier.GetName()
                     
                     self._tag_repo_button.SetLabel( name )
                     
@@ -482,12 +479,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventTagButton( self, event ):
         
-        service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) )
+        service_identifiers = []
+        service_identifiers.append( HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+        service_identifiers.append( HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        service_identifiers.extend( wx.GetApp().Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) ) )
         
         menu = wx.Menu()
-        
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.NULL_SERVICE_IDENTIFIER ), 'all known tags' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', HC.LOCAL_TAG_SERVICE_IDENTIFIER ), 'local tags' )
         
         for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service_identifier ), service_identifier.GetName() )
         
@@ -569,7 +566,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._first_letters = ''
             self._current_namespace = ''
             
-            if self._file_service_identifier == HC.NULL_SERVICE_IDENTIFIER: s_i = self._tag_service_identifier
+            if self._file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER: s_i = self._tag_service_identifier
             else: s_i = self._file_service_identifier
             
             matches = wx.GetApp().Read( 'file_system_predicates', s_i )
@@ -607,32 +604,26 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if media is None: self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                     else:
                         
-                        all_tags = []
+                        tags_managers = []
                         
                         for m in media:
                             
-                            if m.IsCollection(): all_tags.extend( m.GetSingletonsTags() )
-                            else: all_tags.append( m.GetTags() )
+                            if m.IsCollection(): tags_managers.extend( m.GetSingletonsTagsManagers() )
+                            else: tags_managers.append( m.GetTagsManager() )
                             
                         
-                        absolutely_all_tags = []
+                        lists_of_tags = []
                         
-                        if self._tag_service_identifier == HC.NULL_SERVICE_IDENTIFIER:
-                            
-                            if self._include_current: absolutely_all_tags += [ list( current ) for ( current, deleted, pending, petitioned ) in [ tags.GetUnionCDPP() for tags in all_tags ] ]
-                            if self._include_pending: absolutely_all_tags += [ list( pending ) for ( current, deleted, pending, petitioned ) in [ tags.GetUnionCDPP() for tags in all_tags ] ]
-                            
-                        else:
-                            
-                            if self._include_current: absolutely_all_tags += [ list( current ) for ( current, deleted, pending, petitioned ) in [ tags.GetCDPP( self._tag_service_identifier ) for tags in all_tags ] ]
-                            if self._include_pending: absolutely_all_tags += [ list( pending ) for ( current, deleted, pending, petitioned ) in [ tags.GetCDPP( self._tag_service_identifier ) for tags in all_tags ] ]
-                            
+                        if self._include_current: lists_of_tags += [ list( tags_manager.GetCurrent( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
+                        if self._include_pending: lists_of_tags += [ list( tags_manager.GetPending( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
                         
-                        absolutely_all_tags_flat = [ tag for tags in absolutely_all_tags for tag in tags if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
+                        all_tags_flat_iterable = itertools.chain.from_iterable( lists_of_tags )
                         
-                        if self._current_namespace != '': absolutely_all_tags_flat = [ tag for tag in absolutely_all_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
+                        all_tags_flat = [ tag for tag in all_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
                         
-                        tags_to_count = collections.Counter( absolutely_all_tags_flat )
+                        if self._current_namespace != '': all_tags_flat = [ tag for tag in all_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
+                        
+                        tags_to_count = collections.Counter( all_tags_flat )
                         
                         self._cached_results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
                         
@@ -643,6 +634,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             else: matches = []
             
             if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ), None ) )
+            
+            entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, search_text ), None )
+            
+            try:
+                
+                index = matches.index( entry_predicate )
+                
+                predicate = matches[ index ]
+                
+                del matches[ index ]
+                
+                matches.insert( 0, predicate )
+                
+            except: pass
             
         
         for match in matches:
@@ -684,7 +689,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._options = wx.GetApp().Read( 'options' )
         
-        if self._options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.NULL_SERVICE_IDENTIFIER
+        if self._options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
         
@@ -2933,7 +2938,7 @@ class TagsBoxCPP( TagsBox ):
         
         self._page_key = page_key
         
-        self._tag_service_identifier = HC.NULL_SERVICE_IDENTIFIER
+        self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
         self._last_media = None
         
         self._current_tags_to_count = {}
@@ -3084,7 +3089,7 @@ class TagsBoxFlat( TagsBox ):
         TagsBox.__init__( self, parent )
         
         self._removed_callable = removed_callable
-        self._tags = []
+        self._tags = set()
         
     
     def _RecalcTags( self ):
@@ -3111,11 +3116,11 @@ class TagsBoxFlat( TagsBox ):
         self._TextsHaveChanged()
         
     
-    def _Activate( self, s, term ):
+    def _Activate( self, s, tag ):
         
-        if term in self._tags:
+        if tag in self._tags:
             
-            self._tags.remove( term )
+            self._tags.discard( tag )
             
             self._RecalcTags()
             
@@ -3123,9 +3128,15 @@ class TagsBoxFlat( TagsBox ):
             
         
     
-    def AddTag( self, tag ):
+    def AddTag( self, tag, parents ):
         
-        self._tags.append( tag )
+        if tag in self._tags: self._tags.discard( tag )
+        else:
+            
+            self._tags.add( tag )
+            
+            self._tags.update( parents )
+            
         
         self._RecalcTags()
         

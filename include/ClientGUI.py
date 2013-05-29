@@ -1255,8 +1255,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
         
-        nums_pending = wx.GetApp().Read( 'nums_pending' )
-        
         menu = wx.MenuBar()
         
         file = wx.Menu()
@@ -1307,29 +1305,42 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         menu.Append( database, p( '&Database' ) )
         
-        if len( nums_pending ) > 0:
+        nums_pending = wx.GetApp().Read( 'nums_pending' )
+        
+        pending = wx.Menu()
+        
+        total_num_pending = 0
+        
+        for ( service_identifier, info ) in nums_pending.items():
             
-            pending = wx.Menu()
+            service_type = service_identifier.GetType()
             
-            for ( service_identifier, num_pending ) in nums_pending.items():
+            if service_type == HC.TAG_REPOSITORY:
                 
-                if num_pending > 0:
-                    
-                    service_type = service_identifier.GetType()
-                    
-                    submenu = wx.Menu()
-                    
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_identifier ), p( '&Upload' ), p( 'Upload ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_identifier ), p( '&Forget' ), p( 'Clear ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
-                    
-                    pending.AppendMenu( CC.ID_NULL, p( service_identifier.GetName() + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + ')' ), submenu )
-                    
+                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ]
+                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ]
+                
+            elif service_type == HC.FILE_REPOSITORY:
+                
+                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_FILES ]
+                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
                 
             
-            num_pending_total = sum( nums_pending.values() )
+            if num_pending + num_petitioned > 0:
+                
+                submenu = wx.Menu()
+                
+                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_identifier ), p( '&Upload' ), p( 'Upload ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
+                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_identifier ), p( '&Forget' ), p( 'Clear ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
+                
+                pending.AppendMenu( CC.ID_NULL, p( service_identifier.GetName() + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + '/' + HC.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
+                
             
-            menu.Append( pending, p( '&Pending (' + HC.ConvertIntToPrettyString( num_pending_total ) + ')' ) )
+            total_num_pending += num_pending + num_petitioned
             
+        
+        if total_num_pending > 0: menu.Append( pending, p( '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')' ) )
+        else: pending.Destroy()
         
         services = wx.Menu()
         

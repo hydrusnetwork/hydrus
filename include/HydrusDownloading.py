@@ -752,7 +752,7 @@ class DownloaderNewgrounds( Downloader ):
             
             title = soup.find( 'title' )
             
-            tags.append( 'title:' + title )
+            tags.append( 'title:' + title.string )
             
         except: pass
         

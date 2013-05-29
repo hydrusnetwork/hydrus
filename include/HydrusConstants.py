@@ -30,7 +30,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 9
-SOFTWARE_VERSION = 70
+SOFTWARE_VERSION = 71
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -88,6 +88,8 @@ LOCAL_RATING_NUMERICAL = 6
 LOCAL_RATING_LIKE = 7
 RATING_NUMERICAL_REPOSITORY = 8
 RATING_LIKE_REPOSITORY = 9
+COMBINED_TAG = 10
+COMBINED_FILE = 11
 SERVER_ADMIN = 99
 NULL_SERVICE = 100
 
@@ -120,6 +122,7 @@ CURRENT = 0
 PENDING = 1
 DELETED = 2
 PETITIONED = 3
+DELETED_PENDING = 4
 
 HIGH_PRIORITY = 0
 LOW_PRIORITY = 2
@@ -141,6 +144,10 @@ SERVICE_INFO_NUM_PENDING = 11
 SERVICE_INFO_NUM_CONVERSATIONS = 12
 SERVICE_INFO_NUM_UNREAD = 13
 SERVICE_INFO_NUM_DRAFTS = 14
+SERVICE_INFO_NUM_PENDING_MAPPINGS = 15
+SERVICE_INFO_NUM_PETITIONED_MAPPINGS = 16
+SERVICE_INFO_NUM_PENDING_FILES = 15
+SERVICE_INFO_NUM_PETITIONED_FILES = 16
 
 SERVICE_UPDATE_ACCOUNT = 0
 SERVICE_UPDATE_DELETE_PENDING = 1
@@ -474,6 +481,14 @@ def BuildKeyToListDict( pairs ):
     d = collections.defaultdict( list )
     
     for ( key, value ) in pairs: d[ key ].append( value )
+    
+    return d
+    
+def BuildKeyToSetDict( pairs ):
+    
+    d = collections.defaultdict( set )
+    
+    for ( key, value ) in pairs: d[ key ].add( value )
     
     return d
     
@@ -1601,6 +1616,8 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
+    def GetInfo( self ): return ( self._service_key, self._type, self._name )
+    
     def GetName( self ): return self._name
     
     def GetServiceKey( self ): return self._service_key
@@ -1609,6 +1626,8 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
 LOCAL_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local files', LOCAL_FILE, 'local files' )
 LOCAL_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local tags', LOCAL_TAG, 'local tags' )
+COMBINED_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known files', COMBINED_FILE, 'all known files' )
+COMBINED_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known tags', COMBINED_TAG, 'all known tags' )
 NULL_SERVICE_IDENTIFIER = ClientServiceIdentifier( '', NULL_SERVICE, 'no service' )
 
 class ContentUpdate():
@@ -2266,6 +2285,7 @@ sqlite3.register_adapter( HydrusUpdateTagRepository, yaml.safe_dump )
 
 # Custom Exceptions
 
+class DBAccessException( Exception ): pass
 class NetworkVersionException( Exception ): pass
 class NoContentException( Exception ): pass
 class NotFoundException( Exception ): pass

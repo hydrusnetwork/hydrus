@@ -1542,6 +1542,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
             
             c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
+            c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
+            c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
             
             c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
             c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
@@ -1564,6 +1566,22 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
+            
+            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+            
+            c.execute( 'CREATE TABLE deleted_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, account_id INTEGER, admin_account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
+            c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_account_id_index ON deleted_tag_siblings ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_timestamp_index ON deleted_tag_siblings ( service_id, timestamp );' )
+            
+            c.execute( 'CREATE TABLE pending_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id, account_id ) );' )
+            c.execute( 'CREATE INDEX pending_tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX pending_tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+            
+            c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, reason_id ) );' )
+            c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_account_id_reason_id_tag_id_index ON tag_sibling_petitions ( service_id, account_id, reason_id );' )
+            c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_tag_id_hash_id_index ON tag_sibling_petitions ( service_id, old_tag_id );' )
             
             c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, update_key TEXT, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
             c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
@@ -1759,6 +1777,31 @@ class DB( ServiceDB ):
                             
                         
                     
+                
+                if version < 71:
+                    
+                    try: c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
+                    except: pass
+                    
+                    try: c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
+                    except: pass
+                    '''
+                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
+                    c.execute( 'CREATE INDEX tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
+                    c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+                    
+                    c.execute( 'CREATE TABLE pending_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id, account_id ) );' )
+                    c.execute( 'CREATE INDEX pending_tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
+                    c.execute( 'CREATE INDEX pending_tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+                    
+                    c.execute( 'CREATE TABLE deleted_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, account_id INTEGER, admin_account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
+                    c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_account_id_index ON deleted_tag_siblings ( service_id, account_id );' )
+                    c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_timestamp_index ON deleted_tag_siblings ( service_id, timestamp );' )
+                    
+                    c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, reason_id ) );' )
+                    c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_account_id_reason_id_tag_id_index ON tag_sibling_petitions ( service_id, account_id, reason_id );' )
+                    c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_tag_id_hash_id_index ON tag_sibling_petitions ( service_id, old_tag_id );' )
+                    '''
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
                 

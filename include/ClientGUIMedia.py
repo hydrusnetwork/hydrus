@@ -1145,7 +1145,7 @@ class MediaPanelThumbnails( MediaPanel ):
         if t is not None:
             
             if t.GetFileServiceIdentifiersCDPP().HasLocal(): self._FullScreen( t )
-            elif self._file_service_identifier != HC.NULL_SERVICE_IDENTIFIER: wx.GetApp().Write( 'add_downloads', self._file_service_identifier, t.GetHashes() )
+            elif self._file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: wx.GetApp().Write( 'add_downloads', self._file_service_identifier, t.GetHashes() )
             
         
     
@@ -1751,7 +1751,7 @@ class Thumbnail( Selectable ):
         
         local = self.GetFileServiceIdentifiersCDPP().HasLocal()
         
-        ( creators, series, titles, volumes, chapters, pages ) = self.GetTags().GetCSTVCP()
+        ( creators, series, titles, volumes, chapters, pages ) = self.GetTagsManager().GetCSTVCP()
         
         if self._hydrus_bmp is None: self._LoadFromDB()
         

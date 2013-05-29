@@ -350,7 +350,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._tag_service_identifiers = wx.Choice( self._tag_panel )
             self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.NULL_SERVICE_IDENTIFIER )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
             
             self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
@@ -4363,6 +4363,16 @@ class DialogManageOptionsLocal( Dialog ):
             
             self._listbook.AddPage( self._gui_page, 'gui' )
             
+            # sound
+            
+            self._sound_page = wx.Panel( self._listbook )
+            self._sound_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._play_dumper_noises = wx.CheckBox( self._sound_page, label = 'play success/fail noises when dumping' )
+            self._play_dumper_noises.SetValue( self._options[ 'play_dumper_noises' ] )
+            
+            self._listbook.AddPage( self._sound_page, 'sound' )
+            
             # default file system predicates
             
             system_predicates = self._options[ 'file_system_predicates' ]
@@ -4733,6 +4743,14 @@ class DialogManageOptionsLocal( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            vbox.AddF( self._play_dumper_noises, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._sound_page.SetSizer( vbox )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
             vbox.AddF( self._namespace_colours, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_namespace_colour, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._edit_namespace_colour, FLAGS_EXPAND_PERPENDICULAR )
@@ -4918,6 +4936,8 @@ class DialogManageOptionsLocal( Dialog ):
         
     
     def EventOK( self, event ):
+        
+        self._options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
         
         self._options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
         self._options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
@@ -7928,13 +7948,21 @@ class DialogManageTagServicePrecedence( Dialog ):
     
     def EventOK( self, event ):
         
-        try:
+        message = 'This operation may take several minutes to complete. Are you sure?'
+        
+        with DialogYesNo( self, message ) as dlg:
             
-            service_identifiers = [ self._tag_services.GetClientData( i ) for i in range( self._tag_services.GetCount() ) ]
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                try:
+                    
+                    service_identifiers = [ self._tag_services.GetClientData( i ) for i in range( self._tag_services.GetCount() ) ]
+                    
+                    wx.GetApp().Write( 'set_tag_service_precedence', service_identifiers )
+                    
+                except Exception as e: wx.MessageBox( 'Something went wrong when trying to save tag service precedence to the database: ' + unicode( e ) )
+                
             
-            wx.GetApp().Write( 'set_tag_service_precedence', service_identifiers )
-            
-        except Exception as e: wx.MessageBox( 'Something went wrong when trying to save tag service precedence to the database: ' + unicode( e ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -8190,7 +8218,9 @@ class DialogManageTags( Dialog ):
                 self._account = service.GetAccount()
                 
             
-            ( self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags ) = CC.MediaIntersectCDPPTagServiceIdentifiers( media, tag_service_identifier )
+            tags_managers = [ m.GetTagsManager() for m in media ]
+            
+            ( self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags ) = CC.IntersectTags( tags_managers, tag_service_identifier )
             
             self._current_tags.sort()
             self._pending_tags.sort()
@@ -9057,11 +9087,11 @@ class DialogPathsToTagsRegex( Dialog ):
                 
             
         
-        def AddTag( self, tag ):
+        def AddTag( self, tag, parents = [] ):
             
             if tag is not None:
                 
-                self._tags.AddTag( tag )
+                self._tags.AddTag( tag, parents )
                 
                 self._tag_box.Clear()
                 
@@ -9069,11 +9099,11 @@ class DialogPathsToTagsRegex( Dialog ):
                 
             
         
-        def AddTagSingle( self, tag ):
+        def AddTagSingle( self, tag, parents = [] ):
             
             if tag is not None:
                 
-                self._single_tags.AddTag( tag )
+                self._single_tags.AddTag( tag, parents )
                 
                 self._single_tag_box.Clear()
                 
@@ -9084,6 +9114,11 @@ class DialogPathsToTagsRegex( Dialog ):
                     ( num, path, old_tags ) = self._paths_list.GetClientData( index )
                     
                     if tag not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( tag )
+                    
+                    for parent in parents:
+                        
+                        if parent not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( parent )
+                        
                     
                 
                 self._RefreshFileList() # make this more clever
@@ -9164,10 +9199,6 @@ class DialogPathsToTagsRegex( Dialog ):
                 self._single_tag_box.Enable()
                 
             else: self._single_tag_box.Disable()
-            
-            single_tags = list( single_tags )
-            
-            single_tags.sort()
             
             self._single_tags.SetTags( single_tags )
             
@@ -10214,12 +10245,12 @@ class DialogSetupExport( Dialog ):
         
         for ( term_type, term ) in terms:
             
-            tags = media.GetTags()
+            tags_manager = media.GetTagsManager()
             
             if term_type == 'string': filename += term
             elif term_type == 'namespace':
                 
-                tags = tags.GetNamespaceSlice( ( term, ) )
+                tags = tags_manager.GetNamespaceSlice( ( term, ) )
                 
                 filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
                 
@@ -10227,7 +10258,8 @@ class DialogSetupExport( Dialog ):
                 
                 if term in ( 'tags', 'nn tags' ):
                     
-                    ( current, deleted, pending, petitioned ) = tags.GetUnionCDPP()
+                    current = tags_manager.GetCurrent()
+                    pending = tags_manager.GetPending()
                     
                     tags = list( current.union( pending ) )
                     
@@ -10249,7 +10281,7 @@ class DialogSetupExport( Dialog ):
                 
                 if ':' in term: term = term.split( ':' )[1]
                 
-                if tags.HasTag( term ): filename += term
+                if tags_manager.HasTag( term ): filename += term
                 
             
         

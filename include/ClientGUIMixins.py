@@ -119,7 +119,7 @@ class MediaList():
                 
                 for media in self._singleton_media:
                     
-                    if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTags().GetNamespaceSlice( namespaces_to_collect_by )
+                    if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by )
                     else: namespace_key = None
                     
                     if len( ratings_to_collect_by ) > 0:
@@ -304,13 +304,13 @@ class MediaList():
             
             def namespace_compare( x, y ):
                 
-                x_tags = x.GetTags()
-                y_tags = y.GetTags()
+                x_tags_manager = x.GetTagsManager()
+                y_tags_manager = y.GetTagsManager()
                 
                 for namespace in sort_by_data:
                     
-                    x_namespace_slice = x_tags.GetNamespaceSlice( ( namespace, ) )
-                    y_namespace_slice = y_tags.GetNamespaceSlice( ( namespace, ) )
+                    x_namespace_slice = x_tags_manager.GetNamespaceSlice( ( namespace, ) )
+                    y_namespace_slice = y_tags_manager.GetNamespaceSlice( ( namespace, ) )
                     
                     if x_namespace_slice == y_namespace_slice: continue # this covers len == 0 for both, too
                     else:
@@ -412,7 +412,7 @@ class MediaCollection( MediaList, Media ):
         self._duration = None
         self._num_frames = None
         self._num_words = None
-        self._tags = None
+        self._tags_manager = None
         self._file_service_identifiers = None
         
         self._RecalcInternals()
@@ -438,37 +438,11 @@ class MediaCollection( MediaList, Media ):
         if duration_sum > 0: self._duration = duration_sum
         else: self._duration = None
         
-        # better-but-still-pretty-horrible code starts here
+        tags_managers = [ m.GetTagsManager() for m in self._sorted_media ]
         
-        # remember: the only time a collection is asked for its tags is by thumbnail.getbmp(), to draw series and page info
-        # until I make SVCP more complicated, it mostly needs only be a quick and ugly intersection
+        self._tags_manager = CC.MergeTags( tags_managers )
         
-        all_tags_cdpp = [ m.GetTags().GetServiceIdentifiersToCDPP() for m in self._sorted_media ]
-        
-        combined_tags = collections.defaultdict( list )
-        
-        for tags_cdpp in all_tags_cdpp:
-            
-            for ( service_identifier, cdpp ) in tags_cdpp.items(): combined_tags[ service_identifier ].append( cdpp )
-            
-        
-        final_tags = {}
-        
-        for ( service_identifier, cdpps ) in combined_tags.items():
-            
-            current = list( HC.IntelligentMassIntersect( ( c for ( c, d, p, pet ) in cdpps ) ) )
-            deleted = []
-            pending = list( HC.IntelligentMassIntersect( ( p for ( c, d, p, pet ) in cdpps ) ) )
-            petitioned = []
-            
-            final_tags[ service_identifier ] = ( current, deleted, pending, petitioned )
-            
-        
-        self._tags = CC.CDPPTagServiceIdentifiers( wx.GetApp().Read( 'tag_service_precedence' ), final_tags )
-        
-        # END OF HORRIBLE CODE
-        
-        # new horrible compromise
+        # horrible compromise
         if len( self._sorted_media ) > 0: self._ratings = self._sorted_media[0].GetRatings()
         else: self._ratings = ( CC.LocalRatings( {} ), CC.CPRemoteRatingsServiceIdentifiers( {} ) )
         
@@ -541,18 +515,18 @@ class MediaCollection( MediaList, Media ):
     
     def GetResolution( self ): return ( self._width, self._height )
     
-    def GetSingletonsTags( self ):
+    def GetSingletonsTagsManagers( self ):
         
-        all_tags = [ m.GetTags() for m in self._singleton_media ] 
+        tags_managers = [ m.GetTagsManager() for m in self._singleton_media ] 
         
-        for m in self._collected_media: all_tags.extend( m.GetSingletonsTags() )
+        for m in self._collected_media: tags_managers.extend( m.GetSingletonsTagsManagers() )
         
-        return all_tags
+        return tags_managers
         
     
     def GetSize( self ): return self._size
     
-    def GetTags( self ): return self._tags
+    def GetTagsManager( self ): return self._tags_manager
     
     def GetTimestamp( self ): return self._timestamp
     
@@ -641,7 +615,7 @@ class MediaSingleton( Media ):
     
     def GetPrettyInfo( self ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags, file_service_identifiers, local_ratings, remote_ratings ) = self._media_result.GetInfo()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers, local_ratings, remote_ratings ) = self._media_result.GetInfo()
         
         info_string = HC.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
@@ -674,7 +648,7 @@ class MediaSingleton( Media ):
         else: return size
         
     
-    def GetTags( self ): return self._media_result.GetTags()
+    def GetTagsManager( self ): return self._media_result.GetTagsManager()
     
     def HasArchive( self ): return not self._media_result.GetInbox()
     
