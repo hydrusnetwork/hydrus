@@ -4967,6 +4967,7 @@ class DB( ServiceDB ):
             
             CLIENT_DEFAULT_OPTIONS = {}
             
+            CLIENT_DEFAULT_OPTIONS[ 'play_dumper_noises' ] = True
             CLIENT_DEFAULT_OPTIONS[ 'default_sort' ] = 0
             CLIENT_DEFAULT_OPTIONS[ 'default_collect' ] = None
             CLIENT_DEFAULT_OPTIONS[ 'export_path' ] = 'export'
