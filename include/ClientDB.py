@@ -2509,21 +2509,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # tag siblings
             
-            pending = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ]
+            pending = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
-            petitioned = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ) ]
+            petitioned = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
             # tag parents
             
-            pending = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ]
+            pending = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
-            petitioned = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ) ]
+            petitioned = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             

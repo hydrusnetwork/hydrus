@@ -2440,7 +2440,7 @@ class ServiceRemoteRestrictedDepot( ServiceRemoteRestricted ):
     
     def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        ServiceRemoteRestricted.ProcessServiceUpdates( self, update )
+        ServiceRemoteRestricted.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
         
         for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
