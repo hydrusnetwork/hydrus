@@ -2212,6 +2212,16 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
         
     
+    def GetIndexFromClientData( self, data ):
+        
+        for index in range( self.GetItemCount() ):
+            
+            if self.GetClientData( index ) == data: return index
+            
+        
+        raise Exception( 'Data not found!' )
+        
+    
     def GetListCtrl( self ): return self
     
     def RemoveAllSelected( self ):
@@ -3182,10 +3192,16 @@ class TagsBoxManage( TagsBox ):
         
         for tag in all_tags:
             
-            if tag in self._petitioned_tags: tag_string = '(-) ' + tag
-            elif tag in self._current_tags: tag_string = tag
-            elif tag in self._pending_tags: tag_string = '(+) ' + tag
-            else: tag_string = '(X) ' + tag
+            if tag in self._petitioned_tags: prefix = HC.ConvertStatusToPrefix( HC.PETITIONED )
+            elif tag in self._current_tags: prefix = HC.ConvertStatusToPrefix( HC.CURRENT )
+            elif tag in self._pending_tags:
+                
+                if tag in self._deleted_tags: prefix = HC.ConvertStatusToPrefix( HC.DELETED_PENDING )
+                else: prefix = HC.ConvertStatusToPrefix( HC.PENDING )
+                
+            else: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
+            
+            tag_string = prefix + ' ' + tag
             
             sibling = siblings_manager.GetSibling( tag )
             

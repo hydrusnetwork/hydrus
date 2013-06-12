@@ -631,7 +631,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         for ( service_identifier, namespaces ) in advanced_tag_options.items():
             
-            tags = media.GetTagsManager()
+            tags_manager = media.GetTagsManager()
             
             current = tags_manager.GetCurrent( service_identifier )
             pending = tags_manager.GetPending( service_identifier )
@@ -1697,9 +1697,9 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                     
-                    content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
+                    content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
                     
-                    wx.GetApp().WriteDaemon( 'content_updates', content_updates )
+                    wx.GetApp().WriteDaemon( 'content_updates', service_identifiers_to_content_updates )
                     
                 
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -2380,11 +2380,13 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
 class ManagementPanelPetitions( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier ):
+    def __init__( self, parent, page, page_key, file_service_identifier, petition_service_identifier ):
+        
+        self._petition_service_identifier = petition_service_identifier
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
         
-        self._service = wx.GetApp().Read( 'service', file_service_identifier )
+        self._service = wx.GetApp().Read( 'service', self._petition_service_identifier )
         self._can_ban = self._service.GetAccount().HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
@@ -2476,7 +2478,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             search_context = CC.FileSearchContext( self._file_service_identifier )
             
-            with wx.BusyCursor(): file_query_result = wx.GetApp().Read( 'media_results', search_context, self._current_petition.GetPetitionHashes() )
+            with wx.BusyCursor(): file_query_result = wx.GetApp().Read( 'media_results', search_context, self._current_petition.GetHashes() )
             
             panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, [], file_query_result )
             
@@ -2498,26 +2500,13 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventApprove( self, event ):
         
+        update = self._current_petition.GetApproval()
+        
         connection = self._service.GetConnection()
         
-        petition_object = self._current_petition.GetClientPetition()
+        connection.Post( 'update', update = update )
         
-        connection.Post( 'petitions', petitions = petition_object )
-        
-        if isinstance( self._current_petition, HC.ServerFilePetition ):
-            
-            hashes = self._current_petition.GetPetitionHashes()
-            
-            content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes ) ]
-            
-        elif isinstance( self._current_petition, HC.ServerMappingPetition ):
-            
-            ( reason, tag, hashes ) = self._current_petition.GetPetitionInfo()
-            
-            content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, self._file_service_identifier, hashes, tag ) ]
-            
-        
-        wx.GetApp().WriteDaemon( 'content_updates', content_updates )
+        wx.GetApp().WriteDaemon( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
         
         self._current_petition = None
         
@@ -2528,12 +2517,11 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventDeny( self, event ):
         
+        update = self._current_petition.GetDenial()
+        
         connection = self._service.GetConnection()
         
-        petition_object = self._current_petition.GetClientPetitionDenial()
-        
-        # needs work
-        connection.Post( 'petition_denial', petition_denial = petition_object )
+        connection.Post( 'update', update = update )
         
         self._current_petition = None
         
@@ -2564,7 +2552,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventModifyPetitioner( self, event ):
         
-        with ClientGUIDialogs.DialogModifyAccounts( self, self._file_service_identifier, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_identifier, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg: dlg.ShowModal()
         
     
     def EventRefreshNumPetitions( self, event ):

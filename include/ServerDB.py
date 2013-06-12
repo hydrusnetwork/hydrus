@@ -7,6 +7,7 @@ import HydrusServer
 import itertools
 import os
 import Queue
+import random
 import shutil
 import sqlite3
 import sys
@@ -29,9 +30,9 @@ def GetPath( file_type, hash ):
     
     return directory + os.path.sep + first_two_chars + os.path.sep + hash_encoded
     
-def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllFilePaths( file_type ) }
+def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
 
-def IterateAllFilePaths( file_type ):
+def IterateAllPaths( file_type ):
     
     if file_type == 'file': directory = HC.SERVER_FILES_DIR
     elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
@@ -59,7 +60,7 @@ class FileDB():
         
         now = int( time.time() )
         
-        if c.execute( 'SELECT 1 FROM file_map WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone() is None or c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone() is None:
+        if c.execute( 'SELECT 1 FROM file_map WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone() is None or c.execute( 'SELECT 1 FROM file_petitions WHERE service_id = ? AND hash_id = ? AND status = ?;', ( service_id, hash_id, HC.DELETED ) ).fetchone() is None:
             
             size = file_dict[ 'size' ]
             mime = file_dict[ 'mime' ]
@@ -125,19 +126,21 @@ class FileDB():
             
         
     
-    def _AddFilePetition( self, c, service_id, account_id, reason_id, hash_ids ):
+    def _AddFilePetition( self, c, service_id, account_id, hash_ids, reason_id ):
         
         self._ApproveOptimisedFilePetition( c, service_id, account_id, hash_ids )
         
         valid_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_map WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ]
         
         # this clears out any old reasons, if the user wants to overwrite them
-        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ';', ( service_id, account_id ) )
+        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ' AND status = ?;', ( service_id, account_id, HC.PETITIONED ) )
         
-        c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, reason_id, hash_id ) VALUES ( ?, ?, ?, ? );', [ ( service_id, account_id, reason_id, hash_id ) for hash_id in valid_hash_ids ] )
+        now = int( time.time() )
+        
+        c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
         
     
-    def _ApproveFilePetition( self, c, service_id, account_id, reason_id, hash_ids ):
+    def _ApproveFilePetition( self, c, service_id, account_id, hash_ids, reason_id ):
         
         self._ApproveOptimisedFilePetition( c, service_id, account_id, hash_ids )
         
@@ -145,7 +148,7 @@ class FileDB():
         
         self._RewardFilePetitioners( c, service_id, valid_hash_ids, 1 )
         
-        self._DeleteFiles( c, service_id, account_id, reason_id, valid_hash_ids )
+        self._DeleteFiles( c, service_id, account_id, valid_hash_ids, reason_id )
         
     
     def _ApproveOptimisedFilePetition( self, c, service_id, account_id, hash_ids ):
@@ -155,16 +158,18 @@ class FileDB():
         c.execute( 'DELETE FROM file_map WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, biggest_end ) )
         
     
-    def _DeleteFiles( self, c, service_id, admin_account_id, reason_id, hash_ids ):
+    def _DeleteFiles( self, c, service_id, account_id, hash_ids, reason_id ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
         affected_timestamps = [ timestamp for ( timestamp, ) in c.execute( 'SELECT DISTINCT timestamp FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) ]
         
-        c.execute( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id, reason_id, account_id, admin_account_id, timestamp ) SELECT service_id, hash_id, ?, account_id, ?, ? FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( reason_id, admin_account_id, int( time.time() ), service_id ) )
-        
         c.execute( 'DELETE FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
+        
+        now = int( time.time() )
+        
+        c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( service_id, account_id, hash_id, reason_id, now, HC.DELETED ) for hash_id in hash_ids ) )
         
         self._RefreshUpdateCache( c, service_id, affected_timestamps )
         
@@ -173,21 +178,49 @@ class FileDB():
         
         self._RewardFilePetitioners( c, service_id, hash_ids, -1 )
         
-        c.execute( 'DELETE FROM file_petitions WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' )
+        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
     
     def _GenerateFileUpdate( self, c, service_id, begin, end ):
         
-        files_info = [ ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) in c.execute( 'SELECT hash, size, mime, timestamp, width, height, duration, num_frames, num_words FROM file_map, ( files_info, hashes USING ( hash_id ) ) USING ( hash_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) ]
+        hash_ids = set()
         
-        deleted_hashes = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM deleted_files, hashes USING ( hash_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) ]
+        service_data = {}
+        content_data = HC.GetEmptyDataDict()
+        
+        #
+        
+        files_info = [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM file_map, files_info USING ( hash_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) ]
+        
+        hash_ids.update( ( file_info[0] for file_info in files_info ) )
+        
+        content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_ADD ] = files_info
+        
+        #
+        
+        deleted_files_info = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) ]
+        
+        hash_ids.update( deleted_files_info )
+        
+        content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_DELETE ] = deleted_files_info
+        
+        #
         
         news = c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
         
-        return HC.HydrusUpdateFileRepository( files_info, deleted_hashes, news, begin, end )
+        service_data[ HC.SERVICE_UPDATE_NEXT_BEGIN ] = ( begin, end )
+        service_data[ HC.SERVICE_UPDATE_NEWS ] = news
+        
+        #
+        
+        hash_ids_to_hashes = self._GetHashIdsToHashes( c, hash_ids )
+        
+        return HC.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
         
     
     def _GenerateHashIdsEfficiently( self, c, hashes ):
+        
+        if type( hashes ) != list: hashes = list( hashes )
         
         hashes_not_in_db = set( hashes )
         
@@ -216,7 +249,7 @@ class FileDB():
     
     def _GetFilePetition( self, c, service_id ):
         
-        result = c.execute( 'SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, ) ).fetchone()
+        result = c.execute( 'SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PETITIONED ) ).fetchone()
         
         if result is None: raise HC.NotFoundException( 'No petitions!' )
         
@@ -226,11 +259,13 @@ class FileDB():
         
         reason = self._GetReason( c, reason_id )
         
-        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ?;', ( service_id, account_id, reason_id ) ) ]
+        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, reason_id, HC.PETITIONED ) ) ]
         
         hashes = self._GetHashes( c, hash_ids )
         
-        return HC.ServerFilePetition( petitioner_account_identifier, reason, hashes )
+        petition_data = hashes
+        
+        return HC.ServerToClientPetition( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, petitioner_account_identifier, petition_data, reason )
         
     
     def _GetHash( self, c, hash_id ):
@@ -305,7 +340,7 @@ class FileDB():
         return result
         
     
-    def _GetNumFilePetitions( self, c, service_id ): return c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? );', ( service_id, ) ).fetchone()[0]
+    def _GetNumFilePetitions( self, c, service_id ): return c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()[0]
     
     def _GetThumbnail( self, hash ):
         
@@ -322,7 +357,7 @@ class FileDB():
     
     def _RewardFilePetitioners( self, c, service_id, hash_ids, multiplier ):
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in c.execute( 'SELECT account_id, COUNT( * ) FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' GROUP BY account_id;', ( service_id, ) ) ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in c.execute( 'SELECT account_id, COUNT( * ) FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, HC.PETITIONED ) ) ]
         
         self._RewardAccounts( c, service_id, HC.SCORE_PETITION, scores )
         
@@ -411,15 +446,15 @@ class TagDB():
             
             splayed_hash_ids = HC.SplayListForDB( hash_ids )
             
-            affected_timestamps = [ timestamp for ( timestamp, ) in c.execute( 'SELECT DISTINCT timestamp FROM deleted_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) ) ]
+            affected_timestamps = [ timestamp for ( timestamp, ) in c.execute( 'SELECT DISTINCT timestamp FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
             
-            c.execute( 'DELETE FROM deleted_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
+            c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) )
             
             self._RefreshUpdateCache( c, service_id, affected_timestamps )
             
         else:
             
-            already_deleted = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
+            already_deleted = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.DELETED ) ) ]
             
             hash_ids = set( hash_ids ).difference( already_deleted )
             
@@ -429,46 +464,157 @@ class TagDB():
         c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, tag_id, hash_id, account_id, timestamp ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, tag_id, hash_id, account_id, now ) for hash_id in hash_ids ] )
         
     
-    def _AddMappingPetition( self, c, service_id, account_id, reason_id, tag_id, hash_ids ):
+    def _AddMappingPetition( self, c, service_id, account_id, tag_id, hash_ids, reason_id ):
         
-        self._ApproveOptimisedMappingPetition( c, service_id, account_id, tag_id, hash_ids )
+        self._ApproveMappingPetitionOptimised( c, service_id, account_id, tag_id, hash_ids )
         
         valid_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
         
-        # this clears out any old reasons, if the user wants to overwrite them
-        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ';', ( service_id, account_id, tag_id ) )
+        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ' AND STATUS = ?;', ( service_id, account_id, tag_id, HC.PETITIONED ) )
         
-        c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, account_id, reason_id, tag_id, hash_id ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, account_id, reason_id, tag_id, hash_id ) for hash_id in valid_hash_ids ] )
+        now = int( time.time() )
+        
+        c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, account_id, tag_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, tag_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
         
     
-    def _ApproveMappingPetition( self, c, service_id, account_id, reason_id, tag_id, hash_ids ):
+    def _AddTagParentPetition( self, c, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
         
-        self._ApproveOptimisedMappingPetition( c, service_id, account_id, tag_id, hash_ids )
+        result = c.execute( 'SELECT 1 WHERE EXISTS ( SELECT 1 FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ? );', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ).fetchone()
+        
+        it_already_exists = result is not None
+        
+        if status == HC.PENDING:
+            
+            if it_already_exists: return
+            
+        elif status == HC.PETITIONED:
+            
+            if not it_already_exists: return
+            
+        
+        c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND account_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, account_id, old_tag_id, new_tag_id, status ) )
+        
+        now = int( time.time() )
+        
+        c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, now ) )
+        
+    
+    def _AddTagSiblingPetition( self, c, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
+        
+        result = c.execute( 'SELECT 1 WHERE EXISTS ( SELECT 1 FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ? );', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ).fetchone()
+        
+        it_already_exists = result is not None
+        
+        if status == HC.PENDING:
+            
+            if it_already_exists: return
+            
+        elif status == HC.PETITIONED:
+            
+            if not it_already_exists: return
+            
+        
+        c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND account_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, account_id, old_tag_id, new_tag_id, status ) )
+        
+        now = int( time.time() )
+        
+        c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, now ) )
+        
+    
+    def _ApproveMappingPetition( self, c, service_id, account_id, tag_id, hash_ids, reason_id ):
+        
+        self._ApproveMappingPetitionOptimised( c, service_id, account_id, tag_id, hash_ids )
         
         valid_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) ) ]
         
         self._RewardMappingPetitioners( c, service_id, tag_id, valid_hash_ids, 1 )
         
-        self._DeleteMappings( c, service_id, account_id, reason_id, tag_id, valid_hash_ids )
+        self._DeleteMappings( c, service_id, account_id, tag_id, valid_hash_ids, reason_id )
         
     
-    def _ApproveOptimisedMappingPetition( self, c, service_id, account_id, tag_id, hash_ids ):
+    def _ApproveMappingPetitionOptimised( self, c, service_id, account_id, tag_id, hash_ids ):
         
         ( biggest_end, ) = c.execute( 'SELECT end FROM update_cache WHERE service_id = ? ORDER BY end DESC LIMIT 1;', ( service_id, ) ).fetchone()
         
-        c.execute( 'DELETE FROM mappings WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, biggest_end, tag_id ) )
+        c.execute( 'DELETE FROM mappings WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND timestamp > ?;', ( service_id, account_id, tag_id, biggest_end ) )
         
     
-    def _DeleteMappings( self, c, service_id, admin_account_id, reason_id, tag_id, hash_ids ):
+    def _ApproveTagParentPetition( self, c, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
+        
+        result = c.execute( 'SELECT 1 WHERE EXISTS ( SELECT 1 FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ? );', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ).fetchone()
+        
+        it_already_exists = result is not None
+        
+        if status == HC.PENDING:
+            
+            if it_already_exists: return
+            
+        elif status == HC.PETITIONED:
+            
+            if not it_already_exists: return
+            
+        
+        self._RewardTagParentPetitioners( c, service_id, old_tag_id, new_tag_id, 1 )
+        
+        # get affected timestamps here?
+        
+        affected_timestamps = [ timestamp for ( timestamp, ) in c.execute( 'SELECT DISTINCT timestamp FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ) ]
+        
+        c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ?;', ( service_id, old_tag_id, new_tag_id ) )
+        
+        if status == HC.PENDING: new_status = HC.CURRENT
+        elif status == HC.PETITIONED: new_status = HC.DELETED
+        
+        now = int( time.time() )
+        
+        c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
+        
+        if len( affected_timestamps ) > 0: self._RefreshUpdateCache( c, service_id, affected_timestamps )
+        
+    
+    def _ApproveTagSiblingPetition( self, c, service_id, account_id, old_tag_id, new_tag_id, reason_id, status ):
+        
+        result = c.execute( 'SELECT 1 WHERE EXISTS ( SELECT 1 FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ? );', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ).fetchone()
+        
+        it_already_exists = result is not None
+        
+        if status == HC.PENDING:
+            
+            if it_already_exists: return
+            
+        elif status == HC.PETITIONED:
+            
+            if not it_already_exists: return
+            
+        
+        self._RewardTagSiblingPetitioners( c, service_id, old_tag_id, new_tag_id, 1 )
+        
+        # get affected timestamps here?
+        
+        affected_timestamps = [ timestamp for ( timestamp, ) in c.execute( 'SELECT DISTINCT timestamp FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, old_tag_id, new_tag_id, HC.CURRENT ) ) ]
+        
+        c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ?;', ( service_id, old_tag_id, new_tag_id ) )
+        
+        if status == HC.PENDING: new_status = HC.CURRENT
+        elif status == HC.PETITIONED: new_status = HC.DELETED
+        
+        now = int( time.time() )
+        
+        c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
+        
+        if len( affected_timestamps ) > 0: self._RefreshUpdateCache( c, service_id, affected_timestamps )
+        
+    
+    def _DeleteMappings( self, c, service_id, account_id, tag_id, hash_ids, reason_id ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
         affected_timestamps = [ timestamp for ( timestamp, ) in c.execute( 'SELECT DISTINCT timestamp FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) ) ]
         
-        c.execute( 'INSERT OR IGNORE INTO deleted_mappings ( service_id, tag_id, hash_id, reason_id, account_id, admin_account_id, timestamp ) SELECT service_id, tag_id, hash_id, ?, account_id, ?, ? FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( reason_id, admin_account_id, int( time.time() ), service_id, tag_id ) )
-        
         c.execute( 'DELETE FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
-        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
+        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
+        
+        c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, int( time.time() ), HC.DELETED ) for hash_id in hash_ids ) )
         
         self._RefreshUpdateCache( c, service_id, affected_timestamps )
         
@@ -477,43 +623,103 @@ class TagDB():
         
         self._RewardMappingPetitioners( c, service_id, tag_id, hash_ids, -1 )
         
-        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, tag_id ) )
+        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
         
     
-    def _GenerateMappingUpdate( self, c, service_id, begin, end ):
+    def _DenyTagParentPetition( self, c, service_id, old_tag_id, new_tag_id, action ):
+        
+        self._RewardTagParentPetitioners( c, service_id, old_tag_id, new_tag_id, -1 )
+        
+        if action == HC.CONTENT_UPDATE_DENY_PEND: status = HC.PENDING
+        elif action == HC.CONTENT_UPDATE_DENY_PETITION: status = HC.PETITIONED
+        
+        c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, old_tag_id, new_tag_id, status ) )
+        
+    
+    def _DenyTagSiblingPetition( self, c, service_id, old_tag_id, new_tag_id, action ):
+        
+        self._RewardTagSiblingPetitioners( c, service_id, old_tag_id, new_tag_id, -1 )
+        
+        if action == HC.CONTENT_UPDATE_DENY_PEND: status = HC.PENDING
+        elif action == HC.CONTENT_UPDATE_DENY_PETITION: status = HC.PETITIONED
+        
+        c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, old_tag_id, new_tag_id, status ) )
+        
+    
+    def _GenerateTagUpdate( self, c, service_id, begin, end ):
+        
+        service_data = {}
+        content_data = HC.GetEmptyDataDict()
         
         hash_ids = set()
         
-        mappings_dict = collections.defaultdict( list )
+        # mappings
         
-        for ( tag, hash_id ) in c.execute( 'SELECT tag, hash_id FROM tags, mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ):
-            
-            mappings_dict[ tag ].append( hash_id )
-            
-            hash_ids.add( hash_id )
-            
+        mappings_dict = HC.BuildKeyToListDict( c.execute( 'SELECT tag, hash_id FROM tags, mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ) )
+        
+        hash_ids.update( itertools.chain.from_iterable( mappings_dict.values() ) )
         
         mappings = mappings_dict.items()
         
-        deleted_mappings_dict = collections.defaultdict( list )
+        content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_ADD ] = mappings
         
-        for ( tag, hash_id ) in c.execute( 'SELECT tag, hash_id FROM tags, deleted_mappings USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ):
-            
-            deleted_mappings_dict[ tag ].append( hash_id )
-            
-            hash_ids.add( hash_id )
-            
+        #
+        
+        deleted_mappings_dict = HC.BuildKeyToListDict( c.execute( 'SELECT tag, hash_id FROM tags, mapping_petitions USING ( tag_id ) WHERE service_id = ? AND timestamp BETWEEN ? AND ? AND status = ?;', ( service_id, begin, end, HC.DELETED ) ) )
+        
+        hash_ids.update( itertools.chain.from_iterable( deleted_mappings_dict.values() ) )
         
         deleted_mappings = deleted_mappings_dict.items()
         
+        content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_DELETE ] = deleted_mappings
+        
+        # tag siblings
+        
+        tag_sibling_ids = c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.CURRENT, begin, end ) ).fetchall()
+        
+        tag_siblings = [ ( self._GetTag( c, old_tag_id ), self._GetTag( c, new_tag_id ) ) for ( old_tag_id, new_tag_id ) in tag_sibling_ids ]
+        
+        content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_ADD ] = tag_siblings
+        
+        #
+        
+        deleted_tag_sibling_ids = c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_siblings WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.DELETED, begin, end ) ).fetchall()
+        
+        deleted_tag_siblings = [ ( self._GetTag( c, old_tag_id ), self._GetTag( c, new_tag_id ) ) for ( old_tag_id, new_tag_id ) in deleted_tag_sibling_ids ]
+        
+        content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_DELETE ] = deleted_tag_siblings
+        
+        # tag parents
+        
+        tag_parent_ids = c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.CURRENT, begin, end ) ).fetchall()
+        
+        tag_parents = [ ( self._GetTag( c, old_tag_id ), self._GetTag( c, new_tag_id ) ) for ( old_tag_id, new_tag_id ) in tag_parent_ids ]
+        
+        content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_ADD ] = tag_parents
+        
+        #
+        
+        deleted_tag_parent_ids = c.execute( 'SELECT old_tag_id, new_tag_id FROM tag_parents WHERE service_id = ? AND status = ? AND timestamp BETWEEN ? AND ?;', ( service_id, HC.DELETED, begin, end ) ).fetchall()
+        
+        deleted_tag_parents = [ ( self._GetTag( c, old_tag_id ), self._GetTag( c, new_tag_id ) ) for ( old_tag_id, new_tag_id ) in deleted_tag_parent_ids ]
+        
+        content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_DELETE ] = deleted_tag_parents
+        
+        # finish off
+        
         hash_ids_to_hashes = self._GetHashIdsToHashes( c, hash_ids )
         
-        news = c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
+        news_rows = c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
         
-        return HC.HydrusUpdateTagRepository( mappings, deleted_mappings, hash_ids_to_hashes, news, begin, end )
+        service_data[ HC.SERVICE_UPDATE_NEXT_BEGIN ] = ( begin, end )
+        service_data[ HC.SERVICE_UPDATE_NEWS ] = news_rows
+        
+        return HC.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
         
     
     def _GenerateTagIdsEfficiently( self, c, tags ):
+        
+        if type( tags ) != list: tags = list( tags )
         
         tags_not_in_db = set( tags )
         
@@ -527,28 +733,16 @@ class TagDB():
         if len( tags_not_in_db ) > 0: c.executemany( 'INSERT INTO tags ( tag ) VALUES( ? );', [ ( tag, ) for tag in tags_not_in_db ] )
         
     
-    def _GetMappingPetition( self, c, service_id ):
+    def _GetNumTagPetitions( self, c, service_id ):
         
-        result = c.execute( 'SELECT DISTINCT account_id, reason_id, tag_id FROM mapping_petitions WHERE service_id = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, ) ).fetchone()
+        num_mapping_petitions = c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()[0]
         
-        if result is None: raise HC.NotFoundException( 'No petitions!' )
+        num_tag_sibling_petitions = c.execute( 'SELECT COUNT( * ) FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()[0]
         
-        ( account_id, reason_id, tag_id ) = result
+        num_tag_parent_petitions = c.execute( 'SELECT COUNT( * ) FROM tag_parents WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()[0]
         
-        petitioner_account_identifier = HC.AccountIdentifier( account_id = account_id )
+        return num_mapping_petitions + num_tag_sibling_petitions + num_tag_parent_petitions
         
-        reason = self._GetReason( c, reason_id )
-        
-        tag = self._GetTag( c, tag_id )
-        
-        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND reason_id = ? AND tag_id = ?;', ( service_id, account_id, reason_id, tag_id ) ) ]
-        
-        hashes = self._GetHashes( c, hash_ids )
-        
-        return HC.ServerMappingPetition( petitioner_account_identifier, reason, tag, hashes )
-        
-    
-    def _GetNumMappingPetitions( self, c, service_id ): return c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id, tag_id FROM mapping_petitions WHERE service_id = ? );', ( service_id, ) ).fetchone()[0]
     
     def _GetTag( self, c, tag_id ):
         
@@ -565,7 +759,7 @@ class TagDB():
         
         tag = HC.CleanTag( tag )
         
-        if tag == '': raise ForbiddenException( 'Tag of zero length!' )
+        if tag == '': raise HC.ForbiddenException( 'Tag of zero length!' )
         
         result = c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
         
@@ -585,9 +779,96 @@ class TagDB():
             
         
     
+    def _GetTagPetition( self, c, service_id ):
+        
+        petition_types = [ HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ]
+        
+        random.shuffle( petition_types )
+        
+        for petition_type in petition_types:
+            
+            if petition_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                
+                result = c.execute( 'SELECT DISTINCT account_id, tag_id, reason_id, status FROM mapping_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PETITIONED ) ).fetchone()
+                
+                if result is None: continue
+                
+                ( account_id, tag_id, reason_id, status ) = result
+                
+                action = HC.CONTENT_UPDATE_PETITION
+                
+                tag = self._GetTag( c, tag_id )
+                
+                hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND reason_id = ? AND status = ?;', ( service_id, account_id, tag_id, reason_id, HC.PETITIONED ) ) ]
+                
+                hashes = self._GetHashes( c, hash_ids )
+                
+                petition_data = ( tag, hashes )
+                
+            elif petition_type in ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ):
+                
+                if petition_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS: result = c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.DELETED_PENDING, HC.PETITIONED ) ).fetchone()
+                elif petition_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS: result = c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_parents WHERE service_id = ? AND status IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.DELETED_PENDING, HC.PETITIONED ) ).fetchone()
+                
+                if result is None: continue
+                
+                ( account_id, old_tag_id, new_tag_id, reason_id, status ) = result
+                
+                old_tag = self._GetTag( c, old_tag_id )
+                
+                new_tag = self._GetTag( c, new_tag_id )
+                
+                petition_data = ( old_tag, new_tag )
+                
+            
+            if status in ( HC.DELETED_PENDING, HC.PENDING ): action = HC.CONTENT_UPDATE_PENDING
+            elif status == HC.PETITIONED: action = HC.CONTENT_UPDATE_PETITION
+            
+            petitioner_account_identifier = HC.AccountIdentifier( account_id = account_id )
+            
+            reason = self._GetReason( c, reason_id )
+            
+            return HC.ServerToClientPetition( petition_type, action, petitioner_account_identifier, petition_data, reason )
+            
+        
+        raise HC.NotFoundException( 'No petitions!' )
+        
+    
     def _RewardMappingPetitioners( self, c, service_id, tag_id, hash_ids, multiplier ):
         
-        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in c.execute( 'SELECT account_id, COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' GROUP BY account_id;', ( service_id, tag_id ) ) ]
+        scores = [ ( account_id, count * multiplier ) for ( account_id, count ) in c.execute( 'SELECT account_id, COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ? GROUP BY account_id;', ( service_id, tag_id, HC.PETITIONED ) ) ]
+        
+        self._RewardAccounts( c, service_id, HC.SCORE_PETITION, scores )
+        
+    
+    def _RewardTagParentPetitioners( self, c, service_id, old_tag_id, new_tag_id, multiplier ):
+        
+        hash_ids_with_old_tag = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ?;', ( service_id, old_tag_id ) ) }
+        hash_ids_with_new_tag = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ?;', ( service_id, new_tag_id ) ) }
+        
+        score = len( hash_ids_with_old_tag.intersection( hash_ids_with_new_tag ) )
+        
+        weighted_score = score * multiplier
+        
+        account_ids = [ account_id for ( account_id, ) in c.execute( 'SELECT account_id FROM tag_parents WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status IN ( ?, ? );', ( service_id, old_tag_id, new_tag_id, HC.PENDING, HC.PETITIONED ) ) ]
+        
+        scores = [ ( account_id, weighted_score ) for account_id in account_ids ]
+        
+        self._RewardAccounts( c, service_id, HC.SCORE_PETITION, scores )
+        
+    
+    def _RewardTagSiblingPetitioners( self, c, service_id, old_tag_id, new_tag_id, multiplier ):
+        
+        hash_ids_with_old_tag = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ?;', ( service_id, old_tag_id ) ) }
+        hash_ids_with_new_tag = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND tag_id = ?;', ( service_id, new_tag_id ) ) }
+        
+        score = len( hash_ids_with_old_tag.intersection( hash_ids_with_new_tag ) )
+        
+        weighted_score = score * multiplier
+        
+        account_ids = [ account_id for ( account_id, ) in c.execute( 'SELECT account_id FROM tag_siblings WHERE service_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status IN ( ?, ? );', ( service_id, old_tag_id, new_tag_id, HC.PENDING, HC.PETITIONED ) ) ]
+        
+        scores = [ ( account_id, weighted_score ) for account_id in account_ids ]
         
         self._RewardAccounts( c, service_id, HC.SCORE_PETITION, scores )
         
@@ -610,7 +891,7 @@ class RatingDB():
         
         news = c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
         
-        return HC.HydrusUpdateRatingsRepository( ratings, news, begin, end )
+        return HC.UpdateServerToClientRatings( ratings, news, begin, end )
         
     
     def _UpdateRatings( self, c, service_id, account_id, ratings ):
@@ -683,21 +964,25 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         c.executemany( 'INSERT OR IGNORE INTO bans ( service_id, account_id, admin_account_id, reason_id, created, expires ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, subject_account_id, admin_account_id, reason_id, now, expires ) for subject_account_id in subject_account_ids ] )
         
-        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) )
+        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
-        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) )
+        c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
+        
+        c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) )
+        
+        c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) )
         
         if action == HC.SUPERBAN:
             
             hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) ) ]
             
-            if len( hash_ids ) > 0: self._DeleteLocalFiles( c, admin_account_id, reason_id, hash_ids )
+            if len( hash_ids ) > 0: self._DeleteLocalFiles( c, admin_account_id, hash_ids, reason_id )
             
             mappings_dict = HC.BuildKeyToListDict( c.execute( 'SELECT tag_id, hash_id FROM mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_keys_ids + ';', ( service_id, ) ) )
             
             if len( mappings_dict ) > 0:
                 
-                for ( tag_id, hash_ids ) in mappings_dict.items(): self._DeleteMappings( c, admin_account_id, reason_id, tag_id, hash_ids )
+                for ( tag_id, hash_ids ) in mappings_dict.items(): self._DeleteMappings( c, admin_account_id, tag_id, hash_ids, reason_id )
                 
             
         
@@ -777,7 +1062,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY: clean_update = self._GenerateFileUpdate( c, service_id, begin, end )
-        elif service_type == HC.TAG_REPOSITORY: clean_update = self._GenerateMappingUpdate( c, service_id, begin, end )
+        elif service_type == HC.TAG_REPOSITORY: clean_update = self._GenerateTagUpdate( c, service_id, begin, end )
         
         ( update_key, ) = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND begin = ?;', ( service_id, begin ) ).fetchone()
         
@@ -802,7 +1087,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY: update = self._GenerateFileUpdate( c, service_id, begin, end )
-        elif service_type == HC.TAG_REPOSITORY: update = self._GenerateMappingUpdate( c, service_id, begin, end )
+        elif service_type == HC.TAG_REPOSITORY: update = self._GenerateTagUpdate( c, service_id, begin, end )
         
         update_key_bytes = os.urandom( 32 )
         
@@ -931,7 +1216,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 result = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, file_map USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
                 
-                if result is None: result = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, deleted_files USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+                if result is None: result = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, file_petitions USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND hash_id = ? AND status = ?;', ( service_id, hash_id, HC.DELETED ) ).fetchone()
                 
                 ( account_id, account_type, created, expires, used_bytes, used_requests ) = result
                 
@@ -952,7 +1237,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetAccountFileInfo( self, c, service_id, account_id ):
         
-        ( num_deleted_files, ) = c.execute( 'SELECT COUNT( * ) FROM deleted_files WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
+        ( num_deleted_files, ) = c.execute( 'SELECT COUNT( * ) FROM file_petitions WHERE service_id = ? AND account_id = ? AND status = ?;', ( service_id, account_id, HC.DELETED ) ).fetchone()
         
         ( num_files, num_files_bytes ) = c.execute( 'SELECT COUNT( * ), SUM( size ) FROM file_map, files_info USING ( hash_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
         
@@ -963,7 +1248,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         if result is None: petition_score = 0
         else: ( petition_score, ) = result
         
-        ( num_petitions, ) = c.execute( 'SELECT COUNT( DISTINCT reason_id ) FROM file_petitions WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
+        ( num_petitions, ) = c.execute( 'SELECT COUNT( DISTINCT reason_id ) FROM file_petitions WHERE service_id = ? AND account_id = ? AND status = ?;', ( service_id, account_id, HC.PETITIONED ) ).fetchone()
         
         account_info = {}
         
@@ -1013,7 +1298,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetAccountMappingInfo( self, c, service_id, account_id ):
         
-        ( num_deleted_mappings, ) = c.execute( 'SELECT COUNT( * ) FROM deleted_mappings WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
+        ( num_deleted_mappings, ) = c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ?;', ( service_id, account_id, HC.DELETED ) ).fetchone()
         
         ( num_mappings, ) = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
         
@@ -1023,7 +1308,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         else: ( petition_score, ) = result
         
         # crazy query here because two distinct columns
-        ( num_petitions, ) = c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? );', ( service_id, account_id ) ).fetchone()
+        ( num_petitions, ) = c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ? );', ( service_id, account_id, HC.PETITIONED ) ).fetchone()
         
         account_info = {}
         
@@ -1274,19 +1559,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                     begin = 0
                     end = int( time.time() )
                     
-                    if service_type == HC.FILE_REPOSITORY: update = self._GenerateFileUpdate( c, service_id, begin, end )
-                    elif service_type == HC.TAG_REPOSITORY: update = self._GenerateMappingUpdate( c, service_id, begin, end )
-                    elif service_type in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ): update = self._GenerateRatingUpdate( c, service_id, begin, end )
-                    
-                    update_key_bytes = os.urandom( 32 )
-                    
-                    update_key = update_key_bytes.encode( 'hex' )
-                    
-                    path = GetPath( 'update', update_key_bytes )
-                    
-                    with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update )  )
-                    
-                    c.execute( 'INSERT INTO update_cache ( service_id, begin, end, update_key ) VALUES ( ?, ?, ?, ? );', ( service_id, begin, end, update_key ) )
+                    self._CreateUpdate( c, service_id, begin, end )
                     
                 
             elif action == HC.EDIT:
@@ -1480,10 +1753,21 @@ class DB( ServiceDB ):
         
         if not os.path.exists( self._db_path ):
             
-            if not os.path.exists( HC.SERVER_FILES_DIR ): os.mkdir( HC.SERVER_FILES_DIR )
-            if not os.path.exists( HC.SERVER_THUMBNAILS_DIR ): os.mkdir( HC.SERVER_THUMBNAILS_DIR )
-            if not os.path.exists( HC.SERVER_MESSAGES_DIR ): os.mkdir( HC.SERVER_MESSAGES_DIR )
-            if not os.path.exists( HC.SERVER_UPDATES_DIR ): os.mkdir( HC.SERVER_UPDATES_DIR )
+            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_UPDATES_DIR, HC.SERVER_MESSAGES_DIR )
+            
+            hex_chars = '0123456789abcdef'
+            
+            for dir in dirs:
+                
+                if not os.path.exists( dir ): os.mkdir( dir )
+                
+                for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                    
+                    new_dir = dir + os.path.sep + one + two
+                    
+                    if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                    
+                
             
             ( db, c ) = self._GetDBCursor()
             
@@ -1514,32 +1798,28 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE contacts ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, contact_key BLOB, public_key TEXT, PRIMARY KEY( service_id, account_id ) );' )
             c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
             
-            c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, reason_id INTEGER, account_id INTEGER, admin_account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-            c.execute( 'CREATE INDEX deleted_files_service_id_account_id_index ON deleted_files ( service_id, account_id );' )
-            c.execute( 'CREATE INDEX deleted_files_service_id_timestamp_index ON deleted_files ( service_id, timestamp );' )
-            
-            c.execute( 'CREATE TABLE deleted_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, account_id INTEGER, admin_account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
-            c.execute( 'CREATE INDEX deleted_mappings_service_id_account_id_index ON deleted_mappings ( service_id, account_id );' )
-            c.execute( 'CREATE INDEX deleted_mappings_service_id_timestamp_index ON deleted_mappings ( service_id, timestamp );' )
-            
             c.execute( 'CREATE TABLE files_info ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER );' )
             
             c.execute( 'CREATE TABLE file_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, hash_id, account_id ) );' )
             c.execute( 'CREATE INDEX file_map_service_id_account_id_index ON file_map ( service_id, account_id );' )
             c.execute( 'CREATE INDEX file_map_service_id_timestamp_index ON file_map ( service_id, timestamp );' )
             
-            c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, account_id, hash_id ) );' )
+            c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, hash_id, status ) );' )
             c.execute( 'CREATE INDEX file_petitions_service_id_account_id_reason_id_index ON file_petitions ( service_id, account_id, reason_id );' )
             c.execute( 'CREATE INDEX file_petitions_service_id_hash_id_index ON file_petitions ( service_id, hash_id );' )
+            c.execute( 'CREATE INDEX file_petitions_service_id_status_index ON file_petitions ( service_id, status );' )
+            c.execute( 'CREATE INDEX file_petitions_service_id_timestamp_index ON file_petitions ( service_id, timestamp );' )
             
             c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
             c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
             
             c.execute( 'CREATE TABLE ip_addresses ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, ip TEXT, timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
             
-            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id ) );' )
+            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
             c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
             c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+            c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+            c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
             
             c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY( service_id, tag_id, hash_id ) );' )
             c.execute( 'CREATE INDEX mappings_account_id_index ON mappings ( account_id );' )
@@ -1564,24 +1844,18 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE sessions ( session_key BLOB_BYTES, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, expiry INTEGER );' )
             
+            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, new_tag_id, status ) );' )
+            c.execute( 'CREATE INDEX tag_parents_service_id_old_tag_id_index ON tag_parents ( service_id, old_tag_id, new_tag_id );' )
+            c.execute( 'CREATE INDEX tag_parents_service_id_timestamp_index ON tag_parents ( service_id, timestamp );' )
+            c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
+            
+            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, status ) );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_old_tag_id_index ON tag_siblings ( service_id, old_tag_id );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
+            
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
-            
-            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
-            c.execute( 'CREATE INDEX tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
-            c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
-            
-            c.execute( 'CREATE TABLE deleted_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, account_id INTEGER, admin_account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
-            c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_account_id_index ON deleted_tag_siblings ( service_id, account_id );' )
-            c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_timestamp_index ON deleted_tag_siblings ( service_id, timestamp );' )
-            
-            c.execute( 'CREATE TABLE pending_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id, account_id ) );' )
-            c.execute( 'CREATE INDEX pending_tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
-            c.execute( 'CREATE INDEX pending_tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
-            
-            c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, reason_id ) );' )
-            c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_account_id_reason_id_tag_id_index ON tag_sibling_petitions ( service_id, account_id, reason_id );' )
-            c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_tag_id_hash_id_index ON tag_sibling_petitions ( service_id, old_tag_id );' )
             
             c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, update_key TEXT, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
             c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
@@ -1619,6 +1893,8 @@ class DB( ServiceDB ):
         
         c.execute( 'VACUUM' )
         
+        c.execute( 'ANALYZE' )
+        
         c.execute( 'BEGIN IMMEDIATE' )
         
         shutil.copy( self._db_path, self._db_path + '.backup' )
@@ -1646,86 +1922,6 @@ class DB( ServiceDB ):
             try:
                 
                 self._UpdateDBOld( c, version )
-                
-                if version < 37:
-                    
-                    os.mkdir( HC.SERVER_MESSAGES_DIR )
-                    
-                    c.execute( 'CREATE TABLE contacts ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, contact_key BLOB, public_key TEXT, PRIMARY KEY( service_id, account_id ) );' )
-                    c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
-                    
-                    c.execute( 'CREATE TABLE messages ( message_key BLOB PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
-                    c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
-                    c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
-                    
-                
-                if version < 38:
-                    
-                    c.execute( 'COMMIT' )
-                    c.execute( 'PRAGMA journal_mode=WAL;' ) # possibly didn't work last time, cause of sqlite dll issue
-                    c.execute( 'BEGIN IMMEDIATE' )
-                    
-                    c.execute( 'DROP TABLE messages;' ) # blob instead of blob_bytes!
-                    
-                    c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
-                    c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
-                    c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
-                    
-                    c.execute( 'CREATE TABLE message_statuses ( status_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, status BLOB_BYTES, timestamp INTEGER );' )
-                    c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
-                    c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
-                    
-                
-                if version < 40:
-                    
-                    try: c.execute( 'SELECT 1 FROM message_statuses;' ).fetchone() # didn't update dbinit on 38
-                    except:
-                        
-                        c.execute( 'DROP TABLE messages;' ) # blob instead of blob_bytes!
-                        
-                        c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
-                        c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
-                        c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
-                        
-                        c.execute( 'CREATE TABLE message_statuses ( status_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, status BLOB_BYTES, timestamp INTEGER );' )
-                        c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
-                        c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
-                        
-                    
-                
-                if version < 50:
-                    
-                    c.execute( 'CREATE TABLE ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, rating REAL, PRIMARY KEY( service_id, account_id, hash_id ) );' )
-                    c.execute( 'CREATE INDEX ratings_hash_id ON ratings ( hash_id );' )
-                    
-                    c.execute( 'CREATE TABLE ratings_aggregates ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, score INTEGER, count INTEGER, new_timestamp INTEGER, current_timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-                    c.execute( 'CREATE INDEX ratings_aggregates_new_timestamp ON ratings_aggregates ( new_timestamp );' )
-                    c.execute( 'CREATE INDEX ratings_aggregates_current_timestamp ON ratings_aggregates ( current_timestamp );' )
-                    
-                
-                if version < 51:
-                    
-                    if not os.path.exists( HC.SERVER_UPDATES_DIR ): os.mkdir( HC.SERVER_UPDATES_DIR )
-                    
-                    all_update_data = c.execute( 'SELECT * FROM update_cache;' ).fetchall()
-                    
-                    c.execute( 'DROP TABLE update_cache;' )
-                    
-                    c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, update_key TEXT, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
-                    c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
-                    c.execute( 'CREATE INDEX update_cache_service_id_dirty_index ON update_cache ( service_id, dirty );' )
-                    
-                    for ( service_id, begin, end, update, dirty ) in all_update_data:
-                        
-                        update_key_bytes = os.urandom( 32 )
-                        
-                        update_key = update_key_bytes.encode( 'hex' )
-                        
-                        with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( update )
-                        
-                        c.execute( 'INSERT INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, dirty ) )
-                        
-                    
                 
                 if version < 56:
                     
@@ -1785,23 +1981,85 @@ class DB( ServiceDB ):
                     
                     try: c.execute( 'CREATE INDEX mappings_timestamp_index ON mappings ( timestamp );' )
                     except: pass
-                    '''
-                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
-                    c.execute( 'CREATE INDEX tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
+                    
+                
+                if version < 72:
+                    
+                    c.execute( 'ANALYZE' )
+                    
+                    #
+                    
+                    now = int( time.time() )
+                    
+                    #
+                    
+                    petitioned_inserts = [ ( service_id, account_id, hash_id, reason_id, now, HC.PETITIONED ) for ( service_id, account_id, hash_id, reason_id ) in c.execute( 'SELECT service_id, account_id, hash_id, reason_id FROM file_petitions;' ) ]
+                    deleted_inserts = [ ( service_id, account_id, hash_id, reason_id, timestamp, HC.DELETED ) for ( service_id, account_id, hash_id, reason_id, timestamp ) in c.execute( 'SELECT service_id, admin_account_id, hash_id, reason_id, timestamp FROM deleted_files;' ) ]
+                    
+                    c.execute( 'DROP TABLE file_petitions;' )
+                    c.execute( 'DROP TABLE deleted_files;' )
+                    
+                    c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, hash_id, status ) );' )
+                    c.execute( 'CREATE INDEX file_petitions_service_id_account_id_reason_id_index ON file_petitions ( service_id, account_id, reason_id );' )
+                    c.execute( 'CREATE INDEX file_petitions_service_id_hash_id_index ON file_petitions ( service_id, hash_id );' )
+                    c.execute( 'CREATE INDEX file_petitions_service_id_status_index ON file_petitions ( service_id, status );' )
+                    c.execute( 'CREATE INDEX file_petitions_service_id_timestamp_index ON file_petitions ( service_id, timestamp );' )
+                    
+                    c.executemany( 'INSERT INTO file_petitions VALUES ( ?, ?, ?, ?, ?, ? );', petitioned_inserts )
+                    c.executemany( 'INSERT INTO file_petitions VALUES ( ?, ?, ?, ?, ?, ? );', deleted_inserts )
+                    
+                    #
+                    
+                    petitioned_inserts = [ ( service_id, account_id, tag_id, hash_id, reason_id, now, HC.PETITIONED ) for ( service_id, account_id, tag_id, hash_id, reason_id ) in c.execute( 'SELECT service_id, account_id, tag_id, hash_id, reason_id FROM mapping_petitions;' ) ]
+                    deleted_inserts = [ ( service_id, account_id, tag_id, hash_id, reason_id, timestamp, HC.DELETED ) for ( service_id, account_id, tag_id, hash_id, reason_id, timestamp ) in c.execute( 'SELECT service_id, admin_account_id, tag_id, hash_id, reason_id, timestamp FROM deleted_mappings;' ) ]
+                    
+                    c.execute( 'DROP TABLE mapping_petitions;' )
+                    c.execute( 'DROP TABLE deleted_mappings;' )
+                    
+                    c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY( service_id, account_id, tag_id, hash_id, status ) );' )
+                    c.execute( 'CREATE INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
+                    c.execute( 'CREATE INDEX mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
+                    c.execute( 'CREATE INDEX mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
+                    c.execute( 'CREATE INDEX mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
+                    
+                    c.executemany( 'INSERT INTO mapping_petitions VALUES ( ?, ?, ?, ?, ?, ?, ? );', petitioned_inserts )
+                    c.executemany( 'INSERT INTO mapping_petitions VALUES ( ?, ?, ?, ?, ?, ?, ? );', deleted_inserts )
+                    
+                    #
+                    
+                    try:
+                        
+                        c.execute( 'DROP TABLE tag_siblings;' )
+                        c.execute( 'DROP TABLE deleted_tag_siblings;' )
+                        c.execute( 'DROP TABLE pending_tag_siblings;' )
+                        c.execute( 'DROP TABLE tag_sibling_petitions;' )
+                        
+                    except: pass
+                    
+                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, status ) );' )
+                    c.execute( 'CREATE INDEX tag_siblings_service_id_old_tag_id_index ON tag_siblings ( service_id, old_tag_id );' )
                     c.execute( 'CREATE INDEX tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+                    c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
                     
-                    c.execute( 'CREATE TABLE pending_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id, account_id ) );' )
-                    c.execute( 'CREATE INDEX pending_tag_siblings_service_id_account_id_index ON tag_siblings ( service_id, account_id );' )
-                    c.execute( 'CREATE INDEX pending_tag_siblings_service_id_timestamp_index ON tag_siblings ( service_id, timestamp );' )
+                    #
                     
-                    c.execute( 'CREATE TABLE deleted_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, account_id INTEGER, admin_account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, old_tag_id ) );' )
-                    c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_account_id_index ON deleted_tag_siblings ( service_id, account_id );' )
-                    c.execute( 'CREATE INDEX deleted_tag_siblings_service_id_timestamp_index ON deleted_tag_siblings ( service_id, timestamp );' )
+                    c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, timestamp INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, new_tag_id, status ) );' )
+                    c.execute( 'CREATE INDEX tag_parents_service_id_old_tag_id_index ON tag_parents ( service_id, old_tag_id, new_tag_id );' )
+                    c.execute( 'CREATE INDEX tag_parents_service_id_timestamp_index ON tag_parents ( service_id, timestamp );' )
+                    c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
                     
-                    c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, old_tag_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, account_id, old_tag_id, reason_id ) );' )
-                    c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_account_id_reason_id_tag_id_index ON tag_sibling_petitions ( service_id, account_id, reason_id );' )
-                    c.execute( 'CREATE INDEX tag_sibling_petitions_service_id_tag_id_hash_id_index ON tag_sibling_petitions ( service_id, old_tag_id );' )
-                    '''
+                    # update objects have changed
+                    
+                    results = c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE begin = 0;' ).fetchall()
+                    
+                    c.execute( 'DELETE FROM update_cache;' )
+                    
+                    update_paths = [ path for path in IterateAllPaths( 'update' ) ]
+                    
+                    for path in update_paths: os.remove( path )
+                    
+                    for ( service_id, begin, end ) in results: self._CreateUpdate( c, service_id, begin, end )
+                    
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
                 
@@ -1906,6 +2164,86 @@ class DB( ServiceDB ):
             c.execute( 'BEGIN IMMEDIATE' )
             
             os.remove( thumbnails_db_path )
+            
+        
+        if version < 37:
+            
+            os.mkdir( HC.SERVER_MESSAGES_DIR )
+            
+            c.execute( 'CREATE TABLE contacts ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, contact_key BLOB, public_key TEXT, PRIMARY KEY( service_id, account_id ) );' )
+            c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
+            
+            c.execute( 'CREATE TABLE messages ( message_key BLOB PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
+            c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
+            
+        
+        if version < 38:
+            
+            c.execute( 'COMMIT' )
+            c.execute( 'PRAGMA journal_mode=WAL;' ) # possibly didn't work last time, cause of sqlite dll issue
+            c.execute( 'BEGIN IMMEDIATE' )
+            
+            c.execute( 'DROP TABLE messages;' ) # blob instead of blob_bytes!
+            
+            c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
+            c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
+            
+            c.execute( 'CREATE TABLE message_statuses ( status_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, status BLOB_BYTES, timestamp INTEGER );' )
+            c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
+            
+        
+        if version < 40:
+            
+            try: c.execute( 'SELECT 1 FROM message_statuses;' ).fetchone() # didn't update dbinit on 38
+            except:
+                
+                c.execute( 'DROP TABLE messages;' ) # blob instead of blob_bytes!
+                
+                c.execute( 'CREATE TABLE messages ( message_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, timestamp INTEGER );' )
+                c.execute( 'CREATE INDEX messages_service_id_account_id_index ON messages ( service_id, account_id );' )
+                c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
+                
+                c.execute( 'CREATE TABLE message_statuses ( status_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, status BLOB_BYTES, timestamp INTEGER );' )
+                c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
+                c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
+                
+            
+        
+        if version < 50:
+            
+            c.execute( 'CREATE TABLE ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, hash_id INTEGER, rating REAL, PRIMARY KEY( service_id, account_id, hash_id ) );' )
+            c.execute( 'CREATE INDEX ratings_hash_id ON ratings ( hash_id );' )
+            
+            c.execute( 'CREATE TABLE ratings_aggregates ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, score INTEGER, count INTEGER, new_timestamp INTEGER, current_timestamp INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+            c.execute( 'CREATE INDEX ratings_aggregates_new_timestamp ON ratings_aggregates ( new_timestamp );' )
+            c.execute( 'CREATE INDEX ratings_aggregates_current_timestamp ON ratings_aggregates ( current_timestamp );' )
+            
+        
+        if version < 51:
+            
+            if not os.path.exists( HC.SERVER_UPDATES_DIR ): os.mkdir( HC.SERVER_UPDATES_DIR )
+            
+            all_update_data = c.execute( 'SELECT * FROM update_cache;' ).fetchall()
+            
+            c.execute( 'DROP TABLE update_cache;' )
+            
+            c.execute( 'CREATE TABLE update_cache ( service_id INTEGER REFERENCES services ON DELETE CASCADE, begin INTEGER, end INTEGER, update_key TEXT, dirty INTEGER_BOOLEAN, PRIMARY KEY( service_id, begin ) );' )
+            c.execute( 'CREATE UNIQUE INDEX update_cache_service_id_end_index ON update_cache ( service_id, end );' )
+            c.execute( 'CREATE INDEX update_cache_service_id_dirty_index ON update_cache ( service_id, dirty );' )
+            
+            for ( service_id, begin, end, update, dirty ) in all_update_data:
+                
+                update_key_bytes = os.urandom( 32 )
+                
+                update_key = update_key_bytes.encode( 'hex' )
+                
+                with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( update )
+                
+                c.execute( 'INSERT INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, dirty ) )
+                
             
         
     
@@ -2301,7 +2639,7 @@ class DB( ServiceDB ):
         elif request == 'num_petitions':
             
             if service_type == HC.FILE_REPOSITORY: num_petitions = self._GetNumFilePetitions( c, service_id )
-            elif service_type == HC.TAG_REPOSITORY: num_petitions = self._GetNumMappingPetitions( c, service_id )
+            elif service_type == HC.TAG_REPOSITORY: num_petitions = self._GetNumTagPetitions( c, service_id )
             
             response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( num_petitions ) )
             
@@ -2314,7 +2652,7 @@ class DB( ServiceDB ):
         elif request == 'petition':
             
             if service_type == HC.FILE_REPOSITORY: petition = self._GetFilePetition( c, service_id )
-            if service_type == HC.TAG_REPOSITORY: petition = self._GetMappingPetition( c, service_id )
+            if service_type == HC.TAG_REPOSITORY: petition = self._GetTagPetition( c, service_id )
             
             response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( petition ) )
             
@@ -2432,29 +2770,6 @@ class DB( ServiceDB ):
             
             self._AddFile( c, service_id, account_id, request_args )
             
-        elif request == 'mappings':
-            
-            mappings = request_args[ 'mappings' ]
-            
-            tags = mappings.GetTags()
-            
-            hashes = mappings.GetHashes()
-            
-            self._GenerateTagIdsEfficiently( c, tags )
-            
-            self._GenerateHashIdsEfficiently( c, hashes )
-            
-            overwrite_deleted = account.HasPermission( HC.RESOLVE_PETITIONS )
-            
-            for ( tag, hashes ) in mappings:
-                
-                tag_id = self._GetTagId( c, tag )
-                
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                self._AddMappings( c, service_id, account_id, tag_id, hash_ids, overwrite_deleted )
-                
-            
         elif request == 'message':
             
             contact_key = request_args[ 'contact_key' ]
@@ -2481,71 +2796,200 @@ class DB( ServiceDB ):
             
             self._SetOptions( c, service_id, service_identifier, options )
             
-        elif request == 'petition_denial':
-            
-            petition_denial = request_args[ 'petition_denial' ]
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                hashes = petition_denial.GetInfo()
-                
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                self._DenyFilePetition( c, service_id, hash_ids )
-                
-            elif service_type == HC.TAG_REPOSITORY:
-                
-                ( tag, hashes ) = petition_denial.GetInfo()
-                
-                tag_id = self._GetTagId( c, tag )
-                
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                self._DenyMappingPetition( c, service_id, tag_id, hash_ids )
-                
-            
-        elif request == 'petitions':
-            
-            petitions = request_args[ 'petitions' ]
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveFilePetition
-                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddFilePetition
-                
-                for ( reason, hashes ) in petitions:
-                    
-                    reason_id = self._GetReasonId( c, reason )
-                    
-                    hash_ids = self._GetHashIds( c, hashes )
-                    
-                    petition_method( c, service_id, account_id, reason_id, hash_ids )
-                    
-                
-            elif service_type == HC.TAG_REPOSITORY:
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveMappingPetition
-                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddMappingPetition
-                
-                for ( reason, tag, hashes ) in petitions:
-                    
-                    reason_id = self._GetReasonId( c, reason )
-                    
-                    tag_id = self._GetTagId( c, tag )
-                    
-                    hash_ids = self._GetHashIds( c, hashes )
-                    
-                    petition_method( c, service_id, account_id, reason_id, tag_id, hash_ids )
-                    
-                
-            
         elif request == 'services_modification':
             
             edit_log = request_args[ 'edit_log' ]
             
             self._ModifyServices( c, account_id, edit_log )
             
-        
+        elif request == 'update':
+            
+            update = request_args[ 'update' ]
+            
+            if service_type == HC.FILE_REPOSITORY:
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveFilePetition
+                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddFilePetition
+                    
+                    for ( hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION ):
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        reason_id = self._GetReasonId( c, reason )
+                        
+                        petition_method( c, service_id, account_id, hash_ids, reason_id )
+                        
+                    
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    
+                    for hashes in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DENY_PETITION ):
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        self._DenyFilePetition( c, service_id, hash_ids )
+                        
+                    
+                
+            elif service_type == HC.TAG_REPOSITORY:
+                
+                tags = update.GetTags()
+                
+                hashes = update.GetHashes()
+                
+                self._GenerateTagIdsEfficiently( c, tags )
+                
+                self._GenerateHashIdsEfficiently( c, hashes )
+                
+                #
+                
+                overwrite_deleted = account.HasPermission( HC.RESOLVE_PETITIONS )
+                
+                for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING ):
+                    
+                    tag_id = self._GetTagId( c, tag )
+                    
+                    hash_ids = self._GetHashIds( c, hashes )
+                    
+                    self._AddMappings( c, service_id, account_id, tag_id, hash_ids, overwrite_deleted )
+                    
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveMappingPetition
+                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddMappingPetition
+                    
+                    for ( tag, hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
+                        
+                        tag_id = self._GetTagId( c, tag )
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        reason_id = self._GetReasonId( c, reason )
+                        
+                        petition_method( c, service_id, account_id, tag_id, hash_ids, reason_id )
+                        
+                    
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    
+                    for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                        
+                        tag_id = self._GetTagId( c, tag )
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        self._DenyMappingPetition( c, service_id, tag_id, hash_ids )
+                        
+                    
+                
+                #
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
+                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
+                    
+                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PENDING ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        reason_id = self._GetReasonId( c, reason )
+                        
+                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PENDING )
+                        
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
+                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
+                    
+                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        reason_id = self._GetReasonId( c, reason )
+                        
+                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PETITIONED )
+                        
+                    
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    
+                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        self._DenyTagSiblingPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
+                        
+                    
+                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        self._DenyTagSiblingPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PETITION )
+                        
+                    
+                
+                #
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
+                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
+                    
+                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PENDING ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        reason_id = self._GetReasonId( c, reason )
+                        
+                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PENDING )
+                        
+                    
+                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
+                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
+                    
+                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        reason_id = self._GetReasonId( c, reason )
+                        
+                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PETITIONED )
+                        
+                    
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                    
+                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        self._DenyTagParentPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
+                        
+                    
+                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                        
+                        old_tag_id = self._GetTagId( c, old_tag )
+                        
+                        new_tag_id = self._GetTagId( c, new_tag )
+                        
+                        self._DenyTagParentPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PETITION )
+                        
+                    
+                
+            
     
     def _MainLoop_Read( self, c, action ):
         

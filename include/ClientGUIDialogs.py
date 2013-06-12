@@ -5,6 +5,7 @@ import ClientConstants as CC
 import ClientConstantsMessages
 import ClientGUICommon
 import collections
+import itertools
 import os
 import random
 import re
@@ -5403,7 +5404,9 @@ class DialogManageRatings( Dialog ):
             self.SetInitialSize( ( x + 200, y ) )
             
         
-        self._hashes = HC.IntelligentMassUnion( ( m.GetHashes() for m in media ) )
+        self._hashes = set()
+        
+        for m in media: self._hashes.update( m.GetHashes() )
         
         Dialog.__init__( self, parent, 'manage ratings for ' + HC.ConvertIntToPrettyString( len( self._hashes ) ) + ' files' )
         
@@ -5436,21 +5439,19 @@ class DialogManageRatings( Dialog ):
         
         try:
             
-            content_updates = []
+            service_identfiers_to_content_updates = {}
             
             for panel in self._panels:
                 
                 if panel.HasChanges():
                     
-                    service_identifier = panel.GetServiceIdentifier()
+                    ( service_identifier, content_updates ) = panel.GetContentUpdates()
                     
-                    rating = panel.GetRating()
-                    
-                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_RATING, service_identifier, self._hashes, info = rating ) )
+                    service_identfiers_to_content_updates[ service_identifier ] = content_updates
                     
                 
             
-            if len( content_updates ) > 0: wx.GetApp().Write( 'content_updates', content_updates )
+            wx.GetApp().Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving ratings changes to DB raised this error: ' + unicode( e ) )
         
@@ -5696,13 +5697,13 @@ class DialogManageRatings( Dialog ):
             event.Skip()
             
         
-        def GetRating( self ):
+        def GetContentUpdates( self ):
             
             service_type = self._service_identifier.GetType()
             
             choice_text = self._choices.GetSelectedClientData()
             
-            if choice_text == 'remove rating': return None
+            if choice_text == 'remove rating': rating = None
             else:
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
@@ -5715,7 +5716,11 @@ class DialogManageRatings( Dialog ):
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: rating = float( self._slider.GetValue() - self._slider.GetMin() ) / float( self._slider.GetMax() - self._slider.GetMin() )
                 
             
-            return rating
+            hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
+            
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+            
+            return ( self._service_identifier, [ content_update ] )
             
         
         def HasChanges( self ):
@@ -7217,23 +7222,23 @@ class DialogManageTagParents( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            #services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
             
-            #for service in services:
-            #    
-            #    account = service.GetAccount()
-            #    
-            #    if account.HasPermission( HC.POST_DATA ):
-            #        
-            #        service_identifier = service.GetServiceIdentifier()
-            #        
-            #        page_info = ( self._Panel, ( self._tag_repositories, service_identifier, paths ), {} )
-            #        
-            #        name = service_identifier.GetName()
-            #        
-            #        self._tag_repositories.AddPage( page_info, name )
-            #        
-            #    
+            for service in services:
+                
+                account = service.GetAccount()
+                
+                if account.HasPermission( HC.POST_DATA ):
+                    
+                    service_identifier = service.GetServiceIdentifier()
+                    
+                    page_info = ( self._Panel, ( self._tag_repositories, service_identifier ), {} )
+                    
+                    name = service_identifier.GetName()
+                    
+                    self._tag_repositories.AddPage( page_info, name )
+                    
+                
             
             page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER )
             
@@ -7241,9 +7246,9 @@ class DialogManageTagParents( Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            #default_tag_repository = self._options[ 'default_tag_repository' ]
+            default_tag_repository = self._options[ 'default_tag_repository' ]
             
-            #self._tag_repositories.Select( default_tag_repository.GetName() )
+            self._tag_repositories.Select( default_tag_repository.GetName() )
             
             self._ok_button = wx.Button( self, label='ok' )
             self._ok_button.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -7268,7 +7273,7 @@ class DialogManageTagParents( Dialog ):
             
             self.SetSizer( vbox )
             
-            self.SetInitialSize( ( 450, 680 ) )
+            self.SetInitialSize( ( 550, 680 ) )
             
         
         Dialog.__init__( self, parent, 'tag parents' )
@@ -7320,13 +7325,18 @@ class DialogManageTagParents( Dialog ):
     
     def EventOK( self, event ):
         
-        edit_log = []
+        service_identifiers_to_content_updates = {}
         
         try:
             
-            for page in self._tag_repositories.GetNameToPageDict().values(): edit_log.append( page.GetChanges() )
+            for page in self._tag_repositories.GetNameToPageDict().values():
+                
+                ( service_identifier, content_updates ) = page.GetContentUpdates()
+                
+                service_identifiers_to_content_updates[ service_identifier ] = content_updates
+                
             
-            if len( edit_log ) > 0: wx.GetApp().Write( 'tag_parents', edit_log )
+            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving tag parent changes to DB raised this error: ' + unicode( e ) )
         
@@ -7346,9 +7356,15 @@ class DialogManageTagParents( Dialog ):
             
             def InitialiseControls():
                 
-                self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( 'child', 160 ), ( 'parent', -1 ) ] )
+                self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
+                self._tag_parents.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
                 
-                for ( child, parent ) in self._original_pairs: self._tag_parents.Append( ( child, parent ), ( child, parent ) )
+                for ( status, pairs ) in self._original_statuses_to_pairs.items():
+                    
+                    sign = HC.ConvertStatusToPrefix( status )
+                    
+                    for ( child, parent ) in pairs: self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
+                    
                 
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -7360,20 +7376,11 @@ class DialogManageTagParents( Dialog ):
                 self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetParent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 
                 self._add = wx.Button( self, label = 'add' )
-                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
                 self._add.Disable()
-                
-                self._remove = wx.Button( self, label = 'remove' )
-                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-                self._remove.Disable()
                 
             
             def InitialisePanel():
-                
-                button_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                button_box.AddF( self._add, FLAGS_MIXED )
-                button_box.AddF( self._remove, FLAGS_MIXED )
                 
                 text_box = wx.BoxSizer( wx.HORIZONTAL )
                 
@@ -7388,7 +7395,7 @@ class DialogManageTagParents( Dialog ):
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
                 vbox.AddF( self._tag_parents, FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( button_box, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( self._add, FLAGS_LONE_BUTTON )
                 vbox.AddF( text_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 vbox.AddF( input_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
@@ -7399,12 +7406,13 @@ class DialogManageTagParents( Dialog ):
             
             self._service_identifier = service_identifier
             
-            self._added = set()
-            self._removed = set()
+            self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_parents', service_identifier )
             
-            self._original_pairs = [ tuple( pair ) for pair in wx.GetApp().Read( 'tag_parents', service_identifier ) ]
+            self._current_statuses_to_pairs = collections.defaultdict( set )
             
-            self._current_pairs = set( self._original_pairs )
+            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
+            
+            self._pairs_to_reasons = {}
             
             self._current_parent = None
             self._current_child = None
@@ -7414,62 +7422,190 @@ class DialogManageTagParents( Dialog ):
             InitialisePanel()
             
         
-        def _SetButtonStatus( self ):
+        def _AddPair( self, child, parent ):
             
-            all_selected = self._tag_parents.GetAllSelected()
+            old_status = None
+            new_status = None
             
-            if len( all_selected ) == 0: self._remove.Disable()
-            else: self._remove.Enable()
+            pair = ( child, parent )
             
-            if self._current_parent is None or self._current_child is None: self._add.Disable()
-            else: self._add.Enable()
+            pair_string = child + '->' + parent
+            
+            if pair in self._current_statuses_to_pairs[ HC.CURRENT ]:
+                
+                message = pair_string + ' already exists.'
+                
+                with DialogYesNo( self, message, yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                    
+                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                            
+                            with wx.TextEntryDialog( self, message ) as dlg:
+                                
+                                if dlg.ShowModal() == wx.ID_OK:
+                                    
+                                    reason = dlg.GetValue()
+                                    
+                                    self._pairs_to_reasons[ pair ] = reason
+                                    
+                                else: return
+                                
+                            
+                        else: return
+                        
+                    
+                    old_status = HC.CURRENT
+                    new_status = HC.PETITIONED
+                    
+                
+            elif pair in self._current_statuses_to_pairs[ HC.PENDING ] or pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ]:
+                
+                message = pair_string + ' is pending.'
+                
+                with DialogYesNo( self, message, yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+                            
+                            old_status = HC.PENDING
+                            
+                        else:
+                            
+                            old_status = HC.DELETED_PENDING
+                            new_status = HC.DELETED
+                            
+                        
+                    else: return
+                    
+                
+            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+                
+                message = pair_string + ' is petitioned.'
+                
+                with DialogYesNo( self, message, yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        old_status = HC.PETITIONED
+                        new_status = HC.CURRENT
+                        
+                    else: return
+                    
+                
+            else:
+                
+                if self._CanAdd( child, parent ):
+                    
+                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                        
+                        message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
+                        
+                        with wx.TextEntryDialog( self, message ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                reason = dlg.GetValue()
+                                
+                                self._pairs_to_reasons[ pair ] = reason
+                                
+                            else: return
+                            
+                        
+                    
+                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]:
+                        
+                        old_status = HC.DELETED
+                        new_status = HC.DELETED_PENDING
+                        
+                    else:
+                        
+                        new_status = HC.PENDING
+                        
+                    
+                
+            
+            if old_status is not None:
+                
+                self._current_statuses_to_pairs[ old_status ].discard( pair )
+                
+                index = self._tag_parents.GetIndexFromClientData( ( old_status, child, parent ) )
+                
+                self._tag_parents.DeleteItem( index )
+                
+            
+            if new_status is not None:
+                
+                self._current_statuses_to_pairs[ new_status ].add( pair )
+                
+                sign = HC.ConvertStatusToPrefix( new_status )
+                
+                self._tag_parents.Append( ( sign, child, parent ), ( new_status, child, parent ) )
+                
             
         
-        def EventAdd( self, event ):
+        def _CanAdd( self, potential_child, potential_parent ):
             
-            pair = ( self._current_child, self._current_parent )
+            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.DELETED_PENDING ] ).union( self._current_statuses_to_pairs[ HC.PENDING ] )
             
-            if pair in self._current_pairs:
-                
-                wx.MessageBox( 'That relationship already exists!' )
-                
-                return
-                
-            
-            current_children = { child for ( child, parent ) in self._current_pairs }
+            current_children = { child for ( child, parent ) in current_pairs }
             
             # test for loops
             
-            if self._current_parent in current_children:
+            if potential_parent in current_children:
                 
-                d = dict( self._current_pairs )
+                d = dict( current_pairs )
                 
-                next_parent = self._current_parent
+                next_parent = potential_parent
                 
                 while next_parent in d:
                     
                     next_parent = d[ next_parent ]
                     
-                    if next_parent == self._current_child:
+                    if next_parent == potential_child:
                         
                         wx.MessageBox( 'Adding that pair would create a loop!' )
                         
-                        return
+                        return False
                         
                     
                 
             
-            # if we got here, we are great to do it
+            return True
             
-            self._added.add( pair )
-            self._removed.discard( pair )
+        
+        def _SetButtonStatus( self ):
             
-            self._current_pairs.add( pair )
+            if self._current_parent is None or self._current_child is None: self._add.Disable()
+            else: self._add.Enable()
             
-            self._tag_parents.Append( pair, pair )
+        
+        def EventActivated( self, event ):
             
-            self.SetChild( None )
-            self.SetParent( None )
+            all_selected = self._tag_parents.GetAllSelected()
+            
+            if len( all_selected ) > 0:
+                
+                selection = all_selected[0]
+                
+                ( status, child, parent ) = self._tag_parents.GetClientData( selection )
+                
+                self._AddPair( child, parent )
+                
+            
+        
+        def EventAddButton( self, event ):
+            
+            if self._current_child is not None and self._current_parent is not None:
+                
+                self._AddPair( self._current_child, self._current_parent )
+                
+                self.SetChild( None )
+                self.SetParent( None )
+                
             
         
         def EventItemSelected( self, event ):
@@ -7477,46 +7613,39 @@ class DialogManageTagParents( Dialog ):
             self._SetButtonStatus()
             
         
-        def EventRemove( self, event ):
+        def GetContentUpdates( self ):
             
-            all_selected = self._tag_parents.GetAllSelected()
+            # we make it manually here because of the mass pending tags done (but not undone on a rescind) on a pending pair!
+            # we don't want to send a pend and then rescind it, cause that will spam a thousand bad tags and not undo it
             
-            for selected in all_selected:
-                
-                pair = self._tag_parents.GetClientData( selected )
-                
-                self._removed.add( pair )
-                self._added.discard( pair )
-                
-                self._current_pairs.discard( pair )
-                
-            
-            self._tag_parents.RemoveAllSelected()
-            
-        
-        def GetChanges( self ):
-            
-            edit_log = []
+            content_updates = []
             
             if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                edit_log += [ ( HC.ADD, pair ) for pair in self._added ]
-                edit_log += [ ( HC.DELETE, pair ) for pair in self._removed ]
+                for pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] ): content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                
+            else:
+                
+                current_pending = self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                original_pending = self._original_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._original_statuses_to_pairs[ HC.PENDING ] )
+                
+                current_petitioned = self._current_statuses_to_pairs[ HC.PETITIONED ]
+                original_petitioned = self._original_statuses_to_pairs[ HC.PETITIONED ]
+                
+                new_pends = current_pending.difference( original_pending )
+                rescinded_pends = original_pending.difference( current_pending )
+                
+                new_petitions = current_petitioned.difference( original_petitioned )
+                rescinded_petitions = original_petitioned.difference( current_petitioned )
+                
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PENDING, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PENDING, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_petitions ) )
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 
             
-            return ( self._service_identifier, edit_log )
-            
-        
-        def SetParent( self, tag, parents = [] ):
-            
-            if tag is not None and tag == self._current_child: self.SetChild( None )
-            
-            self._current_parent = tag
-            
-            if tag is None: self._parent_text.SetLabel( '' )
-            else: self._parent_text.SetLabel( tag )
-            
-            self._SetButtonStatus()
+            return ( self._service_identifier, content_updates )
             
         
         def SetChild( self, tag, parents = [] ):
@@ -7527,6 +7656,18 @@ class DialogManageTagParents( Dialog ):
             
             if tag is None: self._child_text.SetLabel( '' )
             else: self._child_text.SetLabel( tag )
+            
+            self._SetButtonStatus()
+            
+        
+        def SetParent( self, tag, parents = [] ):
+            
+            if tag is not None and tag == self._current_child: self.SetChild( None )
+            
+            self._current_parent = tag
+            
+            if tag is None: self._parent_text.SetLabel( '' )
+            else: self._parent_text.SetLabel( tag )
             
             self._SetButtonStatus()
             
@@ -7543,33 +7684,33 @@ class DialogManageTagSiblings( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            #services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
-            
-            #for service in services:
-            #    
-            #    account = service.GetAccount()
-            #    
-            #    if account.HasPermission( HC.POST_DATA ):
-            #        
-            #        service_identifier = service.GetServiceIdentifier()
-            #        
-            #        page_info = ( self._Panel, ( self._tag_repositories, service_identifier, paths ), {} )
-            #        
-            #        name = service_identifier.GetName()
-            #        
-            #        self._tag_repositories.AddPage( page_info, name )
-            #        
-            #    
-            
             page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER )
             
             name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
             
             self._tag_repositories.AddPage( page, name )
             
-            #default_tag_repository = self._options[ 'default_tag_repository' ]
+            services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
             
-            #self._tag_repositories.Select( default_tag_repository.GetName() )
+            for service in services:
+                
+                account = service.GetAccount()
+                
+                if account.HasPermission( HC.POST_DATA ):
+                    
+                    service_identifier = service.GetServiceIdentifier()
+                    
+                    page_info = ( self._Panel, ( self._tag_repositories, service_identifier ), {} )
+                    
+                    name = service_identifier.GetName()
+                    
+                    self._tag_repositories.AddPage( page_info, name )
+                    
+                
+            
+            default_tag_repository = self._options[ 'default_tag_repository' ]
+            
+            self._tag_repositories.Select( default_tag_repository.GetName() )
             
             self._ok_button = wx.Button( self, label='ok' )
             self._ok_button.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -7594,7 +7735,7 @@ class DialogManageTagSiblings( Dialog ):
             
             self.SetSizer( vbox )
             
-            self.SetInitialSize( ( 450, 680 ) )
+            self.SetInitialSize( ( 550, 680 ) )
             
         
         Dialog.__init__( self, parent, 'tag siblings' )
@@ -7646,13 +7787,18 @@ class DialogManageTagSiblings( Dialog ):
     
     def EventOK( self, event ):
         
-        edit_log = []
+        service_identifiers_to_content_updates = {}
         
         try:
             
-            for page in self._tag_repositories.GetNameToPageDict().values(): edit_log.append( page.GetChanges() )
+            for page in self._tag_repositories.GetNameToPageDict().values():
+                
+                ( service_identifier, content_updates ) = page.GetContentUpdates()
+                
+                service_identifiers_to_content_updates[ service_identifier ] = content_updates
+                
             
-            if len( edit_log ) > 0: wx.GetApp().Write( 'tag_siblings', edit_log )
+            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving tag sibling changes to DB raised this error: ' + unicode( e ) )
         
@@ -7672,9 +7818,15 @@ class DialogManageTagSiblings( Dialog ):
             
             def InitialiseControls():
                 
-                self._tag_siblings = ClientGUICommon.SaneListCtrl( self, 250, [ ( 'old', 160 ), ( 'new', -1 ) ] )
+                self._tag_siblings = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'old', 160 ), ( 'new', -1 ) ] )
+                self._tag_siblings.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
                 
-                for ( old, new ) in self._original_pairs: self._tag_siblings.Append( ( old, new ), ( old, new ) )
+                for ( status, pairs ) in self._original_statuses_to_pairs.items():
+                    
+                    sign = HC.ConvertStatusToPrefix( status )
+                    
+                    for ( old, new ) in pairs: self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
+                    
                 
                 self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -7686,20 +7838,11 @@ class DialogManageTagSiblings( Dialog ):
                 self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 
                 self._add = wx.Button( self, label = 'add' )
-                self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+                self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
                 self._add.Disable()
-                
-                self._remove = wx.Button( self, label = 'remove' )
-                self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-                self._remove.Disable()
                 
             
             def InitialisePanel():
-                
-                button_box = wx.BoxSizer( wx.HORIZONTAL )
-                
-                button_box.AddF( self._add, FLAGS_MIXED )
-                button_box.AddF( self._remove, FLAGS_MIXED )
                 
                 text_box = wx.BoxSizer( wx.HORIZONTAL )
                 
@@ -7714,7 +7857,7 @@ class DialogManageTagSiblings( Dialog ):
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
                 vbox.AddF( self._tag_siblings, FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( button_box, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( self._add, FLAGS_LONE_BUTTON )
                 vbox.AddF( text_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 vbox.AddF( input_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
@@ -7725,86 +7868,215 @@ class DialogManageTagSiblings( Dialog ):
             
             self._service_identifier = service_identifier
             
-            self._added = set()
-            self._removed = set()
+            self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings', service_identifier )
             
-            self._original_pairs = [ tuple( pair ) for pair in wx.GetApp().Read( 'tag_siblings', service_identifier ) ]
+            self._current_statuses_to_pairs = collections.defaultdict( set )
             
-            self._current_pairs = set( self._original_pairs )
+            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
             
-            self._current_new = None
+            self._pairs_to_reasons = {}
+            
             self._current_old = None
+            self._current_new = None
             
             InitialiseControls()
             
             InitialisePanel()
             
         
-        def _SetButtonStatus( self ):
+        def _AddPair( self, old, new ):
             
-            all_selected = self._tag_siblings.GetAllSelected()
+            old_status = None
+            new_status = None
             
-            if len( all_selected ) == 0: self._remove.Disable()
-            else: self._remove.Enable()
+            pair = ( old, new )
             
-            if self._current_new is None or self._current_old is None: self._add.Disable()
-            else: self._add.Enable()
+            pair_string = old + '->' + new
+            
+            if pair in self._current_statuses_to_pairs[ HC.CURRENT ]:
+                
+                message = pair_string + ' already exists.'
+                
+                with DialogYesNo( self, message, yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                    
+                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                            
+                            with wx.TextEntryDialog( self, message ) as dlg:
+                                
+                                if dlg.ShowModal() == wx.ID_OK:
+                                    
+                                    reason = dlg.GetValue()
+                                    
+                                    self._pairs_to_reasons[ pair ] = reason
+                                    
+                                else: return
+                                
+                            
+                        else: return
+                        
+                    
+                    old_status = HC.CURRENT
+                    new_status = HC.PETITIONED
+                    
+                
+            elif pair in self._current_statuses_to_pairs[ HC.PENDING ] or pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ]:
+                
+                message = pair_string + ' is pending.'
+                
+                with DialogYesNo( self, message, yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+                            
+                            old_status = HC.PENDING
+                            
+                        else:
+                            
+                            old_status = HC.DELETED_PENDING
+                            new_status = HC.DELETED
+                            
+                        
+                    else: return
+                    
+                
+            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+                
+                message = pair_string + ' is petitioned.'
+                
+                with DialogYesNo( self, message, yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        old_status = HC.PETITIONED
+                        new_status = HC.CURRENT
+                        
+                    else: return
+                    
+                
+            else:
+                
+                if self._CanAdd( old, new ):
+                    
+                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                        
+                        message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
+                        
+                        with wx.TextEntryDialog( self, message ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                reason = dlg.GetValue()
+                                
+                                self._pairs_to_reasons[ pair ] = reason
+                                
+                            else: return
+                            
+                        
+                    
+                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]:
+                        
+                        old_status = HC.DELETED
+                        new_status = HC.DELETED_PENDING
+                        
+                    else:
+                        
+                        new_status = HC.PENDING
+                        
+                    
+                
+            
+            if old_status is not None:
+                
+                self._current_statuses_to_pairs[ old_status ].discard( pair )
+                
+                index = self._tag_siblings.GetIndexFromClientData( ( old_status, old, new ) )
+                
+                self._tag_siblings.DeleteItem( index )
+                
+            
+            if new_status is not None:
+                
+                self._current_statuses_to_pairs[ new_status ].add( pair )
+                
+                sign = HC.ConvertStatusToPrefix( new_status )
+                
+                self._tag_siblings.Append( ( sign, old, new ), ( new_status, old, new ) )
+                
             
         
-        def EventAdd( self, event ):
+        def _CanAdd( self, potential_old, potential_new ):
             
-            pair = ( self._current_old, self._current_new )
+            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.DELETED_PENDING ] ).union( self._current_statuses_to_pairs[ HC.PENDING ] )
             
-            if pair in self._current_pairs:
-                
-                wx.MessageBox( 'That relationship already exists!' )
-                
-                return
-                
-            
-            current_olds = { old for ( old, new ) in self._current_pairs }
+            current_olds = { old for ( old, new ) in current_pairs }
             
             # test for ambiguity
             
-            if self._current_old in current_olds:
+            if potential_old in current_olds:
                 
-                wx.MessageBox( 'There already is a relationship set for the tag ' + self._current_new + '.' )
+                wx.MessageBox( 'There already is a relationship set for the tag ' + potential_old + '.' )
                 
-                return
+                return False
                 
             
             # test for loops
             
-            if self._current_new in current_olds:
+            if potential_new in current_olds:
                 
-                d = dict( self._current_pairs )
+                d = dict( current_pairs )
                 
-                next_new = self._current_new
+                next_new = potential_new
                 
                 while next_new in d:
                     
                     next_new = d[ next_new ]
                     
-                    if next_new == self._current_old:
+                    if next_new == potential_old:
                         
                         wx.MessageBox( 'Adding that pair would create a loop!' )
                         
-                        return
+                        return False
                         
                     
                 
             
-            # if we got here, we are great to do it
+            return True
             
-            self._added.add( pair )
-            self._removed.discard( pair )
+        
+        def _SetButtonStatus( self ):
             
-            self._current_pairs.add( pair )
+            if self._current_new is None or self._current_old is None: self._add.Disable()
+            else: self._add.Enable()
             
-            self._tag_siblings.Append( pair, pair )
+        
+        def EventActivated( self, event ):
             
-            self.SetOld( None )
-            self.SetNew( None )
+            all_selected = self._tag_siblings.GetAllSelected()
+            
+            if len( all_selected ) > 0:
+                
+                selection = all_selected[0]
+                
+                ( status, old, new ) = self._tag_siblings.GetClientData( selection )
+                
+                self._AddPair( old, new )
+                
+            
+        
+        def EventAddButton( self, event ):
+            
+            if self._current_old is not None and self._current_new is not None:
+                
+                self._AddPair( self._current_old, self._current_new )
+                
+                self.SetOld( None )
+                self.SetNew( None )
+                
             
         
         def EventItemSelected( self, event ):
@@ -7812,34 +8084,41 @@ class DialogManageTagSiblings( Dialog ):
             self._SetButtonStatus()
             
         
-        def EventRemove( self, event ):
+        def GetContentUpdates( self ):
             
-            all_selected = self._tag_siblings.GetAllSelected()
+            # we make it manually here because of the mass pending tags done (but not undone on a rescind) on a pending pair!
+            # we don't want to send a pend and then rescind it, cause that will spam a thousand bad tags and not undo it
             
-            for selected in all_selected:
-                
-                pair = self._tag_siblings.GetClientData( selected )
-                
-                self._removed.add( pair )
-                self._added.discard( pair )
-                
-                self._current_pairs.discard( pair )
-                
+            # actually, we don't do this for siblings, but we do for parents, and let's have them be the same
             
-            self._tag_siblings.RemoveAllSelected()
-            
-        
-        def GetChanges( self ):
-            
-            edit_log = []
+            content_updates = []
             
             if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                edit_log += [ ( HC.ADD, pair ) for pair in self._added ]
-                edit_log += [ ( HC.DELETE, pair ) for pair in self._removed ]
+                for pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] ): content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                
+            else:
+                
+                current_pending = self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                original_pending = self._original_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._original_statuses_to_pairs[ HC.PENDING ] )
+                
+                current_petitioned = self._current_statuses_to_pairs[ HC.PETITIONED ]
+                original_petitioned = self._original_statuses_to_pairs[ HC.PETITIONED ]
+                
+                new_pends = current_pending.difference( original_pending )
+                rescinded_pends = original_pending.difference( current_pending )
+                
+                new_petitions = current_petitioned.difference( original_petitioned )
+                rescinded_petitions = original_petitioned.difference( current_petitioned )
+                
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PENDING, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_pends ) )
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( pair, self._pairs_to_reasons[ pair ] ) ) for pair in new_petitions ) )
+                content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 
             
-            return ( self._service_identifier, edit_log )
+            return ( self._service_identifier, content_updates )
             
         
         def SetNew( self, tag, parents = [] ):
@@ -8064,7 +8343,10 @@ class DialogManageTags( Dialog ):
             
         
         self._file_service_identifier = file_service_identifier
-        self._hashes = HC.IntelligentMassUnion( ( m.GetHashes() for m in media ) )
+        
+        self._hashes = set()
+        
+        for m in media: self._hashes.update( m.GetHashes() )
         
         Dialog.__init__( self, parent, 'manage tags for ' + HC.ConvertIntToPrettyString( len( self._hashes ) ) + ' files' )
         
@@ -8105,21 +8387,16 @@ class DialogManageTags( Dialog ):
         
         try:
             
-            content_updates = []
+            service_identfiers_to_content_updates = {}
             
             for page in self._tag_repositories.GetNameToPageDict().values():
                 
-                if page.HasChanges():
-                    
-                    service_identifier = page.GetServiceIdentifier()
-                    
-                    edit_log = page.GetEditLog()
-                    
-                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, self._hashes, info = edit_log ) )
-                    
+                ( service_identifier, content_updates ) = page.GetContentUpdates()
+                
+                service_identfiers_to_content_updates[ service_identifier ] = content_updates
                 
             
-            if len( content_updates ) > 0: wx.GetApp().Write( 'content_updates', content_updates )
+            if len( service_identfiers_to_content_updates ) > 0: wx.GetApp().Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving mapping changes to DB raised this error: ' + unicode( e ) )
         
@@ -8209,7 +8486,9 @@ class DialogManageTags( Dialog ):
             
             self._i_am_local_tag_service = self._tag_service_identifier.GetType() == HC.LOCAL_TAG
             
-            self._edit_log = []
+            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
+            
+            self._content_updates = []
             
             if not self._i_am_local_tag_service:
                 
@@ -8263,10 +8542,10 @@ class DialogManageTags( Dialog ):
                     self._tags_box.PendTag( tag )
                     
                 
-                self._edit_log = []
+                self._content_updates = []
                 
-                self._edit_log.extend( [ ( HC.CONTENT_UPDATE_ADD, tag ) for tag in self._pending_tags ] )
-                self._edit_log.extend( [ ( HC.CONTENT_UPDATE_DELETE, tag ) for tag in self._petitioned_tags ] )
+                self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, self._hashes ) ) for tag in self._pending_tags ] )
+                self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, self._hashes ) ) for tag in self._petitioned_tags ] )
                 
             else:
                 
@@ -8278,7 +8557,7 @@ class DialogManageTags( Dialog ):
                     
                     self._tags_box.RescindPend( tag )
                     
-                    self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PENDING, tag ) )
+                    self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, ( tag, self._hashes ) ) )
                     
                 elif tag in self._petitioned_tags:
                     
@@ -8286,7 +8565,7 @@ class DialogManageTags( Dialog ):
                     
                     self._tags_box.RescindPetition( tag )
                     
-                    self._edit_log.append( ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) )
+                    self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, ( tag, self._hashes ) ) )
                     
                 elif tag in self._current_tags:
                     
@@ -8294,7 +8573,7 @@ class DialogManageTags( Dialog ):
                     
                     if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                         
-                        self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, 'admin' ) ) )
+                        self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, self._hashes, 'admin' ) ) )
                         
                         self._petitioned_tags.append( tag )
                         
@@ -8308,7 +8587,7 @@ class DialogManageTags( Dialog ):
                             
                             if dlg.ShowModal() == wx.ID_OK:
                                 
-                                self._edit_log.append( ( HC.CONTENT_UPDATE_PETITION, ( tag, dlg.GetValue() ) ) )
+                                self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, self._hashes, dlg.GetValue() ) ) )
                                 
                                 self._petitioned_tags.append( tag )
                                 
@@ -8321,7 +8600,7 @@ class DialogManageTags( Dialog ):
                     
                     if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
                         
-                        self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
+                        self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( tag, self._hashes ) ) )
                         
                         self._pending_tags.append( tag )
                         
@@ -8330,7 +8609,7 @@ class DialogManageTags( Dialog ):
                     
                 else:
                     
-                    self._edit_log.append( ( HC.CONTENT_UPDATE_PENDING, tag ) )
+                    self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( tag, self._hashes ) ) )
                     
                     self._pending_tags.append( tag )
                     
@@ -8417,11 +8696,11 @@ class DialogManageTags( Dialog ):
             if tag is not None: self.AddTag( tag )
             
         
-        def GetEditLog( self ): return self._edit_log
+        def GetContentUpdates( self ): return ( self._tag_service_identifier, self._content_updates )
         
         def GetServiceIdentifier( self ): return self._tag_service_identifier
         
-        def HasChanges( self ): return len( self._edit_log ) > 0
+        def HasChanges( self ): return len( self._content_updates ) > 0
         
         def SetTagBoxFocus( self ):
             

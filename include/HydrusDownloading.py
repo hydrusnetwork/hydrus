@@ -1,4 +1,5 @@
 import bs4
+import collections
 import HydrusConstants as HC
 import json
 import lxml
@@ -7,24 +8,23 @@ import urllib
 import urlparse
 import wx
 
-def ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags ):
+def ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags ):
     
-    content_updates = []
+    hashes = set( ( hash, ) )
+    
+    service_identifiers_to_content_updates = {}
     
     for ( service_identifier, tags ) in service_identifiers_to_tags.items():
         
-        if len( tags ) > 0:
-            
-            if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: action = HC.CONTENT_UPDATE_ADD
-            else: action = HC.CONTENT_UPDATE_PENDING
-            
-            edit_log = [ ( action, tag ) for tag in tags ]
-            
-            content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), info = edit_log ) )
-            
+        if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: action = HC.CONTENT_UPDATE_ADD
+        else: action = HC.CONTENT_UPDATE_PENDING
+        
+        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
+        
+        service_identifiers_to_content_updates[ service_identifier ] = content_updates
         
     
-    return content_updates
+    return service_identifiers_to_content_updates
     
 def GetDownloader( site_download_type, *args ):
     

@@ -105,17 +105,9 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _THREADUploadPending( self, service_identifier, job_key, cancel_event ):
         
-        # old:
-        
-        #wx.GetApp().Write( 'upload_pending', service_identifier, job_key, cancel_event )
-        
-        #return
-        
-        # new
-        
         try:
             
-            HC.pubsub.pub( 'progress_update', job_key, 0, 4, u'gathering pending and petitioned' )
+            HC.pubsub.pub( 'progress_update', job_key, 0, 3, u'gathering pending and petitioned' )
             
             result = wx.GetApp().Read( 'pending', service_identifier )
             
@@ -123,113 +115,106 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             service = wx.GetApp().Read( 'service', service_identifier )
             
-            if service_type == HC.TAG_REPOSITORY:
+            if service_type == HC.FILE_REPOSITORY:
                 
-                ( mappings_object, petitions_object ) = result
+                ( upload_hashes, update ) = result
                 
-                if len( mappings_object ) > 0 or len( petitions_object ) > 0:
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 1, 4, u'connecting to repository' )
-                    
-                    connection = service.GetConnection()
-                    
-                    if len( mappings_object ) > 0:
-                        
-                        HC.pubsub.pub( 'progress_update', job_key, 2, 4, u'posting new mappings' )
-                        
-                        try: connection.Post( 'mappings', mappings = mappings_object )
-                        except Exception as e: raise Exception( 'Encountered an error while uploading public_mappings:' + os.linesep + unicode( e ) )
-                        
-                    
-                    if len( petitions_object ) > 0:
-                        
-                        HC.pubsub.pub( 'progress_update', job_key, 3, 4, u'posting new petitions' )
-                        
-                        try: connection.Post( 'petitions', petitions = petitions_object )
-                        except Exception as e: raise Exception( 'Encountered an error while uploading petitions:' + os.linesep + unicode( e ) )
-                        
-                    
-                    num_mappings = sum( [ len( hashes ) for ( tag, hashes ) in mappings_object ] )
-                    num_deleted_mappings = sum( [ len( hashes ) for ( reason, tag, hashes ) in petitions_object ] )
-                    
-                    HC.pubsub.pub( 'log_message', 'upload mappings', 'uploaded ' + HC.ConvertIntToPrettyString( num_mappings ) + ' mappings to and deleted ' + HC.ConvertIntToPrettyString( num_deleted_mappings ) + ' mappings from ' + service_identifier.GetName() )
-                    
-                    content_updates = []
-                    
-                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings_object ]
-                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( reason, tag, hashes ) in petitions_object ]
-                    
-                    wx.GetApp().Write( 'content_updates', content_updates )
-                    
+                num_uploads = len( upload_hashes )
                 
-            elif service_type == HC.FILE_REPOSITORY:
+                HC.pubsub.pub( 'progress_update', job_key, 1, num_uploads + 3, u'connecting to repository' )
                 
-                ( uploads, petitions_object ) = result
+                connection = service.GetConnection()
                 
-                ( num_uploads, num_petitions ) = ( len( uploads ), len( petitions_object ) )
+                good_hashes = []
                 
-                if num_uploads > 0 or num_petitions > 0:
+                error_messages = set()
+                
+                for ( index, hash ) in enumerate( upload_hashes ):
                     
-                    HC.pubsub.pub( 'progress_update', job_key, 1, num_uploads + 3, u'connecting to repository' )
+                    HC.pubsub.pub( 'progress_update', job_key, index + 2, num_uploads + 3, u'Uploading file ' + HC.ConvertIntToPrettyString( index + 1 ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
                     
-                    connection = service.GetConnection()
+                    if cancel_event.isSet(): break
                     
-                    good_hashes = []
-                    
-                    if num_uploads > 0:
+                    try:
                         
-                        error_messages = set()
+                        file = wx.GetApp().Read( 'file', hash )
                         
-                        for ( index, hash ) in enumerate( uploads ):
-                            
-                            HC.pubsub.pub( 'progress_update', job_key, index + 2, num_uploads + 3, u'Uploading file ' + HC.ConvertIntToPrettyString( index + 1 ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
-                            
-                            if cancel_event.isSet(): break
-                            
-                            try:
-                                
-                                file = wx.GetApp().Read( 'file', hash )
-                                
-                                connection.Post( 'file', file = file )
-                                
-                                good_hashes.append( hash )
-                                
-                            except Exception as e:
-                                
-                                message = 'Error: ' + unicode( e )
-                                
-                                HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, message )
-                                
-                                print( message )
-                                
-                                time.sleep( 1 )
-                                
-                            
+                        connection.Post( 'file', file = file )
                         
-                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, u'saving changes to local database' )
+                        good_hashes.append( hash )
                         
-                    
-                    if num_petitions > 0:
+                    except Exception as e:
                         
-                        try:
-                            
-                            HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 3, u'uploading petitions' )
-                            
-                            connection.Post( 'petitions', petitions = petitions_object )
-                            
-                        except Exception as e: raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_name + ':' + os.linesep + unicode( e ) )
+                        message = 'Error: ' + unicode( e )
                         
-                    
-                    HC.pubsub.pub( 'log_message', 'upload files', 'uploaded ' + HC.ConvertIntToPrettyString( num_uploads ) + ' files to and deleted ' + HC.ConvertIntToPrettyString( num_petitions ) + ' files from ' + service_identifier.GetName() )
-                    
-                    content_updates = []
-                    
-                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, good_hashes ) )
-                    content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, petitions_object.GetHashes() ) )
-                    
-                    wx.GetApp().Write( 'content_updates', content_updates )
+                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, message )
+                        
+                        print( message )
+                        
+                        time.sleep( 1 )
+                        
                     
                 
+                if len( good_hashes ) > 0: HC.pubsub.pub( 'log_message', 'upload files', 'uploaded ' + HC.ConvertIntToPrettyString( len( good_hashes ) ) + ' files to ' + service_identifier.GetName() )
+                
+                if not update.IsEmpty():
+                    
+                    try:
+                        
+                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, u'uploading petitions' )
+                        
+                        connection.Post( 'update', update = update )
+                        
+                        HC.pubsub.pub( 'log_message', 'upload files', 'uploaded a file update to ' + service_identifier.GetName() )
+                        
+                    except Exception as e:
+                        
+                        print( traceback.format_exc() )
+                        
+                        raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_identifier.GetName() + ':' + os.linesep + unicode( e ) )
+                        
+                    
+                
+                HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 3, u'saving changes to local database' )
+                
+                content_updates = []
+                
+                media_results = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), good_hashes )
+                
+                for media_result in media_results:
+                    
+                    ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = media_result.ToTuple()
+                    
+                    timestamp = int( time.time() )
+                    
+                    content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
+                    
+                    content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
+                    
+                
+                content_updates.extend( update.GetContentUpdates( for_client = True ) )
+                
+                service_identfiers_to_content_updates = { service_identifier : content_updates }
+                
+            elif service_type == HC.TAG_REPOSITORY:
+                
+                update = result
+                
+                HC.pubsub.pub( 'progress_update', job_key, 1, 3, u'connecting to repository' )
+                
+                connection = service.GetConnection()
+                
+                HC.pubsub.pub( 'progress_update', job_key, 2, 3, u'posting update' )
+                
+                try: connection.Post( 'update', update = update )
+                except Exception as e: raise Exception( 'Encountered an error while uploading tags:' + os.linesep + unicode( e ) )
+                
+                HC.pubsub.pub( 'log_message', 'upload mappings', 'uploaded a tag update to ' + service_identifier.GetName() )
+                
+                service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
+                
+            
+            wx.GetApp().Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e:
             
@@ -1317,8 +1302,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if service_type == HC.TAG_REPOSITORY:
                 
-                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ]
-                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ]
+                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
+                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
                 
             elif service_type == HC.FILE_REPOSITORY:
                 
@@ -2081,7 +2066,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
             self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
             
         
-        HC.pubsub.sub( self, 'ProcessServiceUpdate', 'service_update_gui' )
+        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         HC.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
         
     
@@ -2317,20 +2302,24 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
         self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
         
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        service_identifier = update.GetServiceIdentifier()
-        
-        if service_identifier == self._service_identifier:
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            action = update.GetAction()
-            
-            if action == HC.SERVICE_UPDATE_RESET: self._service_identifier = update.GetInfo()
-            
-            if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 200, self._DisplayAccountInfo )
-            else:
-                wx.CallLater( 200, self._DisplayService )
-                wx.CallLater( 400, self.Layout ) # ugly hack, but it works for now
+            for service_update in service_updates:
+                
+                if service_identifier == self._service_identifier:
+                    
+                    ( action, row ) = service_update.ToTuple()
+                    
+                    if action == HC.SERVICE_UPDATE_RESET: self._service_identifier = row
+                    
+                    if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 600, self._DisplayAccountInfo )
+                    else:
+                        wx.CallLater( 200, self._DisplayService )
+                        wx.CallLater( 400, self.Layout ) # ugly hack, but it works for now
+                    
+                
             
         
     

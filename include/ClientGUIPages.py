@@ -354,7 +354,19 @@ class PageImportURL( PageImport ):
     
 class PagePetitions( PageWithMedia ):
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelPetitions( self._search_preview_split, self, self._page_key, self._file_service_identifier )
+    def __init__( self, parent, petition_service_identifier ):
+        
+        self._petition_service_identifier = petition_service_identifier
+        
+        petition_service_type = petition_service_identifier.GetType()
+        
+        if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): self._file_service_identifier = self._petition_service_identifier
+        else: self._file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
+        
+        PageWithMedia.__init__( self, parent, self._file_service_identifier )
+        
+    
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelPetitions( self._search_preview_split, self, self._page_key, self._file_service_identifier, self._petition_service_identifier )
     
     def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
     

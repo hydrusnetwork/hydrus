@@ -1,6 +1,7 @@
 import collections
 import httplib
 import HydrusPubSub
+import itertools
 import locale
 import os
 import Queue
@@ -29,8 +30,8 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 
 # Misc
 
-NETWORK_VERSION = 9
-SOFTWARE_VERSION = 71
+NETWORK_VERSION = 10
+SOFTWARE_VERSION = 72
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -46,6 +47,12 @@ repos_or_subs_changed = False
 
 # Enums
 
+CONTENT_DATA_TYPE_MAPPINGS = 0
+CONTENT_DATA_TYPE_TAG_SIBLINGS = 1
+CONTENT_DATA_TYPE_TAG_PARENTS = 2
+CONTENT_DATA_TYPE_FILES = 3
+CONTENT_DATA_TYPE_RATINGS = 4
+
 CONTENT_UPDATE_ADD = 0
 CONTENT_UPDATE_DELETE = 1
 CONTENT_UPDATE_PENDING = 2
@@ -57,6 +64,8 @@ CONTENT_UPDATE_ARCHIVE = 7
 CONTENT_UPDATE_INBOX = 8
 CONTENT_UPDATE_RATING = 9
 CONTENT_UPDATE_RATINGS_FILTER = 10
+CONTENT_UPDATE_DENY_PEND = 11
+CONTENT_UPDATE_DENY_PETITION = 12
 
 GET_DATA = 0
 POST_DATA = 1
@@ -103,7 +112,7 @@ service_string_lookup[ SERVER_ADMIN ] = 'hydrus server administration'
 
 RATINGS_SERVICES = [ LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
 REPOSITORIES = [ TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
-RESTRICTED_SERVICES = list( REPOSITORIES ) + [ SERVER_ADMIN, MESSAGE_DEPOT ]
+RESTRICTED_SERVICES = ( REPOSITORIES ) + [ SERVER_ADMIN, MESSAGE_DEPOT ]
 REMOTE_SERVICES = list( RESTRICTED_SERVICES )
 ALL_SERVICES = list( REMOTE_SERVICES ) + [ LOCAL_FILE, LOCAL_TAG, LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL ]
 
@@ -148,6 +157,10 @@ SERVICE_INFO_NUM_PENDING_MAPPINGS = 15
 SERVICE_INFO_NUM_PETITIONED_MAPPINGS = 16
 SERVICE_INFO_NUM_PENDING_FILES = 15
 SERVICE_INFO_NUM_PETITIONED_FILES = 16
+SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS = 17
+SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS = 18
+SERVICE_INFO_NUM_PENDING_TAG_PARENTS = 19
+SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS = 20
 
 SERVICE_UPDATE_ACCOUNT = 0
 SERVICE_UPDATE_DELETE_PENDING = 1
@@ -156,6 +169,7 @@ SERVICE_UPDATE_NEXT_BEGIN = 3
 SERVICE_UPDATE_RESET = 4
 SERVICE_UPDATE_REQUEST_MADE = 5
 SERVICE_UPDATE_LAST_CHECK = 6
+SERVICE_UPDATE_NEWS = 7
 
 ADD = 0
 DELETE = 1
@@ -412,8 +426,7 @@ repository_requests.append( ( GET, 'num_petitions', RESOLVE_PETITIONS ) )
 repository_requests.append( ( GET, 'petition', RESOLVE_PETITIONS ) )
 repository_requests.append( ( GET, 'update', GET_DATA ) )
 repository_requests.append( ( POST, 'news', GENERAL_ADMIN ) )
-repository_requests.append( ( POST, 'petition_denial', RESOLVE_PETITIONS ) )
-repository_requests.append( ( POST, 'petitions', ( POST_PETITIONS, RESOLVE_PETITIONS ) ) )
+repository_requests.append( ( POST, 'update', POST_DATA ) )
 
 file_repository_requests = list( repository_requests )
 file_repository_requests.append( ( GET, 'file', GET_DATA ) )
@@ -422,7 +435,6 @@ file_repository_requests.append( ( GET, 'thumbnail', GET_DATA ) )
 file_repository_requests.append( ( POST, 'file', POST_DATA ) )
 
 tag_repository_requests = list( repository_requests )
-tag_repository_requests.append( ( POST, 'mappings', POST_DATA ) )
 
 message_depot_requests = list( restricted_requests )
 message_depot_requests.append( ( GET, 'message', GET_DATA ) )
@@ -475,6 +487,10 @@ DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'message' ] = 'hydrus message depot'
 
 EVT_PUBSUB = HydrusPubSub.EVT_PUBSUB
 pubsub = HydrusPubSub.HydrusPubSub()
+
+def default_dict_list(): return collections.defaultdict( list )
+
+def default_dict_set(): return collections.defaultdict( set )
 
 def BuildKeyToListDict( pairs ):
     
@@ -632,6 +648,14 @@ def ConvertShortcutToPrettyShortcut( modifier, key, action ):
     else: key = wxk_code_string_lookup[ key ]
     
     return ( modifier, key, action )
+    
+def ConvertStatusToPrefix( status ):
+    
+    if status == CURRENT: return ''
+    elif status == PENDING: return '(+)'
+    elif status == PETITIONED: return '(-)'
+    elif status == DELETED: return '(X)'
+    elif status == DELETED_PENDING: return '(X+)'
     
 def ConvertTimestampToPrettyAge( timestamp ):
     
@@ -895,6 +919,12 @@ def ConvertZoomToPercentage( zoom ):
     
     return pretty_zoom
     
+def GetEmptyDataDict():
+    
+    data = collections.defaultdict( default_dict_list )
+    
+    return data
+    
 def GetMimeFromPath( filename ):
     
     f = open( filename, 'rb' )
@@ -943,21 +973,6 @@ def GetShortcutFromEvent( event ):
     
     return ( modifier, key )
     
-def IntelligentMassUnion( iterables_to_reduce ):
-    
-    # while I might usually go |= here (for style), it is quicker to use the ugly .update when we want to be quick
-    # set.update also converts the second argument to a set, if appropriate!
-    
-    #return reduce( set.union, iterables_to_reduce, set() )
-    
-    # also: reduce is slower, I think, cause of union rather than update!
-    
-    answer = set()
-    
-    for i in iterables_to_reduce: answer.update( i )
-    
-    return answer
-    
 def IntelligentMassIntersect( sets_to_reduce ):
     
     answer = None
@@ -985,6 +1000,17 @@ def IntelligentMassIntersect( sets_to_reduce ):
 def IsCollection( mime ): return mime in ( APPLICATION_HYDRUS_CLIENT_COLLECTION, ) # this is a little convoluted, but I want to keep it similar to IsImage, IsText, IsAudio, IsX
 
 def IsImage( mime ): return mime in ( IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG, IMAGE_BMP )
+
+def MergeKeyToListDicts( key_to_list_dicts ):
+    
+    result = collections.defaultdict( list )
+    
+    for key_to_list_dict in key_to_list_dicts:
+        
+        for ( key, value ) in key_to_list_dict.items(): result[ key ].extend( value )
+        
+    
+    return result
 
 def SearchEntryMatchesPredicate( search_entry, predicate ):
     
@@ -1194,7 +1220,7 @@ class AdvancedHTTPConnection():
             
             if server_header is None or service_string not in server_header:
                 
-                pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, GetUnknownAccount() ) )
+                wx.GetApp().Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
                 
                 raise WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
                 
@@ -1206,9 +1232,9 @@ class AdvancedHTTPConnection():
             
             if request_type == 'GET':
                 
-                if ( service_type, GET, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, self._service_identifier, len( raw_response ) ) )
+                if ( service_type, GET, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, len( raw_response ) ) ] } )
                 
-            elif ( service_type, POST, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, self._service_identifier, len( body ) ) )
+            elif ( service_type, POST, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, len( body ) ) ] } )
             
         
         if response.status == 200: return parsed_response
@@ -1264,9 +1290,9 @@ class AdvancedHTTPConnection():
             
             if self._service_identifier is not None:
                 
-                pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ERROR, self._service_identifier, parsed_response ) )
+                wx.GetApp().Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ERROR, parsed_response ) ] } )
                 
-                if response.status in ( 401, 426 ): pubsub.pub( 'service_update_db', ServiceUpdate( SERVICE_UPDATE_ACCOUNT, self._service_identifier, GetUnknownAccount() ) )
+                if response.status in ( 401, 426 ): wx.GetApp().Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] } )
                 
             
             if response.status == 401: raise PermissionsException( parsed_response )
@@ -1511,92 +1537,10 @@ class AccountType( HydrusYAMLBase ):
     
     def HasPermission( self, permission ): return permission in self._permissions
     
-class ClientFilePetitionDenial( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ClientFilePetitionDenial'
-    
-    def __init__( self, hashes ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._hashes = hashes
-        
-    
-    def GetInfo( self ): return self._hashes
-    
-class ClientFilePetitions( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ClientFilePetitions'
-    
-    def __init__( self, petitions ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._petitions = petitions
-        
-    
-    def __iter__( self ): return ( petition for petition in self._petitions )
-    
-    def __len__( self ): return len( self._petitions )
-    
-    def GetHashes( self ): return IntelligentMassUnion( [ hashes for ( reason, hashes ) in self._petitions ] )
-    
-class ClientMappingPetitionDenial( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ClientMappingPetitionDenial'
-    
-    def __init__( self, tag, hashes ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._tag = tag
-        self._hashes = hashes
-        
-    
-    def GetInfo( self ): return ( self._tag, self._hashes )
-    
-class ClientMappingPetitions( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ClientMappingPetitions'
-    
-    def __init__( self, petitions, hash_ids_to_hashes ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._petitions = petitions
-        
-        self._hash_ids_to_hashes = hash_ids_to_hashes
-        
-    
-    def __iter__( self ): return ( ( reason, tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( reason, tag, hash_ids ) in self._petitions )
-    
-    def __len__( self ): return len( self._petitions )
-    
-    def GetHashes( self ): return self._hash_ids_to_hashes.values()
-    
-    def GetTags( self ): return [ tag for ( reason, tag, hash_ids ) in self._petitions ]
-    
-class ClientMappings( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ClientMappings'
-    
-    def __init__( self, mappings, hash_ids_to_hashes ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._mappings = mappings
-        
-        self._hash_ids_to_hashes = hash_ids_to_hashes
-        
-    
-    def __iter__( self ): return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in self._mappings )
-    
-    def __len__( self ): return len( self._mappings )
-    
-    def GetHashes( self ): return self._hash_ids_to_hashes.values()
-    
-    def GetTags( self ): return [ tag for ( tag, hash_ids ) in self._mappings ]
-    
+UNKNOWN_ACCOUNT_TYPE = AccountType( 'unknown account', [], ( None, None ) )
+
+def GetUnknownAccount(): return Account( 0, UNKNOWN_ACCOUNT_TYPE, 0, None, ( 0, 0 ) )
+
 class ClientServiceIdentifier( HydrusYAMLBase ):
     
     yaml_tag = u'!ClientServiceIdentifier'
@@ -1630,23 +1574,147 @@ COMBINED_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known files', C
 COMBINED_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known tags', COMBINED_TAG, 'all known tags' )
 NULL_SERVICE_IDENTIFIER = ClientServiceIdentifier( '', NULL_SERVICE, 'no service' )
 
+class ClientToServerUpdate( HydrusYAMLBase ):
+    
+    yaml_tag = u'!ClientToServerUpdate'
+    
+    def __init__( self, content_data, hash_ids_to_hashes ):
+        
+        HydrusYAMLBase.__init__( self )
+        
+        # we need to flatten it from a collections.defaultdict to just a normal dict so it can be YAMLised
+        
+        self._content_data = {}
+        
+        for data_type in content_data:
+            
+            self._content_data[ data_type ] = {}
+            
+            for action in content_data[ data_type ]: self._content_data[ data_type ][ action ] = content_data[ data_type ][ action ]
+            
+        
+        self._hash_ids_to_hashes = hash_ids_to_hashes
+        
+    
+    def GetContentUpdates( self, for_client = False ):
+        
+        data_types = [ CONTENT_DATA_TYPE_FILES, CONTENT_DATA_TYPE_MAPPINGS, CONTENT_DATA_TYPE_TAG_SIBLINGS, CONTENT_DATA_TYPE_TAG_PARENTS ]
+        actions = [ CONTENT_UPDATE_PENDING, CONTENT_UPDATE_PETITION, CONTENT_UPDATE_DENY_PEND, CONTENT_UPDATE_DENY_PETITION ]
+        
+        content_updates = []
+        
+        for ( data_type, action ) in itertools.product( data_types, actions ):
+            
+            munge_row = lambda row: row
+            
+            if for_client:
+                
+                if action == CONTENT_UPDATE_PENDING: new_action = CONTENT_UPDATE_ADD
+                elif action == CONTENT_UPDATE_PETITION: new_action = CONTENT_UPDATE_DELETE
+                else: continue
+                
+                if data_type in ( CONTENT_DATA_TYPE_TAG_SIBLINGS, CONTENT_DATA_TYPE_TAG_PARENTS ) and action in ( CONTENT_UPDATE_PENDING, CONTENT_UPDATE_PETITION ):
+                    
+                    munge_row = lambda ( pair, reason ): pair
+                    
+                elif data_type == CONTENT_DATA_TYPE_FILES and action == CONTENT_UPDATE_PETITION:
+                    
+                    munge_row = lambda ( hashes, reason ): hashes
+                    
+                elif data_type == CONTENT_DATA_TYPE_MAPPINGS and action == CONTENT_UPDATE_PETITION:
+                    
+                    munge_row = lambda ( tag, hashes, reason ): ( tag, hashes )
+                    
+                
+            else: new_action = action
+            
+            content_updates.extend( [ ContentUpdate( data_type, new_action, munge_row( row ) ) for row in self.GetContentDataIterator( data_type, action ) ] )
+            
+        
+        return content_updates
+        
+    
+    def GetHashes( self ): return self._hash_ids_to_hashes.values()
+    
+    def GetContentDataIterator( self, data_type, action ):
+        
+        if data_type not in self._content_data or action not in self._content_data[ data_type ]: return ()
+        
+        data = self._content_data[ data_type ][ action ]
+        
+        if data_type == CONTENT_DATA_TYPE_FILES:
+            
+            if action == CONTENT_UPDATE_PETITION: return ( ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids }, reason ) for ( hash_ids, reason ) in data )
+            else: return ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids } for hash_ids in ( data, ) )
+            
+        if data_type == CONTENT_DATA_TYPE_MAPPINGS:
+            
+            if action == CONTENT_UPDATE_PETITION: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ], reason ) for ( tag, hash_ids, reason ) in data )
+            else: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in data )
+            
+        else: return data.__iter__()
+        
+    
+    def GetTags( self ):
+        
+        tags = set()
+        
+        try: tags.update( ( tag for ( tag, hash_ids ) in self._content_data[ CONTENT_DATA_TYPE_MAPPINGS ][ CONTENT_UPDATE_PENDING ] ) )
+        except: pass
+        
+        try: tags.update( ( tag for ( tag, hash_ids, reason ) in self._content_data[ CONTENT_DATA_TYPE_MAPPINGS ][ CONTENT_UPDATE_PETITION ] ) )
+        except: pass
+        
+        return tags
+        
+    
+    def IsEmpty( self ):
+        
+        num_total = 0
+        
+        for data_type in self._content_data:
+            
+            for action in self._content_data[ data_type ]: num_total += len( self._content_data[ data_type ][ action ] )
+            
+        
+        return num_total == 0
+        
+    
 class ContentUpdate():
     
-    def __init__( self, action, service_identifier, hashes, info = None ):
+    def __init__( self, data_type, action, row ):
         
+        self._data_type = data_type
         self._action = action
-        self._service_identifier = service_identifier
-        self._hashes = set( hashes )
-        self._info = info
+        self._row = row
         
     
-    def GetAction( self ): return self._action
+    def GetHashes( self ):
+        
+        if self._data_type == CONTENT_DATA_TYPE_FILES:
+            
+            if self._action == CONTENT_UPDATE_ADD:
+                
+                hash = self._row[0]
+                
+                hashes = set( ( hash, ) )
+                
+            elif self._action in ( CONTENT_UPDATE_ARCHIVE, CONTENT_UPDATE_DELETE, CONTENT_UPDATE_INBOX, CONTENT_UPDATE_PENDING, CONTENT_UPDATE_RESCIND_PENDING, CONTENT_UPDATE_RESCIND_PETITION ): hashes = self._row
+            elif self._action == CONTENT_UPDATE_PETITION: ( hashes, reason ) = self._row
+            
+        elif self._data_type == CONTENT_DATA_TYPE_MAPPINGS:
+            
+            if self._action == CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = self._row
+            else: ( tag, hashes ) = self._row
+            
+        elif self._data_type in ( CONTENT_DATA_TYPE_TAG_PARENTS, CONTENT_DATA_TYPE_TAG_SIBLINGS ): hashes = set()
+        
+        if type( hashes ) != set: hashes = set( hashes )
+        
+        return hashes
+        
     
-    def GetHashes( self ): return self._hashes
-    
-    def GetInfo( self ): return self._info
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
+    def ToTuple( self ): return ( self._data_type, self._action, self._row )
     
 class DAEMON( threading.Thread ):
     
@@ -1738,103 +1806,6 @@ class DAEMONWorker( DAEMON ):
         
     
     def set( self, *args, **kwargs ): self._event.set()
-    
-class HydrusUpdate( HydrusYAMLBase ):
-
-    yaml_tag = u'!HydrusUpdate'
-    
-    def __init__( self, news, begin, end ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._news = news
-        
-        self._begin = begin
-        self._end = end
-        
-    
-    def GetBegin( self ): return self._begin
-    
-    def GetEnd( self ): return self._end
-    
-    def GetNextBegin( self ): return self._end + 1
-    
-    def GetNews( self ): return [ ( news, timestamp ) for ( news, timestamp ) in self._news ]
-    
-    def SplitIntoSubUpdates( self ): return [ self ]
-    
-class HydrusUpdateFileRepository( HydrusUpdate ):
-    
-    yaml_tag = u'!HydrusUpdateFileRepository'
-    
-    def __init__( self, files, deleted_hashes, news, begin, end ):
-        
-        HydrusUpdate.__init__( self, news, begin, end )
-        
-        self._files = files
-        self._deleted_hashes = deleted_hashes
-        
-    
-    def GetDeletedHashes( self ): return self._deleted_hashes
-    
-    def GetFiles( self ): return self._files
-    
-    def GetHashes( self ): return [ hash for ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) in self._files ]
-    
-class HydrusUpdateTagRepository( HydrusUpdate ):
-    
-    yaml_tag = u'!HydrusUpdateTagRepository'
-    
-    def __init__( self, mappings, deleted_mappings, hash_ids_to_hashes, news, begin, end ):
-        
-        HydrusUpdate.__init__( self, news, begin, end )
-        
-        self._hash_ids_to_hashes = hash_ids_to_hashes
-        
-        self._mappings = mappings
-        self._deleted_mappings = deleted_mappings
-        
-    
-    def GetDeletedMappings( self ): return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in self._deleted_mappings )
-    
-    def GetMappings( self ): return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in self._mappings )
-    
-    def GetTags( self ): return [ tag for ( tag, hash_ids ) in self._mappings ]
-    
-    def SplitIntoSubUpdates( self ):
-        
-        updates = [ HydrusUpdateTagRepository( [], [], {}, self._news, self._begin, None ) ]
-        
-        total_mappings = sum( [ len( hashes ) for ( tag, hashes ) in self._mappings ] )
-        
-        total_tags = len( self._mappings )
-        
-        number_updates_to_make = total_mappings / 500
-        
-        if number_updates_to_make == 0: number_updates_to_make = 1
-        
-        int_to_split_by = total_tags / number_updates_to_make
-        
-        if int_to_split_by == 0: int_to_split_by = 1
-        
-        for i in range( 0, len( self._mappings ), int_to_split_by ):
-            
-            mappings_subset = self._mappings[ i : i + int_to_split_by ]
-            
-            updates.append( HydrusUpdateTagRepository( mappings_subset, [], self._hash_ids_to_hashes, [], self._begin, None ) )
-            
-        
-        for i in range( 0, len( self._deleted_mappings ), int_to_split_by ):
-            
-            deleted_mappings_subset = self._deleted_mappings[ i : i + int_to_split_by ]
-            
-            updates.append( HydrusUpdateTagRepository( [], deleted_mappings_subset, self._hash_ids_to_hashes, [], self._begin, None ) )
-            
-        
-        updates.append( HydrusUpdateTagRepository( [], [], {}, [], self._begin, self._end ) )
-        
-        return updates
-        
     
 class JobInternal():
     
@@ -2157,74 +2128,7 @@ class ResponseContext():
     def HasBody( self ): return self._body != ''
     
     def HasFilename( self ): return self._filename is not None
-    
-class ServerPetition( HydrusYAMLBase ):
-    
-    yaml_tag = u'!ServerPetition'
-    
-    def __init__( self, petitioner_identifier ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._petitioner_identifier = petitioner_identifier
-        
-    
-    def GetPetitionerIdentifier( self ): return self._petitioner_identifier
-    
-class ServerFilePetition( ServerPetition ):
-    
-    yaml_tag = u'!ServerFilePetition'
-    
-    def __init__( self, petitioner_identifier, reason, hashes ):
-        
-        ServerPetition.__init__( self, petitioner_identifier )
-        
-        self._reason = reason
-        self._hashes = hashes
-        
-    
-    def GetClientPetition( self ): return ClientFilePetitions( [ ( self._reason, self._hashes ) ] )
-    
-    def GetClientPetitionDenial( self ): return ClientFilePetitionDenial( self._hashes )
-    
-    def GetPetitionHashes( self ): return self._hashes
-    
-    def GetPetitionInfo( self ): return ( self._reason, self._hashes )
-    
-    def GetPetitionInfoDenial( self ): return ( self._hashes, )
-    
-    def GetPetitionString( self ): return 'For ' + ConvertIntToPrettyString( len( self._hashes ) ) + ' files:' + os.linesep + os.linesep + self._reason
-    
-class ServerMappingPetition( ServerPetition ):
-    
-    yaml_tag = u'!ServerMappingPetition'
-    
-    def __init__( self, petitioner_identifier, reason, tag, hashes ):
-        
-        ServerPetition.__init__( self, petitioner_identifier )
-        
-        self._reason = reason
-        self._tag = tag
-        self._hashes = hashes
-        
-    
-    def GetClientPetition( self ):
-        
-        hash_ids_to_hashes = { enum : hash for ( enum, hash ) in enumerate( self._hashes ) }
-        
-        hash_ids = hash_ids_to_hashes.keys()
-        
-        return ClientMappingPetitions( [ ( self._reason, self._tag, hash_ids ) ], hash_ids_to_hashes )
-        
-    
-    def GetClientPetitionDenial( self ): return ClientMappingPetitionDenial( self._tag, self._hashes )
-    
-    def GetPetitionHashes( self ): return self._hashes
-    
-    def GetPetitionInfo( self ): return ( self._reason, self._tag, self._hashes )
-    
-    def GetPetitionString( self ): return 'Tag: ' + self._tag + ' for ' + ConvertIntToPrettyString( len( self._hashes ) ) + ' files.' + os.linesep + os.linesep + 'Reason: ' + self._reason
-    
+
 class ServerServiceIdentifier( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerServiceIdentifier'
@@ -2249,18 +2153,229 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     
 class ServiceUpdate():
     
-    def __init__( self, action, service_identifier, info = None ):
+    def __init__( self, action, row = None ):
         
-        self._action = action # make this an enumerated thing, yo
-        self._service_identifier = service_identifier
-        self._info = info
+        self._action = action
+        self._row = row
         
     
-    def GetAction( self ): return self._action
+    def ToTuple( self ): return ( self._action, self._row )
+        
+class ServerToClientPetition( HydrusYAMLBase ):
     
-    def GetInfo( self ): return self._info
+    yaml_tag = u'!ServerToClientPetition'
     
-    def GetServiceIdentifier( self ): return self._service_identifier
+    def __init__( self, petition_type, action, petitioner_account_identifier, petition_data, reason ):
+        
+        HydrusYAMLBase.__init__( self )
+        
+        self._petition_type = petition_type
+        self._action = action
+        self._petitioner_account_identifier = petitioner_account_identifier
+        self._petition_data = petition_data
+        self._reason = reason
+        
+    
+    def GetApproval( self, reason = None ):
+        
+        if reason is None: reason = self._reason
+        
+        if self._petition_type == CONTENT_DATA_TYPE_FILES: hashes = self._petition_data
+        elif self._petition_type == CONTENT_DATA_TYPE_MAPPINGS: ( tag, hashes ) = self._petition_data
+        else: hashes = set()
+        
+        hash_ids_to_hashes = dict( enumerate( hashes ) )
+        
+        hash_ids = hash_ids_to_hashes.keys()
+        
+        content_data = GetEmptyDataDict()
+        
+        if self._petition_type == CONTENT_DATA_TYPE_FILES: row = ( hash_ids, reason )
+        elif self._petition_type == CONTENT_DATA_TYPE_MAPPINGS: row = ( tag, hash_ids, reason )
+        else:
+            
+            ( old, new ) = self._petition_data
+            
+            row = ( ( old, new ), reason )
+            
+        
+        content_data[ self._petition_type ][ self._action ].append( row )
+        
+        return ClientToServerUpdate( content_data, hash_ids_to_hashes )
+        
+    
+    def GetDenial( self ):
+        
+        if self._petition_type == CONTENT_DATA_TYPE_FILES: hashes = self._petition_data
+        elif self._petition_type == CONTENT_DATA_TYPE_MAPPINGS: ( tag, hashes ) = self._petition_data
+        else: hashes = set()
+        
+        hash_ids_to_hashes = dict( enumerate( hashes ) )
+        
+        hash_ids = hash_ids_to_hashes.keys()
+        
+        if self._petition_type == CONTENT_DATA_TYPE_FILES: row_list = hash_ids
+        elif self._petition_type == CONTENT_DATA_TYPE_MAPPINGS: row_list = [ ( tag, hash_ids ) ]
+        else: row_list = [ self._petition_data ]
+        
+        content_data = GetEmptyDataDict()
+        
+        if self._action == CONTENT_UPDATE_PENDING: denial_action = CONTENT_UPDATE_DENY_PEND
+        elif self._action == CONTENT_UPDATE_PETITION: denial_action = CONTENT_UPDATE_DENY_PETITION
+        
+        content_data[ self._petition_type ][ denial_action ] = row_list
+        
+        return ClientToServerUpdate( content_data, hash_ids_to_hashes )
+        
+    
+    def GetHashes( self ):
+        
+        if self._petition_type == CONTENT_DATA_TYPE_FILES: hashes = self._petition_data
+        elif self._petition_type == CONTENT_DATA_TYPE_MAPPINGS: ( tag, hashes ) = self._petition_data
+        else: hashes = set()
+        
+        return hashes
+        
+    
+    def GetPetitioner( self ): return self._petitioner_account_identifier
+    
+    def GetPetitionString( self ):
+        
+        if self._action == CONTENT_UPDATE_PENDING: action_word = 'Add '
+        elif self._action == CONTENT_UPDATE_PETITION: action_word = 'Remove '
+        
+        if self._petition_type == CONTENT_DATA_TYPE_FILES:
+            
+            hashes = self._petition_data
+            
+            content_phrase = ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            
+        elif self._petition_type == CONTENT_DATA_TYPE_MAPPINGS:
+            
+            ( tag, hashes ) = self._petition_data
+            
+            content_phrase = tag + ' for ' + ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            
+        elif self._petition_type == CONTENT_DATA_TYPE_TAG_SIBLINGS:
+            
+            ( old_tag, new_tag ) = self._petition_data
+            
+            content_phrase = ' sibling ' + old_tag + '->' + new_tag
+            
+        elif self._petition_type == CONTENT_DATA_TYPE_TAG_PARENTS:
+            
+            ( old_tag, new_tag ) = self._petition_data
+            
+            content_phrase = ' parent ' + old_tag + '->' + new_tag
+            
+        
+        return action_word + content_phrase + os.linesep + os.linesep + self._reason
+        
+    
+class ServerToClientUpdate( HydrusYAMLBase ):
+
+    yaml_tag = u'!ServerToClientUpdate'
+    
+    def __init__( self, service_data, content_data, hash_ids_to_hashes ):
+        
+        HydrusYAMLBase.__init__( self )
+        
+        self._service_data = service_data
+        
+        self._content_data = {}
+        
+        for data_type in content_data:
+            
+            self._content_data[ data_type ] = {}
+            
+            for action in content_data[ data_type ]: self._content_data[ data_type ][ action ] = content_data[ data_type ][ action ]
+            
+        
+        self._hash_ids_to_hashes = hash_ids_to_hashes
+        
+    
+    def _GetContentData( data_type, action ):
+        
+        if data_type in self._content_data and action in self._content_data[ data_type ]: return self._content_data[ data_type ][ action ]
+        else: return []
+        
+    
+    def GetContentDataIterator( self, data_type, action ):
+        
+        if data_type not in self._content_data or action not in self._content_data[ data_type ]: return ()
+        
+        data = self._content_data[ data_type ][ action ]
+        
+        if data_type == CONTENT_DATA_TYPE_FILES:
+            
+            if action == CONTENT_UPDATE_ADD: return ( ( self._hash_ids_to_hashes[ hash_id ], size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in data )
+            else: return ( { self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids } for hash_ids in ( data, ) )
+            
+        elif data_type == CONTENT_DATA_TYPE_MAPPINGS: return ( ( tag, [ self._hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] ) for ( tag, hash_ids ) in data )
+        else: return data.__iter__()
+        
+    
+    def GetNumContentUpdates( self ):
+        
+        num = 0
+        
+        data_types = [ CONTENT_DATA_TYPE_FILES, CONTENT_DATA_TYPE_MAPPINGS, CONTENT_DATA_TYPE_TAG_SIBLINGS, CONTENT_DATA_TYPE_TAG_PARENTS ]
+        actions = [ CONTENT_UPDATE_ADD, CONTENT_UPDATE_DELETE ]
+        
+        for ( data_type, action ) in itertools.product( data_types, actions ):
+            
+            for row in self.GetContentDataIterator( data_type, action ): num += 1
+            
+        
+        return num
+        
+    
+    # this needs work!
+    # we need a universal content_update for both client and server
+    def IterateContentUpdates( self ):
+        
+        data_types = [ CONTENT_DATA_TYPE_FILES, CONTENT_DATA_TYPE_MAPPINGS, CONTENT_DATA_TYPE_TAG_SIBLINGS, CONTENT_DATA_TYPE_TAG_PARENTS ]
+        actions = [ CONTENT_UPDATE_ADD, CONTENT_UPDATE_DELETE ]
+        
+        for ( data_type, action ) in itertools.product( data_types, actions ):
+            
+            for row in self.GetContentDataIterator( data_type, action ): yield ContentUpdate( data_type, action, row )
+            
+        
+    
+    def IterateServiceUpdates( self ):
+        
+        service_types = [ SERVICE_UPDATE_NEWS, SERVICE_UPDATE_NEXT_BEGIN ]
+        
+        for service_type in service_types:
+            
+            if service_type in self._service_data:
+                
+                data = self._service_data[ service_type ]
+                
+                yield ServiceUpdate( service_type, data )
+                
+            
+        
+    
+    def GetHashes( self ): return set( hash_ids_to_hashes.values() )
+    
+    def GetTags( self ):
+        
+        tags = set()
+        
+        tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( CONTENT_DATA_TYPE_MAPPINGS, CURRENT ) ) )
+        tags.update( ( tag for ( tag, hash_ids ) in self.GetContentDataIterator( CONTENT_DATA_TYPE_MAPPINGS, DELETED ) ) )
+        
+        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( CONTENT_DATA_TYPE_TAG_SIBLINGS, CURRENT ) ) )
+        tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( CONTENT_DATA_TYPE_TAG_SIBLINGS, CURRENT ) ) )
+        tags.update( ( old_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( CONTENT_DATA_TYPE_TAG_SIBLINGS, DELETED ) ) )
+        tags.update( ( new_tag for ( old_tag, new_tag ) in self.GetContentDataIterator( CONTENT_DATA_TYPE_TAG_SIBLINGS, DELETED ) ) )
+        
+        return tags
+        
+    
+    def GetServiceData( self, service_type ): return self._service_data[ service_type ]
     
 # sqlite mod
 
@@ -2280,8 +2395,7 @@ sqlite3.register_adapter( bool, int )
 sqlite3.register_converter( 'INTEGER_BOOLEAN', integer_boolean_to_bool )
 
 # no converters in this case, since we always want to send the dumped string, not the object, to the network
-sqlite3.register_adapter( HydrusUpdateFileRepository, yaml.safe_dump )
-sqlite3.register_adapter( HydrusUpdateTagRepository, yaml.safe_dump )
+sqlite3.register_adapter( ServerToClientUpdate, yaml.safe_dump )
 
 # Custom Exceptions
 

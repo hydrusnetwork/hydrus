@@ -175,8 +175,6 @@ sort_string_lookup[ SORT_BY_RANDOM ] = 'random order'
 THUMBNAIL_MARGIN = 2
 THUMBNAIL_BORDER = 1
 
-UNKNOWN_ACCOUNT_TYPE = HC.AccountType( 'unknown account', [], ( None, None ) )
-
 def AddPaddingToDimensions( dimensions, padding ):
     
     ( x, y ) = dimensions
@@ -353,8 +351,6 @@ def GetThumbnailPath( hash ):
     
     return HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded
     
-def GetUnknownAccount(): return HC.Account( 0, UNKNOWN_ACCOUNT_TYPE, 0, None, ( 0, 0 ) )
-
 def IterateAllFilePaths():
     
     hex_chars = '0123456789abcdef'
@@ -403,7 +399,7 @@ def MergeTags( tags_managers ):
     
     # now let's merge so we have s_i : s_t_t
     
-    merged_tags = {}
+    merged_tags = collections.defaultdict( HC.default_dict_set )
     
     for ( service_identifier, several_statuses_to_tags ) in s_i_s_t_t_dict.items():
         
@@ -413,7 +409,7 @@ def MergeTags( tags_managers ):
         # [( status, tags )]
         flattened_s_t_t = itertools.chain.from_iterable( s_t_t_tupled )
         
-        statuses_to_tags = collections.defaultdict( set )
+        statuses_to_tags = HC.default_dict_set()
         
         for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
         
@@ -605,7 +601,10 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     if len( odd_paths ) > 0:
         
         print( 'Because of mime, the client could not import the following files:' )
-        for odd_path in odd_paths: print( odd_path )
+        
+        for odd_path in odd_paths:
+            try: print( odd_path )
+            except: pass
         
         wx.MessageBox( 'The ' + str( len( odd_paths ) ) + ' files that were not jpegs, pngs, bmps or gifs will not be added. If you are interested, their paths have been written to the log.' )
         
@@ -856,11 +855,9 @@ class CDPPFileServiceIdentifiers():
     
     def HasLocal( self ): return HC.LOCAL_FILE_SERVICE_IDENTIFIER in self._current
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
-        action = content_update.GetAction()
-        
-        service_identifier = content_update.GetServiceIdentifier()
+        ( data_type, action, row ) = content_update.ToTuple()
         
         if action == HC.CONTENT_UPDATE_ADD:
             
@@ -914,11 +911,9 @@ class LocalRatings():
     
     def GetServiceIdentifiersToRatings( self ): return self._service_identifiers_to_ratings
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
-        service_identifier = content_update.GetServiceIdentifier()
-        
-        action = content_update.GetAction()
+        ( data_type, action, row ) = content_update.ToTuple()
         
         if action == HC.CONTENT_UPDATE_RATING:
             
@@ -953,7 +948,7 @@ class ConnectionToService():
             
             error_message = 'Could not connect.'
             
-            if self._service_identifier is not None: HC.pubsub.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, self._service_identifier, error_message ) )
+            if self._service_identifier is not None: HC.pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, error_message ) ] })
             
             raise Exception( error_message )
             
@@ -1114,13 +1109,7 @@ class ConnectionToService():
             
             account.MakeFresh()
             
-            HC.pubsub.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, self._service_identifier, account ) )
-            
-        elif request == 'update':
-            
-            update = response
-            
-            HC.pubsub.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_BEGIN, self._service_identifier, update.GetNextBegin() ) )
+            wx.GetApp().Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
             
         
         return response
@@ -1152,9 +1141,9 @@ class CPRemoteRatingsServiceIdentifiers():
     
     def GetServiceIdentifiersToCP( self ): return self._service_identifiers_to_cp
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
-        service_identifier = content_update.GetServiceIdentifier()
+        ( data_type, action, row ) = content_update.ToTuple()
         
         if service_identifier in self._service_identifiers_to_cp: ( current, pending ) = self._service_identifiers_to_cp[ service_identifier ]
         else:
@@ -1163,8 +1152,6 @@ class CPRemoteRatingsServiceIdentifiers():
             
             self._service_identifiers_to_cp[ service_identifier ] = ( current, pending )
             
-        
-        action = content_update.GetAction()
         
         # this may well need work; need to figure out how to set the pending back to None after an upload. rescind seems ugly
         
@@ -1305,7 +1292,7 @@ class FileQueryResult():
         self._hashes = set( self._hashes_ordered )
         
         HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
-        HC.pubsub.sub( self, 'ProcessServiceUpdate', 'service_update_data' )
+        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         HC.pubsub.sub( self, 'RecalcCombinedTags', 'new_tag_service_precedence' )
         
     
@@ -1350,56 +1337,64 @@ class FileQueryResult():
     
     def GetMediaResults( self ): return [ self._hashes_to_media_results[ hash ] for hash in self._hashes_ordered ]
     
-    def ProcessContentUpdates( self, content_updates ):
+    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
         
-        for content_update in content_updates:
+        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
             
-            action = content_update.GetAction()
-            
-            service_identifier = content_update.GetServiceIdentifier()
-            
-            service_type = service_identifier.GetType()
-            
-            hashes = content_update.GetHashes()
-            
-            if action == HC.CONTENT_UPDATE_ARCHIVE:
+            for content_update in content_updates:
                 
-                if 'system:inbox' in self._predicates: self._Remove( hashes )
+                hashes = content_update.GetHashes()
                 
-            elif action == HC.CONTENT_UPDATE_INBOX:
-                
-                if 'system:archive' in self._predicates: self._Remove( hashes )
-                
-            elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier: self._Remove( hashes )
-            
-            for hash in self._hashes.intersection( hashes ):
-                
-                media_result = self._hashes_to_media_results[ hash ]
-                
-                media_result.ProcessContentUpdate( content_update )
+                if len( hashes ) > 0:
+                    
+                    ( data_type, action, row ) = content_update.ToTuple()
+                    
+                    service_type = service_identifier.GetType()
+                    
+                    if action == HC.CONTENT_UPDATE_ARCHIVE:
+                        
+                        if 'system:inbox' in self._predicates: self._Remove( hashes )
+                        
+                    elif action == HC.CONTENT_UPDATE_INBOX:
+                        
+                        if 'system:archive' in self._predicates: self._Remove( hashes )
+                        
+                    elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier: self._Remove( hashes )
+                    
+                    for hash in self._hashes.intersection( hashes ):
+                        
+                        media_result = self._hashes_to_media_results[ hash ]
+                        
+                        media_result.ProcessContentUpdate( service_identifier, content_update )
+                        
+                    
                 
             
         
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        action = update.GetAction()
-        
-        service_identifier = update.GetServiceIdentifier()
-        
-        if action == HC.SERVICE_UPDATE_DELETE_PENDING:
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            for media_result in self._hashes_to_media_results.values(): media_result.DeletePending( service_identifier )
-            
-        elif action == HC.SERVICE_UPDATE_RESET:
-            
-            for media_result in self._hashes_to_media_results.values(): media_result.ResetService( service_identifier )
+            for service_update in service_updates:
+                
+                ( action, row ) = service_update.ToTuple()
+                
+                if action == HC.SERVICE_UPDATE_DELETE_PENDING:
+                    
+                    for media_result in self._hashes_to_media_results.values(): media_result.DeletePending( service_identifier )
+                    
+                elif action == HC.SERVICE_UPDATE_RESET:
+                    
+                    for media_result in self._hashes_to_media_results.values(): media_result.ResetService( service_identifier )
+                    
+                
             
         
     
 class FileSearchContext():
     
-    def __init__( self, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
+    def __init__( self, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
         
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = tag_service_identifier
@@ -1816,7 +1811,7 @@ class Imageboard( HC.HydrusYAMLBase ):
     
     def IsOkToPost( self, media_result ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags, file_service_identifiers, local_ratings, remote_ratings ) = media_result.GetInfo()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags, file_service_identifiers, local_ratings, remote_ratings ) = media_result.ToTuple()
         
         if RESTRICTION_MIN_RESOLUTION in self._restrictions:
             
@@ -2009,22 +2004,20 @@ class MediaResult():
     
     def GetTimestamp( self ): return self._tuple[4]
     
-    def GetInfo( self ): return self._tuple
-    
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
+        
+        ( data_type, action, row ) = content_update.ToTuple()
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
         
-        service_identifier = content_update.GetServiceIdentifier()
-        
         service_type = service_identifier.GetType()
         
-        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( content_update )
+        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+            try: tags_manager.ProcessContentUpdate( service_identifier, content_update )
+            except: print( traceback.format_exc() )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
             
             if service_type == HC.LOCAL_FILE:
-                
-                action = content_update.GetAction()
                 
                 if action == HC.CONTENT_UPDATE_ADD and not file_service_identifiers_cdpp.HasLocal(): inbox = True
                 elif action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
@@ -2034,12 +2027,12 @@ class MediaResult():
                 self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings )
                 
             
-            file_service_identifiers_cdpp.ProcessContentUpdate( content_update )
+            file_service_identifiers_cdpp.ProcessContentUpdate( service_identifier, content_update )
             
         elif service_type in HC.RATINGS_SERVICES:
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): local_ratings.ProcessContentUpdate( content_update )
-            else: remote_ratings.ProcessContentUpdate( content_update )
+            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): local_ratings.ProcessContentUpdate( service_identifier, content_update )
+            else: remote_ratings.ProcessContentUpdate( service_identifier, content_update )
             
         
     
@@ -2052,6 +2045,8 @@ class MediaResult():
         if service_type in ( HC.TAG_REPOSITORY, HC.COMBINED_TAG ): tags_manager.ResetService( service_identifier )
         elif service_type == HC.FILE_REPOSITORY: file_service_identifiers_cdpp.ResetService( service_identifier )
         
+    
+    def ToTuple( self ): return self._tuple
     
 class MenuEventIdToActionCache():
     
@@ -2203,7 +2198,7 @@ class ServiceRemote( Service ):
         self._credentials = credentials
         self._last_error = last_error
         
-        HC.pubsub.sub( self, 'ProcessServiceUpdate', 'service_update_data' )
+        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
     def GetConnection( self ): return ConnectionToService( self._service_identifier, self._credentials )
@@ -2216,18 +2211,24 @@ class ServiceRemote( Service ):
     
     def SetCredentials( self, credentials ): self._credentials = credentials
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        if update.GetServiceIdentifier() == self._service_identifier:
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            action = update.GetAction()
-            
-            if action == HC.SERVICE_UPDATE_ERROR: self._last_error = int( time.time() )
-            elif action == HC.SERVICE_UPDATE_RESET:
+            for service_update in service_updates:
                 
-                self._service_identifier = update.GetInfo()
-                
-                self._last_error = 0
+                if service_identifier == self._service_identifier:
+                    
+                    ( action, row ) = service_update.ToTuple()
+                    
+                    if action == HC.SERVICE_UPDATE_ERROR: self._last_error = int( time.time() )
+                    elif action == HC.SERVICE_UPDATE_RESET:
+                        
+                        self._service_identifier = row
+                        
+                        self._last_error = 0
+                        
+                    
                 
             
         
@@ -2269,26 +2270,32 @@ class ServiceRemoteRestricted( ServiceRemote ):
         else: return True
         
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        ServiceRemote.ProcessServiceUpdate( self, update )
+        ServiceRemote.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
         
-        if update.GetServiceIdentifier() == self.GetServiceIdentifier():
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            action = update.GetAction()
-            
-            if action == HC.SERVICE_UPDATE_ACCOUNT:
+            for service_update in service_updates:
                 
-                account = update.GetInfo()
-                
-                self._account = account
-                self._last_error = 0
-                
-            elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
-                
-                num_bytes = update.GetInfo()
-                
-                self._account.RequestMade( num_bytes )
+                if service_identifier == self.GetServiceIdentifier():
+                    
+                    ( action, row ) = service_update.ToTuple()
+                    
+                    if action == HC.SERVICE_UPDATE_ACCOUNT:
+                        
+                        account = row
+                        
+                        self._account = account
+                        self._last_error = 0
+                        
+                    elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
+                        
+                        num_bytes = row
+                        
+                        self._account.RequestMade( num_bytes )
+                        
+                    
                 
             
         
@@ -2337,26 +2344,34 @@ class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
             
         
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        ServiceRemoteRestricted.ProcessServiceUpdate( self, update )
+        ServiceRemoteRestricted.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
         
-        if update.GetServiceIdentifier() == self.GetServiceIdentifier():
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            action = update.GetAction()
-            
-            if action == HC.SERVICE_UPDATE_NEXT_BEGIN:
+            for service_update in service_updates:
                 
-                next_begin = update.GetInfo()
-                
-                self.SetNextBegin( next_begin )
-                
-            elif action == HC.SERVICE_UPDATE_RESET:
-                
-                self._service_identifier = update.GetInfo()
-                
-                self._first_begin = 0
-                self._next_begin = 0
+                if service_identifier == self.GetServiceIdentifier():
+                    
+                    ( action, row ) = service_update.ToTuple()
+                    
+                    if action == HC.SERVICE_UPDATE_NEXT_BEGIN:
+                        
+                        ( begin, end ) = row
+                        
+                        next_begin = end + 1
+                        
+                        self.SetNextBegin( next_begin )
+                        
+                    elif action == HC.SERVICE_UPDATE_RESET:
+                        
+                        self._service_identifier = row
+                        
+                        self._first_begin = 0
+                        self._next_begin = 0
+                        
+                    
                 
             
         
@@ -2423,28 +2438,32 @@ class ServiceRemoteRestrictedDepot( ServiceRemoteRestricted ):
     
     def HasCheckDue( self ): return self._last_check + self._check_period + 5 < int( time.time() )
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        ServiceRemoteRestricted.ProcessServiceUpdate( self, update )
+        ServiceRemoteRestricted.ProcessServiceUpdates( self, update )
         
-        if update.GetServiceIdentifier() == self.GetServiceIdentifier():
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            action = update.GetAction()
-            
-            if action == HC.SERVICE_UPDATE_LAST_CHECK:
+            for service_update in service_updates:
                 
-                last_check = update.GetInfo()
+                if service_identifier == self.GetServiceIdentifier():
+                    
+                    ( action, row ) = service_update.ToTuple()
+                    
+                    if action == HC.SERVICE_UPDATE_LAST_CHECK:
+                        
+                        last_check = row
+                        
+                        self._last_check = last_check
+                        
+                    elif action == HC.SERVICE_UPDATE_RESET:
+                        
+                        self._service_identifier = row
+                        
+                        self._last_check = 0
+                        
+                    
                 
-                self._last_check = last_check
-                
-            elif action == HC.SERVICE_UPDATE_RESET:
-                
-                self._service_identifier = update.GetInfo()
-                
-                self._last_check = 0
-                
-            
-        
     
 class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
     
@@ -2491,17 +2510,14 @@ class TagsManager():
         
         for service_identifier in t_s_p:
             
-            if service_identifier in self._service_identifiers_to_statuses_to_tags:
-                
-                statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
-                
-                combined_current.update( statuses_to_tags[ HC.CURRENT ] )
-                combined_current.difference_update( statuses_to_tags[ HC.DELETED ] )
-                combined_current.difference_update( statuses_to_tags[ HC.DELETED_PENDING ] )
-                
-                combined_pending.update( statuses_to_tags[ HC.DELETED_PENDING ] )
-                combined_pending.update( statuses_to_tags[ HC.PENDING ] )
-                
+            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            combined_current.update( statuses_to_tags[ HC.CURRENT ] )
+            combined_current.difference_update( statuses_to_tags[ HC.DELETED ] )
+            combined_current.difference_update( statuses_to_tags[ HC.DELETED_PENDING ] )
+            
+            combined_pending.update( statuses_to_tags[ HC.DELETED_PENDING ] )
+            combined_pending.update( statuses_to_tags[ HC.PENDING ] )
             
         
         combined_statuses_to_tags = collections.defaultdict( set )
@@ -2523,31 +2539,28 @@ class TagsManager():
         self._chapters = set()
         self._pages = set()
         
-        if HC.COMBINED_TAG_SERVICE_IDENTIFIER in self._service_identifiers_to_statuses_to_tags:
+        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        
+        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        
+        for tag in combined_current.union( combined_pending ):
             
-            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
-            
-            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
-            
-            for tag in combined_current.union( combined_pending ):
+            if ':' in tag:
                 
-                if ':' in tag:
+                ( namespace, tag ) = tag.split( ':', 1 )
+                
+                if namespace == 'creator': self._creators.add( tag )
+                elif namespace == 'series': self._series.add( tag )
+                elif namespace == 'title': self._titles.add( tag )
+                elif namespace in ( 'volume', 'chapter', 'page' ):
                     
-                    ( namespace, tag ) = tag.split( ':', 1 )
+                    try: tag = int( tag )
+                    except: pass
                     
-                    if namespace == 'creator': self._creators.add( tag )
-                    elif namespace == 'series': self._series.add( tag )
-                    elif namespace == 'title': self._titles.add( tag )
-                    elif namespace in ( 'volume', 'chapter', 'page' ):
-                        
-                        try: tag = int( tag )
-                        except: pass
-                        
-                        if namespace == 'volume': self._volumes.add( tag )
-                        elif namespace == 'chapter': self._chapters.add( tag )
-                        elif namespace == 'page': self._pages.add( tag )
-                        
+                    if namespace == 'volume': self._volumes.add( tag )
+                    elif namespace == 'chapter': self._chapters.add( tag )
+                    elif namespace == 'page': self._pages.add( tag )
                     
                 
             
@@ -2564,57 +2577,42 @@ class TagsManager():
     
     def DeletePending( self, service_identifier ):
         
-        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        
+        if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.DELETED_PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
             
-            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED_PENDING ] )
             
-            if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.DELETED_PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
-                
-                statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED_PENDING ] )
-                
-                statuses_to_tags[ HC.PENDING ] = set()
-                statuses_to_tags[ HC.DELETED_PENDING ] = set()
-                statuses_to_tags[ HC.PETITIONED ] = set()
-                
-                self._RecalcCombined()
-                
+            statuses_to_tags[ HC.PENDING ] = set()
+            statuses_to_tags[ HC.DELETED_PENDING ] = set()
+            statuses_to_tags[ HC.PETITIONED ] = set()
+            
+            self._RecalcCombined()
             
         
     
     def GetCurrent( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
         
-        if service_identifier in self._service_identifiers_to_statuses_to_tags:
-            
-            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
-            
-            return set( statuses_to_tags[ HC.CURRENT ] )
-            
-        else: return set()
+        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        
+        return set( statuses_to_tags[ HC.CURRENT ] )
         
     
     def GetDeleted( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
         
-        if service_identifier in self._service_identifiers_to_statuses_to_tags:
-            
-            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
-            
-            return statuses_to_tags[ HC.DELETED ].union( statuses_to_tags[ HC.DELETED_PENDING ] )
-            
-        else: return set()
+        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        
+        return statuses_to_tags[ HC.DELETED ].union( statuses_to_tags[ HC.DELETED_PENDING ] )
         
     
     def GetNamespaceSlice( self, namespaces ):
         
-        if HC.COMBINED_TAG_SERVICE_IDENTIFIER in self._service_identifiers_to_statuses_to_tags:
-            
-            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
-            
-            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
-            
-            return frozenset( [ tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ] )
-            
-        else: return frozenset()
+        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        
+        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        
+        return frozenset( ( tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ) )
         
     
     def GetNumTags( self, tag_service_identifier, include_current_tags = True, include_pending_tags = False ):
@@ -2631,58 +2629,39 @@ class TagsManager():
     
     def GetPending( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
         
-        if service_identifier in self._service_identifiers_to_statuses_to_tags:
-            
-            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
-            
-            return statuses_to_tags[ HC.DELETED_PENDING ].union( statuses_to_tags[ HC.PENDING ] )
-            
-        else: return set()
+        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        
+        return statuses_to_tags[ HC.DELETED_PENDING ].union( statuses_to_tags[ HC.PENDING ] )
         
     
     def GetPetitioned( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
         
-        if service_identifier in self._service_identifiers_to_statuses_to_tags:
-            
-            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
-            
-            return set( statuses_to_tags[ HC.PETITIONED ] )
-            
-        else: return set()
+        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        
+        return set( statuses_to_tags[ HC.PETITIONED ] )
         
     
     def GetServiceIdentifiersToStatusesToTags( self ): return self._service_identifiers_to_statuses_to_tags
     
-    def GetStatusesToTags( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_statuses_to_tags: return self._service_identifiers_to_statuses_to_tags[ service_identifier ]
-        else: return collections.defaultdict( set )
-        
+    def GetStatusesToTags( self, service_identifier ): return self._service_identifiers_to_statuses_to_tags[ service_identifier ]
     
     def HasTag( self, tag ):
         
-        if HC.COMBINED_TAG_SERVICE_IDENTIFIER in self._service_identifiers_to_statuses_to_tags:
-            
-            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
-            
-            return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
-            
-        else: return False
+        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        
+        return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
         
     
-    def ProcessContentUpdate( self, content_update ):
-        
-        service_identifier = content_update.GetServiceIdentifier()
-        
-        if service_identifier not in self._service_identifiers_to_statuses_to_tags: self._service_identifiers_to_statuses_to_tags[ service_identifier ] = collections.defaultdict( set )
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
         statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
         
-        action = content_update.GetAction()
+        ( data_type, action, row ) = content_update.ToTuple()
+        
+        if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
+        else: ( tag, hashes ) = row
         
         if action == HC.CONTENT_UPDATE_ADD:
-            
-            tag = content_update.GetInfo()
             
             statuses_to_tags[ HC.CURRENT ].add( tag )
             
@@ -2691,8 +2670,6 @@ class TagsManager():
             statuses_to_tags[ HC.PENDING ].discard( tag )
             
         elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            tag = content_update.GetInfo()
             
             if tag in statuses_to_tags[ HC.PENDING ]:
                 
@@ -2707,84 +2684,38 @@ class TagsManager():
             
             statuses_to_tags[ HC.PETITIONED ].discard( tag )
             
-        elif action == HC.CONTENT_UPDATE_EDIT_LOG:
+        elif action == HC.CONTENT_UPDATE_PENDING:
             
-            edit_log = content_update.GetInfo()
-            
-            for ( action, info ) in edit_log:
+            if tag in statuses_to_tags[ HC.DELETED ]:
                 
-                if action == HC.CONTENT_UPDATE_ADD:
-                    
-                    tag = info
-                    
-                    statuses_to_tags[ HC.CURRENT ].add( tag )
-                    
-                    statuses_to_tags[ HC.DELETED ].discard( tag )
-                    statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
-                    statuses_to_tags[ HC.PENDING ].discard( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_DELETE:
-                    
-                    tag = info
-                    
-                    if tag in statuses_to_tags[ HC.PENDING ]:
-                        
-                        statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
-                        statuses_to_tags[ HC.PENDING ].discard( tag )
-                        
-                    else:
-                        
-                        statuses_to_tags[ HC.DELETED ].add( tag )
-                        statuses_to_tags[ HC.CURRENT ].discard( tag )
-                        
-                    
-                    statuses_to_tags[ HC.PETITIONED ].discard( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_PENDING:
-                    
-                    tag = info
-                    
-                    if tag in statuses_to_tags[ HC.DELETED ]:
-                        
-                        statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
-                        statuses_to_tags[ HC.DELETED ].discard( tag )
-                        
-                    else: statuses_to_tags[ HC.PENDING ].add( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
-                    
-                    tag = info
-                    
-                    if tag in statuses_to_tags[ HC.DELETED_PENDING ]:
-                        
-                        statuses_to_tags[ HC.DELETED ].add( tag )
-                        statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
-                        
-                    else: statuses_to_tags[ HC.PENDING ].discard( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_PETITION:
-                    
-                    ( tag, reason ) = info
-                    
-                    statuses_to_tags[ HC.PETITIONED ].add( tag )
-                    
-                elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-                    
-                    tag = info
-                    
-                    statuses_to_tags[ HC.PETITIONED ].discard( tag )
-                    
+                statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
+                statuses_to_tags[ HC.DELETED ].discard( tag )
                 
+            else: statuses_to_tags[ HC.PENDING ].add( tag )
             
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
+            
+            if tag in statuses_to_tags[ HC.DELETED_PENDING ]:
+                
+                statuses_to_tags[ HC.DELETED ].add( tag )
+                statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
+                
+            else: statuses_to_tags[ HC.PENDING ].discard( tag )
+            
+        elif action == HC.CONTENT_UPDATE_PETITION: statuses_to_tags[ HC.PETITIONED ].add( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
         
         self._RecalcCombined()
         
     
     def ResetService( self, service_identifier ):
         
-        self._service_identifiers_to_statuses_to_tags[ service_identifier ] = collections.defaultdict[ set ]
-        
-        self._RecalcCombined()
+        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+            
+            del self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            
+            self._RecalcCombined()
+            
         
     
 class TagParentsManager():
@@ -2831,11 +2762,16 @@ class TagParentsManager():
     
     def _RefreshParents( self ):
         
-        raw_parents = wx.GetApp().Read( 'tag_parents' )
+        service_identifiers_to_statuses_to_pairs = wx.GetApp().Read( 'tag_parents' )
         
         self._parents = collections.defaultdict( dict )
         
-        for ( service_identifier, pairs ) in raw_parents.items(): self._parents[ service_identifier ] = HC.BuildKeyToListDict( pairs )
+        for ( service_identifier, statuses_to_pairs ) in service_identifiers_to_statuses_to_pairs.items():
+            
+            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.DELETED_PENDING ] ).union( statuses_to_pairs[ HC.PENDING ] )
+            
+            self._parents[ service_identifier ] = HC.BuildKeyToListDict( pairs )
+            
         
     
     def ExpandPredicates( self, service_identifier, predicates ):
@@ -2886,6 +2822,7 @@ class TagSiblingsManager():
         self._tag_service_precedence = wx.GetApp().Read( 'tag_service_precedence' )
         
         # I should offload this to a thread (rather than the gui thread), and have an event to say when it is ready
+        # gui requests should pause until it is ready, which should kick in during refreshes, too!
         
         self._RefreshSiblings()
         
@@ -2896,7 +2833,7 @@ class TagSiblingsManager():
     
     def _RefreshSiblings( self ):
         
-        unprocessed_siblings = wx.GetApp().Read( 'tag_siblings' )
+        service_identifiers_to_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings' )
         
         t_s_p = list( self._tag_service_precedence )
         
@@ -2909,35 +2846,33 @@ class TagSiblingsManager():
         
         for service_identifier in t_s_p:
             
-            if service_identifier in unprocessed_siblings:
+            statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+            
+            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.DELETED_PENDING ] ).union( statuses_to_pairs[ HC.PENDING ] )
+            
+            for ( old, new ) in pairs:
                 
-                some_siblings = unprocessed_siblings[ service_identifier ]
-                
-                for ( old, new ) in some_siblings:
+                if old not in processed_siblings:
                     
-                    if old not in processed_siblings:
+                    next_new = new
+                    
+                    we_have_a_loop = False
+                    
+                    while next_new in processed_siblings:
                         
-                        next_new = new
+                        next_new = processed_siblings[ next_new ]
                         
-                        we_have_a_loop = False
-                        
-                        while next_new in processed_siblings:
+                        if next_new == old:
                             
-                            next_new = processed_siblings[ next_new ]
+                            we_have_a_loop = True
                             
-                            if next_new == old:
-                                
-                                we_have_a_loop = True
-                                
-                                break
-                                
+                            break
                             
-                        
-                        if not we_have_a_loop: processed_siblings[ old ] = new
                         
                     
+                    if not we_have_a_loop: processed_siblings[ old ] = new
+                    
                 
-                processed_siblings.update( unprocessed_siblings[ service_identifier ] )
             
         
         # now to collapse chains

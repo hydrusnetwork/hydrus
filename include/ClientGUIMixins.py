@@ -36,7 +36,14 @@ class MediaList():
     
     def _GetFirst( self ): return self._sorted_media[ 0 ]
     
-    def _GetHashes( self ): return HC.IntelligentMassUnion( [ media.GetHashes() for media in self._sorted_media ] )
+    def _GetHashes( self ):
+        
+        result = set()
+        
+        for media in self._sorted_media: result.update( media.GetHashes() )
+        
+        return result
+        
     
     def _GetLast( self ): return self._sorted_media[ -1 ]
     
@@ -217,19 +224,37 @@ class MediaList():
     
     def HasNoMedia( self ): return len( self._sorted_media ) == 0
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
-        action = content_update.GetAction()
-        
-        service_identifier = content_update.GetServiceIdentifier()
+        ( data_type, action, row ) = content_update.ToTuple()
         
         hashes = content_update.GetHashes()
         
-        for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( content_update )
+        for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( service_identifier, content_update )
         
-        if action == HC.CONTENT_UPDATE_ARCHIVE:
+        if data_type == HC.CONTENT_DATA_TYPE_FILES:
             
-            if HC.SYSTEM_PREDICATE_INBOX in self._predicates:
+            if action == HC.CONTENT_UPDATE_ARCHIVE:
+                
+                if HC.SYSTEM_PREDICATE_INBOX in self._predicates:
+                    
+                    affected_singleton_media = self._GetMedia( hashes, 'singletons' )
+                    affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+                    
+                    self._RemoveMedia( affected_singleton_media, affected_collected_media )
+                    
+                
+            elif action == HC.CONTENT_UPDATE_INBOX:
+                
+                if HC.SYSTEM_PREDICATE_ARCHIVE in self._predicates:
+                    
+                    affected_singleton_media = self._GetMedia( hashes, 'singletons' )
+                    affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+                    
+                    self._RemoveMedia( affected_singleton_media, affected_collected_media )
+                    
+                
+            elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
                 
                 affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                 affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -237,38 +262,28 @@ class MediaList():
                 self._RemoveMedia( affected_singleton_media, affected_collected_media )
                 
             
-        elif action == HC.CONTENT_UPDATE_INBOX:
+        
+    
+    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
+        
+        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
             
-            if HC.SYSTEM_PREDICATE_ARCHIVE in self._predicates:
-                
-                affected_singleton_media = self._GetMedia( hashes, 'singletons' )
-                affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
-                
-                self._RemoveMedia( affected_singleton_media, affected_collected_media )
-                
-            
-        elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
-            
-            affected_singleton_media = self._GetMedia( hashes, 'singletons' )
-            affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
-            
-            self._RemoveMedia( affected_singleton_media, affected_collected_media )
+            for content_update in content_updates: self.ProcessContentUpdate( service_identifier, content_update )
             
         
     
-    def ProcessContentUpdates( self, content_updates ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        for content_update in content_updates: self.ProcessContentUpdate( content_update )
-        
-    
-    def ProcessServiceUpdate( self, update ):
-        
-        action = update.GetAction()
-        
-        service_identifier = update.GetServiceIdentifier()
-        
-        if action == HC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_identifier )
-        elif action == HC.SERVICE_UPDATE_RESET: self.ResetService( service_identifier )
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+            
+            for service_update in service_updates:
+                
+                ( action, row ) = service_update.ToTuple()
+                
+                if action == HC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_identifier )
+                elif action == HC.SERVICE_UPDATE_RESET: self.ResetService( service_identifier )
+                
+            
         
     
     def ResetService( self, service_identifier ):
@@ -387,7 +402,7 @@ class ListeningMediaList( MediaList ):
         MediaList.__init__( self, *args )
         
         HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HC.pubsub.sub( self, 'ProcessServiceUpdate', 'service_update_gui' )
+        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
 class MediaCollection( MediaList, Media ):
@@ -422,7 +437,9 @@ class MediaCollection( MediaList, Media ):
     
     def _RecalcInternals( self ):
         
-        self._hashes = HC.IntelligentMassUnion( [ media.GetHashes() for media in self._sorted_media ] )
+        self._hashes = set()
+        
+        for media in self._sorted_media: self._hashes.update( media.GetHashes() )
         
         self._archive = True in ( media.HasArchive() for media in self._sorted_media )
         self._inbox = True in ( media.HasInbox() for media in self._sorted_media )
@@ -472,7 +489,14 @@ class MediaCollection( MediaList, Media ):
     def GetHashes( self, discriminant = None, not_uploaded_to = None ):
         
         if discriminant is None and not_uploaded_to is None: return self._hashes
-        else: return HC.IntelligentMassUnion( [ media.GetHashes( discriminant, not_uploaded_to ) for media in self._sorted_media ] )
+        else:
+            
+            result = set()
+            
+            for media in self._sorted_media: result.update( media.GetHashes( discriminant, not_uploaded_to ) )
+            
+            return result
+            
         
     
     def GetHashes( self, discriminant = None, not_uploaded_to = None ):
@@ -546,9 +570,9 @@ class MediaCollection( MediaList, Media ):
     
     def IsSizeDefinite( self ): return self._size_definite
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
-        MediaList.ProcessContentUpdate( self, content_update )
+        MediaList.ProcessContentUpdate( self, service_identifier, content_update )
         
         self._RecalcInternals()
         
@@ -615,7 +639,7 @@ class MediaSingleton( Media ):
     
     def GetPrettyInfo( self ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers, local_ratings, remote_ratings ) = self._media_result.GetInfo()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers, local_ratings, remote_ratings ) = self._media_result.ToTuple()
         
         info_string = HC.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         

@@ -184,7 +184,7 @@ class Controller( wx.App ):
                     
                     message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
                     message += os.linesep + os.linesep
-                    message += 'If the old instance does not close for a very long time, you can usually safely force-close it from task manager.'
+                    message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
                     
                     with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'quit now' ) as dlg:
                         

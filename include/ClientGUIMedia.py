@@ -96,7 +96,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_INBOX )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
         
     
     def _CopyHashToClipboard( self ):
@@ -189,7 +189,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        try: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, file_service_identifier, hashes ) ] )
+                        try: wx.GetApp().Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
                         except: wx.MessageBox( traceback.format_exc() )
                         
                     
@@ -199,7 +199,11 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             hashes = self._GetSelectedHashes()
             
-            wx.GetApp().Write( 'petition_files', file_service_identifier, hashes, 'admin' )
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) )
+            
+            service_identifiers_to_content_updates = { file_service_identifier : ( content_update, ) }
+            
+            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
             
         
     
@@ -299,7 +303,14 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _GetSelectedHashes( self, discriminant = None, not_uploaded_to = None ): return HC.IntelligentMassUnion( ( media.GetHashes( discriminant, not_uploaded_to ) for media in self._selected_media ) )
+    def _GetSelectedHashes( self, discriminant = None, not_uploaded_to = None ):
+        
+        result = set()
+        
+        for media in self._selected_media: result.update( media.GetHashes( discriminant, not_uploaded_to ) )
+        
+        return result
+        
     
     def _GetSimilarTo( self ):
         
@@ -366,7 +377,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_ARCHIVE )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', [ HC.ContentUpdate( HC.CONTENT_UPDATE_INBOX, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
+        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
         
     
     def _ManageRatings( self ):
@@ -444,7 +455,14 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             with wx.TextEntryDialog( self, message ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_OK: wx.GetApp().Write( 'petition_files', file_service_identifier, hashes, dlg.GetValue() )
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, dlg.GetValue() ) )
+                    
+                    service_identifiers_to_content_updates = { file_service_identifier : ( content_update, ) }
+                    
+                    wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
+                    
                 
             
             self.SetFocus()
@@ -574,7 +592,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            try: wx.GetApp().Write( 'add_uploads', file_service_identifier, hashes )
+            try: wx.GetApp().Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, hashes ) ] } )
             except Exception as e: wx.MessageBox( unicode( e ) )
             
         
@@ -638,25 +656,26 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def ProcessContentUpdates( self, content_updates ):
+    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
         
-        ClientGUIMixins.ListeningMediaList.ProcessContentUpdates( self, content_updates )
+        ClientGUIMixins.ListeningMediaList.ProcessContentUpdates( self, service_identifiers_to_content_updates )
         
-        for content_update in content_updates:
-            
-            service_identifier = content_update.GetServiceIdentifier()
+        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
             
             service_type = service_identifier.GetType()
             
-            hashes = content_update.GetHashes()
-            
-            affected_media = self._GetMedia( hashes )
-            
-            action = content_update.GetAction()
-            
-            if action == HC.CONTENT_UPDATE_DELETE and service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) and self._focussed_media in affected_media: self._SetFocussedMedia( None )
-            
-            if len( affected_media ) > 0: self._ReblitMedia( affected_media )
+            for content_update in content_updates:
+                
+                ( data_type, action, row ) = content_update.ToTuple()
+                
+                hashes = content_update.GetHashes()
+                
+                affected_media = self._GetMedia( hashes )
+                
+                if action == HC.CONTENT_UPDATE_DELETE and service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) and self._focussed_media in affected_media: self._SetFocussedMedia( None )
+                
+                if len( affected_media ) > 0: self._ReblitMedia( affected_media )
+                
             
         
         self._PublishSelectionChange()
@@ -664,22 +683,26 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         if self._focussed_media is not None: self._HitMedia( self._focussed_media, False, False )
         
     
-    def ProcessServiceUpdate( self, update ):
+    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
-        ClientGUIMixins.ListeningMediaList.ProcessServiceUpdate( self, update )
+        ClientGUIMixins.ListeningMediaList.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
         
-        action = update.GetAction()
-        
-        service_identifier = update.GetServiceIdentifier()
-        
-        if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ): 
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            self._RefitCanvas()
+            for service_update in service_updates:
+                
+                ( action, row ) = service_update.ToTuple()
+                
+                if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ): 
+                    
+                    self._RefitCanvas()
+                    
+                    self._ReblitCanvas()
+                    
+                
+                self._PublishSelectionChange()
+                
             
-            self._ReblitCanvas()
-            
-        
-        self._PublishSelectionChange()
         
     
     def SetFocussedMedia( self, page_key, media ):
@@ -1102,7 +1125,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 elif command == 'custom_filter': self._CustomFilter()
                 elif command == 'delete': self._Delete( data )
                 elif command == 'deselect': self._DeselectAll()
-                elif command == 'download': wx.GetApp().Write( 'add_downloads', data, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) )
+                elif command == 'download': wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
                 elif command == 'export': self._ExportFiles()
                 elif command == 'export special': self._ExportFilesSpecial()
                 elif command == 'filter': self._Filter()
@@ -1145,7 +1168,7 @@ class MediaPanelThumbnails( MediaPanel ):
         if t is not None:
             
             if t.GetFileServiceIdentifiersCDPP().HasLocal(): self._FullScreen( t )
-            elif self._file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: wx.GetApp().Write( 'add_downloads', self._file_service_identifier, t.GetHashes() )
+            elif self._file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, t.GetHashes() ) ] } )
             
         
     
@@ -1249,7 +1272,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     petitioned_phrase = 'all petitioned from'
                     deleted_phrase = 'all deleted from'
                     
-                    download_phrase = 'download all possible from'
+                    download_phrase = 'download all possible'
                     upload_phrase = 'upload all possible to'
                     petition_phrase = 'petition all possible for removal from'
                     remote_delete_phrase = 'delete all possible from'
@@ -1274,7 +1297,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     petitioned_phrase = 'petitioned from'
                     deleted_phrase = 'deleted from'
                     
-                    download_phrase = 'download from'
+                    download_phrase = 'download'
                     upload_phrase = 'upload to'
                     petition_phrase = 'petition for removal from'
                     remote_delete_phrase = 'delete from'
@@ -1295,29 +1318,31 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 # info about the files
                 
+                def MassUnion( lists ): return { item for item in itertools.chain.from_iterable( lists ) }
+                
                 all_current_file_service_identifiers = [ service_identifiers.GetCurrentRemote() for service_identifiers in all_service_identifiers ]
                 
                 current_file_service_identifiers = HC.IntelligentMassIntersect( all_current_file_service_identifiers )
                 
-                some_current_file_service_identifiers = HC.IntelligentMassUnion( all_current_file_service_identifiers ) - current_file_service_identifiers
+                some_current_file_service_identifiers = MassUnion( all_current_file_service_identifiers ) - current_file_service_identifiers
                 
                 all_pending_file_service_identifiers = [ service_identifiers.GetPendingRemote() for service_identifiers in all_service_identifiers ]
                 
                 pending_file_service_identifiers = HC.IntelligentMassIntersect( all_pending_file_service_identifiers )
                 
-                some_pending_file_service_identifiers = HC.IntelligentMassUnion( all_pending_file_service_identifiers ) - pending_file_service_identifiers
+                some_pending_file_service_identifiers = MassUnion( all_pending_file_service_identifiers ) - pending_file_service_identifiers
                 
                 all_petitioned_file_service_identifiers = [ service_identifiers.GetPetitionedRemote() for service_identifiers in all_service_identifiers ]
                 
                 petitioned_file_service_identifiers = HC.IntelligentMassIntersect( all_petitioned_file_service_identifiers )
                 
-                some_petitioned_file_service_identifiers = HC.IntelligentMassUnion( all_petitioned_file_service_identifiers ) - petitioned_file_service_identifiers
+                some_petitioned_file_service_identifiers = MassUnion( all_petitioned_file_service_identifiers ) - petitioned_file_service_identifiers
                 
                 all_deleted_file_service_identifiers = [ service_identifiers.GetDeletedRemote() for service_identifiers in all_service_identifiers ]
                 
                 deleted_file_service_identifiers = HC.IntelligentMassIntersect( all_deleted_file_service_identifiers )
                 
-                some_deleted_file_service_identifiers = HC.IntelligentMassUnion( all_deleted_file_service_identifiers ) - deleted_file_service_identifiers
+                some_deleted_file_service_identifiers = MassUnion( all_deleted_file_service_identifiers ) - deleted_file_service_identifiers
                 
                 # valid commands for the files
                 
@@ -1396,7 +1421,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( selection_downloadable_file_service_identifiers ) > 0 or len( selection_uploadable_file_service_identifiers ) > 0 or len( selection_petitionable_file_service_identifiers ) > 0 or len( selection_deletable_file_service_identifiers ) > 0 or len( selection_modifyable_file_service_identifiers ) > 0:
                     
-                    if len( selection_downloadable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( menu, selection_downloadable_file_service_identifiers, download_phrase, 'download' )
+                    if len( selection_downloadable_file_service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'download' ), download_phrase )
                     
                     if len( selection_uploadable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( menu, selection_uploadable_file_service_identifiers, upload_phrase, 'upload' )
                     
@@ -1958,13 +1983,20 @@ class ThumbnailMediaCollection( Thumbnail, ClientGUIMixins.MediaCollection ):
         Thumbnail.__init__( self, file_service_identifier )
         
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, service_identifier, content_update ):
         
-        ClientGUIMixins.MediaCollection.ProcessContentUpdate( self, content_update )
+        ClientGUIMixins.MediaCollection.ProcessContentUpdate( self, service_identifier, content_update )
         
-        if content_update.GetAction() == HC.CONTENT_UPDATE_ADD and content_update.GetServiceIdentifier() == HC.LOCAL_FILE_SERVICE_IDENTIFIER:
+        if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER:
             
-            if self.GetDisplayMedia() in self._GetMedia( content_update.GetHashes() ): self.ReloadFromDB()
+            ( data_type, action, row ) = content_update.ToTuple()
+            
+            if action == HC.CONTENT_UPDATE_ADD:
+                
+                hashes = row
+                
+                if self.GetDisplayMedia().GetHash() in hashes: self.ReloadFromDB()
+                
             
         
     
@@ -1976,10 +2008,15 @@ class ThumbnailMediaSingleton( Thumbnail, ClientGUIMixins.MediaSingleton ):
         Thumbnail.__init__( self, file_service_identifier )
         
     
-    def ProcessContentUpdate( self, content_update ):
+    def ProcessContentUpdate( self, servce_identifier, content_update ):
         
-        ClientGUIMixins.MediaSingleton.ProcessContentUpdate( self, content_update )
+        ClientGUIMixins.MediaSingleton.ProcessContentUpdate( self, service_identifier, content_update )
         
-        if content_update.GetAction() == HC.CONTENT_UPDATE_ADD and content_update.GetServiceIdentifier() == HC.LOCAL_FILE_SERVICE_IDENTIFIER: self.ReloadFromDB()
+        if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER:
+            
+            ( data_type, action, row ) = content_update.ToTuple()
+            
+            if action == HC.CONTENT_UPDATE_ADD: self.ReloadFromDB()
+            
         
     

@@ -1186,7 +1186,7 @@ class RatingDB():
     
     # leave this until I am more sure of how it'll work remotely
     # pending is involved here too
-    def _UpdateRemoteRatings( self, c, service_identfier, ratings ):
+    def _UpdateRemoteRatings( self, c, service_identifier, ratings ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
@@ -1320,19 +1320,6 @@ class TagDB():
     
 class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
-    def _AddDownloads( self, c, service_identifier, hashes ):
-        
-        service_id = self._GetServiceId( c, service_identifier )
-        
-        hash_ids = self._GetHashIds( c, hashes )
-        
-        c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id_from, service_id_to, hash_id ) VALUES ( ?, ?, ? );', [ ( service_id, self._local_file_service_id, hash_id ) for hash_id in hash_ids ] )
-        
-        self.pub( 'notify_new_downloads' )
-        self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
-        self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes ) ] )
-        
-    
     def _AddFiles( self, c, files_info_rows ):
         
         # service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words
@@ -1356,9 +1343,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
             
-            num_deleted_files_rescinded = c.rowcount
+            num_deleted_files_rescinded = self._GetRowCount( c )
             
-            c.execute( 'DELETE FROM file_transfers WHERE service_id_to = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+            c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
             
             total_size = sum( [ row[ 1 ] for row in rows ] )
             num_files = len( rows )
@@ -1377,57 +1364,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             self._UpdateAutocompleteTagCacheFromFiles( c, service_id, hash_ids, 1 )
             
-        
-    
-    def _AddFileRepositoryUpdate( self, c, service_id, update ):
-        
-        # new
-        
-        files = update.GetFiles()
-        
-        new_hashes = [ hash for ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) in files ]
-        
-        new_hash_ids = self._GetHashIds( c, new_hashes )
-        
-        files_info_rows = [ ( service_id, self._GetHashId( c, hash ), size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) in files ]
-        
-        self._AddFiles( c, files_info_rows )
-        
-        # deleted
-        
-        deleted_hashes = update.GetDeletedHashes()
-        
-        deleted_hash_ids = self._GetHashIds( c, deleted_hashes )
-        
-        self._DeleteFiles( c, service_id, deleted_hash_ids )
-        
-        # news
-        
-        c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in update.GetNews() ] )
-        
-        # done
-        
-        c.execute( 'UPDATE repositories SET first_begin = ? WHERE service_id = ? AND first_begin = ?;', ( update.GetNextBegin(), service_id, 0 ) )
-        
-        c.execute( 'UPDATE repositories SET next_begin = ? WHERE service_id = ?;', ( update.GetNextBegin(), service_id ) )
-        
-        deleted_hashes = [ hash for hash in update.GetDeletedHashes() ] # to proceess generator
-        
-        service_identifier = self._GetServiceIdentifier( c, service_id )
-        
-        if len( new_hashes ) > 0:
-            
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, new_hashes ) ] )
-            
-        
-        if len( deleted_hashes ) > 0:
-            
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, deleted_hashes ) ] )
-            
-        
-        if len( new_hashes ) > 0 or len( deleted_hashes ) > 0: self.pub( 'notify_new_thumbnails' )
         
     
     def _AddHydrusSession( self, c, service_identifier, session_key, expiry ):
@@ -1457,7 +1393,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 access_key = credentials.GetAccessKey()
                 
-                account = CC.GetUnknownAccount()
+                account = HC.GetUnknownAccount()
                 
                 account.MakeStale()
                 
@@ -1548,113 +1484,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _AddServiceUpdates( self, c, update_log ):
-        
-        do_new_permissions = False
-        
-        requests_made = []
-        
-        for service_update in update_log:
-            
-            action = service_update.GetAction()
-            
-            service_identifier = service_update.GetServiceIdentifier()
-            
-            try:
-                
-                service_id = self._GetServiceId( c, service_identifier )
-                
-                if action == HC.SERVICE_UPDATE_ACCOUNT:
-                    
-                    account = service_update.GetInfo()
-                    
-                    c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
-                    c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( 0, service_id ) )
-                    
-                    do_new_permissions = True
-                    
-                elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( int( time.time() ), service_id ) )
-                elif action == HC.SERVICE_UPDATE_REQUEST_MADE: requests_made.append( ( service_id, service_update.GetInfo() ) )
-                
-            except: pass
-            
-            self.pub( 'service_update_data', service_update )
-            self.pub( 'service_update_gui', service_update )
-            
-        
-        for ( service_id, nums_bytes ) in HC.BuildKeyToListDict( requests_made ).items():
-            
-            ( account, ) = c.execute( 'SELECT account FROM accounts WHERE service_id = ?;', ( service_id, ) ).fetchone()
-            
-            for num_bytes in nums_bytes: account.RequestMade( num_bytes )
-            
-            c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
-            
-        
-        if do_new_permissions: self.pub( 'notify_new_permissions' )
-        
-    
-    def _AddTagRepositoryUpdate( self, c, service_id, update ):
-        
-        # new
-        
-        mappings = update.GetMappings()
-        
-        mappings_ids = []
-        
-        for ( tag, hashes ) in mappings:
-            
-            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-            
-            hash_ids = self._GetHashIds( c, hashes )
-            
-            mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-            
-        
-        # deleted
-        
-        deleted_mappings = update.GetDeletedMappings()
-        
-        deleted_mappings_ids = []
-        
-        for ( tag, hashes ) in update.GetDeletedMappings():
-            
-            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-            
-            hash_ids = self._GetHashIds( c, hashes )
-            
-            deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-            
-        
-        if len( mappings_ids ) > 0 or len( deleted_mappings_ids ) > 0: self._UpdateMappings( c, service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids )
-        
-        # news
-        
-        c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in update.GetNews() ] )
-        
-        # done
-        
-        if update.GetEnd() is not None:
-            
-            c.execute( 'UPDATE repositories SET first_begin = ? WHERE service_id = ? AND first_begin = ?;', ( update.GetNextBegin(), service_id, 0 ) )
-            
-            c.execute( 'UPDATE repositories SET next_begin = ? WHERE service_id = ?;', ( update.GetNextBegin(), service_id ) )
-            
-        
-        service_identifier = self._GetServiceIdentifier( c, service_id )
-        
-        mappings = [ mapping for mapping in update.GetMappings() ] # to clear generator
-        
-        deleted_mappings = [ deleted_mapping for deleted_mapping in update.GetDeletedMappings() ] # to clear generator
-        
-        if len( mappings ) > 0:
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, hashes, info = tag ) for ( tag, hashes ) in mappings ] )
-        if len( deleted_mappings ) > 0:
-            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
-            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, hashes, info = tag ) for ( tag, hashes ) in deleted_mappings ] )
-        
-    
     def _AddUpdate( self, c, service_identifier, update ):
         
         service_type = service_identifier.GetType()
@@ -1663,32 +1492,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_type == HC.FILE_REPOSITORY: self._AddFileRepositoryUpdate( c, service_id, update )
         elif service_type == HC.TAG_REPOSITORY: self._AddTagRepositoryUpdate( c, service_id, update )
-        
-    
-    def _AddUploads( self, c, service_identifier, hashes ):
-        
-        service_id = self._GetServiceId( c, service_identifier )
-        
-        service = self._GetService( c, service_id )
-        
-        hash_ids = set( self._GetHashIds( c, hashes ) )
-        
-        if not service.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ):
-            
-            deleted_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( service_id, ) ) ]
-            
-            hash_ids.difference_update( deleted_hash_ids )
-            
-        
-        existing_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ]
-        
-        hash_ids.difference_update( existing_hash_ids )
-        
-        c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id_from, service_id_to, hash_id ) VALUES ( ?, ?, ? );', [ ( self._local_file_service_id, service_id, hash_id ) for hash_id in hash_ids ] )
-        
-        self.pub( 'notify_new_pending' )
-        self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-        self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PENDING, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
         
     
     def _AddWebSession( self, c, name, cookies, expiry ):
@@ -1766,7 +1569,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         deleted_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
         
-        pending_upload_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id_from = ?;', ( self._local_file_service_id, ) ) }
+        pending_upload_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers;', ) }
         
         message_attachment_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM message_attachments;' ) }
         
@@ -1857,14 +1660,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             self._UpdateMappings( c, service_id, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
             
+            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
+            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+            
         elif service_identifier.GetType() == HC.FILE_REPOSITORY:
             
-            c.execute( 'DELETE FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) )
+            c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
             c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
             
         
         self.pub( 'notify_new_pending' )
-        self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING, service_identifier ) )
+        
+        self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
     def _DoFileQuery( self, c, query_key, search_context ):
@@ -1980,9 +1787,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             query_hash_ids.intersection_update( { hash_id } )
             
         
-        exclude_query_hash_ids = HC.IntelligentMassUnion( [ self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) for tag in tags_to_exclude ] )
+        exclude_query_hash_ids = set()
         
-        exclude_query_hash_ids.update( HC.IntelligentMassUnion( [ self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_exclude ] ) )
+        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) )
+        
+        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) )
         
         if file_service_type == HC.FILE_REPOSITORY and self._options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
         
@@ -2001,7 +1810,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) ) ] )
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for service_identifier in file_services_to_exclude_current:
@@ -2015,7 +1824,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) ) ] )
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for ( service_identifier, operator, value ) in system_predicates.GetRatingsPredicates():
@@ -2055,15 +1864,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if result is None: return ( '', '', 0 )
         else: return result
-        
-    
-    def _GetAllDownloads( self, c ):
-        
-        id_result = HC.BuildKeyToListDict( c.execute( 'SELECT service_id_from, hash_id FROM file_transfers WHERE service_id_to = ?;', ( self._local_file_service_id, ) ) )
-        
-        all_downloads = { self._GetServiceIdentifier( c, service_id ) : self._GetHashes( c, hash_ids ) for ( service_id, hash_ids ) in id_result.items() }
-        
-        return all_downloads
         
     
     def _GetAutocompleteTags( self, c, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
@@ -2211,6 +2011,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return matches
         
     
+    def _GetDownloads( self, c ): return { hash for ( hash, ) in c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
+    
     def _GetFavouriteCustomFilterActions( self, c ): return dict( c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' ).fetchall() )
     
     def _GetFileSystemPredicates( self, c, service_identifier ):
@@ -2232,9 +2034,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
             
-            # num local would be great
-            # num inbox would be great
-            
         elif service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
             
             service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_INBOX } )
@@ -2254,6 +2053,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             num_inbox = service_info[ HC.SERVICE_INFO_NUM_INBOX ]
             num_archive = num_everything - num_inbox
             
+            if service_type == HC.FILE_REPOSITORY:
+                
+                ( num_local, ) = c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+                
+                num_not_local = num_everything - num_local
+                
+                num_archive = num_local - num_inbox
+                
+            
             predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), num_everything ) )
             
             if num_inbox > 0:
@@ -2263,10 +2071,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
             if service_type == HC.FILE_REPOSITORY:
-                
-                ( num_local, ) = c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
-                
-                num_not_local = num_everything - num_local
                 
                 predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), num_local ) )
                 predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), num_not_local ) )
@@ -2504,7 +2308,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash_ids_to_deleted_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
-        hash_ids_to_pending_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id_to FROM file_transfers WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
+        hash_ids_to_pending_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
         hash_ids_to_petitioned_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
@@ -2536,7 +2340,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # s_i : status : tags
             
-            service_identifiers_to_statuses_to_tags = { service_ids_to_service_identifiers[ service_id ] : HC.BuildKeyToSetDict( tags_info ) for ( service_id, tags_info ) in tags_dict.items() }
+            service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+            
+            service_identifiers_to_statuses_to_tags.update( { service_ids_to_service_identifiers[ service_id ] : HC.BuildKeyToSetDict( tags_info ) for ( service_id, tags_info ) in tags_dict.items() } )
             
             tags_manager = CC.TagsManager( self._tag_service_precedence, service_identifiers_to_statuses_to_tags )
             
@@ -2657,7 +2463,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             service_type = service_identifier.GetType()
             
             if service_type == HC.FILE_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES }
-            elif service_type == HC.TAG_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS }
+            elif service_type == HC.TAG_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS }
             
             pendings[ service_identifier ] = self._GetServiceInfoSpecific( c, service_id, service_type, info_types )
             
@@ -2677,56 +2483,77 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_type == HC.TAG_REPOSITORY:
             
-            mappings_dict = {}
-            mappings_hash_ids = set()
+            content_data = HC.GetEmptyDataDict()
             
-            if account.HasPermission( HC.POST_DATA ):
-                
-                mappings_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ] )
-                
+            all_hash_ids = set()
             
-            mappings = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in mappings_dict.items() ]
+            # mappings
             
-            mappings_hash_ids = HC.IntelligentMassUnion( mappings_dict.values() )
+            pending_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ] )
             
-            mappings_hash_ids_to_hashes = self._GetHashIdsToHashes( c, mappings_hash_ids )
+            pending = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items() ]
             
-            petitions_dict = {}
-            petitions_hash_ids = set()
+            content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
-            if account.HasPermission( HC.POST_PETITIONS ):
-                
-                petitions_dict = HC.BuildKeyToListDict( [ ( ( reason_id, namespace_id, tag_id ), hash_id ) for ( reason_id, namespace_id, tag_id, hash_id ) in c.execute( 'SELECT reason_id, namespace_id, tag_id, hash_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
-                
+            for hash_ids in pending_dict.values(): all_hash_ids.update( hash_ids )
             
-            petitions = [ ( self._GetReason( c, reason_id ), self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( reason_id, namespace_id, tag_id ), hash_ids ) in petitions_dict.items() ]
+            petitioned_dict = {}
             
-            petitions_hash_ids = HC.IntelligentMassUnion( petitions_dict.values() )
+            petitioned_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
             
-            petitions_hash_ids_to_hashes = self._GetHashIdsToHashes( c, petitions_hash_ids )
+            petitioned = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids, self._GetReason( c, reason_id ) ) for ( ( namespace_id, tag_id, reason_id ), hash_ids ) in petitioned_dict.items() ]
             
-            mappings_object = HC.ClientMappings( mappings, mappings_hash_ids_to_hashes )
+            content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
-            petitions_object = HC.ClientMappingPetitions( petitions, petitions_hash_ids_to_hashes )
+            for hash_ids in petitioned_dict.values(): all_hash_ids.update( hash_ids )
             
-            return ( mappings_object, petitions_object )
+            # tag siblings
+            
+            pending = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ]
+            
+            content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
+            
+            petitioned = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ) ]
+            
+            content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            
+            # tag parents
+            
+            pending = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ]
+            
+            content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
+            
+            petitioned = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ) ]
+            
+            content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            
+            # make the object
+            
+            hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+            
+            update = HC.ClientToServerUpdate( content_data, hash_ids_to_hashes )
+            
+            return update
             
         elif service_type == HC.FILE_REPOSITORY:
             
-            uploads = []
+            upload_hashes = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ) ]
             
-            petitions = []
+            content_data = HC.GetEmptyDataDict()
             
-            if account.HasPermission( HC.POST_DATA ): uploads = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id_to = ?;', ( service_id, ) ) ]
+            content_data[ HC.CONTENT_DATA_TYPE_FILES ] = {}
             
-            if account.HasPermission( HC.POST_PETITIONS ):
-                
-                petitions = HC.BuildKeyToListDict( c.execute( 'SELECT reason, hash FROM reasons, ( hashes, file_petitions USING ( hash_id ) ) USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items()
-                
-                petitions_object = HC.ClientFilePetitions( petitions )
-                
+            petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HC.BuildKeyToListDict( c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items() ]
             
-            return ( uploads, petitions_object )
+            all_hash_ids = { hash_id for hash_id in itertools.chain.from_iterable( ( hash_ids for ( hash_ids, reason ) in petitioned ) ) }
+            
+            hash_ids_to_hashes = self._GetHashIdsToHashes( c, hash_ids )
+            
+            content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            
+            update = HC.ClientToServerUpdate( content_data, hash_ids_to_hashes )
+            
+            return ( upload_hashes, update )
             
         
     
@@ -2791,7 +2618,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_type in HC.REPOSITORIES:
             
-            ( host, port, last_error, access_key, account, first_begin, next_begin ) = c.execute( 'SELECT host, port, last_error, access_key, account, first_begin, next_begin FROM repositories, ( accounts, addresses USING ( service_id ) ) USING ( service_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            ( host, port, last_error, access_key, account, first_begin, next_begin ) = c.execute( 'SELECT host, port, last_error, access_key, account, first_begin, next_begin FROM repositories, ( accounts, addresses USING ( service_id ) ) USING ( service_id ) WHERE repositories.service_id = ?;', ( service_id, ) ).fetchone()
             
             credentials = CC.Credentials( host, port, access_key )
             
@@ -2811,7 +2638,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         elif service_type == HC.MESSAGE_DEPOT:
             
-            ( host, port, last_error, access_key, account, contact_id, last_check, check_period, private_key, receive_anon ) = c.execute( 'SELECT host, port, last_error, access_key, account, contact_id, last_check, check_period, private_key, receive_anon FROM message_depots, ( accounts, addresses USING ( service_id ) ) USING ( service_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            ( host, port, last_error, access_key, account, contact_id, last_check, check_period, private_key, receive_anon ) = c.execute( 'SELECT host, port, last_error, access_key, account, contact_id, last_check, check_period, private_key, receive_anon FROM message_depots, ( accounts, addresses USING ( service_id ) ) USING ( service_id ) WHERE message_depots.service_id = ?;', ( service_id, ) ).fetchone()
             
             credentials = CC.Credentials( host, port, access_key )
             
@@ -2961,7 +2788,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_TOTAL_SIZE: result = c.execute( 'SELECT SUM( size ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_DELETED_FILES: result = c.execute( 'SELECT COUNT( * ) FROM deleted_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES: result = c.execute( 'SELECT COUNT( * ) FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES: result = c.execute( 'SELECT COUNT( * ) FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES: result = c.execute( 'SELECT COUNT( * ) FROM file_petitions where service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
@@ -2980,6 +2807,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
+                    if info_type in ( HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ): save_it = False
+                    
                     if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_NAMESPACES: result = c.execute( 'SELECT COUNT( DISTINCT namespace_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_TAGS: result = c.execute( 'SELECT COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
@@ -2987,6 +2816,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.DELETED, HC.DELETED_PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS: result = c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS: result = c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS: result = c.execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS: result = c.execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
@@ -3038,30 +2871,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_identifier is None:
             
-            results = HC.BuildKeyToListDict( ( ( service_id, ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_parents;' ) ) )
+            service_identifiers_to_statuses_and_pair_ids = HC.BuildKeyToListDict( ( ( service_id, ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) ) for ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) in c.execute( 'SELECT service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parents UNION SELECT service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parent_petitions;' ) ) )
             
-            processed_results = {}
+            service_identifiers_to_statuses_to_pairs = collections.defaultdict( HC.default_dict_set )
             
-            for ( service_id, pair_ids ) in results.items():
+            for ( service_id, statuses_and_pair_ids ) in service_identifiers_to_statuses_and_pair_ids.items():
                 
                 service_identifier = self._GetServiceIdentifier( c, service_id )
                 
-                pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
+                statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ) ) for ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) in statuses_and_pair_ids ) )
                 
-                processed_results[ service_identifier ] = pairs
+                service_identifiers_to_statuses_to_pairs[ service_identifier ] = statuses_to_pairs
                 
             
-            return processed_results
+            return service_identifiers_to_statuses_to_pairs
             
         else:
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            pair_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_parents WHERE service_id = ?;', ( service_id, ) ).fetchall()
+            statuses_and_pair_ids = c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parents WHERE service_id = ? UNION SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
-            pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
+            statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) in statuses_and_pair_ids ) )
             
-            return pairs
+            return statuses_to_pairs
             
         
     
@@ -3078,30 +2911,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_identifier is None:
             
-            results = HC.BuildKeyToListDict( ( ( service_id, ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id  ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_siblings;' ) ) )
+            service_identifiers_to_statuses_and_pair_ids = HC.BuildKeyToListDict( ( ( service_id, ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) in c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_siblings UNION SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_sibling_petitions;' ) ) )
             
-            processed_results = {}
+            service_identifiers_to_statuses_to_pairs = collections.defaultdict( HC.default_dict_set )
             
-            for ( service_id, pair_ids ) in results.items():
+            for ( service_id, statuses_and_pair_ids ) in service_identifiers_to_statuses_and_pair_ids.items():
                 
                 service_identifier = self._GetServiceIdentifier( c, service_id )
                 
-                pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
+                statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) ) for ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in statuses_and_pair_ids ) )
                 
-                processed_results[ service_identifier ] = pairs
+                service_identifiers_to_statuses_to_pairs[ service_identifier ] = statuses_to_pairs
                 
             
-            return processed_results
+            return service_identifiers_to_statuses_to_pairs
             
         else:
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            pair_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id FROM tag_siblings WHERE service_id = ?;', ( service_id, ) ).fetchall()
+            statuses_and_pair_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_siblings WHERE service_id = ? UNION SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
-            pairs = [ ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in pair_ids ]
+            statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) in statuses_and_pair_ids ) )
             
-            return pairs
+            return statuses_to_pairs
             
         
     
@@ -3198,8 +3031,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) )
                 
-                self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
-                self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ARCHIVE, HC.LOCAL_FILE_SERVICE_IDENTIFIER, set( ( hash, ) ) ) ] )
+                self.pub_content_updates( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
                 
             
             can_add = False
@@ -3301,6 +3133,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             self._AddFiles( c, files_info_rows )
             
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
+            
+            self.pub_content_updates( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ content_update ] } )
+            
             md5 = hashlib.md5( file ).digest()
             
             sha1 = hashlib.sha1( file ).digest()
@@ -3312,15 +3148,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( service_identifiers_to_tags ) > 0 and c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
             
+            service_identifiers_to_content_updates = collections.defaultdict( list )
+            
             for ( service_identifier, tags ) in service_identifiers_to_tags.items():
                 
-                if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: edit_log = [ ( HC.CONTENT_UPDATE_ADD, tag ) for tag in tags ]
-                else: edit_log = [ ( HC.CONTENT_UPDATE_PENDING, tag ) for tag in tags ]
+                if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: action = HC.CONTENT_UPDATE_ADD
+                else: action = HC.CONTENT_UPDATE_PENDING
                 
-                content_updates = [ HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, ( hash, ), edit_log ) ]
+                hashes = set( ( hash, ) )
                 
-                self._ProcessContentUpdates( c, content_updates )
+                service_identifiers_to_content_updates[ service_identifier ].extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ) )
                 
+            
+            self._ProcessContentUpdates( c, service_identifiers_to_content_updates )
             
         
         if generate_media_result:
@@ -3346,10 +3186,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if media_result is not None: self.pub( 'add_media_result', page_key, media_result )
             
-            if result == 'successful':
-                self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-                self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-            
             self.pub( 'import_done', page_key, result )
             
         except Exception as e:
@@ -3364,7 +3200,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.executemany( 'INSERT OR IGNORE INTO file_inbox VALUES ( ? );', [ ( hash_id, ) for hash_id in hash_ids ] )
         
-        num_added = c.rowcount
+        num_added = self._GetRowCount( c )
         
         if num_added > 0:
             
@@ -3376,229 +3212,384 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _PetitionFiles( self, c, service_identifier, hashes, reason ):
+    def _ProcessContentUpdates( self, c, service_identifiers_to_content_updates ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        notify_new_downloads = False
+        notify_new_pending = False
+        notify_new_parents = False
+        notify_new_siblings = False
+        notify_new_thumbnails = False
         
-        hash_ids = self._GetHashIds( c, hashes )
-        
-        reason_id = self._GetReasonId( c, reason )
-        
-        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
-        
-        c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
-        
-        self.pub( 'notify_new_pending' )
-        self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
-        self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_PETITION, service_identifier, hashes ) ] )
-        
-    
-    def _ProcessContentUpdates( self, c, content_updates ):
-        
-        for content_update in content_updates:
-            
-            service_identifier =  content_update.GetServiceIdentifier()
+        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
             
             service_type = service_identifier.GetType()
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            action = content_update.GetAction()
+            mappings_ids = []
+            deleted_mappings_ids = []
             
-            if service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
+            pending_mappings_ids = []
+            pending_rescinded_mappings_ids = []
+            
+            petitioned_mappings_ids = []
+            petitioned_rescinded_mappings_ids = []
+            
+            for content_update in content_updates:
                 
-                hashes = content_update.GetHashes()
+                ( data_type, action, row ) = content_update.ToTuple()
                 
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                if action == HC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( c, hash_ids )
-                elif action == HC.CONTENT_UPDATE_INBOX: self._InboxFiles( c, hash_ids )
-                elif action == HC.CONTENT_UPDATE_DELETE: self._DeleteFiles( c, service_id, hash_ids )
-                elif action == HC.CONTENT_UPDATE_ADD:
+                if service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
                     
-                    # this is really 'uploaded' rather than a strict add, so may need to improve it in future!
-                    
-                    files_info_rows = c.execute( 'SELECT ?, hash_id, size, mime, ?, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, int( time.time() ), self._local_file_service_id ) ).fetchall()
-                    
-                    self._AddFiles( c, files_info_rows )
-                    
-                
-            elif service_type == HC.LOCAL_TAG:
-                
-                hashes = content_update.GetHashes()
-                
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                info = content_update.GetInfo()
-                
-                if action == HC.CONTENT_UPDATE_EDIT_LOG:
-                    
-                    splayed_hash_ids = HC.SplayListForDB( hash_ids )
-                    
-                    hash_ids_set = set( hash_ids )
-                    
-                    edit_log = info
-                    
-                    mappings_ids = []
-                    deleted_mappings_ids = []
-                    
-                    for ( action, info ) in edit_log:
+                    if data_type == HC.CONTENT_DATA_TYPE_FILES:
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
-                            tag = info
+                            ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) = row
                             
-                            if tag == '': continue
+                            hash_id = self._GetHashId( c, hash )
                             
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                            file_info_row = ( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
                             
-                            mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            self._AddFiles( c, ( file_info_row, ) )
                             
-                        elif action == HC.CONTENT_UPDATE_DELETE:
+                            notify_new_thumbnails = True
                             
-                            tag = info
+                        elif action == HC.CONTENT_UPDATE_PENDING:
                             
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                            hashes = row
                             
-                            deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            hash_ids = self._GetHashIds( c, hashes )
                             
-                        
-                    
-                    self._UpdateMappings( c, service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids )
-                    
-                    self.pub( 'notify_new_pending' )
-                    
-                
-            elif service_type == HC.TAG_REPOSITORY:
-                
-                hashes = content_update.GetHashes()
-                
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                info = content_update.GetInfo()
-                
-                if action == HC.CONTENT_UPDATE_ADD:
-                    
-                    tag = info
-                    
-                    ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-                    
-                    self._UpdateMappings( c, service_id, mappings_ids = [ ( namespace_id, tag_id, hash_ids ) ] )
-                    
-                elif action == HC.CONTENT_UPDATE_DELETE:
-                    
-                    tag = info
-                    
-                    ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-                    
-                    self._UpdateMappings( c, service_id, deleted_mappings_ids = [ ( namespace_id, tag_id, hash_ids ) ] )
-                    
-                elif action == HC.CONTENT_UPDATE_EDIT_LOG:
-                    
-                    pending_mappings_ids = []
-                    pending_rescinded_mappings_ids = []
-                    
-                    petitioned_mappings_ids = []
-                    petitioned_rescinded_mappings_ids = []
-                    
-                    edit_log = info
-                    
-                    for ( action, info ) in edit_log:
-                        
-                        if action == HC.CONTENT_UPDATE_PENDING:
+                            service_id = self._GetServiceId( c, service_identifier )
                             
-                            tag = info
+                            hash_ids = self._GetHashIds( c, hashes )
                             
-                            if tag == '': continue
+                            c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in hash_ids ] )
                             
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-                            
-                            pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                            
-                        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
-                            
-                            tag = info
-                            
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-                            
-                            pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: notify_new_downloads = True
+                            else: notify_new_pending = True
                             
                         elif action == HC.CONTENT_UPDATE_PETITION:
                             
-                            ( tag, reason ) = info
+                            ( hashes, reason ) = row
                             
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                            hash_ids = self._GetHashIds( c, hashes )
                             
                             reason_id = self._GetReasonId( c, reason )
                             
-                            petitioned_mappings_ids.append( ( namespace_id, tag_id, reason_id, hash_ids ) )
+                            c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
                             
-                        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                            c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
                             
-                            tag = info
+                            notify_new_pending = True
                             
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                        else:
                             
-                            petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            hashes = row
                             
-                        
-                    
-                    self._UpdateMappings( c, service_id, pending_mappings_ids = pending_mappings_ids, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_mappings_ids = petitioned_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
-                    
-                    self.pub( 'notify_new_pending' )
-                    
-                
-            elif service_type in HC.RATINGS_SERVICES:
-                
-                action = content_update.GetAction()
-                
-                hashes = content_update.GetHashes()
-                
-                hash_ids = self._GetHashIds( c, hashes )
-                
-                splayed_hash_ids = HC.SplayListForDB( hash_ids )
-                
-                info = content_update.GetInfo()
-                
-                if action == HC.CONTENT_UPDATE_RATING:
-                    
-                    rating = info
-                    
-                    if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                        
-                        ratings_added = 0
-                        
-                        c.execute( 'DELETE FROM local_ratings WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-                        
-                        ratings_added -= c.rowcount
-                        
-                        if rating is not None:
+                            hash_ids = self._GetHashIds( c, hashes )
                             
-                            c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-                            
-                            c.executemany( 'INSERT INTO local_ratings ( service_id, hash_id, rating ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, rating ) for hash_id in hash_ids ] )
-                            
-                            ratings_added += c.rowcount
+                            if action == HC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( c, hash_ids )
+                            elif action == HC.CONTENT_UPDATE_INBOX: self._InboxFiles( c, hash_ids )
+                            elif action == HC.CONTENT_UPDATE_DELETE: self._DeleteFiles( c, service_id, hash_ids )
                             
                         
-                        c.execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                    
+                elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
+                    
+                    if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
                         
-                        # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
+                        if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
+                        else: ( tag, hashes ) = row
+                        
+                        if tag == '': continue
+                        
+                        ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        if action == HC.CONTENT_UPDATE_ADD: mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                        elif action == HC.CONTENT_UPDATE_DELETE: deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                        elif action == HC.CONTENT_UPDATE_PENDING: pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                        elif action == HC.CONTENT_UPDATE_PETITION:
+                            
+                            reason_id = self._GetReasonId( c, reason )
+                            
+                            petitioned_mappings_ids.append( ( namespace_id, tag_id, hash_ids, reason_id ) )
+                            
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                        
+                    elif data_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS:
+                        
+                        if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
+                            
+                            if action == HC.CONTENT_UPDATE_ADD: ( deletee_status, new_status ) = ( HC.PENDING, HC.CURRENT )
+                            elif action == HC.CONTENT_UPDATE_DELETE: ( deletee_status, new_status ) = ( HC.PETITIONED, HC.DELETED )
+                            
+                            ( old_tag, new_tag ) = row
+                            
+                            ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                            
+                            ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                            
+                            c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
+                            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
+                            
+                            c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, new_status ) )
+                            
+                        elif action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
+                            
+                            if action == HC.CONTENT_UPDATE_PENDING: new_status = HC.PENDING
+                            elif action == HC.CONTENT_UPDATE_PETITION: new_status = HC.PETITIONED
+                            
+                            ( ( old_tag, new_tag ), reason ) = row
+                            
+                            ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                            
+                            ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                            
+                            reason_id = self._GetReasonId( c, reason )
+                            
+                            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
+                            
+                            c.execute( 'INSERT OR IGNORE INTO tag_sibling_petitions ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id, new_status ) )
+                            
+                            notify_new_pending = True
+                            
+                        elif action in ( HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ):
+                            
+                            if action == HC.CONTENT_UPDATE_RESCIND_PENDING: deletee_status = HC.PENDING
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: deletee_status = HC.PETITIONED
+                            
+                            ( old_tag, new_tag ) = row
+                            
+                            ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                            
+                            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
+                            
+                        
+                        notify_new_siblings = True
+                        
+                    elif data_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS:
+                        
+                        if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
+                            
+                            if action == HC.CONTENT_UPDATE_ADD: ( deletee_status, new_status ) = ( HC.PENDING, HC.CURRENT )
+                            elif action == HC.CONTENT_UPDATE_DELETE: ( deletee_status, new_status ) = ( HC.PETITIONED, HC.DELETED )
+                            
+                            ( child_tag, parent_tag ) = row
+                            
+                            ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
+                            
+                            ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
+                            
+                            c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id ) )
+                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, deletee_status ) )
+                            
+                            c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, new_status ) )
+                            
+                            if action == HC.CONTENT_UPDATE_ADD and service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                                
+                                existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT ) ) ]
+                                
+                                existing_hashes = self._GetHashes( c, existing_hash_ids )
+                                
+                                mapping_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
+                                
+                                self._UpdateMappings( c, service_id, mappings_ids = mapping_ids )
+                                
+                                special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, existing_hashes ) )
+                                
+                                self.pub_content_updates( { service_identifier : [ special_content_update ] } )
+                                
+                            
+                        elif action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
+                            
+                            if action == HC.CONTENT_UPDATE_PENDING: new_status = HC.PENDING
+                            elif action == HC.CONTENT_UPDATE_PETITION: new_status = HC.PETITIONED
+                            
+                            ( ( child_tag, parent_tag ), reason ) = row
+                            
+                            ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
+                            
+                            ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
+                            
+                            reason_id = self._GetReasonId( c, reason )
+                            
+                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id ) )
+                            
+                            c.execute( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, new_status ) )
+                            
+                            if action == HC.CONTENT_UPDATE_PENDING:
+                                
+                                existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT ) ) ]
+                                
+                                existing_hashes = self._GetHashes( c, existing_hash_ids )
+                                
+                                mapping_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
+                                
+                                self._UpdateMappings( c, service_id, pending_mappings_ids = mapping_ids )
+                                
+                                special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( parent_tag, existing_hashes ) )
+                                
+                                self.pub_content_updates( { service_identifier : [ special_content_update ] } )
+                                
+                            
+                            notify_new_pending = True
+                            
+                        elif action in ( HC.CONTENT_UPDATE_RESCIND_PENDING, HC.CONTENT_UPDATE_RESCIND_PETITION ):
+                            
+                            if action == HC.CONTENT_UPDATE_RESCIND_PENDING: deletee_status = HC.PENDING
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: deletee_status = HC.PETITIONED
+                            
+                            ( child_tag, parent_tag ) = row
+                            
+                            ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
+                            
+                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, deletee_status ) )
+                            
+                        
+                        notify_new_parents = True
                         
                     
-                elif action == HC.CONTENT_UPDATE_RATINGS_FILTER:
+                elif service_type in HC.RATINGS_SERVICES:
                     
-                    ( min, max ) = info
-                    
-                    c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-                    
-                    c.executemany( 'INSERT INTO ratings_filter ( service_id, hash_id, min, max ) VALUES ( ?, ?, ?, ? );', [ ( service_id, hash_id, min, max ) for hash_id in hash_ids ] )
+                    if action == HC.CONTENT_UPDATE_ADD:
+                        
+                        ( rating, hashes ) = row
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                            
+                            ratings_added = 0
+                            
+                            c.execute( 'DELETE FROM local_ratings WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+                            
+                            rowcount = self._GetRowCount( c )
+                            
+                            if rating is not None:
+                                
+                                c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+                                
+                                c.executemany( 'INSERT INTO local_ratings ( service_id, hash_id, rating ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, rating ) for hash_id in hash_ids ] )
+                                
+                                ratings_added += self._GetRowCount( c )
+                                
+                            
+                            c.execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            
+                            # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
+                            
+                        
+                    elif action == HC.CONTENT_UPDATE_RATINGS_FILTER:
+                        
+                        ( min, max, hashes ) = row
+                        
+                        hash_ids = self._GetHashIds( c, hashes )
+                        
+                        c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+                        
+                        c.executemany( 'INSERT INTO ratings_filter ( service_id, hash_id, min, max ) VALUES ( ?, ?, ?, ? );', [ ( service_id, hash_id, min, max ) for hash_id in hash_ids ] )
+                        
                     
                 
             
+            if len( mappings_ids ) + len( deleted_mappings_ids ) + len( pending_mappings_ids ) + len( pending_rescinded_mappings_ids ) + len( petitioned_mappings_ids ) + len( petitioned_rescinded_mappings_ids ) > 0:
+                
+                self._UpdateMappings( c, service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids, pending_mappings_ids = pending_mappings_ids, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_mappings_ids = petitioned_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
+                
+                notify_new_pending = True
+                
+            
         
-        self.pub( 'content_updates_data', content_updates )
-        self.pub( 'content_updates_gui', content_updates )
+        if notify_new_downloads: self.pub( 'notify_new_downloads' )
+        if notify_new_pending: self.pub( 'notify_new_pending' )
+        if notify_new_parents: self.pub( 'notify_new_parents' )
+        if notify_new_siblings: self.pub( 'notify_new_siblings' )
+        if notify_new_thumbnails: self.pub( 'notify_new_thumbnails' )
+        
+        self.pub_content_updates( service_identifiers_to_content_updates )
+        
+    
+    def _ProcessServiceUpdates( self, c, service_identifiers_to_service_updates ):
+        
+        do_new_permissions = False
+        
+        requests_made = []
+        
+        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            for service_update in service_updates:
+                
+                ( action, row ) = service_update.ToTuple()
+                
+                try:
+                    
+                    if action == HC.SERVICE_UPDATE_ACCOUNT:
+                        
+                        account = row
+                        
+                        c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
+                        c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( 0, service_id ) )
+                        
+                        do_new_permissions = True
+                        
+                    elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( int( time.time() ), service_id ) )
+                    elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
+                        
+                        num_bytes = row
+                        
+                        requests_made.append( ( service_id, num_bytes ) )
+                        
+                    elif action == HC.SERVICE_UPDATE_NEWS:
+                        
+                        news_rows = row
+                        
+                        c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in news_rows ] )
+                        
+                        now = int( time.time() )
+                        
+                        for ( post, timestamp ) in news_rows:
+                            
+                            if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post )
+                            
+                        
+                    elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
+                        
+                        ( begin, end ) = row
+                        
+                        next_begin = end + 1
+                        
+                        c.execute( 'UPDATE repositories SET first_begin = ? WHERE service_id = ? AND first_begin = ?;', ( next_begin, service_id, 0 ) )
+                        
+                        c.execute( 'UPDATE repositories SET next_begin = ? WHERE service_id = ?;', ( next_begin, service_id ) )
+                        
+                    
+                except Exception as e:
+                    
+                    print( 'Had a service update error:' )
+                    print( unicode( e ) )
+                    
+                
+            
+            self.pub_service_updates( service_identifiers_to_service_updates )
+            
+        
+        for ( service_id, nums_bytes ) in HC.BuildKeyToListDict( requests_made ).items():
+            
+            ( account, ) = c.execute( 'SELECT account FROM accounts WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            for num_bytes in nums_bytes: account.RequestMade( num_bytes )
+            
+            c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
+            
+        
+        if do_new_permissions: self.pub( 'notify_new_permissions' )
         
     
     def _RebuildTagServicePrecedence( self, c ):
@@ -3613,7 +3604,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     def _RecalcCombinedMappings( self, c ):
         
         # this all now takes minutes to calculate!
-        # I'm pretty sure its because the new incarnation of mappings has so many indices
+        # I'm pretty sure it's because the new incarnation of mappings has so many indices
         
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence DESC;' ) ]
         
@@ -3680,7 +3671,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._AddService( c, new_service_identifier, credentials, extra_info )
         
-        self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, service_identifier, new_service_identifier ) )
+        self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, new_service_identifier ) ] } )
         self.pub( 'notify_new_pending' )
         self.pub( 'permissions_are_stale' )
         self.pub( 'log_message', 'database', 'reset ' + service_name )
@@ -3743,10 +3734,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._RecalcCombinedMappings( c )
         
-        service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+        service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
         
-        self.pub( 'service_update_data', service_update )
-        self.pub( 'service_update_gui', service_update )
+        service_identifiers_to_service_updates = { HC.COMBINED_TAG_SERVICE_IDENTIFIER : [ service_update ] }
+        
+        self.pub_service_updates( service_identifiers_to_service_updates )
         
     
     def _UpdateAutocompleteTagCacheFromFiles( self, c, file_service_id, hash_ids, direction ):
@@ -3774,7 +3766,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             c.execute( 'UPDATE mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( appropriate_hash_ids ) + ' AND status = ?;', ( new_status, service_id, namespace_id, tag_id, old_status ) )
             
-            num_rows_changed = c.rowcount
+            num_rows_changed = self._GetRowCount( c )
             
             if old_status not in ( HC.DELETED_PENDING, HC.PENDING ) and new_status in ( HC.DELETED_PENDING, HC.PENDING ):
                 
@@ -3833,7 +3825,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status IN ( ?, ? );', ( service_id, namespace_id, tag_id, HC.DELETED_PENDING, HC.PENDING ) )
             
-            num_deleted = c.rowcount
+            num_deleted = self._GetRowCount( c )
             
             UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, hash_ids, -1 )
             
@@ -3846,7 +3838,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
             
-            num_deleted = c.rowcount
+            num_deleted = self._GetRowCount( c )
             
             return num_deleted
             
@@ -3877,13 +3869,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def InsertMappings( namespace_id, tag_id, hash_ids, status ):
             
-            existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, status ) ) ]
+            existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) ) ]
             
             new_hash_ids = set( hash_ids ).difference( existing_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
             
-            num_rows_added = c.rowcount
+            num_rows_added = self._GetRowCount( c )
             
             if status in ( HC.DELETED_PENDING, HC.PENDING ):
                 
@@ -3902,11 +3894,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             return num_rows_added
             
         
-        def InsertPetitions( namespace_id, tag_id, reason_id, hash_ids ):
+        def InsertPetitions( namespace_id, tag_id, hash_ids, reason_id ):
             
             c.executemany( 'INSERT OR IGNORE INTO mapping_petitions VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, reason_id ) for hash_id in hash_ids ] )
             
-            num_rows_added = c.rowcount
+            num_rows_added = self._GetRowCount( c )
             
             return num_rows_added
             
@@ -4003,16 +3995,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             change_in_num_pending_mappings -= num_deleted_pending_committed + num_pending_committed
             
         
-        for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
-            
-            num_deleted_pended = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED, HC.DELETED_PENDING )
-            num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.PENDING )
-            num_deleted_petitions = DeletePetitions( namespace_id, tag_id, hash_ids )
-            
-            change_in_num_pending_mappings += num_deleted_pended + num_raw_adds
-            change_in_num_petitioned_mappings -= num_deleted_petitions
-            
-        
         for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids:
             
             num_current_deleted = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.CURRENT, HC.DELETED )
@@ -4022,6 +4004,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             change_in_num_mappings -= num_current_deleted
             change_in_num_deleted_mappings += num_current_deleted + num_pending_made_deleted_pending + num_raw_adds
+            change_in_num_petitioned_mappings -= num_deleted_petitions
+            
+        
+        for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
+            
+            num_deleted_pended = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED, HC.DELETED_PENDING )
+            num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.PENDING )
+            num_deleted_petitions = DeletePetitions( namespace_id, tag_id, hash_ids )
+            
+            change_in_num_pending_mappings += num_deleted_pended + num_raw_adds
             change_in_num_petitioned_mappings -= num_deleted_petitions
             
         
@@ -4045,9 +4037,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         change_in_num_tags -= num_tags_removed
         change_in_num_files -= num_files_removed
         
-        for ( namespace_id, tag_id, reason_id, hash_ids ) in petitioned_mappings_ids:
+        for ( namespace_id, tag_id, hash_ids, reason_id ) in petitioned_mappings_ids:
             
-            num_petitions_added = InsertPetitions( namespace_id, tag_id, reason_id, hash_ids )
+            num_petitions_added = InsertPetitions( namespace_id, tag_id, hash_ids, reason_id )
             
             change_in_num_petitioned_mappings += num_petitions_added
             
@@ -4134,7 +4126,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     c.execute( 'DELETE FROM services WHERE service_id = ?;', ( client_service_id, ) )
                     
-                    self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, client_service_identifier ) )
+                    service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
+                    
+                    service_identifiers_to_service_updates = { client_service_identifier : [ service_update ] }
+                    
+                    self.pub_service_updates( service_identifiers_to_service_updates )
                     
                 
                 if len( names ) > 0: recalc_combined_mappings = True
@@ -4174,7 +4170,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
-                self.pub( 'service_update_db', HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, service_identifier ) )
+                service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
+                
+                service_identifiers_to_service_updates = { service_identifier : [ service_update ] }
+                
+                self.pub_service_updates( service_identifiers_to_service_updates )
                 
                 service_type = service_identifier.GetType()
                 
@@ -4256,310 +4256,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub( 'notify_new_services' )
         
     
-    def _UploadPending( self, c, service_identifier, job_key, cancel_event = threading.Event() ):
-        
-        try:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            service_type = service_identifier.GetType()
-            
-            service_name = service_identifier.GetName()
-            
-            repository = self._GetService( c, service_id )
-            
-            account = repository.GetAccount()
-            
-            if service_type == HC.TAG_REPOSITORY:
-                
-                HC.pubsub.pub( 'progress_update', job_key, 0, 7, u'gathering pending mappings' )
-                
-                mappings_dict = {}
-                mappings_hash_ids = set()
-                
-                if account.HasPermission( HC.POST_DATA ):
-                    
-                    mappings_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ] )
-                    
-                
-                mappings = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in mappings_dict.items() ]
-                
-                mappings_hash_ids = HC.IntelligentMassUnion( mappings_dict.values() )
-                
-                mappings_hash_ids_to_hashes = self._GetHashIdsToHashes( c, mappings_hash_ids )
-                
-                HC.pubsub.pub( 'progress_update', job_key, 1, 7, u'gathering petitioned mappings' )
-                
-                petitions_dict = {}
-                petitions_hash_ids = set()
-                
-                if account.HasPermission( HC.POST_PETITIONS ):
-                    
-                    petitions_dict = HC.BuildKeyToListDict( [ ( ( reason_id, namespace_id, tag_id ), hash_id ) for ( reason_id, namespace_id, tag_id, hash_id ) in c.execute( 'SELECT reason_id, namespace_id, tag_id, hash_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
-                    
-                
-                petitions = [ ( self._GetReason( c, reason_id ), self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( reason_id, namespace_id, tag_id ), hash_ids ) in petitions_dict.items() ]
-                
-                petitions_hash_ids = HC.IntelligentMassUnion( petitions_dict.values() )
-                
-                petitions_hash_ids_to_hashes = self._GetHashIdsToHashes( c, petitions_hash_ids )
-                
-                if len( mappings ) > 0 or len( petitions ) > 0:
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 2, 7, u'connecting to repository' )
-                    
-                    connection = repository.GetConnection()
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 3, 7, u'posting new mappings' )
-                    
-                    if len( mappings ) > 0:
-                        
-                        try:
-                            
-                            mappings_object = HC.ClientMappings( mappings, mappings_hash_ids_to_hashes )
-                            
-                            connection.Post( 'mappings', mappings = mappings_object )
-                            
-                        except Exception as e: raise Exception( 'Encountered an error while uploading public_mappings:' + os.linesep + unicode( e ) )
-                        
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 4, 7, u'posting new petitions' )
-                    
-                    if len( petitions ) > 0:
-                        
-                        try:
-                            
-                            petitions_object = HC.ClientMappingPetitions( petitions, petitions_hash_ids_to_hashes )
-                            
-                            connection.Post( 'petitions', petitions = petitions_object )
-                            
-                        except Exception as e: raise Exception( 'Encountered an error while uploading petitions:' + os.linesep + unicode( e ) )
-                        
-                    
-                    mappings_ids = [ ( namespace_id, tag_id, hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in mappings_dict.items() ]
-                    deleted_mappings_ids = [ ( namespace_id, tag_id, hash_ids ) for ( ( reason_id, namespace_id, tag_id ), hash_ids ) in petitions_dict.items() ]
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 5, 7, u'saving changes to local database' )
-                    
-                    self._UpdateMappings( c, service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids )
-                    
-                    num_mappings = sum( [ len( hash_ids ) for ( namespace_id, tag_id, hash_ids ) in mappings_ids ] )
-                    num_deleted_mappings = sum( [ len( hash_ids ) for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids ] )
-                    
-                    self.pub( 'log_message', 'upload mappings', 'uploaded ' + str( num_mappings ) + ' mappings to and deleted ' + str( num_deleted_mappings ) + ' mappings from ' + service_identifier.GetName() )
-                    
-                    content_updates = []
-                    
-                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in mappings_ids ]
-                    content_updates += [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ), info = self._GetNamespaceTag( c, namespace_id, tag_id ) ) for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids ]
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 6, 7, u'saving changes to gui' )
-                    
-                    self.pub( 'content_updates_data', content_updates )
-                    self.pub( 'content_updates_gui', content_updates )
-                    
-                
-                HC.pubsub.pub( 'progress_update', job_key, 7, 7, u'done!' )
-                
-            elif service_type == HC.FILE_REPOSITORY:
-                
-                uploads = []
-                
-                petitions = []
-                
-                HC.pubsub.pub( 'progress_update', job_key, 0, 1, u'gathering pending and petitioned file info' )
-                
-                if account.HasPermission( HC.POST_DATA ): uploads = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id_to = ?;', ( service_id, ) ) ]
-                
-                if account.HasPermission( HC.POST_PETITIONS ): petitions = HC.BuildKeyToListDict( c.execute( 'SELECT reason, hash FROM reasons, ( hashes, file_petitions USING ( hash_id ) ) USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items()
-                
-                num_uploads = len( uploads )
-                num_petitions = len( petitions )
-                
-                if num_uploads > 0 or num_petitions > 0:
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, 0, num_uploads + 4, u'connecting to repository' )
-                    
-                    connection = repository.GetConnection()
-                    
-                    if num_uploads > 0:
-                        
-                        error_messages = set()
-                        
-                        good_hash_ids = []
-                        
-                        for ( index, hash_id ) in enumerate( uploads ):
-                            
-                            HC.pubsub.pub( 'progress_update', job_key, index, num_uploads + 4, u'Uploading file ' + HC.ConvertIntToPrettyString( index + 1 ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
-                            
-                            if cancel_event.isSet(): break
-                            
-                            try:
-                                
-                                ( hash, ) = self._GetHashes( c, ( hash_id, ) )
-                                
-                                file = self._GetFile( hash )
-                                
-                                connection.Post( 'file', file = file )
-                                
-                                good_hash_ids.append( hash_id )
-                                
-                            except Exception as e: error_messages.add( unicode( e ) )
-                            
-                        
-                        splayed_good_hash_ids = HC.SplayListForDB( good_hash_ids )
-                        
-                        HC.pubsub.pub( 'progress_update', job_key, num_uploads, num_uploads + 4, u'saving changes to local database' )
-                        
-                        files_info_rows = c.execute( 'SELECT ?, hash_id, size, mime, ?, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_good_hash_ids + ';', ( service_id, int( time.time() ), self._local_file_service_id ) ).fetchall()
-                        
-                        self._AddFiles( c, files_info_rows )
-                        
-                        if len( error_messages ) > 0: raise Exception( 'Errors were encountered while trying to upload files to ' + service_name + ':' + os.linesep + os.linesep.join( error_messages ) )
-                        
-                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 4, u'saving changes to gui' )
-                        
-                        if len( good_hash_ids ) > 0:
-                            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
-                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, self._GetHashes( c, good_hash_ids ) ) ] )
-                        
-                    
-                    if num_petitions > 0:
-                        
-                        try:
-                            
-                            HC.pubsub.pub( 'progress_update', job_key, num_uploads + 3, num_uploads + 4, u'uploading petitions' )
-                            
-                            petitions_object = HC.ClientFilePetitions( petitions )
-                            
-                            connection.Post( 'petitions', petitions = petitions_object )
-                            
-                            hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_petitions WHERE service_id = ?;', ( service_id, ) ) ]
-                            
-                            self._DeleteFiles( c, service_id, hash_ids )
-                            
-                            self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-                            self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_DELETE, service_identifier, self._GetHashes( c, hash_ids ) ) ] )
-                            
-                        except Exception as e: raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_name + ':' + os.linesep + unicode( e ) )
-                        
-                    
-                    self.pub( 'log_message', 'upload files', 'uploaded ' + str( num_uploads ) + ' files to and deleted ' + str( num_petitions ) + ' files from ' + service_identifier.GetName() )
-                    
-                
-                HC.pubsub.pub( 'progress_update', job_key, num_uploads + 4, num_uploads + 4, u'done!' )
-                
-            
-            self.pub( 'notify_new_pending' )
-            
-        except Exception as e:
-            
-            time.sleep( 2 )
-            
-            HC.pubsub.pub( 'progress_update', job_key, 0, 1, 'error: ' + unicode( e ) )
-            
-            time.sleep( 3 )
-            
-            HC.pubsub.pub( 'progress_update', job_key, 1, 1, 'quitting' )
-            
-            raise
-            
-        
-    
-    def _UpdateTagParents( self, c, edit_log ):
-        
-        pending_updated = False
-        
-        content_updates = []
-        
-        for ( service_identifier, sub_edit_log ) in edit_log:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            for ( action, data ) in sub_edit_log:
-                
-                if action == HC.ADD:
-                    
-                    ( old_tag, new_tag ) = data
-                    
-                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
-                    
-                    ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
-                    
-                    c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) )
-                    
-                    existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, HC.CURRENT ) ) ]
-                    
-                    existing_hashes = self._GetHashes( c, existing_hash_ids )
-                    
-                    mapping_ids = [ ( new_namespace_id, new_tag_id, existing_hash_ids ) ]
-                    
-                    if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
-                        
-                        self._UpdateMappings( c, service_id, mappings_ids = mapping_ids )
-                        
-                        content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, service_identifier, existing_hashes, info = new_tag ) )
-                        
-                    else:
-                        
-                        self._UpdateMappings( c, service_id, pending_mappings_ids = mapping_ids )
-                        
-                        content_update_edit_log = [ ( HC.CONTENT_UPDATE_PENDING, tag ) ]
-                        
-                        content_updates.append( HC.ContentUpdate( HC.CONTENT_UPDATE_EDIT_LOG, service_identifier, existing_hashes, info = content_update_edit_log ) )
-                        
-                    
-                elif action == HC.DELETE:
-                    
-                    ( old_tag, new_tag ) = data
-                    
-                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
-                    
-                    ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
-                    
-                    c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND new_namespace_id = ? AND new_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) )
-                    
-                
-            
-        
-        self.pub( 'notify_new_parents' )
-        
-        self.pub( 'content_updates_data', content_updates )
-        self.pub( 'content_updates_gui', content_updates )
-        
-    
-    def _UpdateTagSiblings( self, c, edit_log ):
-        
-        for ( service_identifier, sub_edit_log ) in edit_log:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            for ( action, data ) in sub_edit_log:
-                
-                if action == HC.ADD:
-                    
-                    ( old_tag, new_tag ) = data
-                    
-                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
-                    
-                    ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
-                    
-                    c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) )
-                    
-                elif action == HC.DELETE:
-                    
-                    ( old_tag, new_tag ) = data
-                    
-                    ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
-                    
-                    c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
-                    
-                
-            
-        
-        self.pub( 'notify_new_siblings' )
-        
-    
 class DB( ServiceDB ):
     
     def __init__( self ):
@@ -4568,6 +4264,8 @@ class DB( ServiceDB ):
         
         self._jobs = Queue.PriorityQueue()
         self._pubsubs = []
+        
+        self._currently_doing_job = False
         
         self._InitDB()
         
@@ -4671,7 +4369,7 @@ class DB( ServiceDB ):
         HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
         HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', self.DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
-        HC.DAEMONQueue( 'FlushRepositoryUpdates', self.DAEMONFlushServiceUpdates, 'service_update_db', period = 2 )
+        HC.DAEMONQueue( 'FlushRepositoryUpdates', self.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
         
     
     def _CheckPassword( self ):
@@ -4737,6 +4435,14 @@ class DB( ServiceDB ):
             
         
         return all_imageboards
+        
+    
+    def _GetRowCount( self, c ):
+        
+        row_count = c.rowcount
+        
+        if row_count == -1: return 0
+        else: return row_count
         
     
     def _GetSiteId( self, c, name ):
@@ -4816,8 +4522,7 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE files_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, size INTEGER, mime INTEGER, timestamp INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
             c.execute( 'CREATE INDEX files_info_hash_id ON files_info ( hash_id );' )
             
-            c.execute( 'CREATE TABLE file_transfers ( service_id_from INTEGER, service_id_to INTEGER REFERENCES services( service_id ) ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id_from, service_id_to, hash_id ), FOREIGN KEY( service_id_from, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
-            c.execute( 'CREATE INDEX file_transfers_service_id_to ON file_transfers ( service_id_to );' )
+            c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
             c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
             
             c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ), FOREIGN KEY( service_id, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
@@ -4840,7 +4545,7 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX local_ratings_hash_id_index ON local_ratings ( hash_id );' )
             c.execute( 'CREATE INDEX local_ratings_rating_index ON local_ratings ( rating );' )
             
-            c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id ) );' )
+            c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
             c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
             c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
             c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
@@ -4916,13 +4621,17 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
             
-            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER );' )
-            c.execute( 'CREATE UNIQUE INDEX tag_parents_all_index ON tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id );' )
+            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+            c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
+            c.execute( 'CREATE INDEX tag_parents_status_index ON tag_parents ( status );' )
             
-            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
-            #c.execute( 'CREATE TABLE deleted_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
-            #c.execute( 'CREATE TABLE pending_tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
-            #c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, reason_id ) );' )
+            c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+            
+            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
+            c.execute( 'CREATE INDEX tag_siblings_status_index ON tag_siblings ( status );' )
+            
+            c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
             
             c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
@@ -4938,7 +4647,7 @@ class DB( ServiceDB ):
             
             # inserts
             
-            account = CC.GetUnknownAccount()
+            account = HC.GetUnknownAccount()
             account.MakeStale()
             
             init_service_identifiers = [ HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.LOCAL_TAG_SERVICE_IDENTIFIER, HC.COMBINED_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
@@ -5382,7 +5091,73 @@ class DB( ServiceDB ):
                     c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
                     
                 
-                unknown_account = CC.GetUnknownAccount()
+                if version < 72:
+                    
+                    c.execute( 'ALTER TABLE tag_siblings ADD COLUMN status INTEGER;' )
+                    c.execute( 'UPDATE tag_siblings SET status = ?;', ( HC.CURRENT, ) )
+                    
+                    c.execute( 'ALTER TABLE tag_parents ADD COLUMN status INTEGER;' )
+                    c.execute( 'UPDATE tag_parents SET status = ?;', ( HC.CURRENT, ) )
+                    
+                    tag_siblings = c.execute( 'SELECT * FROM tag_siblings;' ).fetchall()
+                    tag_parents = c.execute( 'SELECT * FROM tag_parents;' ).fetchall()
+                    
+                    c.execute( 'DROP TABLE tag_siblings;' )
+                    c.execute( 'DROP TABLE tag_parents;' )
+                    
+                    c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+                    c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
+                    c.execute( 'CREATE INDEX tag_parents_status_index ON tag_parents ( status );' )
+                    
+                    c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+                    
+                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+                    c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
+                    c.execute( 'CREATE INDEX tag_siblings_status_index ON tag_siblings ( status );' )
+                    
+                    c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+                    
+                    c.executemany( 'INSERT INTO tag_siblings VALUES ( ?, ?, ?, ?, ?, ? );', tag_siblings )
+                    c.executemany( 'INSERT INTO tag_parents VALUES ( ?, ?, ?, ?, ?, ? );', tag_parents )
+                    
+                    #
+                    
+                    c.execute( 'ALTER TABLE mappings RENAME TO mappings_old;' )
+                    
+                    c.execute( 'DROP INDEX mappings_hash_id_index;' )
+                    c.execute( 'DROP INDEX mappings_service_id_tag_id_index;' )
+                    c.execute( 'DROP INDEX mappings_service_id_hash_id_index;' )
+                    c.execute( 'DROP INDEX mappings_service_id_status_index;' )
+                    c.execute( 'DROP INDEX mappings_status_index;' )
+                    
+                    c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+                    c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
+                    c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
+                    c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
+                    c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
+                    c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
+                    
+                    c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
+                    
+                    c.execute( 'DROP TABLE mappings_old;' )
+                    
+                    #
+                    
+                    download_data = c.execute( 'SELECT service_id_to, hash_id FROM file_transfers;' ).fetchall()
+                    
+                    c.execute( 'DROP TABLE file_transfers;' )
+                    
+                    c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+                    c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
+                    
+                    c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', download_data )
+                    
+                    #
+                    
+                    c.execute( 'DELETE FROM service_info;' )
+                    
+                
+                unknown_account = HC.GetUnknownAccount()
                 
                 unknown_account.MakeStale()
                 
@@ -6664,15 +6439,37 @@ class DB( ServiceDB ):
     
     def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
+    def pub_content_updates( self, service_identifiers_to_content_updates ):
+        
+        self.pub( 'content_updates_data', service_identifiers_to_content_updates )
+        self.pub( 'content_updates_gui', service_identifiers_to_content_updates )
+        
+    
+    def pub_service_updates( self, service_identifiers_to_service_updates ):
+        
+        self.pub( 'service_updates_data', service_identifiers_to_service_updates )
+        self.pub( 'service_updates_gui', service_identifiers_to_service_updates )
+        
+    
     def DAEMONDownloadFiles( self ):
         
-        all_downloads = wx.GetApp().ReadDaemon( 'all_downloads' )
+        service_identifiers_to_connections = {}
         
-        num_downloads = sum( [ len( hashes ) for ( service_identifier, hashes ) in all_downloads.items() ] ) 
+        hashes = wx.GetApp().ReadDaemon( 'downloads' )
         
-        for ( service_identifier, hashes ) in all_downloads.items():
+        num_downloads = len( hashes )
+        
+        for hash in hashes:
             
-            try:
+            ( media_result, ) = wx.GetApp().ReadDaemon( 'media_results', CC.FileSearchContext(), ( hash, ) )
+            
+            service_identifiers = list( media_result.GetFileServiceIdentifiersCDPP().GetCurrent() )
+            
+            random.shuffle( service_identifiers )
+            
+            for service_identifier in service_identifiers:
+                
+                if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: break
                 
                 try: file_repository = wx.GetApp().ReadDaemon( 'service', service_identifier )
                 except: continue
@@ -6681,11 +6478,11 @@ class DB( ServiceDB ):
                 
                 if file_repository.CanDownload(): 
                     
-                    connection = file_repository.GetConnection()
-                    
-                    for hash in hashes:
+                    try:
                         
-                        if HC.shutdown: return
+                        if service_identifier not in service_identifiers_to_connections: service_identifiers_to_connections[ service_identifier ] = file_repository.GetConnection()
+                        
+                        connection = service_identifiers_to_connections[ service_identifier ]
                         
                         file = connection.Get( 'file', hash = hash.encode( 'hex' ) )
                         
@@ -6697,16 +6494,17 @@ class DB( ServiceDB ):
                         
                         wx.GetApp().WriteDaemon( 'import_file', file )
                         
-                        HC.pubsub.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
-                        HC.pubsub.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_ADD, HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) ) ] )
+                        HC.pubsub.pub( 'log_message', 'download files daemon', 'downloaded ' + hash.encode( 'hex' ) + ' from ' + service_identifier.GetName() )
                         
-                        self.pub( 'log_message', 'download files daemon', 'downloaded ' + hash.encode( 'hex' ) + ' from ' + file_repository.GetServiceIdentifier().GetName() )
+                        break
                         
-                        time.sleep( 0.25 )
-                        
+                    except:
+                        print( traceback.format_exc() )
+                        pass
                     
                 
-            except: pass # if bad download, the repo gets dinged an error. no need to do anything here
+                if HC.shutdown: return
+                
             
         
         if num_downloads == 0: HC.pubsub.pub( 'downloads_status', 'no file downloads' )
@@ -6765,15 +6563,18 @@ class DB( ServiceDB ):
             
         
     
-    def DAEMONFlushServiceUpdates( self, update_log ): wx.GetApp().WriteDaemon( 'service_updates', update_log )
+    def DAEMONFlushServiceUpdates( self, list_of_service_identifiers_to_service_updates ):
+        
+        service_identifiers_to_service_updates = HC.MergeKeyToListDicts( list_of_service_identifiers_to_service_updates )
+        
+        wx.GetApp().WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+        
     
     def DAEMONResizeThumbnails( self ):
         
-        all_thumbnail_paths = [ path for path in CC.IterateAllThumbnailPaths() ]
+        full_size_thumbnail_paths = { path for path in CC.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
         
-        full_size_thumbnail_paths = { path for path in all_thumbnail_paths if not path.endswith( '_resized' ) }
-        
-        resized_thumbnail_paths = { path for path in all_thumbnail_paths if path.endswith( '_resized' ) }
+        resized_thumbnail_paths = { path[:-8] for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
         
         thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
         
@@ -7092,7 +6893,9 @@ class DB( ServiceDB ):
                             if first_begin == 0: update_index_string = 'initial update'
                             else: update_index_string = 'update ' + str( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
                             
-                            HC.pubsub.pub( 'service_status', 'Downloading and parsing ' + update_index_string + ' for ' + name )
+                            prefix_string = name + ' ' + update_index_string + ': '
+                            
+                            HC.pubsub.pub( 'service_status', prefix_string + 'downloading and parsing' )
                             
                             update = connection.Get( 'update', begin = next_begin )
                             
@@ -7103,31 +6906,53 @@ class DB( ServiceDB ):
                                 wx.GetApp().WriteDaemon( 'generate_tag_ids', update.GetTags() )
                                 
                             
-                            updates = update.SplitIntoSubUpdates()
+                            i = 0
+                            num_content_updates = update.GetNumContentUpdates()
+                            content_updates = []
+                            current_weight = 0
                             
-                            num_updates = len( updates )
+                            for content_update in update.IterateContentUpdates():
+                                
+                                content_updates.append( content_update )
+                                
+                                current_weight += len( content_update.GetHashes() )
+                                
+                                i += 1
+                                
+                                if current_weight > 50:
+                                    
+                                    HC.pubsub.pub( 'service_status', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
+                                    
+                                    wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                                    
+                                    self.WaitUntilGoodTimeToUseDBThread()
+                                    
+                                    time.sleep( 0.0001 )
+                                    
+                                    wx.GetApp().WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                                    
+                                    content_updates = []
+                                    current_weight = 0
+                                    
+                                
                             
-                            for ( i, sub_update ) in enumerate( updates ):
-                                
-                                wx.GetApp().WriteDaemon( 'update', service_identifier, sub_update )
-                                
-                                HC.pubsub.pub( 'service_status', 'Processing ' + update_index_string + ' part ' + str( i + 1 ) + '/' + str( num_updates ) + ' for ' + name )
-                                
-                                wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
-                                
-                                self.WaitUntilGoodTimeToUseDBThread()
-                                
+                            if len( content_updates ) > 0: wx.GetApp().WriteDaemon( 'content_updates', { service_identifier : content_updates } )
                             
-                            HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string + ' (' + HC.ConvertTimestampToPrettyTime( update.GetEnd() ) + ')' )
+                            HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
+                            
+                            service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
+                            
+                            service_identifiers_to_service_updates = { service_identifier : service_updates }
+                            
+                            wx.GetApp().WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+                            
+                            HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string )
                             
                             HC.pubsub.pub( 'notify_new_pending' )
                             
-                            now = int( time.time() )
+                            self.WaitUntilGoodTimeToUseDBThread()
                             
-                            for ( news, timestamp ) in update.GetNews():
-                                
-                                if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + news )
-                                
+                            time.sleep( 0.25 )
                             
                             try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
                             except: break
@@ -7333,9 +7158,9 @@ class DB( ServiceDB ):
                                             
                                             service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                                             
-                                            content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToContentUpdates( hash, service_identifiers_to_tags )
+                                            service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
                                             
-                                            wx.GetApp().Write( 'content_updates', content_updates )
+                                            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
                                             
                                         except: pass
                                         
@@ -7532,7 +7357,6 @@ class DB( ServiceDB ):
     def _MainLoop_Read( self, c, action, args, kwargs ):
         
         if action == '4chan_pass': result = self._Get4chanPass( c, *args, **kwargs )
-        elif action == 'all_downloads': result = self._GetAllDownloads( c, *args, **kwargs )
         elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
         elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
         elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
@@ -7540,6 +7364,7 @@ class DB( ServiceDB ):
         elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
         elif action == 'do_file_query': result = self._DoFileQuery( c, *args, **kwargs )
         elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
+        elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
         elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
         elif action == 'file': result = self._GetFile( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
@@ -7608,11 +7433,10 @@ class DB( ServiceDB ):
         elif action == 'message': self._AddMessage( c, *args, **kwargs )
         elif action == 'message_info_since': self._AddMessageInfoSince( c, *args, **kwargs )
         elif action == 'message_statuses': self._UpdateMessageStatuses( c, *args, **kwargs )
-        elif action == 'petition_files': self._PetitionFiles( c, *args, **kwargs )
         elif action == 'pixiv_account': self._SetPixivAccount( c, *args, **kwargs )
         elif action == 'reset_service': self._ResetService( c, *args, **kwargs )
         elif action == 'save_options': self._SaveOptions( c, *args, **kwargs )
-        elif action == 'service_updates': self._AddServiceUpdates( c, *args, **kwargs )
+        elif action == 'service_updates': self._ProcessServiceUpdates( c, *args, **kwargs )
         elif action == 'session': self._AddSession( c, *args, **kwargs )
         elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
         elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
@@ -7627,7 +7451,6 @@ class DB( ServiceDB ):
         elif action == 'update_imageboards': self._UpdateImageboards( c, *args, **kwargs )
         elif action == 'update_server_services': self._UpdateServerServices( c, *args, **kwargs )
         elif action == 'update_services': self._UpdateServices( c, *args, **kwargs )
-        elif action == 'upload_pending': self._UploadPending( c, *args, **kwargs )
         elif action == 'vacuum': self._Vacuum()
         elif action == 'web_session': result = self._AddWebSession( c, *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
@@ -7642,6 +7465,8 @@ class DB( ServiceDB ):
             try:
                 
                 ( priority, job ) = self._jobs.get( timeout = 1 )
+                
+                self._currently_doing_job = True
                 
                 self._pubsubs = []
                 
@@ -7665,6 +7490,8 @@ class DB( ServiceDB ):
                     
                     time.sleep( 5 )
                     
+                
+                self._currently_doing_job = False
                 
             except: pass # no jobs this second; let's see if we should shutdown
             
@@ -7699,7 +7526,7 @@ class DB( ServiceDB ):
         while True:
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
-            elif self._jobs.empty(): return
+            elif self._jobs.empty() and not self._currently_doing_job: return
             else: time.sleep( 0.0001 )
             
         
