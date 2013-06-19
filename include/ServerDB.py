@@ -807,8 +807,8 @@ class TagDB():
                 
             elif petition_type in ( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_DATA_TYPE_TAG_PARENTS ):
                 
-                if petition_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS: result = c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.DELETED_PENDING, HC.PETITIONED ) ).fetchone()
-                elif petition_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS: result = c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_parents WHERE service_id = ? AND status IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.DELETED_PENDING, HC.PETITIONED ) ).fetchone()
+                if petition_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS: result = c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
+                elif petition_type == HC.CONTENT_DATA_TYPE_TAG_PARENTS: result = c.execute( 'SELECT account_id, old_tag_id, new_tag_id, reason_id, status FROM tag_parents WHERE service_id = ? AND status IN ( ?, ? ) ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
                 
                 if result is None: continue
                 
@@ -821,7 +821,7 @@ class TagDB():
                 petition_data = ( old_tag, new_tag )
                 
             
-            if status in ( HC.DELETED_PENDING, HC.PENDING ): action = HC.CONTENT_UPDATE_PENDING
+            if status == HC.PENDING: action = HC.CONTENT_UPDATE_PENDING
             elif status == HC.PETITIONED: action = HC.CONTENT_UPDATE_PETITION
             
             petitioner_account_identifier = HC.AccountIdentifier( account_id = account_id )

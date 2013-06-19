@@ -293,7 +293,6 @@ class Comment( wx.Panel ):
         self._comment_panel = ClientGUICommon.StaticBox( self, 'comment' )
         
         self._comment = wx.TextCtrl( self._comment_panel, value = '', style = wx.TE_MULTILINE | wx.TE_READONLY, size = ( -1, 120 ) )
-        self._comment.Disable()
         
         self._comment_append = wx.TextCtrl( self._comment_panel, value = '', style = wx.TE_MULTILINE | wx.TE_PROCESS_ENTER, size = ( -1, 120 ) )
         self._comment_append.Bind( wx.EVT_KEY_UP, self.EventKeyDown )
@@ -850,6 +849,8 @@ class ManagementPanelDumper( ManagementPanel ):
             self._start_button.Disable()
             
             self._timer.Stop()
+            
+            self._dumping = False
             
         
     
@@ -1697,7 +1698,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                     
-                    content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
+                    service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
                     
                     wx.GetApp().WriteDaemon( 'content_updates', service_identifiers_to_content_updates )
                     

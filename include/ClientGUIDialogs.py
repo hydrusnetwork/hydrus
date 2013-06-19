@@ -1069,6 +1069,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._months.SetValue( months )
                 self._days = wx.SpinCtrl( self, max = 90 )
                 self._days.SetValue( days )
+                self._hours = wx.SpinCtrl( self, max = 24 )
+                self._hours.SetValue( 0 )
                 
                 self._ok = wx.Button( self, label='Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
@@ -1087,6 +1089,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                 hbox.AddF( wx.StaticText( self, label='months' ), FLAGS_MIXED )
                 hbox.AddF( self._days, FLAGS_MIXED )
                 hbox.AddF( wx.StaticText( self, label='days' ), FLAGS_MIXED )
+                hbox.AddF( self._hours, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label='hours' ), FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
@@ -1736,7 +1740,7 @@ class DialogInputFileSystemPredicate( Dialog ):
     
     def EventOk( self, event ):
         
-        if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: info = ( self._sign.GetStringSelection(), self._years.GetValue(), self._months.GetValue(), self._days.GetValue() )
+        if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: info = ( self._sign.GetStringSelection(), self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: info = ( self._sign.GetStringSelection(), self._duration_s.GetValue() * 1000 + self._duration_ms.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_HASH:
             
@@ -7461,7 +7465,7 @@ class DialogManageTagParents( Dialog ):
                     new_status = HC.PETITIONED
                     
                 
-            elif pair in self._current_statuses_to_pairs[ HC.PENDING ] or pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ]:
+            elif pair in self._current_statuses_to_pairs[ HC.PENDING ]:
                 
                 message = pair_string + ' is pending.'
                 
@@ -7469,15 +7473,9 @@ class DialogManageTagParents( Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
-                            
-                            old_status = HC.PENDING
-                            
-                        else:
-                            
-                            old_status = HC.DELETED_PENDING
-                            new_status = HC.DELETED
-                            
+                        old_status = HC.PENDING
+                        
+                        if pair in self._current_statuses_to_pairs[ HC.DELETED ]: new_status = HC.DELETED
                         
                     else: return
                     
@@ -7516,15 +7514,9 @@ class DialogManageTagParents( Dialog ):
                             
                         
                     
-                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]:
-                        
-                        old_status = HC.DELETED
-                        new_status = HC.DELETED_PENDING
-                        
-                    else:
-                        
-                        new_status = HC.PENDING
-                        
+                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]: old_status = HC.DELETED
+                    
+                    new_status = HC.PENDING
                     
                 
             
@@ -7549,7 +7541,7 @@ class DialogManageTagParents( Dialog ):
         
         def _CanAdd( self, potential_child, potential_parent ):
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.DELETED_PENDING ] ).union( self._current_statuses_to_pairs[ HC.PENDING ] )
+            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
             
             current_children = { child for ( child, parent ) in current_pairs }
             
@@ -7622,13 +7614,13 @@ class DialogManageTagParents( Dialog ):
             
             if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                for pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] ): content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.PENDING ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
                 for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
                 
             else:
                 
-                current_pending = self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
-                original_pending = self._original_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._original_statuses_to_pairs[ HC.PENDING ] )
+                current_pending = self._current_statuses_to_pairs[ HC.PENDING ]
+                original_pending = self._original_statuses_to_pairs[ HC.PENDING ]
                 
                 current_petitioned = self._current_statuses_to_pairs[ HC.PETITIONED ]
                 original_petitioned = self._original_statuses_to_pairs[ HC.PETITIONED ]
@@ -7923,7 +7915,7 @@ class DialogManageTagSiblings( Dialog ):
                     new_status = HC.PETITIONED
                     
                 
-            elif pair in self._current_statuses_to_pairs[ HC.PENDING ] or pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ]:
+            elif pair in self._current_statuses_to_pairs[ HC.PENDING ]:
                 
                 message = pair_string + ' is pending.'
                 
@@ -7931,15 +7923,9 @@ class DialogManageTagSiblings( Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
-                            
-                            old_status = HC.PENDING
-                            
-                        else:
-                            
-                            old_status = HC.DELETED_PENDING
-                            new_status = HC.DELETED
-                            
+                        old_status = HC.PENDING
+                        
+                        if pair in self._current_statuses_to_pairs[ HC.DELETED ]: new_status = HC.DELETED
                         
                     else: return
                     
@@ -7978,15 +7964,9 @@ class DialogManageTagSiblings( Dialog ):
                             
                         
                     
-                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]:
-                        
-                        old_status = HC.DELETED
-                        new_status = HC.DELETED_PENDING
-                        
-                    else:
-                        
-                        new_status = HC.PENDING
-                        
+                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]: old_status = HC.DELETED
+                    
+                    new_status = HC.PENDING
                     
                 
             
@@ -8011,7 +7991,7 @@ class DialogManageTagSiblings( Dialog ):
         
         def _CanAdd( self, potential_old, potential_new ):
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.DELETED_PENDING ] ).union( self._current_statuses_to_pairs[ HC.PENDING ] )
+            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
             
             current_olds = { old for ( old, new ) in current_pairs }
             
@@ -8095,13 +8075,13 @@ class DialogManageTagSiblings( Dialog ):
             
             if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                for pair in self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] ): content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.PENDING ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
                 for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
                 
             else:
                 
-                current_pending = self._current_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
-                original_pending = self._original_statuses_to_pairs[ HC.DELETED_PENDING ].union( self._original_statuses_to_pairs[ HC.PENDING ] )
+                current_pending = self._current_statuses_to_pairs[ HC.PENDING ]
+                original_pending = self._original_statuses_to_pairs[ HC.PENDING ]
                 
                 current_petitioned = self._current_statuses_to_pairs[ HC.PETITIONED ]
                 original_petitioned = self._original_statuses_to_pairs[ HC.PETITIONED ]
@@ -8121,26 +8101,60 @@ class DialogManageTagSiblings( Dialog ):
             return ( self._service_identifier, content_updates )
             
         
-        def SetNew( self, tag, parents = [] ):
+        def SetNew( self, new, parents = [] ):
             
-            if tag is not None and tag == self._current_old: self.SetOld( None )
+            if new is not None and new == self._current_old: self.SetOld( None )
             
-            self._current_new = tag
+            self._current_new = new
             
-            if tag is None: self._new_text.SetLabel( '' )
-            else: self._new_text.SetLabel( tag )
+            if new is None: self._new_text.SetLabel( '' )
+            else: self._new_text.SetLabel( new )
             
             self._SetButtonStatus()
             
         
-        def SetOld( self, tag, parents = [] ):
+        def SetOld( self, old, parents = [] ):
             
-            if tag is not None and tag == self._current_new: self.SetNew( None )
+            if old is not None:
+                
+                current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                
+                current_olds = { current_old for ( current_old, current_new ) in current_pairs }
+                
+                # test for ambiguity
+                
+                while old in current_olds:
+                    
+                    olds_to_news = dict( current_pairs )
+                    
+                    new = olds_to_news[ old ]
+                    
+                    message = 'There already is a relationship set for ' + old + '! It goes to ' + new + '.'
+                    
+                    with DialogYesNo( self, message, yes_label = 'I want to overwrite it', no_label = 'do nothing' ) as dlg:
+                        
+                        if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                            
+                            if dlg.ShowModal() != wx.ID_YES: return
+                            
+                            self._AddPair( old, new )
+                            
+                        
+                    
+                    current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                    
+                    current_olds = { current_old for ( current_old, current_new ) in current_pairs }
+                    
+                
             
-            self._current_old = tag
+            #
             
-            if tag is None: self._old_text.SetLabel( '' )
-            else: self._old_text.SetLabel( tag )
+            if old is not None and old == self._current_new: self.SetNew( None )
+            
+            self._current_old = old
+            
+            if old is None: self._old_text.SetLabel( '' )
+            else: self._old_text.SetLabel( old )
             
             self._SetButtonStatus()
             
@@ -8545,7 +8559,7 @@ class DialogManageTags( Dialog ):
                 self._content_updates = []
                 
                 self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, self._hashes ) ) for tag in self._pending_tags ] )
-                self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, self._hashes ) ) for tag in self._petitioned_tags ] )
+                self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, self._hashes ) ) for tag in self._petitioned_tags ] )
                 
             else:
                 

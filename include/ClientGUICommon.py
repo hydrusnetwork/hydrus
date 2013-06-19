@@ -601,7 +601,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     media = self._media_callable()
                     
-                    if media is None: self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                    # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
+                    if media is None or not self._synchronised.IsOn(): self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                     else:
                         
                         tags_managers = []
@@ -3201,7 +3202,7 @@ class TagsBoxManage( TagsBox ):
                 
             else: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
             
-            tag_string = prefix + ' ' + tag
+            tag_string = prefix + tag
             
             sibling = siblings_manager.GetSibling( tag )
             

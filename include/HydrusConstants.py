@@ -31,7 +31,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 72
+SOFTWARE_VERSION = 73
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -652,10 +652,10 @@ def ConvertShortcutToPrettyShortcut( modifier, key, action ):
 def ConvertStatusToPrefix( status ):
     
     if status == CURRENT: return ''
-    elif status == PENDING: return '(+)'
-    elif status == PETITIONED: return '(-)'
-    elif status == DELETED: return '(X)'
-    elif status == DELETED_PENDING: return '(X+)'
+    elif status == PENDING: return '(+) '
+    elif status == PETITIONED: return '(-) '
+    elif status == DELETED: return '(X) '
+    elif status == DELETED_PENDING: return '(X+) '
     
 def ConvertTimestampToPrettyAge( timestamp ):
     
@@ -1708,6 +1708,11 @@ class ContentUpdate():
             else: ( tag, hashes ) = self._row
             
         elif self._data_type in ( CONTENT_DATA_TYPE_TAG_PARENTS, CONTENT_DATA_TYPE_TAG_SIBLINGS ): hashes = set()
+        elif self._data_type == CONTENT_DATA_TYPE_RATINGS:
+            
+            if self._action == CONTENT_UPDATE_ADD: ( rating, hashes ) = self._row
+            elif self._action == CONTENT_UPDATE_RATINGS_FILTER: ( min, max, hashes ) = self._row
+            
         
         if type( hashes ) != set: hashes = set( hashes )
         
@@ -1965,9 +1970,9 @@ class Predicate():
                 
                 if info is not None:
                     
-                    ( operator, years, months, days ) = info
+                    ( operator, years, months, days, hours ) = info
                     
-                    base += u' ' + operator + u' ' + unicode( years ) + u'y' + unicode( months ) + u'm' + unicode( days ) + u'd'
+                    base += u' ' + operator + u' ' + unicode( years ) + u'y' + unicode( months ) + u'm' + unicode( days ) + u'd' + unicode( hours ) + u'h'
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HASH:

@@ -44,6 +44,9 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
     
     service_identifiers_to_tags = {}
     
+    siblings_manager = wx.GetApp().GetTagSiblingsManager()
+    parents_manager = wx.GetApp().GetTagParentsManager()
+    
     for ( service_identifier, namespaces ) in advanced_tag_options.items():
         
         if len( namespaces ) > 0:
@@ -56,7 +59,13 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
                 else: tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if tag.startswith( namespace + ':' ) ] )
                 
             
-            if len( tags_to_add_here ) > 0: service_identifiers_to_tags[ service_identifier ] = tags_to_add_here
+            if len( tags_to_add_here ) > 0:
+                
+                tags_to_add_here = siblings_manager.CollapseTagList( tags_to_add_here )
+                tags_to_add_here = parents_manager.ExpandTags( service_identifier, tags_to_add_here )
+                
+                service_identifiers_to_tags[ service_identifier ] = tags_to_add_here
+                
             
         
     

@@ -8,6 +8,68 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 73</h3></li>
+				<ul>
+					<li>every file operation from fullscreen was broke due to a single-character typo that got propagated</li>
+					<li>fixed local ratings, which were broken five different ways</li>
+					<li>ditched the deleted_pending concept, which was actually making things more complicated</li>
+					<li>possible fix to review services opening on bottom level</li>
+					<li>dumper no longer says it is still dumping on page close if it is done dumping</li>
+					<li>you can now scroll the dumper's upper comment box</li>
+					<li>moved site links over to github</li>
+					<li>fixed a typo re downloading a file that is already in the db and adding tags at the same time</li>
+					<li>local tags delete fixed</li>
+					<li>tag parents now apply globally, like siblings</li>
+					<li>thumbnail resizer daemon is less verbose and more helpful on IOErrors</li>
+					<li>fixed namespace colours in manage tags dialog</li>
+					<li>open selection in a new page now works for single-file selections</li>
+					<li>upload tags progress bar misalign fixed</li>
+					<li>namespaced counts no longer total up in A/C writes</li>
+					<li>manage siblings dialog now catches collisions when you put in the old, not the pair, and asks you what you want to do</li>
+					<li>age predicate now supports hours</li>
+					<li>while search is not synchronised, A/C will now query db when it might have queried the current media</li>
+					<li>think I fixed a sometimes-not-initially-showing-first-frame-of-gifs problem</li>
+					<li>downloaders now run parsed tags through siblings and parents managers</li>
+					<li>maaaybe fixed a cache counts error</li>
+					<li>wrote a little more sibling and parent help, and updated schema</li>
+				</ul>
+				<li><h3>version 72</h3></li>
+				<ul>
+					<li>remote tag siblings!</li>
+					<li>remote tag parents!</li>
+					<li>simplified update nomenclature</li>
+					<li>streamlined client-to-server update objects and processing</li>
+					<li>streamlined server-to-client update objects and processing</li>
+					<li>did a bunch of work on content_updates</li>
+					<li>did some work on service_updates, too</li>
+					<li>improved client-side petition handling</li>
+					<li>a bunch of changes to how uploadpending works</li>
+					<li>the way pending downloads are stored is improved</li>
+					<li>mappings tables are collapsed server-side</li>
+					<li>file tables are collapsed server-side</li>
+					<li>moved tag siblings and parents to content_updates</li>
+					<li>moved file upload/download to content_updates</li>
+					<li>reworked tag content_updates to be more streamlined</li>
+					<li>addfile/tagrepositoryupdate is made entirely content_updates, now</li>
+					<li>simplification in the way deleted content is stored</li>
+					<li>repo update processing string is muchly improved</li>
+					<li>repo update processing is smoother!</li>
+					<li>a slight change to default behind-the-scenes searches</li>
+					<li>improved how the server creates updates on service init</li>
+					<li>improvements to service_identifiers_to_statuses_to_tags sub-init and related parts of tags_manager</li>
+					<li>some misc nomenclature improvements</li>
+					<li>fixed a denypetition bug for file repositories</li>
+					<li>fixed optimised petition handling in server</li>
+					<li>fixed posting tags in dumper</li>
+					<li>fixed a problem with getunknownaccount</li>
+					<li>server now analyses on vacuum, like client</li>
+					<li>fixed a lolbug in thumbnail resizer daemon that was continually resizing thumbs</li>
+					<li>fixed a bug in cache counts, which should fix the 'pending menu disappeared' problem</li>
+					<li>corrected num_archive count in file repos</li>
+					<li>downloading files is simpler and faster; download menu is simpler</li>
+					<li>fixed server initialisation</li>
+					<li>updated to new sqlite version</li>
+				</ul>
 				<li><h3>version 71</h3></li>
 				<ul>
 					<li>collapsed the four mappings tables into two tables</li>

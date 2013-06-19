@@ -1650,7 +1650,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_identifier.GetType() == HC.TAG_REPOSITORY:
             
-            pending_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ] )
+            pending_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
             pending_rescinded_mappings_ids = [ ( namespace_id, tag_id, hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in pending_rescinded_mappings_ids.items() ]
             
@@ -1761,7 +1761,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         else:
             
             if file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
-            elif tag_service_identifier != HC.COMBINED_TAG_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( tag_service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ) }
+            elif tag_service_identifier != HC.COMBINED_TAG_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
             else: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
             
         
@@ -1772,7 +1772,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             statuses = []
             
             if include_current_tags: statuses.append( HC.CURRENT )
-            if include_pending_tags: statuses.extend( ( HC.DELETED_PENDING, HC.PENDING ) )
+            if include_pending_tags: statuses.append( HC.PENDING )
             
             nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ' + HC.SplayListForDB( statuses ) + ';', ( tag_service_id, ) ) }
             
@@ -1874,12 +1874,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER:
             
             current_tables_phrase = 'mappings WHERE service_id = ' + str( tag_service_id ) + ' AND status = ' + str( HC.CURRENT ) + ' AND '
-            pending_tables_phrase = 'mappings WHERE service_id = ' + str( tag_service_id ) + ' AND status IN ' + HC.SplayListForDB( ( HC.DELETED_PENDING, HC.PENDING ) ) + ' AND '
+            pending_tables_phrase = 'mappings WHERE service_id = ' + str( tag_service_id ) + ' AND status = ' + str( HC.PENDING ) + ' AND '
             
         else:
             
             current_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + str( tag_service_id ) + ' AND mappings.status = ' + str( HC.CURRENT ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' AND '
-            pending_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + str( tag_service_id ) + ' AND mappings.status IN ' + HC.SplayListForDB( ( HC.DELETED_PENDING, HC.PENDING ) ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' AND '
+            pending_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + str( tag_service_id ) + ' AND mappings.status = ' + str( HC.PENDING ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' AND '
             
         
         # precache search
@@ -1999,7 +1999,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         [ tags_to_count.update( { ( namespace_id, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results ]
         
-        if not there_was_a_namespace:
+        if collapse and not there_was_a_namespace:
             
             unnamespaced_tag_ids = { tag_id for ( namespace_id, tag_id, num_tags ) in results if namespace_id == 1 }
             
@@ -2087,7 +2087,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         statuses = []
         
         if include_current_tags: statuses.append( HC.CURRENT )
-        if include_pending_tags: statuses.extend( ( HC.DELETED_PENDING, HC.PENDING ) )
+        if include_pending_tags: statuses.append( HC.PENDING )
         
         if len( statuses ) > 0: status_phrase = 'mappings.status IN ' + HC.SplayListForDB( statuses ) + ' AND '
         else: status_phrase = ''
@@ -2111,7 +2111,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         statuses = []
         
         if include_current_tags: statuses.append( HC.CURRENT )
-        if include_pending_tags: statuses.extend( ( HC.DELETED_PENDING, HC.PENDING ) )
+        if include_pending_tags: statuses.append( HC.PENDING )
         
         if len( statuses ) > 0: status_phrase = 'mappings.status IN ' + HC.SplayListForDB( statuses ) + ' AND '
         else: status_phrase = ''
@@ -2489,7 +2489,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # mappings
             
-            pending_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ) ] )
+            pending_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
             pending = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items() ]
             
@@ -2509,7 +2509,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # tag siblings
             
-            pending = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
@@ -2519,7 +2519,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # tag parents
             
-            pending = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
@@ -2763,7 +2763,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if common_tag_info_types <= info_types_missed:
                     
-                    ( num_files, num_namespaces, num_tags ) = c.execute( 'SELECT COUNT( DISTINCT hash_id ), COUNT( DISTINCT namespace_id ), COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
+                    ( num_files, num_namespaces, num_tags ) = c.execute( 'SELECT COUNT( DISTINCT hash_id ), COUNT( DISTINCT namespace_id ), COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
                     
                     results[ HC.SERVICE_INFO_NUM_FILES ] = num_files
                     results[ HC.SERVICE_INFO_NUM_NAMESPACES ] = num_namespaces
@@ -2809,12 +2809,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     if info_type in ( HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ): save_it = False
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_NAMESPACES: result = c.execute( 'SELECT COUNT( DISTINCT namespace_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_TAGS: result = c.execute( 'SELECT COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ?, ? );', ( service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.DELETED, HC.DELETED_PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.DELETED_PENDING ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_NAMESPACES: result = c.execute( 'SELECT COUNT( DISTINCT namespace_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_TAGS: result = c.execute( 'SELECT COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.DELETED ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS: result = c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS: result = c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
@@ -3462,6 +3462,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         hash_ids = self._GetHashIds( c, hashes )
                         
+                        splayed_hash_ids = HC.SplayListForDB( hash_ids )
+                        
                         if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                             
                             ratings_added = 0
@@ -3489,6 +3491,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         ( min, max, hashes ) = row
                         
                         hash_ids = self._GetHashIds( c, hashes )
+                        
+                        splayed_hash_ids = HC.SplayListForDB( hash_ids )
                         
                         c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
                         
@@ -3603,9 +3607,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _RecalcCombinedMappings( self, c ):
         
-        # this all now takes minutes to calculate!
-        # I'm pretty sure it's because the new incarnation of mappings has so many indices
-        
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence DESC;' ) ]
         
         c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
@@ -3615,11 +3616,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for service_id in service_ids:
             
             c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, ? FROM mappings WHERE service_id = ? AND status = ?;', ( self._combined_tag_service_id, HC.CURRENT, service_id, HC.CURRENT ) )
-            c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, ? FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( self._combined_tag_service_id, HC.PENDING, service_id, HC.PENDING, HC.DELETED_PENDING ) )
+            c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, ? FROM mappings WHERE service_id = ? AND status = ?;', ( self._combined_tag_service_id, HC.PENDING, service_id, HC.PENDING ) )
             
             if not first_round:
                 
-                deleted_ids_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.DELETED_PENDING, HC.DELETED ) ) ] )
+                deleted_ids_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.DELETED ) ) ] )
                 
                 for ( ( namespace_id, tag_id ), hash_ids ) in deleted_ids_dict.items(): c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.CURRENT  ) )
                 
@@ -3746,7 +3747,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
         current_tags = c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status = ? GROUP BY service_id, namespace_id, tag_id;', ( HC.CURRENT, ) ).fetchall()
-        pending_tags = c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status IN ( ?, ? ) GROUP BY service_id, namespace_id, tag_id;', ( HC.PENDING, HC.DELETED_PENDING ) ).fetchall()
+        pending_tags = c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status = ? GROUP BY service_id, namespace_id, tag_id;', ( HC.PENDING, ) ).fetchall()
         
         c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
         c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
@@ -3768,14 +3769,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             num_rows_changed = self._GetRowCount( c )
             
-            if old_status not in ( HC.DELETED_PENDING, HC.PENDING ) and new_status in ( HC.DELETED_PENDING, HC.PENDING ):
+            if old_status != HC.PENDING and new_status == HC.PENDING:
                 
                 UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, appropriate_hash_ids, 1 )
                 
                 InsertCombinedPendingMappings( namespace_id, tag_id, appropriate_hash_ids )
                 
             
-            if old_status in ( HC.DELETED_PENDING, HC.PENDING ) and new_status not in ( HC.DELETED_PENDING, HC.PENDING ):
+            if old_status == HC.PENDING and new_status != HC.PENDING:
                 
                 UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, appropriate_hash_ids, -1 )
                 
@@ -3812,7 +3813,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def DeleteCombinedPendingMappings( namespace_id, tag_id, hash_ids ):
             
-            existing_higher_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_higher_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status IN ( ?, ? );', ( namespace_id, tag_id, HC.DELETED_PENDING, HC.PENDING ) ) }
+            existing_higher_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_higher_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, HC.PENDING ) ) }
             
             deletable_hash_ids = set( hash_ids ).difference( existing_higher_precedence_hash_ids )
             
@@ -3823,7 +3824,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def DeletePending( namespace_id, tag_id, hash_ids ):
             
-            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status IN ( ?, ? );', ( service_id, namespace_id, tag_id, HC.DELETED_PENDING, HC.PENDING ) )
+            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
             
             num_deleted = self._GetRowCount( c )
             
@@ -3877,7 +3878,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             num_rows_added = self._GetRowCount( c )
             
-            if status in ( HC.DELETED_PENDING, HC.PENDING ):
+            if status == HC.PENDING:
                 
                 UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, new_hash_ids, 1 )
                 
@@ -3971,9 +3972,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tag_ids_to_search_for = tag_ids_being_added.union( tag_ids_being_removed )
         hash_ids_to_search_for = hash_ids_being_added.union( hash_ids_being_removed )
         
-        pre_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ?, ? ) );', ( namespace_id, service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone() is not None }
-        pre_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ?, ? ) );', ( tag_id, service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone() is not None }
-        pre_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ?, ? ) );', ( hash_id, service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone() is not None }
+        pre_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( namespace_id, service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        pre_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( tag_id, service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        pre_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( hash_id, service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
         
         num_namespaces_added = len( namespace_ids_being_added.difference( pre_existing_namespace_ids ) )
         num_tags_added = len( tag_ids_being_added.difference( pre_existing_tag_ids ) )
@@ -3986,48 +3987,44 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for ( namespace_id, tag_id, hash_ids ) in mappings_ids:
             
             num_deleted_rescinded = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED, HC.CURRENT )
-            num_deleted_pending_committed = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED_PENDING, HC.CURRENT )
             num_pending_committed = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.PENDING, HC.CURRENT )
             num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.CURRENT )
             
-            change_in_num_mappings += num_deleted_rescinded + num_deleted_pending_committed + num_pending_committed + num_raw_adds
-            change_in_num_deleted_mappings -= num_deleted_rescinded + num_deleted_pending_committed
-            change_in_num_pending_mappings -= num_deleted_pending_committed + num_pending_committed
+            change_in_num_mappings += num_deleted_rescinded + num_pending_committed + num_raw_adds
+            change_in_num_deleted_mappings -= num_deleted_rescinded
+            change_in_num_pending_mappings -= num_pending_committed
             
         
         for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids:
             
             num_current_deleted = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.CURRENT, HC.DELETED )
-            num_pending_made_deleted_pending = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.PENDING, HC.DELETED_PENDING )
             num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.DELETED )
             num_deleted_petitions = DeletePetitions( namespace_id, tag_id, hash_ids )
             
             change_in_num_mappings -= num_current_deleted
-            change_in_num_deleted_mappings += num_current_deleted + num_pending_made_deleted_pending + num_raw_adds
+            change_in_num_deleted_mappings += num_current_deleted + num_raw_adds
             change_in_num_petitioned_mappings -= num_deleted_petitions
             
         
         for ( namespace_id, tag_id, hash_ids ) in pending_mappings_ids:
             
-            num_deleted_pended = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED, HC.DELETED_PENDING )
             num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.PENDING )
             num_deleted_petitions = DeletePetitions( namespace_id, tag_id, hash_ids )
             
-            change_in_num_pending_mappings += num_deleted_pended + num_raw_adds
+            change_in_num_pending_mappings += num_raw_adds
             change_in_num_petitioned_mappings -= num_deleted_petitions
             
         
         for ( namespace_id, tag_id, hash_ids ) in pending_rescinded_mappings_ids:
             
-            num_deleted_pended_rescinded = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED_PENDING, HC.DELETED )
             num_pending_rescinded = DeletePending( namespace_id, tag_id, hash_ids )
             
-            change_in_num_pending_mappings -= num_deleted_pended_rescinded + num_pending_rescinded
+            change_in_num_pending_mappings -= num_pending_rescinded
             
         
-        post_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ?, ? ) );', ( namespace_id, service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone() is not None }
-        post_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ?, ? ) );', ( tag_id, service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone() is not None }
-        post_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ?, ? ) );', ( hash_id, service_id, HC.CURRENT, HC.DELETED_PENDING, HC.PENDING ) ).fetchone() is not None }
+        post_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( namespace_id, service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        post_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( tag_id, service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        post_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( hash_id, service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
         
         num_namespaces_removed = len( pre_existing_namespace_ids.intersection( namespace_ids_being_removed ).difference( post_existing_namespace_ids ) )
         num_tags_removed = len( pre_existing_tag_ids.intersection( tag_ids_being_removed ).difference( post_existing_tag_ids ) )
@@ -5155,6 +5152,27 @@ class DB( ServiceDB ):
                     #
                     
                     c.execute( 'DELETE FROM service_info;' )
+                    
+                
+                if version < 73:
+                    
+                    inserts = c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM mappings WHERE status = ?;', ( HC.DELETED_PENDING, ) ).fetchall()
+                    
+                    c.execute( 'DELETE FROM mappings WHERE status = ?;', ( HC.DELETED_PENDING, ) )
+                    
+                    c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
+                    c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
+                    
+                    #
+                    
+                    self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
+                    self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+                    
+                    c.execute( 'DELETE FROM autocomplete_tags_cache;' )
+                    
+                    self._RecalcCombinedMappings( c )
+                    
+                    self._FattenAutocompleteCache( c )
                     
                 
                 unknown_account = HC.GetUnknownAccount()
@@ -6595,6 +6613,11 @@ class DB( ServiceDB ):
                 thumbnail_resized_path = thumbnail_path + '_resized'
                 
                 with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+                
+            except IOError as e:
+                
+                print( 'thumbnail rendering error' )
+                print( thumbnail_path )
                 
             except: print( traceback.format_exc() )
             

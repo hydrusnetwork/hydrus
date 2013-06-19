@@ -992,7 +992,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1024,13 +1024,13 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
     
     def _PausePlaySlideshow( self ):
         
@@ -1270,7 +1270,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1302,13 +1302,13 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
     
     def EventKeyDown( self, event ):
         
@@ -1397,7 +1397,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                 
                             
                         
-                        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPES_MAPPINGS, content_update_action, row )
+                        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, content_update_action, row )
                         
                     elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                         
@@ -1406,7 +1406,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                         
                         row = ( action, hashes )
                         
-                        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPES_RATINGS, HC.CONTENT_UPDATE_ADD, row )
+                        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row )
                         
                     
                     wx.GetApp().Write( 'content_updates', { service_identifier : [ content_update ] } )
@@ -1625,8 +1625,8 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                                 
                                 content_updates = []
                                 
-                                content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
-                                content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPES_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
+                                content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
+                                content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
                                 
                                 wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : content_updates } )
                                 
@@ -1806,8 +1806,8 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                                 
                                 content_updates = []
                                 
-                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
-                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPES_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
+                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
+                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
                                 
                                 wx.GetApp().Write( 'content_updates', { self._rating_service_identifier : content_updates } )
                                 
@@ -2812,6 +2812,7 @@ class Image( wx.Window ):
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self._timer_animated = wx.Timer( self, id = ID_TIMER_ANIMATED )
+        self._yet_to_draw_initial_frame = True
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -3002,8 +3003,15 @@ class Image( wx.Window ):
         
         if self.IsShown():
             
-            if self._image_container.HasFrame( self._current_frame_index + 1 ): self._current_frame_index += 1
-            elif self._image_container.IsFinishedRendering(): self._current_frame_index = 0
+            if self._yet_to_draw_initial_frame:
+                
+                if self._image_container.HasFrame( 0 ): self._yet_to_draw_initial_frame = False
+                
+            else:
+                
+                if self._image_container.HasFrame( self._current_frame_index + 1 ): self._current_frame_index += 1
+                elif self._image_container.IsFinishedRendering(): self._current_frame_index = 0
+                
             
             self._Draw()
             

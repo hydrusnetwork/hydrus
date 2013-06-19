@@ -1467,18 +1467,14 @@ class MediaPanelThumbnails( MediaPanel ):
                     menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
                     
                 
-                #menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export' ), export_phrase )
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export special' ), export_phrase )
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 menu.AppendSeparator()
                 
-                if multiple_selected:
-                    
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
-                    
-                    menu.AppendSeparator()
-                    
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
+                
+                menu.AppendSeparator()
                 
                 copy_menu = wx.Menu()
                 

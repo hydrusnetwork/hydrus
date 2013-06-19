@@ -335,8 +335,6 @@ def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_ID
         
         current_tags_to_count.update( statuses_to_tags[ HC.CURRENT ] )
         deleted_tags_to_count.update( statuses_to_tags[ HC.DELETED ] )
-        deleted_tags_to_count.update( statuses_to_tags[ HC.DELETED_PENDING ] )
-        pending_tags_to_count.update( statuses_to_tags[ HC.DELETED_PENDING ] )
         pending_tags_to_count.update( statuses_to_tags[ HC.PENDING ] )
         petitioned_tags_to_count.update( statuses_to_tags[ HC.PETITIONED ] )
         
@@ -915,9 +913,9 @@ class LocalRatings():
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        if action == HC.CONTENT_UPDATE_RATING:
+        if action == HC.CONTENT_UPDATE_ADD:
             
-            rating = content_update.GetInfo()
+            ( rating, hashes ) = row
             
             if rating is None and service_identifier in self._service_identifiers_to_ratings: del self._service_identifiers_to_ratings[ service_identifier ]
             else: self._service_identifiers_to_ratings[ service_identifier ] = rating
@@ -1541,9 +1539,9 @@ class FileSystemPredicates():
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_AGE:
                 
-                ( operator, years, months, days ) = info
+                ( operator, years, months, days, hours ) = info
                 
-                timestamp = int( time.time() ) - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
+                timestamp = int( time.time() ) - ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours * 3600 )
                 
                 # this is backwards because we are talking about age, not timestamp
                 
@@ -2514,9 +2512,7 @@ class TagsManager():
             
             combined_current.update( statuses_to_tags[ HC.CURRENT ] )
             combined_current.difference_update( statuses_to_tags[ HC.DELETED ] )
-            combined_current.difference_update( statuses_to_tags[ HC.DELETED_PENDING ] )
             
-            combined_pending.update( statuses_to_tags[ HC.DELETED_PENDING ] )
             combined_pending.update( statuses_to_tags[ HC.PENDING ] )
             
         
@@ -2579,12 +2575,9 @@ class TagsManager():
         
         statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
         
-        if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.DELETED_PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
-            
-            statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED_PENDING ] )
+        if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
             
             statuses_to_tags[ HC.PENDING ] = set()
-            statuses_to_tags[ HC.DELETED_PENDING ] = set()
             statuses_to_tags[ HC.PETITIONED ] = set()
             
             self._RecalcCombined()
@@ -2602,7 +2595,7 @@ class TagsManager():
         
         statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
         
-        return statuses_to_tags[ HC.DELETED ].union( statuses_to_tags[ HC.DELETED_PENDING ] )
+        return statuses_to_tags[ HC.DELETED ]
         
     
     def GetNamespaceSlice( self, namespaces ):
@@ -2622,7 +2615,7 @@ class TagsManager():
         statuses_to_tags = self.GetStatusesToTags( tag_service_identifier )
         
         if include_current_tags: num_tags += len( statuses_to_tags[ HC.CURRENT ] )
-        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.DELETED_PENDING ] ) + len( statuses_to_tags[ HC.PENDING ] )
+        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.PENDING ] )
         
         return num_tags
         
@@ -2631,7 +2624,7 @@ class TagsManager():
         
         statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
         
-        return statuses_to_tags[ HC.DELETED_PENDING ].union( statuses_to_tags[ HC.PENDING ] )
+        return statuses_to_tags[ HC.PENDING ]
         
     
     def GetPetitioned( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
@@ -2666,42 +2659,17 @@ class TagsManager():
             statuses_to_tags[ HC.CURRENT ].add( tag )
             
             statuses_to_tags[ HC.DELETED ].discard( tag )
-            statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
             statuses_to_tags[ HC.PENDING ].discard( tag )
             
         elif action == HC.CONTENT_UPDATE_DELETE:
             
-            if tag in statuses_to_tags[ HC.PENDING ]:
-                
-                statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
-                statuses_to_tags[ HC.PENDING ].discard( tag )
-                
-            else:
-                
-                statuses_to_tags[ HC.DELETED ].add( tag )
-                statuses_to_tags[ HC.CURRENT ].discard( tag )
-                
+            statuses_to_tags[ HC.DELETED ].add( tag )
             
+            statuses_to_tags[ HC.CURRENT ].discard( tag )
             statuses_to_tags[ HC.PETITIONED ].discard( tag )
             
-        elif action == HC.CONTENT_UPDATE_PENDING:
-            
-            if tag in statuses_to_tags[ HC.DELETED ]:
-                
-                statuses_to_tags[ HC.DELETED_PENDING ].add( tag )
-                statuses_to_tags[ HC.DELETED ].discard( tag )
-                
-            else: statuses_to_tags[ HC.PENDING ].add( tag )
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
-            
-            if tag in statuses_to_tags[ HC.DELETED_PENDING ]:
-                
-                statuses_to_tags[ HC.DELETED ].add( tag )
-                statuses_to_tags[ HC.DELETED_PENDING ].discard( tag )
-                
-            else: statuses_to_tags[ HC.PENDING ].discard( tag )
-            
+        elif action == HC.CONTENT_UPDATE_PENDING: statuses_to_tags[ HC.PENDING ].add( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: statuses_to_tags[ HC.PENDING ].discard( tag )
         elif action == HC.CONTENT_UPDATE_PETITION: statuses_to_tags[ HC.PETITIONED ].add( tag )
         elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
         
@@ -2722,6 +2690,8 @@ class TagParentsManager():
     
     def __init__( self ):
         
+        self._tag_service_precedence = wx.GetApp().Read( 'tag_service_precedence' )
+        
         self._RefreshParents()
         
         self._lock = threading.Lock()
@@ -2730,8 +2700,6 @@ class TagParentsManager():
         
     
     def _GetParents( self, service_identifier, tag ):
-        
-        if service_identifier == HC.COMBINED_TAG_SERVICE_IDENTIFIER: return []
         
         if tag in self._parents[ service_identifier ]: still_to_process = list( self._parents[ service_identifier ][ tag ] )
         else: still_to_process = []
@@ -2768,15 +2736,38 @@ class TagParentsManager():
         
         for ( service_identifier, statuses_to_pairs ) in service_identifiers_to_statuses_to_pairs.items():
             
-            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.DELETED_PENDING ] ).union( statuses_to_pairs[ HC.PENDING ] )
+            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
             
             self._parents[ service_identifier ] = HC.BuildKeyToListDict( pairs )
+            
+        
+        t_s_p = list( self._tag_service_precedence )
+        
+        combined = self._parents[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        
+        for service_identifier in t_s_p:
+            
+            current_and_pending_dict = self._parents[ service_identifier ]
+            
+            combined.update( current_and_pending_dict )
+            
+            deleted = HC.BuildKeyToListDict( service_identifiers_to_statuses_to_pairs[ service_identifier ][ HC.DELETED ] )
+            
+            for ( deleted_child, deleted_parents ) in deleted.items():
+                
+                combined_parents_set = set( combined[ deleted_child ] )
+                
+                combined_parents_set.difference( deleted_parents )
+                
+                combined[ deleted_child ] = list( combined_parents_set )
+                
             
         
     
     def ExpandPredicates( self, service_identifier, predicates ):
         
-        if service_identifier == HC.COMBINED_TAG_SERVICE_IDENTIFIER: return predicates
+        # for now -- we will make an option, later
+        service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
         
         results = []
         
@@ -2805,9 +2796,30 @@ class TagParentsManager():
             
         
     
+    def ExpandTags( self, service_identifier, tags ):
+        
+        with self._lock:
+            
+            # for now -- we will make an option, later
+            service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+            
+            tags_results = list( tags )
+            
+            for tag in tags: tags_results.extend( self._GetParents( service_identifier, tag ) )
+            
+            return tags_results
+            
+        
+    
     def GetParents( self, service_identifier, tag ):
         
-        with self._lock: return self._GetParents( service_identifier, tag )
+        with self._lock:
+            
+            # for now -- we will make an option, later
+            service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+            
+            return self._GetParents( service_identifier, tag )
+            
         
     
     def RefreshParents( self ):
@@ -2848,7 +2860,7 @@ class TagSiblingsManager():
             
             statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
             
-            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.DELETED_PENDING ] ).union( statuses_to_pairs[ HC.PENDING ] )
+            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
             
             for ( old, new ) in pairs:
                 

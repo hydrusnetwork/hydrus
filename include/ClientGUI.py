@@ -223,7 +223,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             HC.pubsub.pub( 'exception', unicode( e ) )
             
         
-        HC.pubsub.pub( 'progress_update', job_key, 4, 4, u'done!' )
+        HC.pubsub.pub( 'progress_update', job_key, 3, 3, u'done!' )
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -242,7 +242,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         aboutinfo.SetLicense( license )
         
         aboutinfo.SetDevelopers( [ 'Anonymous' ] )
-        aboutinfo.SetWebSite( 'http://hydrus.x10.mx/' )
+        aboutinfo.SetWebSite( 'http://hydrusnetwork.github.io/hydrus/' )
         
         wx.AboutBox( aboutinfo )
         
@@ -1096,7 +1096,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'set_password': self._SetPassword()
                 elif command == 'set_media_focus': self._SetMediaFocus()
                 elif command == 'set_search_focus': self._SetSearchFocus()
-                elif command == 'site': webbrowser.open( 'http://hydrus.x10.mx/' )
+                elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
                 elif command == 'stats': self._Stats( data )
                 elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
                 elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
@@ -1793,6 +1793,8 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         self.Show( True )
         
         HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services' )
+        
+        wx.CallAfter( self.Raise )
         
     
     def _InitialiseServices( self ):
