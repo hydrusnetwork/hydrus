@@ -580,7 +580,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_file_query_result }
             
-            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            sorted_flat_media = self.GetFlatMedia()
+            
+            sorted_media_results = [ hashes_to_media_results[ media.GetHash() ] for media in sorted_flat_media if media.GetHash() in hashes_to_media_results ]
             
             HC.pubsub.pub( 'new_page_query', self._file_service_identifier, initial_media_results = sorted_media_results )
             
@@ -1868,9 +1870,26 @@ class Thumbnail( Selectable ):
             dc.DrawText( collections_string, top_left_x, top_left_y )
             
         
-        if len( creators ) > 0: upper_info_string = ', '.join( creators )
-        elif len( series ) > 0: upper_info_string = ', '.join( series )
-        elif len( titles ) > 0: upper_info_string = ', '.join( titles )
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        if len( creators ) > 0:
+            
+            creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
+            
+            upper_info_string = ', '.join( creators )
+            
+        elif len( series ) > 0:
+            
+            series = siblings_manager.CollapseNamespacedTags( 'series', series )
+            
+            upper_info_string = ', '.join( series )
+            
+        elif len( titles ) > 0:
+            
+            titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
+            
+            upper_info_string = ', '.join( titles )
+            
         else: upper_info_string = ''
         
         if len( upper_info_string ) > 0:

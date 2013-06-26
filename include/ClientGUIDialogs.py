@@ -7410,6 +7410,13 @@ class DialogManageTagParents( Dialog ):
             
             self._service_identifier = service_identifier
             
+            if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                
+                service = wx.GetApp().Read( 'service', service_identifier )
+                
+                self._account = service.GetAccount()
+                
+            
             self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_parents', service_identifier )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
@@ -7445,18 +7452,19 @@ class DialogManageTagParents( Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                            if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                            else:
+                                
+                                message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                                
+                                with wx.TextEntryDialog( self, message ) as dlg:
+                                    
+                                    if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                                    else: return
+                                    
+                                
                             
-                            with wx.TextEntryDialog( self, message ) as dlg:
-                                
-                                if dlg.ShowModal() == wx.ID_OK:
-                                    
-                                    reason = dlg.GetValue()
-                                    
-                                    self._pairs_to_reasons[ pair ] = reason
-                                    
-                                else: return
-                                
+                            self._pairs_to_reasons[ pair ] = reason
                             
                         else: return
                         
@@ -7500,18 +7508,19 @@ class DialogManageTagParents( Dialog ):
                     
                     if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                         
-                        message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
+                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                        else:
+                            
+                            message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
+                            
+                            with wx.TextEntryDialog( self, message ) as dlg:
+                                
+                                if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                                else: return
+                                
+                            
                         
-                        with wx.TextEntryDialog( self, message ) as dlg:
-                            
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                reason = dlg.GetValue()
-                                
-                                self._pairs_to_reasons[ pair ] = reason
-                                
-                            else: return
-                            
+                        self._pairs_to_reasons[ pair ] = reason
                         
                     
                     if pair in self._current_statuses_to_pairs[ HC.DELETED ]: old_status = HC.DELETED
@@ -7860,6 +7869,13 @@ class DialogManageTagSiblings( Dialog ):
             
             self._service_identifier = service_identifier
             
+            if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                
+                service = wx.GetApp().Read( 'service', service_identifier )
+                
+                self._account = service.GetAccount()
+                
+            
             self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings', service_identifier )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
@@ -7895,18 +7911,19 @@ class DialogManageTagSiblings( Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                            if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                            else:
+                                
+                                message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
+                                
+                                with wx.TextEntryDialog( self, message ) as dlg:
+                                    
+                                    if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                                    else: return
+                                    
+                                
                             
-                            with wx.TextEntryDialog( self, message ) as dlg:
-                                
-                                if dlg.ShowModal() == wx.ID_OK:
-                                    
-                                    reason = dlg.GetValue()
-                                    
-                                    self._pairs_to_reasons[ pair ] = reason
-                                    
-                                else: return
-                                
+                            self._pairs_to_reasons[ pair ] = reason
                             
                         else: return
                         
@@ -7950,18 +7967,19 @@ class DialogManageTagSiblings( Dialog ):
                     
                     if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                         
-                        message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
+                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                        else:
+                            
+                            message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
+                            
+                            with wx.TextEntryDialog( self, message ) as dlg:
+                                
+                                if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                                else: return
+                                
+                            
                         
-                        with wx.TextEntryDialog( self, message ) as dlg:
-                            
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                reason = dlg.GetValue()
-                                
-                                self._pairs_to_reasons[ pair ] = reason
-                                
-                            else: return
-                            
+                        self._pairs_to_reasons[ pair ] = reason
                         
                     
                     if pair in self._current_statuses_to_pairs[ HC.DELETED ]: old_status = HC.DELETED

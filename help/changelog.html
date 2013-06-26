@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 74</h3></li>
+				<ul>
+					<li>flash scanbar added</li>
+					<li>made new mediacontainer class for media canvas</li>
+					<li>extracted scanbar to separate class</li>
+					<li>made animation frame tracking and control more sensible overall</li>
+					<li>previous_frame/next_frame shortcut now works for flash as well</li>
+					<li>fixed age predicate for > hours</li>
+					<li>fixed an important 'all known tags' A/C count cache bug when multiple services have the same tags for a file</li>
+					<li>if you have resolve_petitions permission for a tag service, tag siblings and parents petitions need no reason</li>
+					<li>slight change in how un-namespaced totals are calculated in A/C read</li>
+					<li>collection now obeys siblings</li>
+					<li>thumbnail upper text now obeys siblings</li>
+					<li>fullscreen text now obeys siblings</li>
+					<li>bit of siblings code cleanup</li>
+					<li>a little changeup to how showselectioninnewpage collects its media</li>
+					<li>/asp/, /gd/, /lgbt/, /vr/ and /wsg/ added to default dumper support</li>
+					<li>trying out making the server non-daemon, to see how that manages</li>
+				</ul>
 				<li><h3>version 73</h3></li>
 				<ul>
 					<li>every file operation from fullscreen was broke due to a single-character typo that got propagated</li>

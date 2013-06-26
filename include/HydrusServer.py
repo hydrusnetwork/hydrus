@@ -386,7 +386,7 @@ class HydrusHTTPServer( SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer )
     
     def __init__( self, service_identifier, message = '' ):
         
-        self.daemon_threads = True
+        #self.daemon_threads = True
         
         self._service_identifier = service_identifier
         self._message = message

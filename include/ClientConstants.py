@@ -1541,7 +1541,7 @@ class FileSystemPredicates():
                 
                 ( operator, years, months, days, hours ) = info
                 
-                timestamp = int( time.time() ) - ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours * 3600 )
+                timestamp = int( time.time() ) - ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
                 
                 # this is backwards because we are talking about age, not timestamp
                 
@@ -1874,6 +1874,7 @@ fourchan_imageboards.append( Imageboard( '/3/', 'https://sys.4chan.org/3/post', 
 fourchan_imageboards.append( Imageboard( '/a/', 'https://sys.4chan.org/a/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/adv/', 'https://sys.4chan.org/adv/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/an/', 'https://sys.4chan.org/an/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
+fourchan_imageboards.append( Imageboard( '/asp/', 'https://sys.4chan.org/asp/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/b/', 'https://sys.4chan.org/b/post', 75, fourchan_anon_form_fields, { RESTRICTION_MAX_FILE_SIZE : 2097152, RESTRICTION_ALLOWED_MIMES : GJP } ) )
 fourchan_imageboards.append( Imageboard( '/c/', 'https://sys.4chan.org/c/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/cgl/', 'https://sys.4chan.org/cgl/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
@@ -1886,6 +1887,7 @@ fourchan_imageboards.append( Imageboard( '/e/', 'https://sys.4chan.org/e/post', 
 fourchan_imageboards.append( Imageboard( '/fa/', 'https://sys.4chan.org/fa/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/fit/', 'https://sys.4chan.org/fit/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/g/', 'https://sys.4chan.org/g/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
+fourchan_imageboards.append( Imageboard( '/gd/', 'https://sys.4chan.org/gd/post', 75, fourchan_typical_form_fields, { RESTRICTION_MAX_FILE_SIZE : 8388608, RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.APPLICATION_PDF ] } ) )
 fourchan_imageboards.append( Imageboard( '/gif/', 'https://sys.4chan.org/gif/post', 75, fourchan_typical_form_fields, { RESTRICTION_MAX_FILE_SIZE : 4194304, RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF ] } ) )
 fourchan_imageboards.append( Imageboard( '/h/', 'https://sys.4chan.org/h/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/hc/', 'https://sys.4chan.org/hc/post', 75, fourchan_typical_form_fields, { RESTRICTION_MAX_FILE_SIZE : 8388608, RESTRICTION_ALLOWED_MIMES : GJP } ) )
@@ -1894,6 +1896,7 @@ fourchan_imageboards.append( Imageboard( '/hr/', 'https://sys.4chan.org/hr/post'
 fourchan_imageboards.append( Imageboard( '/int/', 'https://sys.4chan.org/int/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/jp/', 'https://sys.4chan.org/jp/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/k/', 'https://sys.4chan.org/k/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
+fourchan_imageboards.append( Imageboard( '/lgbt/', 'https://sys.4chan.org/lgbt/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/lit/', 'https://sys.4chan.org/lit/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/m/', 'https://sys.4chan.org/m/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/mlp/', 'https://sys.4chan.org/mlp/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
@@ -1915,8 +1918,10 @@ fourchan_imageboards.append( Imageboard( '/tv/', 'https://sys.4chan.org/tv/post'
 fourchan_imageboards.append( Imageboard( '/u/', 'https://sys.4chan.org/u/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/v/', 'https://sys.4chan.org/v/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/vg/', 'https://sys.4chan.org/vg/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
+fourchan_imageboards.append( Imageboard( '/vr/', 'https://sys.4chan.org/vr/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/w/', 'https://sys.4chan.org/w/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/wg/', 'https://sys.4chan.org/wg/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
+fourchan_imageboards.append( Imageboard( '/wsg/', 'https://sys.4chan.org/wsg/post', 75, fourchan_typical_form_fields, { RESTRICTION_MAX_FILE_SIZE : 4194304, RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF ] } ) )
 fourchan_imageboards.append( Imageboard( '/x/', 'https://sys.4chan.org/x/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/y/', 'https://sys.4chan.org/y/post', 75, fourchan_typical_form_fields, fourchan_typical_restrictions ) )
 fourchan_imageboards.append( Imageboard( '/vp/', 'https://sys.4chan.org/vp/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
@@ -2153,6 +2158,8 @@ class Service( HC.HydrusYAMLBase ):
         self._service_identifier = service_identifier
         
     
+    def __hash__( self ): return self._service_identifier.__hash__()
+    
     def GetExtraInfo( self ): return None
     
     def GetServiceIdentifier( self ): return self._service_identifier
@@ -2184,6 +2191,40 @@ class ServiceLocalRatingNumerical( Service ):
         
     
     def GetExtraInfo( self ): return ( self._lower, self._upper )
+    
+class ServiceManager():
+    
+    def __init__( self ):
+        
+        self._lock = threading.Lock()
+        
+        services = wx.GetApp().Read( 'services' )
+        
+        self._service_identifiers_to_services = { service.GetServiceIdentifier() : service for service in services }
+        
+        # pubsub for services changing
+        # maybe a variable that says services are not ready, so wait a second (for refresh)
+        # maybe refresh should be synchro with db? nah, that makes locking issues
+        
+        # need to protect the actual service objects with a lock too, although the subobjects make this delicate
+        
+    
+    def GetService( self, service_identifier ):
+        
+        with self._lock:
+            
+            if service_identifier in self._service_identifiers_to_services: return self._service_identifiers_to_services[ service_identifier ]
+            else: raise Exception( 'Could not find that service!' )
+            
+        
+    
+    def GetServices( self, service_types ):
+        
+        with self._lock:
+            
+            return { service for ( service_identifier, service ) in self._service_identifiers_to_services.items() if service_idenifier.GetType() in service_types }
+            
+        
     
 class ServiceRemote( Service ):
     
@@ -2605,7 +2646,13 @@ class TagsManager():
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
         
-        return frozenset( ( tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ) )
+        slice = set( ( tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ) )
+        
+        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        
+        collapsed_slice = frozenset( siblings_manager.CollapseTags( slice ) )
+        
+        return collapsed_slice
         
     
     def GetNumTags( self, tag_service_identifier, include_current_tags = True, include_pending_tags = False ):
@@ -2989,6 +3036,31 @@ class TagSiblingsManager():
             
         
     
+    def CollapseNamespacedTags( self, namespace, tags ):
+        
+        with self._lock:
+            
+            results = set()
+            
+            for tag in tags:
+                
+                full_tag = namespace + ':' + tag
+                
+                if full_tag in self._siblings:
+                    
+                    sibling = self._siblings[ full_tag ]
+                    
+                    if ':' in sibling: sibling = sibling.split( ':', 1 )[1]
+                    
+                    results.add( sibling )
+                    
+                else: results.add( tag )
+                
+            
+            return results
+            
+        
+    
     def CollapsePredicates( self, predicates ):
         
         with self._lock:
@@ -3038,7 +3110,7 @@ class TagSiblingsManager():
             
         
     
-    def CollapseTagList( self, tags ):
+    def CollapseTags( self, tags ):
         
         with self._lock: return { self._siblings[ tag ] if tag in self._siblings else tag for tag in tags }
         

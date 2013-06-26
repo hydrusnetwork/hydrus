@@ -2001,7 +2001,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if collapse and not there_was_a_namespace:
             
-            unnamespaced_tag_ids = { tag_id for ( namespace_id, tag_id, num_tags ) in results if namespace_id == 1 }
+            unnamespaced_tag_ids = { tag_id for ( namespace_id, tag_id, num_tags ) in results }
             
             [ tags_to_count.update( { ( 1, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results if namespace_id != 1 and tag_id in unnamespaced_tag_ids ]
             
@@ -3757,9 +3757,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         ( precedence, ) = c.execute( 'SELECT precedence FROM tag_service_precedence WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
-        higher_precedence_service_ids = [ id for ( id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence WHERE precedence < ?;', ( precedence, ) ) ]
+        # these are in order least to most important
+        higher_precedence_service_ids = [ id for ( id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence WHERE precedence < ? ORDER BY precedence DESC;', ( precedence, ) ) ]
+        
+        # these are in order most to least important
+        lower_precedence_service_ids = [ id for ( id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence WHERE precedence > ? ORDER BY precedence ASC;', ( precedence, ) ) ]
         
         splayed_higher_precedence_service_ids = HC.SplayListForDB( higher_precedence_service_ids )
+        splayed_lower_precedence_service_ids = HC.SplayListForDB( lower_precedence_service_ids )
+        splayed_other_precedence_service_ids = HC.SplayListForDB( higher_precedence_service_ids + lower_precedence_service_ids )
         
         def ChangeMappingStatus( namespace_id, tag_id, hash_ids, old_status, new_status ):
             
@@ -3773,78 +3779,84 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, appropriate_hash_ids, 1 )
                 
-                InsertCombinedPendingMappings( namespace_id, tag_id, appropriate_hash_ids )
+                CheckIfCombinedPendingMappingsNeedInserting( namespace_id, tag_id, appropriate_hash_ids )
                 
             
             if old_status == HC.PENDING and new_status != HC.PENDING:
                 
                 UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, appropriate_hash_ids, -1 )
                 
-                DeleteCombinedPendingMappings( namespace_id, tag_id, appropriate_hash_ids )
+                CheckIfCombinedPendingMappingsNeedDeleting( namespace_id, tag_id, appropriate_hash_ids )
                 
             
             if old_status != HC.CURRENT and new_status == HC.CURRENT:
                 
                 UpdateAutocompleteTagCacheFromCurrentTags( namespace_id, tag_id, appropriate_hash_ids, 1 )
                 
-                InsertCombinedMappings( namespace_id, tag_id, appropriate_hash_ids )
+                CheckIfCombinedMappingsNeedInserting( namespace_id, tag_id, appropriate_hash_ids )
                 
             
             if old_status == HC.CURRENT and new_status != HC.CURRENT:
                 
                 UpdateAutocompleteTagCacheFromCurrentTags( namespace_id, tag_id, appropriate_hash_ids, -1 )
                 
-                DeleteCombinedMappings( namespace_id, tag_id, appropriate_hash_ids )
+                CheckIfCombinedMappingsNeedDeleting( namespace_id, tag_id, appropriate_hash_ids )
                 
             
             return num_rows_changed
             
         
-        def DeleteCombinedMappings( namespace_id, tag_id, hash_ids ):
+        def CheckIfCombinedMappingsNeedDeleting( namespace_id, tag_id, hash_ids ):
             
-            existing_higher_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_higher_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, HC.CURRENT ) ) }
+            # if our mappings don't already exist in combined, then must be an arguing service at the top, so the recent delete will have no impact
+            existing_combined_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.CURRENT ) ) }
             
-            deletable_hash_ids = set( hash_ids ).difference( existing_higher_precedence_hash_ids )
+            # intersection, not difference
+            deletable_hash_ids = set( hash_ids ).intersection( existing_combined_hash_ids )
+            
+            # all those that have a higher agree will still agree, so the recent delete will have no impact
+            existing_higher_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_higher_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, HC.CURRENT ) ) }
+            
+            deletable_hash_ids.difference_update( existing_higher_precedence_hash_ids )
+            
+            # all those whose next existing step below is agree will not change
+            # all those whose next existing step below is argue will change
+            # all those who have no next existing step below will change
+            
+            search_hash_ids = deletable_hash_ids
+            deletable_hash_ids = set()
+            
+            for lower_precedence_service_id in lower_precedence_service_ids:
+                
+                agreeing_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( search_hash_ids ) + ' AND status = ?;', ( lower_precedence_service_id, namespace_id, tag_id, HC.CURRENT ) ) }
+                arguing_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( search_hash_ids ) + ' AND status = ?;', ( lower_precedence_service_id, namespace_id, tag_id, HC.DELETED ) ) }
+                
+                deletable_hash_ids.update( arguing_hash_ids )
+                
+                search_hash_ids.difference_update( agreeing_hash_ids )
+                search_hash_ids.difference_update( arguing_hash_ids )
+                
+            
+            deletable_hash_ids.update( search_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ';', ( self._combined_tag_service_id, namespace_id, tag_id ) )
             
             UpdateAutocompleteTagCacheFromCombinedCurrentTags( namespace_id, tag_id, deletable_hash_ids, -1 )
             
         
-        def DeleteCombinedPendingMappings( namespace_id, tag_id, hash_ids ):
+        def CheckIfCombinedPendingMappingsNeedDeleting( namespace_id, tag_id, hash_ids ):
             
-            existing_higher_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_higher_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, HC.PENDING ) ) }
+            # all those that have a higher or lower agree will still agree, so the recent delete will have no impact
+            existing_other_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_other_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, HC.PENDING ) ) }
             
-            deletable_hash_ids = set( hash_ids ).difference( existing_higher_precedence_hash_ids )
+            deletable_hash_ids = set( hash_ids ).difference( existing_other_precedence_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.PENDING ) )
             
             UpdateAutocompleteTagCacheFromCombinedPendingTags( namespace_id, tag_id, deletable_hash_ids, -1 )
             
         
-        def DeletePending( namespace_id, tag_id, hash_ids ):
-            
-            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
-            
-            num_deleted = self._GetRowCount( c )
-            
-            UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, hash_ids, -1 )
-            
-            DeleteCombinedPendingMappings( namespace_id, tag_id, hash_ids )
-            
-            return num_deleted
-            
-        
-        def DeletePetitions( namespace_id, tag_id, hash_ids ):
-            
-            c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
-            
-            num_deleted = self._GetRowCount( c )
-            
-            return num_deleted
-            
-        
-        def InsertCombinedMappings( namespace_id, tag_id, hash_ids ):
+        def CheckIfCombinedMappingsNeedInserting( namespace_id, tag_id, hash_ids ):
             
             arguing_higher_precedence_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_higher_precedence_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, HC.DELETED ) ) }
             
@@ -3857,7 +3869,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             UpdateAutocompleteTagCacheFromCombinedCurrentTags( namespace_id, tag_id, new_hash_ids, 1 )
             
         
-        def InsertCombinedPendingMappings( namespace_id, tag_id, hash_ids ):
+        def CheckIfCombinedPendingMappingsNeedInserting( namespace_id, tag_id, hash_ids ):
             
             existing_combined_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.PENDING ) ) }
             
@@ -3866,6 +3878,28 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for hash_id in new_hash_ids ] )
             
             UpdateAutocompleteTagCacheFromCombinedPendingTags( namespace_id, tag_id, new_hash_ids, 1 )
+            
+        
+        def DeletePending( namespace_id, tag_id, hash_ids ):
+            
+            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
+            
+            num_deleted = self._GetRowCount( c )
+            
+            UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, hash_ids, -1 )
+            
+            CheckIfCombinedPendingMappingsNeedDeleting( namespace_id, tag_id, hash_ids )
+            
+            return num_deleted
+            
+        
+        def DeletePetitions( namespace_id, tag_id, hash_ids ):
+            
+            c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
+            
+            num_deleted = self._GetRowCount( c )
+            
+            return num_deleted
             
         
         def InsertMappings( namespace_id, tag_id, hash_ids, status ):
@@ -3882,14 +3916,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 UpdateAutocompleteTagCacheFromPendingTags( namespace_id, tag_id, new_hash_ids, 1 )
                 
-                InsertCombinedPendingMappings( namespace_id, tag_id, new_hash_ids )
+                CheckIfCombinedPendingMappingsNeedInserting( namespace_id, tag_id, new_hash_ids )
                 
             
             if status == HC.CURRENT:
                 
                 UpdateAutocompleteTagCacheFromCurrentTags( namespace_id, tag_id, new_hash_ids, 1 )
                 
-                InsertCombinedMappings( namespace_id, tag_id, new_hash_ids )
+                CheckIfCombinedMappingsNeedInserting( namespace_id, tag_id, new_hash_ids )
                 
             
             return num_rows_added
@@ -4297,12 +4331,14 @@ class DB( ServiceDB ):
         
         self._UpdateDB( c )
         
-        # ####### put a temp db update here! ######
-        
         try: c.execute( 'BEGIN IMMEDIATE' )
         except Exception as e: raise HC.DBAccessException( unicode( e ) )
         
         try:
+            
+            # ####### put a temp db update here! ######
+            
+            # ###### ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ######
             
             c.execute( 'COMMIT' )
             
@@ -4314,8 +4350,6 @@ class DB( ServiceDB ):
             
             raise
             
-        
-        # ###### ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ######
         
         self._local_file_service_id = self._GetServiceId( c, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         self._local_tag_service_id = self._GetServiceId( c, HC.LOCAL_TAG_SERVICE_IDENTIFIER )
@@ -5164,6 +5198,38 @@ class DB( ServiceDB ):
                     c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
                     
                     #
+                    
+                    self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
+                    self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+                    
+                    c.execute( 'DELETE FROM autocomplete_tags_cache;' )
+                    
+                    self._RecalcCombinedMappings( c )
+                    
+                    self._FattenAutocompleteCache( c )
+                    
+                
+                if version < 74:
+                    
+                    fourchan_imageboards = []
+                    
+                    fourchan_imageboards.append( CC.Imageboard( '/asp/', 'https://sys.4chan.org/asp/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
+                    fourchan_imageboards.append( CC.Imageboard( '/gd/', 'https://sys.4chan.org/gd/post', 75, CC.fourchan_typical_form_fields, { CC.RESTRICTION_MAX_FILE_SIZE : 8388608, CC.RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.APPLICATION_PDF ] } ) )
+                    fourchan_imageboards.append( CC.Imageboard( '/lgbt/', 'https://sys.4chan.org/lgbt/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
+                    fourchan_imageboards.append( CC.Imageboard( '/vr/', 'https://sys.4chan.org/vr/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
+                    fourchan_imageboards.append( CC.Imageboard( '/wsg/', 'https://sys.4chan.org/wsg/post', 75, CC.fourchan_typical_form_fields, { CC.RESTRICTION_MAX_FILE_SIZE : 4194304, CC.RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF ] } ) )
+                    
+                    new_imageboards = []
+                    
+                    new_imageboards.append( ( '4chan', fourchan_imageboards ) )
+                    
+                    for ( site_name, imageboards ) in new_imageboards:
+                        
+                        site_id = self._GetSiteId( c, site_name )
+                        
+                        try: c.executemany( 'INSERT INTO imageboards VALUES ( ?, ?, ? );', [ ( site_id, imageboard.GetName(), imageboard ) for imageboard in imageboards ] )
+                        except: pass
+                        
                     
                     self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
                     self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
