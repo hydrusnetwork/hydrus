@@ -2745,13 +2745,13 @@ class TagParentsManager():
         
         service_identifiers_to_statuses_to_pairs = wx.GetApp().Read( 'tag_parents' )
         
-        self._parents = collections.defaultdict( dict )
+        self._parents = collections.defaultdict( HC.default_dict_set )
         
         for ( service_identifier, statuses_to_pairs ) in service_identifiers_to_statuses_to_pairs.items():
             
             pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
             
-            self._parents[ service_identifier ] = HC.BuildKeyToListDict( pairs )
+            self._parents[ service_identifier ] = HC.BuildKeyToSetDict( pairs )
             
         
         t_s_p = list( self._tag_service_precedence )
