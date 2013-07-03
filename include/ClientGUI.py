@@ -46,13 +46,14 @@ class FrameGUI( ClientGUICommon.Frame ):
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
         
         self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 4 )
-        self._statusbar.SetStatusWidths( [ -1, 400, 200, 200 ] )
+        self._statusbar.SetFieldsCount( 5 )
+        self._statusbar.SetStatusWidths( [ -1, -1, 100, 120, 50 ] )
         
         self._statusbar_media = ''
         self._statusbar_service = ''
         self._statusbar_inbox = ''
         self._statusbar_downloads = ''
+        self._statusbar_db_locked = ''
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
@@ -90,6 +91,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         HC.pubsub.sub( self, 'RefreshMenuBar', 'notify_new_services' )
         HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'options_updated' )
         HC.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
+        HC.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         HC.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
         HC.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
         HC.pubsub.sub( self, 'SetServiceStatus', 'service_status' )
@@ -349,7 +351,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                                 subprocess.Popen( [ 'explorer', HC.BASE_DIR + os.path.sep + 'server.exe' ] )
                                 
                             
-                            time.sleep( 5 ) # give it time to init its db
+                            time.sleep( 10 ) # give it time to init its db
                             
                         except:
                             
@@ -901,6 +903,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         self._statusbar.SetStatusText( self._statusbar_service, number = 1 )
         self._statusbar.SetStatusText( self._statusbar_inbox, number = 2 )
         self._statusbar.SetStatusText( self._statusbar_downloads, number = 3 )
+        self._statusbar.SetStatusText( self._statusbar_db_locked, number = 4 )
         
     
     def _ReviewServices( self ):
@@ -1469,6 +1472,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def RefreshStatusBar( self ): self._RefreshStatusBar()
+    
+    def SetDBLockedStatus( self, status ):
+        
+        if self.IsShown():
+            
+            self._statusbar_db_locked = status
+            
+            self._RefreshStatusBar()
+            
+        
     
     def SetDownloadsStatus( self, status ):
         

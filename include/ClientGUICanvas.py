@@ -1570,6 +1570,14 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
         self.SetMedia( self._GetFirst() )
         
     
+    def _Delete( self ):
+        
+        self._deleted.add( self._current_media )
+        
+        if self._current_media == self._GetLast(): self.EventClose( None )
+        else: self._ShowNext()
+        
+    
     def _Keep( self ):
         
         self._kept.add( self._current_media )
@@ -1593,6 +1601,12 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                 
             
         
+    
+    def EventButtonBack( self, event ): self.EventBack( event )
+    def EventButtonDelete( self, event ): self._Delete()
+    def EventButtonDone( self, event ): self.EventClose( event )
+    def EventButtonKeep( self, event ): self._Keep()
+    def EventButtonSkip( self, event ): self._ShowNext()
     
     def EventClose( self, event ):
         
@@ -1649,13 +1663,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     def EventDelete( self, event ):
         
         if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            self._deleted.add( self._current_media )
-            
-            if self._current_media == self._GetLast(): self.EventClose( event )
-            else: self._ShowNext()
-            
+        else: self._Delete()
         
     
     def EventKeyDown( self, event ):
@@ -1768,6 +1776,374 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             
         
     
+class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
+    
+    def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results ):
+        
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_identifier, predicates, media_results )
+        
+        FullscreenPopoutFilterInbox( self )
+        
+    
+class FullscreenPopout( wx.Frame ):
+    
+    def __init__( self, parent ):
+        
+        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_SIMPLE )
+        
+        self._last_drag_coordinates = None
+        self._total_drag_delta = ( 0, 0 )
+        
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._popout_window = self._InitialisePopoutWindow( hbox )
+        
+        self._popout_window.Hide()
+        
+        self._button_window = self._InitialiseButtonWindow( hbox )
+        
+        hbox.AddF( self._popout_window, FLAGS_EXPAND_PERPENDICULAR )
+        hbox.AddF( self._button_window, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( hbox )
+        
+        self._SizeAndPosition()
+        
+        tlp = self.GetParent().GetTopLevelParent()
+        
+        tlp.Bind( wx.EVT_SIZE, self.EventResize )
+        tlp.Bind( wx.EVT_MOVE, self.EventMove )
+        
+        self.Show()
+        
+    
+    def _InitialiseButtonWindow( self, sizer ):
+        
+        button_window = wx.Window( self )
+        
+        self._move_button = wx.Button( button_window, label = u'\u2022', size = ( 20, 20 ) )
+        self._move_button.SetCursor( wx.StockCursor( wx.CURSOR_SIZING ) )
+        self._move_button.Bind( wx.EVT_MOTION, self.EventDrag )
+        self._move_button.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
+        self._move_button.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
+        
+        self._arrow_button = wx.Button( button_window, label = '>', size = ( 20, 80 ) )
+        self._arrow_button.Bind( wx.EVT_BUTTON, self.EventArrowClicked )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._move_button, FLAGS_MIXED )
+        vbox.AddF( self._arrow_button, FLAGS_EXPAND_BOTH_WAYS )
+        
+        button_window.SetSizer( vbox )
+        
+        return button_window
+        
+    
+    def _SizeAndPosition( self ):
+        
+        self.Fit()
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        my_y = ( parent_height - my_height ) / 2
+        
+        ( offset_x, offset_y ) = self._total_drag_delta
+        
+        self.SetPosition( parent.ClientToScreenXY( 0 + offset_x, my_y + offset_y ) )
+        
+    
+    def EventArrowClicked( self, event ):
+        
+        if self._popout_window.IsShown():
+            
+            self._popout_window.Hide()
+            self._arrow_button.SetLabel( '>' )
+            
+        else:
+            
+            self._popout_window.Show()
+            self._arrow_button.SetLabel( '<' )
+            
+        
+        self._SizeAndPosition()
+        
+        self.Layout()
+        
+    
+    def EventMove( self, event ):
+        
+        self._SizeAndPosition()
+        
+        event.Skip()
+        
+    
+    def EventDrag( self, event ):
+        
+        if event.Dragging() and self._last_drag_coordinates is not None:
+            
+            ( old_x, old_y ) = self._last_drag_coordinates
+            
+            ( x, y ) = event.GetPosition()
+            
+            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
+            
+            ( old_delta_x, old_delta_y ) = self._total_drag_delta
+            
+            self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+            
+            self._SizeAndPosition()
+            
+        
+    
+    def EventDragBegin( self, event ):
+        
+        self._last_drag_coordinates = event.GetPosition()
+        
+        event.Skip()
+        
+    
+    def EventDragEnd( self, event ):
+        
+        self._last_drag_coordinates = None
+        
+        event.Skip()
+        
+    
+    def EventResize( self, event ):
+        
+        self._SizeAndPosition()
+        
+        event.Skip()
+        
+    
+class FullscreenPopoutFilterInbox( FullscreenPopout ):
+    
+    def _InitialisePopoutWindow( self, sizer ):
+        
+        window = wx.Window( self )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        parent = self.GetParent()
+        
+        keep = wx.Button( window, label = 'archive' )
+        keep.Bind( wx.EVT_BUTTON, parent.EventButtonKeep )
+        
+        delete = wx.Button( window, label = 'delete' )
+        delete.Bind( wx.EVT_BUTTON, parent.EventButtonDelete )
+        
+        skip = wx.Button( window, label = 'skip' )
+        skip.Bind( wx.EVT_BUTTON, parent.EventButtonSkip )
+        
+        back = wx.Button( window, label = 'back' )
+        back.Bind( wx.EVT_BUTTON, parent.EventButtonBack )
+        
+        done = wx.Button( window, label = 'done' )
+        done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
+        
+        vbox.AddF( keep, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( delete, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        
+        window.SetSizer( vbox )
+        
+        return window
+        
+    
+class FullscreenPopoutFilterLike( FullscreenPopout ):
+    
+    def _InitialisePopoutWindow( self, sizer ):
+        
+        window = wx.Window( self )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        parent = self.GetParent()
+        
+        like = wx.Button( window, label = 'like' )
+        like.Bind( wx.EVT_BUTTON, parent.EventButtonKeep )
+        
+        dislike = wx.Button( window, label = 'dislike' )
+        dislike.Bind( wx.EVT_BUTTON, parent.EventButtonDelete )
+        
+        skip = wx.Button( window, label = 'skip' )
+        skip.Bind( wx.EVT_BUTTON, parent.EventButtonSkip )
+        
+        back = wx.Button( window, label = 'back' )
+        back.Bind( wx.EVT_BUTTON, parent.EventButtonBack )
+        
+        done = wx.Button( window, label = 'done' )
+        done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
+        
+        vbox.AddF( like, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( dislike, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        
+        window.SetSizer( vbox )
+        
+        return window
+        
+    
+class FullscreenPopoutFilterNumerical( FullscreenPopout ):
+    
+    def __init__( self, parent, callable_parent ):
+        
+        self._callable_parent = callable_parent
+        
+        FullscreenPopout.__init__( self, parent )
+        
+    
+    def _InitialisePopoutWindow( self, sizer ):
+        
+        window = wx.Window( self )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        parent = self.GetParent()
+        
+        #
+        
+        options = wx.GetApp().Read( 'options' )
+        
+        accuracy_slider_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        if 'ratings_filter_accuracy' not in options:
+            
+            options[ 'ratings_filter_accuracy' ] = 1
+            
+            wx.GetApp().Write( 'save_options' )
+            
+        
+        value = options[ 'ratings_filter_accuracy' ]
+        
+        self._accuracy_slider = wx.Slider( window, size = ( 50, -1 ), value = value, minValue = 0, maxValue = 4 )
+        self._accuracy_slider.Bind( wx.EVT_SLIDER, self.EventAccuracySlider )
+        
+        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'quick' ), FLAGS_MIXED )
+        accuracy_slider_hbox.AddF( self._accuracy_slider, FLAGS_EXPAND_BOTH_WAYS )
+        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'accurate' ), FLAGS_MIXED )
+        
+        self.EventAccuracySlider( None )
+        
+        #
+        
+        if 'ratings_filter_compare_same' not in options:
+            
+            options[ 'ratings_filter_compare_same' ] = False
+            
+            wx.GetApp().Write( 'save_options' )
+            
+        
+        compare_same = options[ 'ratings_filter_compare_same' ]
+        
+        self._compare_same = wx.CheckBox( window, label = 'compare same image until rating is done' )
+        self._compare_same.SetValue( compare_same )
+        self._compare_same.Bind( wx.EVT_CHECKBOX, self.EventCompareSame )
+        
+        self.EventCompareSame( None )
+        
+        #
+        
+        self._left_right_slider_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        
+        if 'ratings_filter_left_right' not in options:
+            
+            options[ 'ratings_filter_left_right' ] = 'left'
+            
+            wx.GetApp().Write( 'save_options' )
+            
+        
+        left_right = options[ 'ratings_filter_left_right' ]
+        
+        if left_right == 'left': left_right_value = 0
+        elif left_right == 'random': left_right_value = 1
+        else: left_right_value = 2
+        
+        self._left_right_slider = wx.Slider( window, size = ( 30, -1 ), value = left_right_value, minValue = 0, maxValue = 2 )
+        self._left_right_slider.Bind( wx.EVT_SLIDER, self.EventLeftRight )
+        
+        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'left' ), FLAGS_MIXED )
+        self._left_right_slider_sizer.AddF( self._left_right_slider, FLAGS_EXPAND_BOTH_WAYS )
+        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'right' ), FLAGS_MIXED )
+        
+        self.EventLeftRight( None )
+        
+        #
+        
+        left = wx.Button( window, label = 'left is better' )
+        left.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonLeft )
+        
+        right = wx.Button( window, label = 'right is better' )
+        right.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonRight )
+        
+        equal = wx.Button( window, label = 'they are about the same' )
+        equal.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonEqual )
+        
+        back = wx.Button( window, label = 'back' )
+        back.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonBack )
+        
+        dont_filter = wx.Button( window, label = 'don\'t filter this file' )
+        dont_filter.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDontFilter )
+        
+        done = wx.Button( window, label = 'done' )
+        done.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDone )
+        
+        vbox.AddF( accuracy_slider_hbox, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._compare_same, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._left_right_slider_sizer, FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.AddF( wx.StaticLine( window, style = wx.LI_HORIZONTAL ), FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.AddF( left, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( right, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( equal, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( dont_filter, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        
+        window.SetSizer( vbox )
+        
+        return window
+        
+    
+    def EventAccuracySlider( self, event ):
+        
+        value = self._accuracy_slider.GetValue()
+        
+        self._callable_parent.SetAccuracy( value )
+        
+    
+    def EventCompareSame( self, event ):
+        
+        compare_same = self._compare_same.GetValue()
+        
+        self._callable_parent.SetCompareSame( compare_same )
+        
+    
+    def EventLeftRight( self, event ):
+        
+        value = self._left_right_slider.GetValue()
+        
+        if value == 0: left_right = 'left'
+        elif value == 1: left_right = 'random'
+        else: left_right = 'right'
+        
+        self._callable_parent.SetLeftRight( left_right )
+        
+    
 class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
     
     def __init__( self, my_parent, page_key, service_identifier, media_results ):
@@ -1776,6 +2152,8 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
         
         self._rating_service_identifier = service_identifier
         self._service = wx.GetApp().Read( 'service', service_identifier )
+        
+        FullscreenPopoutFilterLike( self )
         
     
     def EventClose( self, event ):
@@ -1847,6 +2225,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         self._page_key = page_key
         self._service_identifier = service_identifier
         self._media_still_to_rate = { ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results }
+        self._current_media_to_rate = None
         
         self._file_query_result = CC.FileQueryResult( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
         
@@ -1871,37 +2250,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_FULL
         self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_FULL
         
-        # panel
-        
-        if service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
-            
-            top_panel = wx.Panel( self )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            if 'ratings_filter_accuracy' not in self._options:
-                
-                self._options[ 'ratings_filter_accuracy' ] = 1
-                
-                wx.GetApp().Write( 'save_options' )
-                
-            
-            value = self._options[ 'ratings_filter_accuracy' ]
-            
-            self._accuracy_slider = wx.Slider( top_panel, value = value, minValue = 0, maxValue = 4 )
-            self._accuracy_slider.Bind( wx.EVT_SLIDER, self.EventSlider )
-            
-            self.EventSlider( None )
-            
-            hbox.AddF( wx.StaticText( top_panel, label = 'quick' ), FLAGS_MIXED )
-            hbox.AddF( self._accuracy_slider, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( wx.StaticText( top_panel, label = 'accurate' ), FLAGS_MIXED )
-            
-            top_panel.SetSizer( hbox )
-            
-        
-        # end panel
-        
         self._statusbar = self.CreateStatusBar()
         self._statusbar.SetFieldsCount( 3 )
         self._statusbar.SetStatusWidths( [ -1, 500, -1 ] )
@@ -1911,7 +2259,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        if service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL: vbox.AddF( top_panel, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._splitter, FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
@@ -1933,6 +2280,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         wx.GetApp().SetTopWindow( self )
         
         self._left_window = self._Panel( self._splitter )
+        FullscreenPopoutFilterNumerical( self._left_window, self )
+        
         self._right_window = self._Panel( self._splitter )
         
         ( my_width, my_height ) = self.GetClientSize()
@@ -2110,7 +2459,10 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     
     def _ShowNewMedia( self ):
         
-        ( self._current_media_to_rate, ) = random.sample( self._media_still_to_rate, 1 )
+        if not ( self._compare_same and self._current_media_to_rate in self._media_still_to_rate ):
+            
+            ( self._current_media_to_rate, ) = random.sample( self._media_still_to_rate, 1 )
+            
         
         ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
         
@@ -2190,7 +2542,11 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             self._current_media_to_rate_against = media_to_rate_against
             
-            if random.randint( 0, 1 ) == 0:
+            if self._left_right == 'left': position = 0
+            elif self._left_right == 'random': position = random.randint( 0, 1 )
+            else: position = 1
+            
+            if position == 0:
                 
                 self._unrated_is_on_the_left = True
                 
@@ -2384,6 +2740,19 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         else: self._ShowNewMedia()
         
     
+    def EventButtonBack( self, event ): self._GoBack()
+    def EventButtonDone( self, event ): self.EventClose( event )
+    def EventButtonDontFilter( self, event ):
+        
+        self._media_still_to_rate.discard( self._current_media_to_rate )
+        
+        if len( self._media_still_to_rate ) == 0: self.EventClose( None )
+        else: self._ShowNewMedia()
+        
+    def EventButtonEqual( self, event ): self._ProcessAction( 'equal' )
+    def EventButtonLeft( self, event ): self._ProcessAction( 'right' )
+    def EventButtonRight( self, event ): self._ProcessAction( 'left' )
+    
     def EventClose( self, event ):
         
         if len( self._decision_log ) > 0:
@@ -2469,23 +2838,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         elif event.ButtonDown( wx.MOUSE_BTN_MIDDLE ): self._ProcessAction( 'equal' )
         
     
-    def EventSlider( self, event ):
-        
-        value = self._accuracy_slider.GetValue()
-        
-        if value == 0: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_FULL
-        elif value <= 2: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_HALF
-        else: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_QUARTER
-        
-        if value <= 1: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_FULL
-        elif value <= 3: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_HALF
-        else: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_QUARTER
-        
-        self._options[ 'ratings_filter_accuracy' ] = value
-        
-        wx.GetApp().Write( 'save_options' )
-        
-    
     def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
         
         redraw = False
@@ -2518,6 +2870,39 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         
         self._left_window.RefreshBackground()
         self._right_window.RefreshBackground()
+        
+    
+    def SetAccuracy( self, accuracy ):
+        
+        if accuracy == 0: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_FULL
+        elif accuracy <= 2: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_HALF
+        else: self._equal_accuracy = self.RATINGS_FILTER_EQUALITY_QUARTER
+        
+        if accuracy <= 1: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_FULL
+        elif accuracy <= 3: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_HALF
+        else: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_QUARTER
+        
+        self._options[ 'ratings_filter_accuracy' ] = accuracy
+        
+        wx.GetApp().Write( 'save_options' )
+        
+    
+    def SetCompareSame( self, compare_same ):
+        
+        self._options[ 'ratings_filter_compare_same' ] = compare_same
+        
+        wx.GetApp().Write( 'save_options' )
+        
+        self._compare_same = compare_same
+        
+    
+    def SetLeftRight( self, left_right ):
+        
+        self._options[ 'ratings_filter_left_right' ] = left_right
+        
+        wx.GetApp().Write( 'save_options' )
+        
+        self._left_right = left_right
         
     
     class _Panel( Canvas, wx.Window ):

@@ -261,7 +261,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( media_results ) > 0:
             
-            try: ClientGUICanvas.CanvasFullscreenMediaListFilter( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, media_results )
+            try: ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, media_results )
             except: wx.MessageBox( traceback.format_exc() )
             
         
@@ -807,7 +807,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             bmp = thumbnail.GetBmp()
             
-            self._thumbnails_being_faded_in[ ( bmp, x, y ) ] = ( bmp, 0 )
+            hash = thumbnail.GetDisplayMedia().GetHash()
+            
+            self._thumbnails_being_faded_in[ hash ] = ( bmp, bmp, x, y, 0 )
             
             if not self._timer_animation.IsRunning(): self._timer_animation.Start( 0, wx.TIMER_ONE_SHOT )
             
@@ -1543,13 +1545,11 @@ class MediaPanelThumbnails( MediaPanel ):
         
         all_info = self._thumbnails_being_faded_in.items()
         
-        for ( key, ( alpha_bmp, num_frames_rendered ) ) in all_info:
-            
-            ( bmp, x, y ) = key
+        for ( hash, ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) ) in all_info:
             
             if num_frames_rendered == 0:
                 
-                image = bmp.ConvertToImage()
+                image = original_bmp.ConvertToImage()
                 
                 image.InitAlpha()
                 
@@ -1560,13 +1560,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             num_frames_rendered += 1
             
-            self._thumbnails_being_faded_in[ key ] = ( alpha_bmp, num_frames_rendered )
+            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, x, y, num_frames_rendered )
             
             if y < min_y or y > max_y or num_frames_rendered == 9:
                 
-                bmp_to_use = bmp
+                bmp_to_use = original_bmp
                 
-                del self._thumbnails_being_faded_in[ key ]
+                del self._thumbnails_being_faded_in[ hash ]
                 
             else:
                 

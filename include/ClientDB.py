@@ -575,8 +575,8 @@ class MessageDB():
         
         num_inbox = len( convo_ids )
         
-        if num_inbox == 0: inbox_string = 'inbox empty'
-        else: inbox_string = str( num_inbox ) + ' in inbox'
+        if num_inbox == 0: inbox_string = 'message inbox empty'
+        else: inbox_string = str( num_inbox ) + ' in message inbox'
         
         self.pub( 'inbox_status', inbox_string )
         
@@ -1407,7 +1407,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         c.execute( 'INSERT INTO tag_service_precedence ( service_id, precedence ) SELECT ?, CASE WHEN MAX( precedence ) NOT NULL THEN MAX( precedence ) + 1 ELSE 0 END FROM tag_service_precedence;', ( service_id, ) )
                         
-                        self._RebuildTagServicePrecedence( c )
+                        self._RebuildTagServicePrecedenceCache( c )
                         
                         #
                         
@@ -2547,7 +2547,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             all_hash_ids = { hash_id for hash_id in itertools.chain.from_iterable( ( hash_ids for ( hash_ids, reason ) in petitioned ) ) }
             
-            hash_ids_to_hashes = self._GetHashIdsToHashes( c, hash_ids )
+            hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
             
             content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
@@ -3263,8 +3263,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             service_id = self._GetServiceId( c, service_identifier )
                             
-                            hash_ids = self._GetHashIds( c, hashes )
-                            
                             c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in hash_ids ] )
                             
                             if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: notify_new_downloads = True
@@ -3385,8 +3383,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
                             
-                            c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id ) )
-                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, deletee_status ) )
+                            c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
+                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
                             
                             c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, new_status ) )
                             
@@ -3596,7 +3594,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if do_new_permissions: self.pub( 'notify_new_permissions' )
         
     
-    def _RebuildTagServicePrecedence( self, c ):
+    def _RebuildTagServicePrecedenceCache( self, c ):
         
         del self._tag_service_precedence[:]
         
@@ -3665,7 +3663,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_type == HC.TAG_REPOSITORY:
             
-            self._RebuildTagServicePrecedence( c )
+            self._RebuildTagServicePrecedenceCache( c )
             
             self._RecalcCombinedMappings( c )
             
@@ -3731,7 +3729,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.executemany( 'INSERT INTO tag_service_precedence ( service_id, precedence ) VALUES ( ?, ? );', [ ( service_id, precedence ) for ( precedence, service_id ) in enumerate( service_ids ) ] )
         
-        self._RebuildTagServicePrecedence( c )
+        self._RebuildTagServicePrecedenceCache( c )
         
         self._RecalcCombinedMappings( c )
         
@@ -3769,11 +3767,22 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def ChangeMappingStatus( namespace_id, tag_id, hash_ids, old_status, new_status ):
             
+            # when we have a tag both deleted and pending made current, we merge two statuses into one!
+            # in this case, we have to be careful about the counts (decrement twice, but only increment once), hence why this returns two numbers
+            
             appropriate_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, old_status ) ) ]
+            
+            existing_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, new_status ) ) }
+            
+            deletable_hash_ids = existing_hash_ids.intersection( appropriate_hash_ids )
+            
+            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, old_status ) )
+            
+            num_old_deleted = self._GetRowCount( c )
             
             c.execute( 'UPDATE mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( appropriate_hash_ids ) + ' AND status = ?;', ( new_status, service_id, namespace_id, tag_id, old_status ) )
             
-            num_rows_changed = self._GetRowCount( c )
+            num_old_made_new = self._GetRowCount( c )
             
             if old_status != HC.PENDING and new_status == HC.PENDING:
                 
@@ -3803,7 +3812,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 CheckIfCombinedMappingsNeedDeleting( namespace_id, tag_id, appropriate_hash_ids )
                 
             
-            return num_rows_changed
+            return ( num_old_deleted + num_old_made_new, num_old_made_new )
             
         
         def CheckIfCombinedMappingsNeedDeleting( namespace_id, tag_id, hash_ids ):
@@ -3904,7 +3913,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def InsertMappings( namespace_id, tag_id, hash_ids, status ):
             
-            existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) ) ]
+            if status == HC.PENDING: existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status != ?;', ( service_id, namespace_id, tag_id, HC.DELETED ) ) ]
+            else: existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) ) ]
             
             new_hash_ids = set( hash_ids ).difference( existing_hash_ids )
             
@@ -4020,23 +4030,23 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( namespace_id, tag_id, hash_ids ) in mappings_ids:
             
-            num_deleted_rescinded = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED, HC.CURRENT )
-            num_pending_committed = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.PENDING, HC.CURRENT )
+            ( num_deleted_deleted, num_deleted_made_current ) = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.DELETED, HC.CURRENT )
+            ( num_pending_deleted, num_pending_made_current ) = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.PENDING, HC.CURRENT )
             num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.CURRENT )
             
-            change_in_num_mappings += num_deleted_rescinded + num_pending_committed + num_raw_adds
-            change_in_num_deleted_mappings -= num_deleted_rescinded
-            change_in_num_pending_mappings -= num_pending_committed
+            change_in_num_mappings += num_deleted_made_current + num_pending_made_current + num_raw_adds
+            change_in_num_deleted_mappings -= num_deleted_deleted
+            change_in_num_pending_mappings -= num_pending_deleted
             
         
         for ( namespace_id, tag_id, hash_ids ) in deleted_mappings_ids:
             
-            num_current_deleted = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.CURRENT, HC.DELETED )
+            ( num_current_deleted, num_current_made_deleted ) = ChangeMappingStatus( namespace_id, tag_id, hash_ids, HC.CURRENT, HC.DELETED )
             num_raw_adds = InsertMappings( namespace_id, tag_id, hash_ids, HC.DELETED )
             num_deleted_petitions = DeletePetitions( namespace_id, tag_id, hash_ids )
             
             change_in_num_mappings -= num_current_deleted
-            change_in_num_deleted_mappings += num_current_deleted + num_raw_adds
+            change_in_num_deleted_mappings += num_current_made_deleted + num_raw_adds
             change_in_num_petitioned_mappings -= num_deleted_petitions
             
         
@@ -4170,7 +4180,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if recalc_combined_mappings:
             
-            self._RebuildTagServicePrecedence( c )
+            self._RebuildTagServicePrecedenceCache( c )
             
             self._RecalcCombinedMappings( c )
             
@@ -4278,7 +4288,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if recalc_combined_mappings:
             
-            self._RebuildTagServicePrecedence( c )
+            self._RebuildTagServicePrecedenceCache( c )
             
             self._RecalcCombinedMappings( c )
             
@@ -4360,7 +4370,9 @@ class DB( ServiceDB ):
         
         ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
         
-        self._tag_service_precedence = self._GetTagServicePrecedence( c )
+        self._tag_service_precedence = []
+        
+        self._RebuildTagServicePrecedenceCache( c )
         
         if not self._CheckPassword(): raise HC.PermissionException( 'No password!' )
         
@@ -7041,7 +7053,7 @@ class DB( ServiceDB ):
                             
                             self.WaitUntilGoodTimeToUseDBThread()
                             
-                            time.sleep( 0.25 )
+                            time.sleep( 0.10 )
                             
                             try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
                             except: break
@@ -7364,6 +7376,8 @@ class DB( ServiceDB ):
     
     def _MainLoop_JobInternal( self, c, job ):
         
+        HC.pubsub.pub( 'db_locked_status', 'db locked' )
+        
         action = job.GetAction()
         
         job_type = job.GetType()
@@ -7441,6 +7455,8 @@ class DB( ServiceDB ):
                 if action not in ( 'import_file', 'import_file_from_page' ): HC.pubsub.pub( 'exception', new_e )
                 
             
+        
+        HC.pubsub.pub( 'db_locked_status', '' )
         
     
     def _MainLoop_Read( self, c, action, args, kwargs ):
@@ -7600,15 +7616,9 @@ class DB( ServiceDB ):
         if action != 'do_file_query': return job.GetResult()
         
     
-    def ReadFile( self, hash ):
-        
-        return self._GetFile( hash )
-        
+    def ReadFile( self, hash ): return self._GetFile( hash )
     
-    def ReadThumbnail( self, hash, full_size = False ):
-        
-        return self._GetThumbnail( hash, full_size )
-        
+    def ReadThumbnail( self, hash, full_size = False ): return self._GetThumbnail( hash, full_size )
     
     def WaitUntilGoodTimeToUseDBThread( self ):
         

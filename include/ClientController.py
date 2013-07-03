@@ -22,7 +22,6 @@ class Controller( wx.App ):
     def _Read( self, action, *args, **kwargs ):
         
         if action == 'options': return self._options
-        elif action == 'tag_service_precedence': return self._tag_service_precedence
         elif action == 'file': return self._db.ReadFile( *args, **kwargs )
         elif action == 'thumbnail': return self._db.ReadThumbnail( *args, **kwargs )
         else: return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
@@ -195,8 +194,6 @@ class Controller( wx.App ):
                 
             
             self._options = self._db.Read( 'options', HC.HIGH_PRIORITY )
-            
-            self._tag_service_precedence = self._db.Read( 'tag_service_precedence', HC.HIGH_PRIORITY )
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()

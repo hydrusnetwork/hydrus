@@ -3169,8 +3169,6 @@ class TagsBoxManage( TagsBox ):
         
         self._callable = callable
         
-        self._show_deleted_tags = False
-        
         self._current_tags = set( current_tags )
         self._deleted_tags = set( deleted_tags )
         self._pending_tags = set( pending_tags )
@@ -3185,8 +3183,7 @@ class TagsBoxManage( TagsBox ):
         
         siblings_manager = wx.GetApp().GetTagSiblingsManager()
         
-        if self._show_deleted_tags: all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
-        else: all_tags = self._current_tags | self._pending_tags | self._petitioned_tags
+        all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
         
         self._ordered_strings = []
         self._strings_to_terms = {}
@@ -3241,13 +3238,6 @@ class TagsBoxManage( TagsBox ):
     def RescindPend( self, tag ):
         
         self._pending_tags.discard( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def SetShowDeletedTags( self, value ):
-        
-        self._show_deleted_tags = value
         
         self._RebuildTagStrings()
         

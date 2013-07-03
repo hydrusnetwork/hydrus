@@ -2192,40 +2192,6 @@ class ServiceLocalRatingNumerical( Service ):
     
     def GetExtraInfo( self ): return ( self._lower, self._upper )
     
-class ServiceManager():
-    
-    def __init__( self ):
-        
-        self._lock = threading.Lock()
-        
-        services = wx.GetApp().Read( 'services' )
-        
-        self._service_identifiers_to_services = { service.GetServiceIdentifier() : service for service in services }
-        
-        # pubsub for services changing
-        # maybe a variable that says services are not ready, so wait a second (for refresh)
-        # maybe refresh should be synchro with db? nah, that makes locking issues
-        
-        # need to protect the actual service objects with a lock too, although the subobjects make this delicate
-        
-    
-    def GetService( self, service_identifier ):
-        
-        with self._lock:
-            
-            if service_identifier in self._service_identifiers_to_services: return self._service_identifiers_to_services[ service_identifier ]
-            else: raise Exception( 'Could not find that service!' )
-            
-        
-    
-    def GetServices( self, service_types ):
-        
-        with self._lock:
-            
-            return { service for ( service_identifier, service ) in self._service_identifiers_to_services.items() if service_idenifier.GetType() in service_types }
-            
-        
-    
 class ServiceRemote( Service ):
     
     yaml_tag = u'!ServiceRemote'

@@ -676,7 +676,7 @@ class MediaSingleton( Media ):
     
     def HasArchive( self ): return not self._media_result.GetInbox()
     
-    def HasDuration( self ): return self._media_result.GetDuration() is not None
+    def HasDuration( self ): return self._media_result.GetDuration() is not None and self._media_result.GetNumFrames() > 1
     
     def HasImages( self ): return self.IsImage()
     

@@ -61,7 +61,7 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
             
             if len( tags_to_add_here ) > 0:
                 
-                tags_to_add_here = siblings_manager.CollapseTagList( tags_to_add_here )
+                tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
                 tags_to_add_here = parents_manager.ExpandTags( service_identifier, tags_to_add_here )
                 
                 service_identifiers_to_tags[ service_identifier ] = tags_to_add_here

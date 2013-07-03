@@ -8463,9 +8463,6 @@ class DialogManageTags( Dialog ):
                 
                 self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
                 
-                self._show_deleted_tags = wx.CheckBox( self, label='Show deleted tags' )
-                self._show_deleted_tags.Bind( wx.EVT_CHECKBOX, self.EventShowDeletedTags )
-                
                 self._modify_mappers = wx.Button( self, label='Modify mappers' )
                 self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
                 
@@ -8475,11 +8472,7 @@ class DialogManageTags( Dialog ):
                 self._paste_tags = wx.Button( self, label = 'paste tags' )
                 self._paste_tags.Bind( wx.EVT_BUTTON, self.EventPasteTags )
                 
-                if self._i_am_local_tag_service:
-                    
-                    self._show_deleted_tags.Hide()
-                    self._modify_mappers.Hide()
-                    
+                if self._i_am_local_tag_service: self._modify_mappers.Hide()
                 else:
                     
                     if not self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.Hide()
@@ -8491,11 +8484,6 @@ class DialogManageTags( Dialog ):
                 
                 self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
                 
-                special_hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                special_hbox.AddF( self._show_deleted_tags, FLAGS_MIXED )
-                special_hbox.AddF( self._modify_mappers, FLAGS_MIXED )
-                
                 copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 copy_paste_hbox.AddF( self._copy_tags, FLAGS_MIXED )
@@ -8506,7 +8494,7 @@ class DialogManageTags( Dialog ):
                 vbox.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
                 vbox.AddF( self._add_tag_box, FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( copy_paste_hbox, FLAGS_BUTTON_SIZERS )
-                vbox.AddF( special_hbox, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( self._modify_mappers, FLAGS_BUTTON_SIZERS )
                 
                 self.SetSizer( vbox )
                 
@@ -8628,17 +8616,6 @@ class DialogManageTags( Dialog ):
                             
                         
                     
-                elif tag in self._deleted_tags:
-                    
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
-                        
-                        self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( tag, self._hashes ) ) )
-                        
-                        self._pending_tags.append( tag )
-                        
-                        self._tags_box.PendTag( tag )
-                        
-                    
                 else:
                     
                     self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( tag, self._hashes ) ) )
@@ -8718,8 +8695,6 @@ class DialogManageTags( Dialog ):
                 
             else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
-        
-        def EventShowDeletedTags( self, event ): self._tags_box.SetShowDeletedTags( self._show_deleted_tags.GetValue() )
         
         def EventTagsBoxAction( self, event ):
             
