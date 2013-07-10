@@ -313,7 +313,7 @@ class Controller( wx.App ):
         
         self._last_idle_time = int( time.time() )
         
-        if action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
+        if False and action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
         
         self._Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
         
