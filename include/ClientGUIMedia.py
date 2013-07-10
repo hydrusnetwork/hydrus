@@ -70,7 +70,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self.SetDoubleBuffered( True )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self.SetScrollRate( 0, 50 )
         
@@ -96,7 +96,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_INBOX )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
+        if len( hashes ) > 0: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
         
     
     def _CopyHashToClipboard( self ):
@@ -189,7 +189,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        try: wx.GetApp().Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                        try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
                         except: wx.MessageBox( traceback.format_exc() )
                         
                     
@@ -203,7 +203,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             service_identifiers_to_content_updates = { file_service_identifier : ( content_update, ) }
             
-            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
         
     
@@ -377,14 +377,14 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( CC.DISCRIMINANT_ARCHIVE )
         
-        if len( hashes ) > 0: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
+        if len( hashes ) > 0: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
         
     
     def _ManageRatings( self ):
         
         if len( self._selected_media ) > 0:
             
-            service_identifiers = wx.GetApp().Read( 'service_identifiers', HC.RATINGS_SERVICES )
+            service_identifiers = HC.app.Read( 'service_identifiers', HC.RATINGS_SERVICES )
             
             if len( service_identifiers ) > 0:
                 
@@ -461,7 +461,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                     
                     service_identifiers_to_content_updates = { file_service_identifier : ( content_update, ) }
                     
-                    wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
+                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
                     
                 
             
@@ -561,6 +561,8 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def _SelectAll( self ): self._DeselectSelect( [], self._sorted_media )
     
+    def _SelectNone( self ): self._DeselectSelect( self._selected_media, [] )
+    
     def _SetFocussedMedia( self, media ):
         
         self._focussed_media = media
@@ -576,7 +578,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             search_context = CC.FileSearchContext()
             
-            unsorted_file_query_result = wx.GetApp().Read( 'media_results', search_context, hashes )
+            unsorted_file_query_result = HC.app.Read( 'media_results', search_context, hashes )
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_file_query_result }
             
@@ -594,7 +596,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            try: wx.GetApp().Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, hashes ) ] } )
+            try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, hashes ) ] } )
             except Exception as e: wx.MessageBox( unicode( e ) )
             
         
@@ -770,7 +772,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._drawn_up_to = 0
         
-        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( wx.GetApp().Read( 'options' )[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -842,7 +844,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         with ClientGUIDialogs.DialogProgress( self, job_key, cancel_event ) as dlg:
             
-            wx.GetApp().Write( 'export_files', job_key, self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ), cancel_event )
+            HC.app.Write( 'export_files', job_key, self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ), cancel_event )
             
             dlg.ShowModal()
             
@@ -999,7 +1001,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._thumbnails_being_faded_in = {}
             
-            wx.GetApp().GetThumbnailCache().Waterfall( self._page_key, thumbnails_to_render_later )
+            HC.app.GetThumbnailCache().Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -1023,7 +1025,11 @@ class MediaPanelThumbnails( MediaPanel ):
             
             canvas_height = max( last_visible_row * thumbnail_height, client_height )
             
-            if ( canvas_width, canvas_height ) != self._canvas_bmp.GetSize(): self._canvas_bmp = wx.EmptyBitmap( canvas_width, canvas_height, 24 )
+            if ( canvas_width, canvas_height ) != self._canvas_bmp.GetSize():
+                
+                self._canvas_bmp.Destroy()
+                self._canvas_bmp = wx.EmptyBitmap( canvas_width, canvas_height, 24 )
+                
             
             virtual_width = client_width
             
@@ -1117,7 +1123,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
-                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ) )
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_hashes': self._CopyHashesToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
@@ -1129,7 +1135,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 elif command == 'custom_filter': self._CustomFilter()
                 elif command == 'delete': self._Delete( data )
                 elif command == 'deselect': self._DeselectAll()
-                elif command == 'download': wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
+                elif command == 'download': HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
                 elif command == 'export': self._ExportFiles()
                 elif command == 'export special': self._ExportFilesSpecial()
                 elif command == 'filter': self._Filter()
@@ -1146,6 +1152,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 elif command == 'scroll_end': self._ScrollEnd()
                 elif command == 'scroll_home': self._ScrollHome()
                 elif command == 'select_all': self._SelectAll()
+                elif command == 'select_none': self._SelectNone()
                 elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
                 elif command == 'upload': self._UploadFiles( data )
                 elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
@@ -1172,7 +1179,7 @@ class MediaPanelThumbnails( MediaPanel ):
         if t is not None:
             
             if t.GetFileServiceIdentifiersCDPP().HasLocal(): self._FullScreen( t )
-            elif self._file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, t.GetHashes() ) ] } )
+            elif self._file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, t.GetHashes() ) ] } )
             
         
     
@@ -1233,7 +1240,15 @@ class MediaPanelThumbnails( MediaPanel ):
         
         menu = wx.Menu()
         
-        if thumbnail is None: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_all' ), 'select all' )
+        if thumbnail is None:
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+            
+            menu.AppendSeparator()
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_all' ), 'select all' )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_none' ), 'select none' )
+            
         else:
             
             self._HitMedia( thumbnail, event.CmdDown(), event.ShiftDown() )
@@ -1246,7 +1261,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 multiple_selected = num_selected > 1
                 
-                services = wx.GetApp().Read( 'services' )
+                services = HC.app.Read( 'services' )
                 
                 tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
                 
@@ -1282,8 +1297,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     remote_delete_phrase = 'delete all possible from'
                     modify_account_phrase = 'modify the accounts that uploaded these to'
                     
-                    manage_tags_phrase = 'manage tags for all'
-                    manage_ratings_phrase = 'manage ratings for all'
+                    manage_tags_phrase = 'files\' tags'
+                    manage_ratings_phrase = 'files\' ratings'
                     
                     archive_phrase = 'archive all'
                     inbox_phrase = 'return all to inbox'
@@ -1307,8 +1322,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     remote_delete_phrase = 'delete from'
                     modify_account_phrase = 'modify the account that uploaded this to'
                     
-                    manage_tags_phrase = 'manage tags'
-                    manage_ratings_phrase = 'manage ratings'
+                    manage_tags_phrase = 'file\'s tags'
+                    manage_ratings_phrase = 'file\'s ratings'
                     
                     archive_phrase = 'archive'
                     inbox_phrase = 'return to inbox'
@@ -1423,32 +1438,44 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
+                #
+                
                 if len( selection_downloadable_file_service_identifiers ) > 0 or len( selection_uploadable_file_service_identifiers ) > 0 or len( selection_petitionable_file_service_identifiers ) > 0 or len( selection_deletable_file_service_identifiers ) > 0 or len( selection_modifyable_file_service_identifiers ) > 0:
                     
-                    if len( selection_downloadable_file_service_identifiers ) > 0: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'download' ), download_phrase )
+                    file_repo_menu = wx.Menu()
                     
-                    if len( selection_uploadable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( menu, selection_uploadable_file_service_identifiers, upload_phrase, 'upload' )
+                    if len( selection_downloadable_file_service_identifiers ) > 0: file_repo_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'download' ), download_phrase )
                     
-                    if len( selection_petitionable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( menu, selection_petitionable_file_service_identifiers, petition_phrase, 'petition' )
+                    if len( selection_uploadable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_uploadable_file_service_identifiers, upload_phrase, 'upload' )
                     
-                    if len( selection_deletable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( menu, selection_deletable_file_service_identifiers, remote_delete_phrase, 'delete' )
+                    if len( selection_petitionable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_petitionable_file_service_identifiers, petition_phrase, 'petition' )
                     
-                    if len( selection_modifyable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( menu, selection_modifyable_file_service_identifiers, modify_account_phrase, 'modify_account' )
+                    if len( selection_deletable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_deletable_file_service_identifiers, remote_delete_phrase, 'delete' )
                     
-                    menu.AppendSeparator()
+                    if len( selection_modifyable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_modifyable_file_service_identifiers, modify_account_phrase, 'modify_account' )
+                    
+                    menu.AppendMenu( CC.ID_NULL, 'file repositories', file_repo_menu )
                     
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), manage_tags_phrase )
+                #
                 
-                if i_can_post_ratings: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), manage_ratings_phrase )
+                manage_menu = wx.Menu()
                 
-                menu.AppendSeparator()
+                manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), manage_tags_phrase )
+                
+                if i_can_post_ratings: manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), manage_ratings_phrase )
+                
+                menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+                
+                #
                 
                 if selection_has_local:
                     
                     if multiple_selected or i_can_post_ratings: 
                         
-                        if multiple_selected: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'filter' )
+                        filter_menu = wx.Menu()
+                        
+                        if multiple_selected: filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'archive/delete' )
                         
                         if i_can_post_ratings:
                             
@@ -1456,13 +1483,18 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                             for service in local_ratings_services: ratings_filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceIdentifier() ), service.GetServiceIdentifier().GetName() )
                             
-                            menu.AppendMenu( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
+                            filter_menu.AppendMenu( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
                             
                         
-                        if multiple_selected: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
+                        if multiple_selected: filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
                         
-                        menu.AppendSeparator()
+                        menu.AppendMenu( CC.ID_NULL, 'filter', filter_menu )
                         
+                    
+                
+                menu.AppendSeparator()
+                
+                if selection_has_local:
                     
                     if selection_has_inbox: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), archive_phrase )
                     if selection_has_archive: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
@@ -1474,11 +1506,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export special' ), export_phrase )
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
-                menu.AppendSeparator()
-                
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
-                
-                menu.AppendSeparator()
+                #
                 
                 copy_menu = wx.Menu()
                 
@@ -1489,6 +1517,21 @@ class MediaPanelThumbnails( MediaPanel ):
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
                 
                 menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+                
+                #
+                
+                menu.AppendSeparator()
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+                
+                menu.AppendSeparator()
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_all' ), 'select all' )
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_none' ), 'select none' )
+                
+                menu.AppendSeparator()
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
                 
                 if self._focussed_media.HasImages():
                     
@@ -1653,7 +1696,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def ThumbnailsResized( self ):
         
-        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( wx.GetApp().Read( 'options' )[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -1702,7 +1745,7 @@ class ThumbGridSizer( wx.PySizer ):
         
         self._thumbnails = []
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
     
     def _GetThumbnailDimensions( self ): return CC.AddPaddingToDimensions( self._options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_MARGIN + CC.THUMBNAIL_BORDER ) * 2 )
@@ -1761,10 +1804,10 @@ class Thumbnail( Selectable ):
         self._hydrus_bmp = None
         self._file_service_identifier = file_service_identifier
         
-        self._my_dimensions = CC.AddPaddingToDimensions( wx.GetApp().Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
     
-    def _LoadFromDB( self ): self._hydrus_bmp = wx.GetApp().GetThumbnailCache().GetThumbnail( self )
+    def _LoadFromDB( self ): self._hydrus_bmp = HC.app.GetThumbnailCache().GetThumbnail( self )
     
     def Dumped( self, dump_status ): self._dump_status = dump_status
     
@@ -1870,7 +1913,7 @@ class Thumbnail( Selectable ):
             dc.DrawText( collections_string, top_left_x, top_left_y )
             
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         if len( creators ) > 0:
             
@@ -1976,14 +2019,14 @@ class Thumbnail( Selectable ):
     
     def ReloadFromDB( self ):
         
-        self._my_dimensions = CC.AddPaddingToDimensions( wx.GetApp().Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
         if self._hydrus_bmp is not None: self._LoadFromDB()
         
     
     def ReloadFromDBLater( self ):
         
-        self._my_dimensions = CC.AddPaddingToDimensions( wx.GetApp().Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
         self._hydrus_bmp = None
         

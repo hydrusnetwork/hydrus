@@ -2,6 +2,7 @@ import BaseHTTPServer
 import Cookie
 import hashlib
 import httplib
+import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
 import HydrusFlashHandling
@@ -248,7 +249,7 @@ def ParseFileArguments( file ):
     
     mime = HC.GetMimeFromString( file )
     
-    if mime not in HC.ALLOWED_MIMES: raise HC.ForbiddenException( 'Currently, only jpg, gif, bmp, png and swf are supported.' )
+    if mime not in HC.ALLOWED_MIMES: raise HC.ForbiddenException( 'Currently, only jpg, gif, bmp, png, swf, pdf, flv and mp3 are supported.' )
     
     hash = hashlib.sha256( file ).digest()
     
@@ -303,6 +304,10 @@ def ParseFileArguments( file ):
         num_words = HydrusDocumentHandling.GetPDFNumWords( file )
         
         args[ 'num_words' ] = num_words
+        
+    elif mime == HC.AUDIO_MP3:
+        
+        args[ 'duration' ] = HydrusAudioHandling.GetMP3Duration( file )
         
     
     return args
@@ -497,13 +502,13 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                 elif request == 'favicon.ico': response_context = HC.ResponseContext( 200, mime = HC.IMAGE_ICON, body = self._favicon, filename = 'favicon.ico' )
                 else:
                     
-                    if service_type == HC.LOCAL_FILE: response_context = wx.GetApp().ProcessServerRequest( request_type, request, request_args )
+                    if service_type == HC.LOCAL_FILE: response_context = HC.app.ProcessServerRequest( request_type, request, request_args )
                     else:
                         
                         session_key = ParseSessionKey( self.headers.getheader( 'Cookie' ) )
                         access_key = ParseAccessKey( self.headers.getheader( 'Authorization' ) )
                         
-                        response_context = wx.GetApp().GetDB().AddJobServer( self._service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length )
+                        response_context = HC.app.GetDB().AddJobServer( self._service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length )
                         
                     
                 

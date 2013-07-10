@@ -414,7 +414,7 @@ def MergeTags( tags_managers ):
         merged_tags[ service_identifier ] = statuses_to_tags
         
     
-    return TagsManager( wx.GetApp().Read( 'tag_service_precedence' ), merged_tags )
+    return TagsManager( HC.app.Read( 'tag_service_precedence' ), merged_tags )
     
 def ParseImportablePaths( raw_paths, include_subdirs = True ):
     
@@ -423,7 +423,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     if include_subdirs: title = 'Parsing files and subdirectories'
     else: title = 'Parsing files'
     
-    progress = wx.ProgressDialog( title, u'Preparing', 1000, wx.GetApp().GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    progress = wx.ProgressDialog( title, u'Preparing', 1000, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
     
     try:
         
@@ -482,7 +482,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
     
     num_file_paths = len( file_paths )
     
-    progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, wx.GetApp().GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
     
     for ( i, path ) in enumerate( file_paths ):
         
@@ -529,7 +529,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True ):
                 
                 while aes_key is None:
                     
-                    with wx.TextEntryDialog( wx.GetApp().GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
+                    with wx.TextEntryDialog( HC.app.GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
                         
                         result = dlg.ShowModal()
                         
@@ -646,7 +646,7 @@ class AutocompleteMatchesPredicates():
         
         if self._collapse:
             
-            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            siblings_manager = HC.app.GetTagSiblingsManager()
             
             self._predicates = siblings_manager.CollapsePredicates( self._predicates )
             
@@ -662,7 +662,7 @@ class AutocompleteMatchesPredicates():
         
         if not self._collapse:
             
-            parents_manager = wx.GetApp().GetTagParentsManager()
+            parents_manager = HC.app.GetTagParentsManager()
             
             matches = parents_manager.ExpandPredicates( self._service_identifier, matches )
             
@@ -969,7 +969,7 @@ class ConnectionToService():
             
         elif self._service_identifier.GetType() in HC.RESTRICTED_SERVICES:
             
-            session_key = wx.GetApp().GetSessionKey( self._service_identifier )
+            session_key = HC.app.GetSessionKey( self._service_identifier )
             
             headers[ 'Cookie' ] = 'session_key=' + session_key.encode( 'hex' )
             
@@ -1048,7 +1048,7 @@ class ConnectionToService():
             
             if unicode( e ) == 'Session not found!':
                 
-                wx.GetApp().DeleteSessionKey( self._service_identifier )
+                HC.app.DeleteSessionKey( self._service_identifier )
                 
                 response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
                 
@@ -1090,7 +1090,7 @@ class ConnectionToService():
                 
                 edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, self._credentials, None ) ) ) ]
                 
-                wx.GetApp().Write( 'update_services', edit_log )
+                HC.app.Write( 'update_services', edit_log )
                 
             
             with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
@@ -1107,7 +1107,7 @@ class ConnectionToService():
             
             account.MakeFresh()
             
-            wx.GetApp().Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+            HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
             
         
         return response
@@ -1248,12 +1248,6 @@ class DataCache():
     
     def AddData( self, key, data ):
         
-        self._keys_to_data[ key ] = data
-        
-        self._keys_fifo.append( key )
-        
-        self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
-        
         while self._total_estimated_memory_footprint > self._options[ self._cache_size_key ]:
             
             deletee_key = self._keys_fifo.pop( 0 )
@@ -1264,6 +1258,12 @@ class DataCache():
             
             del self._keys_to_data[ deletee_key ]
             
+        
+        self._keys_to_data[ key ] = data
+        
+        self._keys_fifo.append( key )
+        
+        self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
         
     
     def GetData( self, key ):
@@ -2111,7 +2111,7 @@ class RenderedImageCache():
             elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
             else:
                 
-                file = wx.GetApp().Read( 'file', hash )
+                file = HC.app.Read( 'file', hash )
                 
                 image_container = HydrusImageHandling.RenderImageFromFile( file, hash, target_resolution = resolution, synchronous = False )
                 
@@ -2614,7 +2614,7 @@ class TagsManager():
         
         slice = set( ( tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) ) )
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         collapsed_slice = frozenset( siblings_manager.CollapseTags( slice ) )
         
@@ -2703,7 +2703,7 @@ class TagParentsManager():
     
     def __init__( self ):
         
-        self._tag_service_precedence = wx.GetApp().Read( 'tag_service_precedence' )
+        self._tag_service_precedence = HC.app.Read( 'tag_service_precedence' )
         
         self._RefreshParents()
         
@@ -2743,7 +2743,7 @@ class TagParentsManager():
     
     def _RefreshParents( self ):
         
-        service_identifiers_to_statuses_to_pairs = wx.GetApp().Read( 'tag_parents' )
+        service_identifiers_to_statuses_to_pairs = HC.app.Read( 'tag_parents' )
         
         self._parents = collections.defaultdict( HC.default_dict_set )
         
@@ -2816,9 +2816,9 @@ class TagParentsManager():
             # for now -- we will make an option, later
             service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
             
-            tags_results = list( tags )
+            tags_results = set( tags )
             
-            for tag in tags: tags_results.extend( self._GetParents( service_identifier, tag ) )
+            for tag in tags: tags_results.update( self._GetParents( service_identifier, tag ) )
             
             return tags_results
             
@@ -2844,7 +2844,7 @@ class TagSiblingsManager():
     
     def __init__( self ):
         
-        self._tag_service_precedence = wx.GetApp().Read( 'tag_service_precedence' )
+        self._tag_service_precedence = HC.app.Read( 'tag_service_precedence' )
         
         # I should offload this to a thread (rather than the gui thread), and have an event to say when it is ready
         # gui requests should pause until it is ready, which should kick in during refreshes, too!
@@ -2858,96 +2858,120 @@ class TagSiblingsManager():
     
     def _RefreshSiblings( self ):
         
-        service_identifiers_to_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings' )
-        
-        t_s_p = list( self._tag_service_precedence )
-        
-        processed_siblings = {}
-        
-        # first combine the services
-        # go from high precedence to low, writing A -> B
-        # if A map already exists, don't overwrite
-        # if A -> B forms a loop, don't write it
-        
-        for service_identifier in t_s_p:
+        def CombineServices( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
             
-            statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+            # first combine the services
+            # go from high precedence to low, writing A -> B
+            # if A map already exists, don't overwrite
+            # if A -> B forms a loop, don't write it
             
-            pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+            processed_siblings = {}
+            current_deleted_pairs = set()
             
-            for ( old, new ) in pairs:
+            for service_identifier in tag_service_precedence:
                 
-                if old not in processed_siblings:
+                statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+                
+                pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+                
+                pairs.difference_update( current_deleted_pairs )
+                
+                for ( old, new ) in pairs:
                     
-                    next_new = new
+                    if old == new: continue
                     
-                    we_have_a_loop = False
-                    
-                    while next_new in processed_siblings:
+                    if old not in processed_siblings:
                         
-                        next_new = processed_siblings[ next_new ]
+                        next_new = new
                         
-                        if next_new == old:
+                        we_have_a_loop = False
+                        
+                        while next_new in processed_siblings:
                             
-                            we_have_a_loop = True
+                            next_new = processed_siblings[ next_new ]
                             
-                            break
+                            if next_new == old:
+                                
+                                we_have_a_loop = True
+                                
+                                break
+                                
                             
+                        
+                        if not we_have_a_loop: processed_siblings[ old ] = new
                         
                     
-                    if not we_have_a_loop: processed_siblings[ old ] = new
+                
+                current_deleted_pairs.update( statuses_to_pairs[ HC.DELETED ] )
+                
+            
+            return processed_siblings
+            
+        
+        def CollapseChains( processed_siblings ):
+            
+            # now to collapse chains
+            # A -> B and B -> C goes to A -> C and B -> C
+            
+            siblings = {}
+            
+            for ( old_tag, new_tag ) in processed_siblings.items():
+                
+                # adding A -> B
+                
+                if new_tag in siblings:
+                    
+                    # B -> F already calculated and added, so add A -> F
+                    
+                    siblings[ old_tag ] = siblings[ new_tag ]
+                    
+                else:
+                    
+                    while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
+                    
+                    siblings[ old_tag ] = new_tag
                     
                 
             
-        
-        # now to collapse chains
-        # A -> B and B -> C goes to A -> C and B -> C
-        
-        self._siblings = {}
-        
-        for ( old_tag, new_tag ) in processed_siblings.items():
+            reverse_lookup = collections.defaultdict( list )
             
-            # adding A -> B
+            for ( old_tag, new_tag ) in siblings.items(): reverse_lookup[ new_tag ].append( old_tag )
             
-            if new_tag in self._siblings:
-                
-                # B -> F already calculated and added, so add A -> F
-                
-                self._siblings[ old_tag ] = self._siblings[ new_tag ]
-                
-            else:
-                
-                while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
-                
-                self._siblings[ old_tag ] = new_tag
-                
+            return ( siblings, reverse_lookup )
             
         
-        self._reverse_lookup = collections.defaultdict( list )
+        service_identifiers_to_statuses_to_pairs = HC.app.Read( 'tag_siblings' )
         
-        for ( old_tag, new_tag ) in self._siblings.items(): self._reverse_lookup[ new_tag ].append( old_tag )
+        tag_service_precedence = list( self._tag_service_precedence )
+        
+        processed_siblings = CombineServices( tag_service_precedence, service_identifiers_to_statuses_to_pairs )
+        
+        ( self._siblings, self._reverse_lookup ) = CollapseChains( processed_siblings )
         
         HC.pubsub.pub( 'new_siblings_gui' )
         
     
     def GetAutocompleteSiblings( self, half_complete_tag ):
         
-        key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if HC.SearchEntryMatchesTag( half_complete_tag, key ) }
-        
-        value_based_matching_values = { value for value in self._siblings.values() if HC.SearchEntryMatchesTag( half_complete_tag, value ) }
-        
-        matching_values = key_based_matching_values.union( value_based_matching_values )
-        
-        # all the matching values have a matching sibling somewhere in their network
-        # so now fetch the networks
-        
-        lists_of_matching_keys = [ self._reverse_lookup[ value ] for value in matching_values ]
-        
-        matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
-        
-        matches = matching_values.union( matching_keys )
-        
-        return matches
+        with self._lock:
+            
+            key_based_matching_values = { self._siblings[ key ] for key in self._siblings.keys() if HC.SearchEntryMatchesTag( half_complete_tag, key, search_siblings = False ) }
+            
+            value_based_matching_values = { value for value in self._siblings.values() if HC.SearchEntryMatchesTag( half_complete_tag, value, search_siblings = False ) }
+            
+            matching_values = key_based_matching_values.union( value_based_matching_values )
+            
+            # all the matching values have a matching sibling somewhere in their network
+            # so now fetch the networks
+            
+            lists_of_matching_keys = [ self._reverse_lookup[ value ] for value in matching_values ]
+            
+            matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
+            
+            matches = matching_values.union( matching_keys )
+            
+            return matches
+            
         
     
     def GetSibling( self, tag ):
@@ -2981,25 +3005,6 @@ class TagSiblingsManager():
     def RefreshSiblings( self ):
         
         with self._lock: self._RefreshSiblings()
-        
-    
-    def CollapseCountedTagList( self, tag_list ):
-        
-        with self._lock:
-            
-            results = collections.Counter()
-            
-            for ( tag, count ) in tag_list:
-                
-                if tag in self._siblings: tag = self._siblings[ tag ]
-                
-                results[ tag ] += count
-                
-            
-            results = results.items()
-            
-            return results
-            
         
     
     def CollapseNamespacedTags( self, namespace, tags ):
@@ -3111,11 +3116,13 @@ class ThumbnailCache():
         with open( HC.STATIC_DIR + os.path.sep + 'hydrus.png', 'rb' ) as f: self._not_found_file = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'flash.png', 'rb' ) as f: self._flash_file = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'flv.png', 'rb' ) as f: self._flv_file = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'mp3.png', 'rb' ) as f: self._mp3_file = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'pdf.png', 'rb' ) as f: self._pdf_file = f.read()
         
         self._not_found = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._not_found_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flash = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flash_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flv = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flv_file, self._options[ 'thumbnail_dimensions' ] ) )
+        self._mp3 = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._mp3_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._pdf = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._pdf_file, self._options[ 'thumbnail_dimensions' ] ) )
         
         HC.pubsub.sub( self, 'Clear', 'thumbnail_resize' )
@@ -3128,11 +3135,13 @@ class ThumbnailCache():
         self._not_found = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._not_found_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flash = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flash_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._flv = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._flv_file, self._options[ 'thumbnail_dimensions' ] ) )
+        self._mp3 = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._mp3_file, self._options[ 'thumbnail_dimensions' ] ) )
         self._pdf = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( self._pdf_file, self._options[ 'thumbnail_dimensions' ] ) )
         
     
     def GetFlashThumbnail( self ): return self._flash
     def GetFLVThumbnail( self ): return self._flv
+    def GetMP3Thumbnail( self ): return self._mp3
     def GetNotFoundThumbnail( self ): return self._not_found
     def GetPDFThumbnail( self ): return self._pdf
     
@@ -3146,7 +3155,7 @@ class ThumbnailCache():
             
             if not self._data_cache.HasData( hash ):
                 
-                try: hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( wx.GetApp().Read( 'thumbnail', hash ) )
+                try: hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( HC.app.Read( 'thumbnail', hash ) )
                 except:
                     print( traceback.format_exc() )
                     return self._not_found
@@ -3158,6 +3167,7 @@ class ThumbnailCache():
             
         elif mime == HC.APPLICATION_FLASH: return self._flash
         elif mime == HC.APPLICATION_PDF: return self._pdf
+        elif mime == HC.AUDIO_MP3: return self._mp3
         elif mime == HC.VIDEO_FLV: return self._flv
         else: return self._not_found
         
@@ -3194,7 +3204,128 @@ class ThumbnailCache():
     
     def THREADPrefetch( self, hashes ):
         
-        for hash in hashes: wx.GetApp().ReadDaemon( 'thumbnail', hash )
+        for hash in hashes: HC.app.ReadDaemon( 'thumbnail', hash )
+        
+    
+class UndoManager():
+    
+    def __init__( self ):
+        
+        self._commands = []
+        self._inverted_commands = []
+        self._current_index = 0
+        
+    
+    def _InvertServiceIdentifiersToContentUpdates( self, service_identifiers_to_content_updates ):
+        
+        inverted_service_identifiers_to_content_updates = {}
+        
+        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+            
+            inverted_content_updates = []
+            
+            for content_update in content_updates:
+                
+                ( data_type, action, row ) = content_update.ToTuple()
+                
+                # tags is simple, but files is more complicated here
+                # this is more complicated with files than tags
+                
+                # I add the command before the db does the thing, so I _could_ get mediaresults or whatever when I Add
+                # maybe keep two lists, of command and invert command, whatever
+                
+                if action == CONTENT_UPDATE_ADD:
+                    
+                    inverted_action = CONTENT_UPDATE_DELETE
+                    
+                    # not sure what this means, since this is usually an import
+                    
+                elif action == CONTENT_UPDATE_ARCHIVE: inverted_action = CONTENT_UPDATE_INBOX
+                elif action == CONTENT_UPDATE_DELETE:
+                    
+                    inverted_action = CONTENT_UPDATE_ADD
+                    
+                    # convert the deleted_hashes to multiple content updates or whatever with the add file media_results business
+                    
+                elif action == CONTENT_UPDATE_INBOX: inverted_action = CONTENT_UPDATE_ARCHIVE
+                elif action == CONTENT_UPDATE_PENDING: inverted_action = CONTENT_UPDATE_RESCIND_PENDING
+                elif action == CONTENT_UPDATE_PETITION: inverted_action = CONTENT_UPDATE_RESCIND_PETITION
+                elif action == CONTENT_UPDATE_RESCIND_PENDING: inverted_action = CONTENT_UPDATE_PENDING
+                elif action == CONTENT_UPDATE_RESCIND_PETITION: inverted_action = CONTENT_UPDATE_PETITION
+                else: pass # what do we do here?
+                
+                inverted_content_update = ContentUpdate( data_type, inverted_action, row )
+                
+                inverted_content_updates.append( inverted_content_update )
+                
+            
+            inverted_service_identifiers_to_content_updates[ service_identifier ] = inverted_content_updates
+            
+        
+        return inverted_service_identifiers_to_content_updates
+        
+    
+    def AddCommand( self, action, *args, **kwargs ):
+        
+        self._commands = self._commands[ : self._current_index ]
+        
+        self._commands.append( ( action, args, kwargs ) )
+        
+        inverted_action = action
+        inverted_kwargs = kwargs
+        
+        if action == 'content_updates':
+            
+            ( service_identifiers_to_content_updates, ) = args
+            
+            inverted_service_identifiers_to_content_updates = self._InvertServiceIdentifiersToContentUpdates( service_identifiers_to_content_updates )
+            
+            inverted_args = ( inverted_service_identifiers_to_content_updates, )
+            
+        
+        self._inverted_commands.append( ( inverted_action, inverted_args, inverted_kwargs ) )
+        
+        self._current_index += 1
+        
+    
+    def GetUndoRedoStrings( self ):
+        
+        ( undo, redo ) = ( None, None )
+        
+        # something like "Undo add "blah" to 24 files", if that it doable
+        # Undo "add 46 mappings" if several tags
+        
+        # Delete 23 files
+        
+        # return None if None
+        
+        return ( undo, redo )
+        
+    
+    def Undo( self ):
+        wx.MessageBox( 'undo')
+        return
+        if self._current_index > 0:
+            
+            self._current_index -= 1
+            
+            ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
+            
+            HC.app.WriteDaemon( action, *args, **kwargs )
+            
+        
+    
+    def Redo( self ):
+        wx.MessageBox( 'redo')
+        return
+        if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+            
+            ( action, args, kwargs ) = self._commands[ self._current_index ]
+            
+            self._current_index += 1
+            
+            HC.app.WriteDaemon( action, *args, **kwargs )
+            
         
     
 class VPTreeNode():
@@ -3290,7 +3421,7 @@ class WebSessionManagerClient():
     
     def __init__( self ):
         
-        existing_sessions = wx.GetApp().Read( 'web_sessions' )
+        existing_sessions = HC.app.Read( 'web_sessions' )
         
         self._sessions = { name : ( cookies, expiry ) for ( name, cookies, expiry ) in existing_sessions }
         
@@ -3326,7 +3457,7 @@ class WebSessionManagerClient():
                 
             elif name == 'pixiv':
                 
-                ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+                ( id, password ) = HC.app.Read( 'pixiv_account' )
                 
                 if id == '' and password == '':
                     
@@ -3360,7 +3491,7 @@ class WebSessionManagerClient():
             
             self._sessions[ name ] = ( cookies, expiry )
             
-            wx.GetApp().Write( 'web_session', name, cookies, expiry )
+            HC.app.Write( 'web_session', name, cookies, expiry )
             
             return cookies
             

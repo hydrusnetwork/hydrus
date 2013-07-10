@@ -53,7 +53,7 @@ def SelectServiceIdentifier( permission = None, service_types = HC.ALL_SERVICES,
     
     if service_identifiers is None:
         
-        services = wx.GetApp().Read( 'services', service_types )
+        services = HC.app.Read( 'services', service_types )
         
         if permission is not None: services = [ service for service in services if service.GetAccount().HasPermission( permission ) ]
         
@@ -73,7 +73,7 @@ def SelectServiceIdentifier( permission = None, service_types = HC.ALL_SERVICES,
         
         names_to_service_identifiers = { service_identifier.GetName() : service_identifier for service_identifier in service_identifiers }
         
-        with DialogSelectFromListOfStrings( wx.GetApp().GetGUI(), 'select service', [ service_identifier.GetName() for service_identifier in service_identifiers ] ) as dlg:
+        with DialogSelectFromListOfStrings( HC.app.GetGUI(), 'select service', [ service_identifier.GetName() for service_identifier in service_identifiers ] ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: return names_to_service_identifiers[ dlg.GetString() ]
             else: return None
@@ -88,11 +88,11 @@ class Dialog( wx.Dialog ):
     
     def __init__( self, parent, title, style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, position = 'topleft' ):
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         if position == 'topleft':
             
-            ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
+            ( pos_x, pos_y ) = HC.app.GetGUI().GetPositionTuple()
             
             pos = ( pos_x + 50, pos_y + 100 )
             
@@ -333,7 +333,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         def InitialiseControls():
             
-            service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
             self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
             
@@ -521,7 +521,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_identifier = self._ratings_like_service_identifiers.GetClientData( selection )
                 
-                service = wx.GetApp().Read( 'service', service_identifier )
+                service = HC.app.Read( 'service', service_identifier )
                 
                 self._current_ratings_like_service = service
                 
@@ -545,7 +545,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_identifier = self._ratings_numerical_service_identifiers.GetClientData( selection )
                 
-                service = wx.GetApp().Read( 'service', service_identifier )
+                service = HC.app.Read( 'service', service_identifier )
                 
                 self._current_ratings_numerical_service = service
                 
@@ -741,7 +741,7 @@ class DialogInputNewAccounts( Dialog ):
             self._num = wx.SpinCtrl( self, min=1, max=10000 )
             self._num.SetValue( 1 )
             
-            service = wx.GetApp().Read( 'service', service_identifier )
+            service = HC.app.Read( 'service', service_identifier )
             
             connection = service.GetConnection()
             
@@ -810,7 +810,7 @@ class DialogInputNewAccounts( Dialog ):
         
         expiration = self._expiration.GetClientData( self._expiration.GetSelection() )
         
-        service = wx.GetApp().Read( 'service', self._service_identifier )
+        service = HC.app.Read( 'service', self._service_identifier )
         
         try:
             
@@ -1166,7 +1166,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._current_pending.Append( 'pending to', HC.PENDING )
                 self._current_pending.SetSelection( 0 )
                 
-                service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+                service_identifiers = HC.app.Read( 'service_identifiers', ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
                 
                 self._file_service_identifier = wx.Choice( self )
                 for service_identifier in service_identifiers: self._file_service_identifier.Append( service_identifier.GetName(), service_identifier )
@@ -1316,7 +1316,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 ( media, type ) = system_predicates[ 'mime' ]
                 
-                self._mime_media = wx.Choice( self, choices=[ 'image', 'application', 'video' ] )
+                self._mime_media = wx.Choice( self, choices=[ 'image', 'application', 'audio', 'video' ] )
                 self._mime_media.SetSelection( media )
                 self._mime_media.Bind( wx.EVT_CHOICE, self.EventMime )
                 
@@ -1507,8 +1507,8 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             Dialog.__init__( self, parent, 'enter rating predicate' )
             
-            self._local_numericals = wx.GetApp().Read( 'services', ( HC.LOCAL_RATING_NUMERICAL, ) )
-            self._local_likes = wx.GetApp().Read( 'services', ( HC.LOCAL_RATING_LIKE, ) )
+            self._local_numericals = HC.app.Read( 'services', ( HC.LOCAL_RATING_NUMERICAL, ) )
+            self._local_likes = HC.app.Read( 'services', ( HC.LOCAL_RATING_LIKE, ) )
             
             InitialiseControls()
             
@@ -1682,7 +1682,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             InitialisePanel()
             
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         system_predicates = options[ 'file_system_predicates' ]
         
@@ -1729,6 +1729,10 @@ class DialogInputFileSystemPredicate( Dialog ):
             self._mime_type.Append( 'any', HC.APPLICATIONS )
             self._mime_type.Append( 'pdf', HC.APPLICATION_PDF )
             self._mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
+            
+        elif media == 'audio':
+            
+            self._mime_type.Append( 'mp3', HC.AUDIO_MP3 )
             
         elif media == 'video':
             
@@ -1906,7 +1910,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = wx.GetApp().Read( 'contact_names' )
+                contact_names = HC.app.Read( 'contact_names' )
                 
                 self._contact = wx.Choice( self, choices=contact_names )
                 self._contact.SetSelection( 0 )
@@ -1942,7 +1946,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = wx.GetApp().Read( 'contact_names' )
+                contact_names = HC.app.Read( 'contact_names' )
                 
                 self._contact = wx.Choice( self, choices=contact_names )
                 self._contact.SetSelection( 0 )
@@ -1978,7 +1982,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             
             def InitialiseControls():
                 
-                contact_names = [ name for name in wx.GetApp().Read( 'contact_names' ) if name != 'Anonymous' ]
+                contact_names = [ name for name in HC.app.Read( 'contact_names' ) if name != 'Anonymous' ]
                 
                 self._contact = wx.Choice( self, choices=contact_names )
                 self._contact.SetSelection( 0 )
@@ -2143,7 +2147,7 @@ class DialogManageAccountTypes( Dialog ):
         
         def InitialiseControls():
             
-            service = wx.GetApp().Read( 'service', service_identifier )
+            service = HC.app.Read( 'service', service_identifier )
             
             connection = service.GetConnection()
             
@@ -2350,7 +2354,7 @@ class DialogManageAccountTypes( Dialog ):
         
         try:
             
-            service = wx.GetApp().Read( 'service', self._service_identifier )
+            service = HC.app.Read( 'service', self._service_identifier )
             
             connection = service.GetConnection()
             
@@ -2371,7 +2375,7 @@ class DialogManageBoorus( Dialog ):
             
             self._boorus = ClientGUICommon.ListBook( self )
             
-            boorus = wx.GetApp().Read( 'boorus' )
+            boorus = HC.app.Read( 'boorus' )
             
             for booru in boorus:
                 
@@ -2497,7 +2501,7 @@ class DialogManageBoorus( Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: wx.GetApp().Write( 'update_boorus', self._edit_log )
+            if len( self._edit_log ) > 0: HC.app.Write( 'update_boorus', self._edit_log )
             
         except Exception as e: wx.MessageBox( 'Saving boorus to DB raised this error: ' + unicode( e ) )
         
@@ -2830,7 +2834,7 @@ class DialogManageContacts( Dialog ):
             
             self._contacts = ClientGUICommon.ListBook( self )
             
-            ( identities, contacts, deletable_names ) = wx.GetApp().Read( 'identities_and_contacts' )
+            ( identities, contacts, deletable_names ) = HC.app.Read( 'identities_and_contacts' )
             
             self._deletable_names = deletable_names
             
@@ -3120,7 +3124,7 @@ class DialogManageContacts( Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: wx.GetApp().Write( 'update_contacts', self._edit_log )
+            if len( self._edit_log ) > 0: HC.app.Write( 'update_contacts', self._edit_log )
             
         except Exception as e: wx.MessageBox( 'Saving contacts to DB raised this error: ' + unicode( e ) )
         
@@ -3423,7 +3427,7 @@ class DialogManage4chanPass( Dialog ):
         
         Dialog.__init__( self, parent, 'manage 4chan pass' )
         
-        ( token, pin, self._timeout ) = wx.GetApp().Read( '4chan_pass' )
+        ( token, pin, self._timeout ) = HC.app.Read( '4chan_pass' )
         
         InitialiseControls()
         
@@ -3446,7 +3450,7 @@ class DialogManage4chanPass( Dialog ):
         token = self._token.GetValue()
         pin = self._pin.GetValue()
         
-        wx.GetApp().Write( '4chan_pass', token, pin, self._timeout )
+        HC.app.Write( '4chan_pass', token, pin, self._timeout )
         
         self.EndModal( wx.ID_OK )
         
@@ -3483,7 +3487,7 @@ class DialogManage4chanPass( Dialog ):
                 self._timeout = int( time.time() ) + 365 * 24 * 3600
                 
             
-            wx.GetApp().Write( '4chan_pass', token, pin, self._timeout )
+            HC.app.Write( '4chan_pass', token, pin, self._timeout )
             
             self._SetStatus()
             
@@ -3502,7 +3506,7 @@ class DialogManageImageboards( Dialog ):
             
             self._sites = ClientGUICommon.ListBook( self )
             
-            sites = wx.GetApp().Read( 'imageboards' )
+            sites = HC.app.Read( 'imageboards' )
             
             for ( name, imageboards ) in sites:
                 
@@ -3626,7 +3630,7 @@ class DialogManageImageboards( Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: wx.GetApp().Write( 'update_imageboards', self._edit_log )
+            if len( self._edit_log ) > 0: HC.app.Write( 'update_imageboards', self._edit_log )
             
         except Exception as e: wx.MessageBox( 'Saving imageboards to DB raised this error: ' + unicode( e ) )
         
@@ -4240,7 +4244,7 @@ class DialogManageOptionsFileRepository( Dialog ):
         
         self._service_identifier = service_identifier
         
-        self._service = wx.GetApp().Read( 'service', service_identifier )
+        self._service = HC.app.Read( 'service', service_identifier )
         
         connection = self._service.GetConnection()
         
@@ -4356,7 +4360,7 @@ class DialogManageOptionsLocal( Dialog ):
             elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
-            service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
             self._default_tag_repository = wx.Choice( self._gui_page )
             for service_identifier in service_identifiers: self._default_tag_repository.Append( service_identifier.GetName(), service_identifier )
@@ -5002,7 +5006,7 @@ class DialogManageOptionsLocal( Dialog ):
         self._options[ 'default_tag_repository' ] = self._default_tag_repository.GetClientData( self._default_tag_repository.GetSelection() )
         self._options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
         
-        try: wx.GetApp().Write( 'save_options' )
+        try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
         
         self.EndModal( wx.ID_OK )
@@ -5134,7 +5138,7 @@ class DialogManageOptionsServerAdmin( Dialog ):
         
         self._service_identifier = service_identifier
         
-        self._service = wx.GetApp().Read( 'service', service_identifier )
+        self._service = HC.app.Read( 'service', service_identifier )
         
         connection = self._service.GetConnection()
         
@@ -5222,7 +5226,7 @@ class DialogManageOptionsTagRepository( Dialog ):
         
         self._service_identifier = service_identifier
         
-        self._service = wx.GetApp().Read( 'service', service_identifier )
+        self._service = HC.app.Read( 'service', service_identifier )
         
         connection = self._service.GetConnection()
         
@@ -5310,7 +5314,7 @@ class DialogManagePixivAccount( Dialog ):
         
         Dialog.__init__( self, parent, 'manage pixiv account' )
         
-        ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+        ( id, password ) = HC.app.Read( 'pixiv_account' )
         
         InitialiseControls()
         
@@ -5324,7 +5328,7 @@ class DialogManagePixivAccount( Dialog ):
         id = self._id.GetValue()
         password = self._password.GetValue()
         
-        wx.GetApp().Write( 'pixiv_account', id, password )
+        HC.app.Write( 'pixiv_account', id, password )
         
         self.EndModal( wx.ID_OK )
         
@@ -5370,7 +5374,7 @@ class DialogManageRatings( Dialog ):
         
         def InitialiseControls():
             
-            service_identifiers = wx.GetApp().Read( 'service_identifiers', HC.RATINGS_SERVICES )
+            service_identifiers = HC.app.Read( 'service_identifiers', HC.RATINGS_SERVICES )
             
             # sort according to local/remote, I guess
             # and maybe sub-sort according to name?
@@ -5455,7 +5459,7 @@ class DialogManageRatings( Dialog ):
                     
                 
             
-            wx.GetApp().Write( 'content_updates', service_identfiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving ratings changes to DB raised this error: ' + unicode( e ) )
         
@@ -5480,7 +5484,7 @@ class DialogManageRatings( Dialog ):
             wx.Panel.__init__( self, parent )
             
             self._service_identifier = service_identifier
-            self._service = wx.GetApp().Read( 'service', service_identifier )
+            self._service = HC.app.Read( 'service', service_identifier )
             
             extra_info = self._service.GetExtraInfo()
             
@@ -5811,7 +5815,7 @@ class DialogManageServer( Dialog ):
         
         Dialog.__init__( self, parent, 'manage ' + service_identifier.GetName() + ' services' )
         
-        self._service = wx.GetApp().Read( 'service', service_identifier )
+        self._service = HC.app.Read( 'service', service_identifier )
         
         connection = self._service.GetConnection()
         
@@ -5894,7 +5898,7 @@ class DialogManageServer( Dialog ):
                 
                 connection.Post( 'services_modification', edit_log = self._edit_log )
                 
-                wx.GetApp().Write( 'update_server_services', self._service.GetServiceIdentifier(), self._edit_log )
+                HC.app.Write( 'update_server_services', self._service.GetServiceIdentifier(), self._edit_log )
                 
             
         except Exception as e: wx.MessageBox( 'Saving services to server raised this error: ' + unicode( e ) )
@@ -6026,7 +6030,7 @@ class DialogManageServices( Dialog ):
             self._servers_admin = ClientGUICommon.ListBook( self._listbook )
             self._servers_admin.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
-            services = wx.GetApp().Read( 'services', HC.RESTRICTED_SERVICES + [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] )
+            services = HC.app.Read( 'services', HC.RESTRICTED_SERVICES + [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] )
             
             for service in services:
                 
@@ -6293,7 +6297,7 @@ class DialogManageServices( Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: wx.GetApp().Write( 'update_services', self._edit_log )
+            if len( self._edit_log ) > 0: HC.app.Write( 'update_services', self._edit_log )
             
         except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + unicode( e ) )
         
@@ -6732,7 +6736,7 @@ class DialogManageSubscriptions( Dialog ):
         
         Dialog.__init__( self, parent, 'manage subscriptions' )
         
-        self._original_subscriptions = wx.GetApp().Read( 'subscriptions' )
+        self._original_subscriptions = HC.app.Read( 'subscriptions' )
         
         InitialiseControls()
         
@@ -6790,7 +6794,7 @@ class DialogManageSubscriptions( Dialog ):
                     
                     if site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV:
                         
-                        ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+                        ( id, password ) = HC.app.Read( 'pixiv_account' )
                         
                         if id == '' and password == '':
                             
@@ -6908,7 +6912,7 @@ class DialogManageSubscriptions( Dialog ):
         
         subscriptions = [ page.GetInfo() for page in all_pages ]
         
-        try: wx.GetApp().Write( 'subscriptions', subscriptions )
+        try: HC.app.Write( 'subscriptions', subscriptions )
         except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + unicode( e ) )
         
         self.EndModal( wx.ID_OK )
@@ -7031,7 +7035,7 @@ class DialogManageSubscriptions( Dialog ):
             
             if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
                 
-                boorus = wx.GetApp().Read( 'boorus' )
+                boorus = HC.app.Read( 'boorus' )
                 
                 for booru in boorus: self._booru_selector.Append( booru.GetName(), booru )
                 
@@ -7226,7 +7230,7 @@ class DialogManageTagParents( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.Read( 'services', ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -7340,7 +7344,7 @@ class DialogManageTagParents( Dialog ):
                 service_identifiers_to_content_updates[ service_identifier ] = content_updates
                 
             
-            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving tag parent changes to DB raised this error: ' + unicode( e ) )
         
@@ -7412,12 +7416,12 @@ class DialogManageTagParents( Dialog ):
             
             if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                service = wx.GetApp().Read( 'service', service_identifier )
+                service = HC.app.Read( 'service', service_identifier )
                 
                 self._account = service.GetAccount()
                 
             
-            self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_parents', service_identifier )
+            self._original_statuses_to_pairs = HC.app.Read( 'tag_parents', service_identifier )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -7691,7 +7695,7 @@ class DialogManageTagSiblings( Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.Read( 'services', ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -7799,7 +7803,7 @@ class DialogManageTagSiblings( Dialog ):
                 service_identifiers_to_content_updates[ service_identifier ] = content_updates
                 
             
-            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving tag sibling changes to DB raised this error: ' + unicode( e ) )
         
@@ -7871,12 +7875,12 @@ class DialogManageTagSiblings( Dialog ):
             
             if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                service = wx.GetApp().Read( 'service', service_identifier )
+                service = HC.app.Read( 'service', service_identifier )
                 
                 self._account = service.GetAccount()
                 
             
-            self._original_statuses_to_pairs = wx.GetApp().Read( 'tag_siblings', service_identifier )
+            self._original_statuses_to_pairs = HC.app.Read( 'tag_siblings', service_identifier )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -8192,7 +8196,7 @@ class DialogManageTagServicePrecedence( Dialog ):
             
             self._tag_services = wx.ListBox( self )
             
-            tag_service_precedence = wx.GetApp().Read( 'tag_service_precedence' )
+            tag_service_precedence = HC.app.Read( 'tag_service_precedence' )
             
             for service_identifier in tag_service_precedence:
                 
@@ -8269,7 +8273,7 @@ class DialogManageTagServicePrecedence( Dialog ):
                     
                     service_identifiers = [ self._tag_services.GetClientData( i ) for i in range( self._tag_services.GetCount() ) ]
                     
-                    wx.GetApp().Write( 'set_tag_service_precedence', service_identifiers )
+                    HC.app.Write( 'set_tag_service_precedence', service_identifiers )
                     
                 except Exception as e: wx.MessageBox( 'Something went wrong when trying to save tag service precedence to the database: ' + unicode( e ) )
                 
@@ -8329,7 +8333,7 @@ class DialogManageTags( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) )
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) )
             
             for service_identifier in list( service_identifiers ) + [ HC.LOCAL_TAG_SERVICE_IDENTIFIER ]:
                 
@@ -8428,7 +8432,7 @@ class DialogManageTags( Dialog ):
                 service_identfiers_to_content_updates[ service_identifier ] = content_updates
                 
             
-            if len( service_identfiers_to_content_updates ) > 0: wx.GetApp().Write( 'content_updates', service_identfiers_to_content_updates )
+            if len( service_identfiers_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving mapping changes to DB raised this error: ' + unicode( e ) )
         
@@ -8512,7 +8516,7 @@ class DialogManageTags( Dialog ):
             
             if not self._i_am_local_tag_service:
                 
-                service = wx.GetApp().Read( 'service', tag_service_identifier )
+                service = HC.app.Read( 'service', tag_service_identifier )
                 
                 self._account = service.GetAccount()
                 
@@ -8874,7 +8878,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = wx.GetApp().Read( 'service', service_identifier )
+        self._service = HC.app.Read( 'service', service_identifier )
         self._subject_identifiers = set( subject_identifiers )
         
         InitialiseControls()
@@ -8949,7 +8953,7 @@ class DialogNews( Dialog ):
         
         def InitialisePanel():
             
-            self._newslist = wx.GetApp().Read( 'news', service_identifier )
+            self._newslist = HC.app.Read( 'news', service_identifier )
             
             self._current_news_position = len( self._newslist )
             
@@ -9028,7 +9032,7 @@ class DialogPathsToTagsRegex( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            services = wx.GetApp().Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.Read( 'services', ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -9748,7 +9752,7 @@ class DialogSelectBooru( Dialog ):
         
         def InitialiseControls():
             
-            boorus = wx.GetApp().Read( 'boorus' )
+            boorus = HC.app.Read( 'boorus' )
             
             self._boorus = wx.ListBox( self, style = wx.LB_SORT )
             self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
@@ -9804,7 +9808,7 @@ class DialogSelectImageboard( Dialog ):
             self._tree = wx.TreeCtrl( self )
             self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventSelect )
             
-            all_imageboards = wx.GetApp().Read( 'imageboards' )
+            all_imageboards = HC.app.Read( 'imageboards' )
             
             root_item = self._tree.AddRoot( 'all sites' )
             
@@ -10007,7 +10011,7 @@ class DialogSelectLocalFiles( Dialog ):
             self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
             
         
-        if odd_paths: wx.MessageBox( 'At present hydrus can handle only jpegs, pngs, bmps, gifs, swfs, flvs and pdfs. The other files have not been added.' )
+        if odd_paths: wx.MessageBox( 'At present hydrus can handle only jpegs, pngs, bmps, gifs, swfs, flvs, pdfs and swfs. The other files have not been added.' )
         
     
     def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
@@ -10130,7 +10134,7 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             self._favourites.Append( 'default', default_actions )
             
-            favourites = wx.GetApp().Read( 'favourite_custom_filter_actions' )
+            favourites = HC.app.Read( 'favourite_custom_filter_actions' )
             
             if 'previous' in favourites: self._favourites.Append( 'previous', favourites[ 'previous' ] )
             else: self._favourites.Append( 'previous', default_actions )
@@ -10314,7 +10318,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         favourites[ 'previous' ] = self._actions.GetClientData() # overwrite
         
-        wx.GetApp().Write( 'favourite_custom_filter_actions', favourites )
+        HC.app.Write( 'favourite_custom_filter_actions', favourites )
         
         self.EndModal( wx.ID_OK )
         
@@ -10707,7 +10711,7 @@ class DialogSetupExport( Dialog ):
                         
                         hash = media.GetHash()
                         
-                        file = wx.GetApp().Read( 'file', hash )
+                        file = HC.app.Read( 'file', hash )
                         
                         ( gumpf, filename ) = os.path.split( path )
                         
@@ -10732,7 +10736,7 @@ class DialogSetupExport( Dialog ):
                     
                     hash = media.GetHash()
                     
-                    file = wx.GetApp().Read( 'file', hash )
+                    file = HC.app.Read( 'file', hash )
                     
                     with open( path, 'wb' ) as f: f.write( file )
                     

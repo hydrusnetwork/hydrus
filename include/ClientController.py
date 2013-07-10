@@ -141,6 +141,8 @@ class Controller( wx.App ):
     
     def MaintainDB( self ):
         
+        gc.collect()
+        
         now = int( time.time() )
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
@@ -154,6 +156,8 @@ class Controller( wx.App ):
     def Message( self, message ): wx.MessageBox( message )
     
     def OnInit( self ):
+        
+        HC.app = self
         
         try:
             
@@ -199,6 +203,7 @@ class Controller( wx.App ):
             self._web_session_manager = CC.WebSessionManagerClient()
             self._tag_parents_manager = CC.TagParentsManager()
             self._tag_siblings_manager = CC.TagSiblingsManager()
+            self._undo_manager = CC.UndoManager()
             
             self.SetSplashText( 'caches' )
             
@@ -307,6 +312,8 @@ class Controller( wx.App ):
     def Write( self, action, *args, **kwargs ):
         
         self._last_idle_time = int( time.time() )
+        
+        if action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
         
         self._Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
         

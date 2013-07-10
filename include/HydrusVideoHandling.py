@@ -1,5 +1,9 @@
 import cStringIO
 from flvlib import tags as flv_tags
+import HydrusConstants as HC
+import mutagen
+import mutagen.mp4
+import os
 import traceback
 
 def GetFLVProperties( file ):
@@ -39,3 +43,21 @@ def GetFLVProperties( file ):
         
     
     return ( ( width, height ), duration, num_frames )
+
+def GetMP4Duration( file ):
+    
+    # wait, this only does the audio component!
+    
+    filename = HC.TEMP_DIR + os.path.sep + 'mp4_parse.mp4'
+    
+    with open( filename, 'wb' ) as f: f.write( file )
+    
+    try: mp4_object = mutagen.mp4.MP4( filename )
+    except: raise Exception( 'Could not parse the mp4!' )
+    
+    length_in_seconds = mp4_object.info.length
+    
+    length_in_ms = int( length_in_seconds * 1000 )
+    
+    return length_in_ms
+    

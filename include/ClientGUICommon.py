@@ -296,7 +296,7 @@ class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
                     
                     self._first_letters = entry[ : num_first_letters ]
                     
-                    self._cached_results = wx.GetApp().Read( 'autocomplete_contacts', entry, name_to_exclude = self._identity.GetName() )
+                    self._cached_results = HC.app.Read( 'autocomplete_contacts', entry, name_to_exclude = self._identity.GetName() )
                     
                 
                 matches = self._cached_results.GetMatches( entry )
@@ -351,7 +351,7 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         if entry.startswith( '-' ): search_term = entry[1:]
         else: search_term = entry
         
-        if search_term == '': matches = wx.GetApp().Read( 'message_system_predicates', self._identity )
+        if search_term == '': matches = HC.app.Read( 'message_system_predicates', self._identity )
         else: matches = [ ( entry, None ) ]
         
         return matches
@@ -373,7 +373,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         AutoCompleteDropdown.__init__( self, parent )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self._current_namespace = ''
         self._current_matches = []
@@ -412,7 +412,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         service_identifiers = []
         service_identifiers.append( HC.COMBINED_FILE_SERVICE_IDENTIFIER )
         service_identifiers.append( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
-        service_identifiers.extend( wx.GetApp().Read( 'service_identifiers', ( HC.FILE_REPOSITORY, ) ) )
+        service_identifiers.extend( HC.app.Read( 'service_identifiers', ( HC.FILE_REPOSITORY, ) ) )
         
         menu = wx.Menu()
         
@@ -482,7 +482,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         service_identifiers = []
         service_identifiers.append( HC.COMBINED_TAG_SERVICE_IDENTIFIER )
         service_identifiers.append( HC.LOCAL_TAG_SERVICE_IDENTIFIER )
-        service_identifiers.extend( wx.GetApp().Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) ) )
+        service_identifiers.extend( HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) ) )
         
         menu = wx.Menu()
         
@@ -569,7 +569,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             if self._file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER: s_i = self._tag_service_identifier
             else: s_i = self._file_service_identifier
             
-            matches = wx.GetApp().Read( 'file_system_predicates', s_i )
+            matches = HC.app.Read( 'file_system_predicates', s_i )
             
         else:
             
@@ -602,7 +602,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     media = self._media_callable()
                     
                     # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
-                    if media is None or not self._synchronised.IsOn(): self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                    if media is None or not self._synchronised.IsOn(): self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                     else:
                         
                         tags_managers = []
@@ -688,7 +688,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._page_key = None # this makes the parent's eventmenu pubsubs with page_key simpler!
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         if self._options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
         
@@ -714,7 +714,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             ( operator, tag ) = predicate.GetValue()
             
-            parent_manager = wx.GetApp().GetTagParentsManager()
+            parent_manager = HC.app.GetTagParentsManager()
             
             parents = parent_manager.GetParents( self._tag_service_identifier, tag )
             
@@ -765,7 +765,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._first_letters = half_complete_tag
                     
-                    self._cached_results = wx.GetApp().Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, collapse = False )
+                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, collapse = False )
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
@@ -781,7 +781,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ), 0 ) )
             
-            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            siblings_manager = HC.app.GetTagSiblingsManager()
             
             sibling = siblings_manager.GetSibling( search_text )
             
@@ -814,7 +814,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         tag = predicate.GetTag()
                         
-                        parents_manager = wx.GetApp().GetTagParentsManager()
+                        parents_manager = HC.app.GetTagParentsManager()
                         
                         raw_parents = parents_manager.GetParents( self._tag_service_identifier, tag )
                         
@@ -883,7 +883,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         self._page_key = page_key
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         sort_by = options[ 'sort_by' ]
         
@@ -894,7 +894,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
         collect_types.sort()
         
-        ratings_service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for service_identifier in ratings_service_identifiers: collect_types.append( ( service_identifier.GetName(), ( 'rating', service_identifier ) ) )
         
@@ -962,7 +962,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 
                 self._special_parent = special_parent
                 
-                options = wx.GetApp().Read( 'options' )
+                options = HC.app.Read( 'options' )
                 
                 default = options[ 'default_collect' ]
                 
@@ -1013,7 +1013,7 @@ class ChoiceCollect( BetterChoice ):
         
         self._page_key = page_key
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         if sort_by is None: sort_by = options[ 'sort_by' ]
         
@@ -1049,13 +1049,13 @@ class ChoiceSort( BetterChoice ):
         
         self._page_key = page_key
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         if sort_by is None: sort_by = options[ 'sort_by' ]
         
         sort_choices = CC.SORT_CHOICES + sort_by
         
-        ratings_service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service_identifier in ratings_service_identifiers:
             
@@ -1120,7 +1120,7 @@ class Frame( wx.Frame ):
         
         wx.Frame.__init__( self, *args, **kwargs )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         #self.SetDoubleBuffered( True )
         
@@ -1445,7 +1445,7 @@ class ListBox( wx.ScrolledWindow ):
         self._ordered_strings = []
         self._strings_to_terms = {}
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
@@ -2567,7 +2567,7 @@ class AdvancedImportOptions( AdvancedOptions ):
     
     def _InitPanel( self, panel ):
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         self._auto_archive = wx.CheckBox( panel )
         
@@ -2601,7 +2601,7 @@ class AdvancedImportOptions( AdvancedOptions ):
     
     def _SetControls( self, info ):
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         if 'auto_archive' in info: self._auto_archive.SetValue( info[ 'auto_archive' ] )
         else: self._auto_archive.SetValue( False )
@@ -2653,7 +2653,7 @@ class AdvancedTagOptions( AdvancedOptions ):
     
     def _InitPanel( self, panel ):
         
-        service_identifiers = wx.GetApp().Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -3006,7 +3006,7 @@ class TagsBoxCPP( TagsBox ):
     
     def SetTags( self, current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ):
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
         
@@ -3059,7 +3059,7 @@ class TagsBoxCPPWithSorter( StaticBox ):
         
         StaticBox.__init__( self, parent, 'selection tags' )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self._sorter = wx.Choice( self )
         
@@ -3107,7 +3107,7 @@ class TagsBoxFlat( TagsBox ):
         
         self._strings_to_terms = {}
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         for tag in self._tags:
             
@@ -3181,7 +3181,7 @@ class TagsBoxManage( TagsBox ):
     
     def _RebuildTagStrings( self ):
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
         

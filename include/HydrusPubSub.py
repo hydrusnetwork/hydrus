@@ -1,3 +1,4 @@
+import HydrusConstants as HC
 import Queue
 import threading
 import traceback
@@ -43,7 +44,7 @@ class HydrusPubSub():
                                     
                                     self._pubsubs.put( ( getattr( object, method_name ), args, kwargs ) )
                                     
-                                    wx.PostEvent( wx.GetApp(), PubSubEvent() )
+                                    wx.PostEvent( HC.app, PubSubEvent() )
                                     
                                 except wx.PyDeadObjectError: pass
                                 except: print( topic + ' for ' + str( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )

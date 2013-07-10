@@ -31,7 +31,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 75
+SOFTWARE_VERSION = 76
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -41,6 +41,7 @@ UPDATE_DURATION = 100000
 
 expirations = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), ( 'six months', 6 * 31 * 86400 ), ( 'one year', 12 * 31 * 86400 ), ( 'two years', 24 * 31 * 86400 ), ( 'five years', 60 * 31 * 86400 ), ( 'does not expire', None ) ]
 
+app = None
 shutdown = False
 is_first_start = False
 repos_or_subs_changed = False
@@ -195,20 +196,28 @@ VIDEO_FLV = 9
 APPLICATION_PDF = 10
 APPLICATION_ZIP = 11
 APPLICATION_HYDRUS_ENCRYPTED_ZIP = 12
+AUDIO_MP3 = 13
+VIDEO_MP4 = 14
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, APPLICATION_PDF )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, APPLICATION_PDF, AUDIO_MP3 )
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
 
+AUDIO = ( AUDIO_MP3, )
+
+VIDEO = ( VIDEO_FLV, )
+
 APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF, APPLICATION_ZIP )
 
-NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV )
+NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV, AUDIO_MP3 )
 
 ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
 MIMES_WITH_THUMBNAILS = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
+
+# mp3 header is complicated
 
 mime_enum_lookup = {}
 
@@ -228,6 +237,7 @@ mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
 mime_enum_lookup[ 'application/zip' ] = APPLICATION_ZIP
 mime_enum_lookup[ 'application/hydrus-encrypted-zip' ] = APPLICATION_HYDRUS_ENCRYPTED_ZIP
 mime_enum_lookup[ 'application' ] = APPLICATIONS
+mime_enum_lookup[ 'audio/mp3' ] = AUDIO_MP3
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
 mime_enum_lookup[ 'unknown mime' ] = APPLICATION_UNKNOWN
@@ -248,6 +258,7 @@ mime_string_lookup[ APPLICATION_PDF ] = 'application/pdf'
 mime_string_lookup[ APPLICATION_ZIP ] = 'application/zip'
 mime_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
 mime_string_lookup[ APPLICATIONS ] = 'application'
+mime_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
@@ -266,6 +277,7 @@ mime_ext_lookup[ APPLICATION_YAML ] = '.yaml'
 mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
 mime_ext_lookup[ APPLICATION_ZIP ] = '.zip'
 mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
+mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
@@ -274,17 +286,19 @@ mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
 ALLOWED_MIME_EXTENSIONS = [ mime_ext_lookup[ mime ] for mime in ALLOWED_MIMES ]
 
 header_and_mime = [
-    ( '\xff\xd8', IMAGE_JPEG ),
-    ( 'GIF87a', IMAGE_GIF ),
-    ( 'GIF89a', IMAGE_GIF ),
-    ( '\x89PNG', IMAGE_PNG ),
-    ( 'BM', IMAGE_BMP ),
-    ( 'CWS', APPLICATION_FLASH ),
-    ( 'FWS', APPLICATION_FLASH ),
-    ( 'FLV', VIDEO_FLV ),
-    ( '%PDF', APPLICATION_PDF ),
-    ( 'PK\x03\x04', APPLICATION_ZIP ),
-    ( 'hydrus encrypted zip', APPLICATION_HYDRUS_ENCRYPTED_ZIP )
+    ( 0, '\xff\xd8', IMAGE_JPEG ),
+    ( 0, 'GIF87a', IMAGE_GIF ),
+    ( 0, 'GIF89a', IMAGE_GIF ),
+    ( 0, '\x89PNG', IMAGE_PNG ),
+    ( 0, 'BM', IMAGE_BMP ),
+    ( 0, 'CWS', APPLICATION_FLASH ),
+    ( 0, 'FWS', APPLICATION_FLASH ),
+    ( 0, 'FLV', VIDEO_FLV ),
+    ( 0, '%PDF', APPLICATION_PDF ),
+    ( 0, 'PK\x03\x04', APPLICATION_ZIP ),
+    ( 0, 'hydrus encrypted zip', APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( 0, 'ID3', AUDIO_MP3 ), # this isn't quite right, but nvm the mutagen parser will pick up errors
+    ( 4, 'ftypmp4', VIDEO_MP4 )
     ]
 
 PREDICATE_TYPE_SYSTEM = 0
@@ -951,7 +965,9 @@ def GetMimeFromString( file ):
     
     if type( bit_to_check ) == unicode: bit_to_check = str( bit_to_check )
     
-    for ( header, mime ) in header_and_mime:
+    for ( offset, header, mime ) in header_and_mime:
+        
+        offset_bit_to_check = bit_to_check[ offset: ]
         
         if bit_to_check.startswith( header ):
             
@@ -1024,11 +1040,17 @@ def SearchEntryMatchesPredicate( search_entry, predicate ):
         
     else: return False
     
-def SearchEntryMatchesTag( search_entry, tag ):
+def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
     
-    sibling_manager = wx.GetApp().GetTagSiblingsManager()
+    if ':' in search_entry: ( search_entry_namespace, search_entry ) = search_entry.split( ':', 1 )
     
-    tags = sibling_manager.GetAllSiblings( tag )
+    if search_siblings:
+        
+        sibling_manager = app.GetTagSiblingsManager()
+        
+        tags = sibling_manager.GetAllSiblings( tag )
+        
+    else: tags = [ tag ]
     
     for tag in tags:
         
@@ -1220,7 +1242,7 @@ class AdvancedHTTPConnection():
             
             if server_header is None or service_string not in server_header:
                 
-                wx.GetApp().Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
+                app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
                 
                 raise WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
                 
@@ -1290,9 +1312,9 @@ class AdvancedHTTPConnection():
             
             if self._service_identifier is not None:
                 
-                wx.GetApp().Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ERROR, parsed_response ) ] } )
+                app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ERROR, parsed_response ) ] } )
                 
-                if response.status in ( 401, 426 ): wx.GetApp().Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] } )
+                if response.status in ( 401, 426 ): app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] } )
                 
             
             if response.status == 401: raise PermissionsException( parsed_response )
@@ -1689,6 +1711,10 @@ class ContentUpdate():
         self._row = row
         
     
+    def __eq__( self, other ): return self._data_type == other._data_type and self._action == other._action and self._row == other._row
+    
+    def __ne__( self, other ): return not self.__eq__( other )
+    
     def GetHashes( self ):
         
         if self._data_type == CONTENT_DATA_TYPE_FILES:
@@ -2052,7 +2078,7 @@ class Predicate():
             
             if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
             
-            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            siblings_manager = app.GetTagSiblingsManager()
             
             sibling = siblings_manager.GetSibling( tag )
             

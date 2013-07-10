@@ -36,7 +36,7 @@ class PageBase():
         
         self._pretty_status = ''
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         HC.pubsub.sub( self, 'SetPrettyStatus', 'new_page_status' )
         
@@ -85,7 +85,7 @@ class PageLog( PageBase, wx.Panel ):
         wx.Panel.__init__( self, parent )
         PageBase.__init__( self )
         
-        log = wx.GetApp().GetLog()
+        log = HC.app.GetLog()
         
         self._log_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'type', 60 ), ( 'source', 180 ), ( 'message', -1 ), ( 'time', 120 ) ] )
         
@@ -401,7 +401,7 @@ class PageThreadDumper( PageWithMedia ):
         
         search_context = CC.FileSearchContext()
         
-        self._unsorted_file_query_result = wx.GetApp().Read( 'media_results', search_context, hashes )
+        self._unsorted_file_query_result = HC.app.Read( 'media_results', search_context, hashes )
         
         hashes_to_media_results = { media_result.GetHash() : media_result for media_result in self._unsorted_file_query_result }
         

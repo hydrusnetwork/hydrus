@@ -2486,7 +2486,7 @@ class DB( ServiceDB ):
                     
                     expiry = int( time.time() ) + max_age
                     
-                    wx.GetApp().AddSession( session_key, service_identifier, account_identifier, expiry )
+                    HC.app.AddSession( session_key, service_identifier, account_identifier, expiry )
                     
                     cookies = [ 'session_key=' + session_key.encode( 'hex' ) + '; Max-Age=' + str( max_age ) + '; Path=/' ]
                     
@@ -2506,7 +2506,7 @@ class DB( ServiceDB ):
                     
                     if permissions is not None or request == 'account':
                         
-                        account_identifier = wx.GetApp().GetAccountIdentifier( session_key, service_identifier )
+                        account_identifier = HC.app.GetAccountIdentifier( session_key, service_identifier )
                         
                         account = self._GetAccount( c, service_id, account_identifier )
                         

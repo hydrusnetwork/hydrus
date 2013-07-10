@@ -3,6 +3,7 @@ import dircache
 import hashlib
 import httplib
 import itertools
+import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
 import HydrusDownloading
@@ -1952,7 +1953,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # now fetch siblings, add to results set
             
-            siblings_manager = wx.GetApp().GetTagSiblingsManager()
+            siblings_manager = HC.app.GetTagSiblingsManager()
             
             all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
             
@@ -2120,7 +2121,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         file_service_id = self._GetServiceId( c, file_service_identifier )
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         tags = siblings_manager.GetAllSiblings( tag )
         
@@ -3084,6 +3085,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( file )
                 
             elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( file )
+            elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( file )
             
             if width is not None and height is not None:
                 
@@ -5514,7 +5516,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( all_local_files ), 100 ):
                 
-                wx.GetApp().SetSplashText( 'updating db to v29 ' + str( i ) + '/' + str( len( all_local_files ) ) )
+                HC.app.SetSplashText( 'updating db to v29 ' + str( i ) + '/' + str( len( all_local_files ) ) )
                 
                 local_files_subset = all_local_files[ i : i + 100 ]
                 
@@ -5564,7 +5566,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( all_thumbnails ), 500 ):
                 
-                wx.GetApp().SetSplashText( 'updating db to v30 ' + str( i ) + '/' + str( len( all_thumbnails ) ) )
+                HC.app.SetSplashText( 'updating db to v30 ' + str( i ) + '/' + str( len( all_thumbnails ) ) )
                 
                 thumbnails_subset = all_thumbnails[ i : i + 500 ]
                 
@@ -5637,7 +5639,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( hashes ), 100 ):
                 
-                wx.GetApp().SetSplashText( 'updating db to v33 ' + str( i ) + '/' + str( len( hashes ) ) )
+                HC.app.SetSplashText( 'updating db to v33 ' + str( i ) + '/' + str( len( hashes ) ) )
                 
                 hashes_subset = hashes[ i : i + 100 ]
                 
@@ -6047,7 +6049,7 @@ class DB( ServiceDB ):
                 c.execute( 'DELETE FROM active_pending_mappings WHERE tag_id = ?;', ( tag_id, ) )
                 
             
-            wx.GetApp().SetSplashText( 'making new cache, may take a minute' )
+            HC.app.SetSplashText( 'making new cache, may take a minute' )
             
             c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
@@ -6112,7 +6114,7 @@ class DB( ServiceDB ):
         
         if version < 52:
             
-            wx.GetApp().SetSplashText( 'making new indices' )
+            HC.app.SetSplashText( 'making new indices' )
             
             c.execute( 'DROP INDEX mappings_namespace_id_index;' )
             c.execute( 'DROP INDEX mappings_tag_id_index;' )
@@ -6120,7 +6122,7 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
             c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
             
-            wx.GetApp().SetSplashText( 'making some more new indices' )
+            HC.app.SetSplashText( 'making some more new indices' )
             
             c.execute( 'DROP INDEX pending_mappings_namespace_id_index;' )
             c.execute( 'DROP INDEX pending_mappings_tag_id_index;' )
@@ -6275,7 +6277,7 @@ class DB( ServiceDB ):
         
         if version < 65:
             
-            wx.GetApp().SetSplashText( 'renaming db files' )
+            HC.app.SetSplashText( 'renaming db files' )
             
             filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
             
@@ -6302,7 +6304,7 @@ class DB( ServiceDB ):
                 
                 i += 1
                 
-                if i % 250 == 0: wx.GetApp().SetSplashText( 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                if i % 250 == 0: HC.app.SetSplashText( 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
                 
             
             c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
@@ -6339,7 +6341,7 @@ class DB( ServiceDB ):
             
             #
             
-            wx.GetApp().SetSplashText( 'creating new db directories' )
+            HC.app.SetSplashText( 'creating new db directories' )
             
             hex_chars = '0123456789abcdef'
             
@@ -6354,7 +6356,7 @@ class DB( ServiceDB ):
                 if not os.path.exists( dir ): os.mkdir( dir )
                 
             
-            wx.GetApp().SetSplashText( 'generating file cache' )
+            HC.app.SetSplashText( 'generating file cache' )
             
             filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
             
@@ -6376,10 +6378,10 @@ class DB( ServiceDB ):
                 
                 i += 1
                 
-                if i % 100 == 0: wx.GetApp().SetSplashText( 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                if i % 100 == 0: HC.app.SetSplashText( 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
                 
             
-            wx.GetApp().SetSplashText( 'generating thumbnail cache' )
+            HC.app.SetSplashText( 'generating thumbnail cache' )
             
             filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
             
@@ -6401,7 +6403,7 @@ class DB( ServiceDB ):
                 
                 i += 1
                 
-                if i % 100 == 0: wx.GetApp().SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                if i % 100 == 0: HC.app.SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
                 
             
         
@@ -6421,7 +6423,7 @@ class DB( ServiceDB ):
                     
                     # can't do it inside transaction
                     
-                    wx.GetApp().SetSplashText( 'consolidating db - preparing' )
+                    HC.app.SetSplashText( 'consolidating db - preparing' )
                     
                     c.execute( 'ATTACH database "' + main_db_path + '" as main_db;' )
                     c.execute( 'ATTACH database "' + files_info_db_path + '" as files_info_db;' )
@@ -6453,7 +6455,7 @@ class DB( ServiceDB ):
                     
                     c.execute( 'DELETE FROM main.options;' )
                     
-                    wx.GetApp().SetSplashText( 'consolidating db - 1/4' )
+                    HC.app.SetSplashText( 'consolidating db - 1/4' )
                     
                     c.execute( 'REPLACE INTO main.accounts SELECT * FROM main_db.accounts;' )
                     c.execute( 'REPLACE INTO main.addresses SELECT * FROM main_db.addresses;' )
@@ -6472,18 +6474,18 @@ class DB( ServiceDB ):
                     c.execute( 'REPLACE INTO main.tags SELECT * FROM main_db.tags;' )
                     # don't do version, lol
                     
-                    wx.GetApp().SetSplashText( 'consolidating db - 2/4' )
+                    HC.app.SetSplashText( 'consolidating db - 2/4' )
                     
                     c.execute( 'REPLACE INTO main.deleted_mappings SELECT * FROM mappings_db.deleted_mappings;' )
                     c.execute( 'REPLACE INTO main.mappings SELECT * FROM mappings_db.mappings;' )
                     c.execute( 'REPLACE INTO main.mapping_petitions SELECT * FROM mappings_db.mapping_petitions;' )
                     c.execute( 'REPLACE INTO main.pending_mappings SELECT * FROM mappings_db.pending_mappings;' )
                     
-                    wx.GetApp().SetSplashText( 'consolidating db - 3/4' )
+                    HC.app.SetSplashText( 'consolidating db - 3/4' )
                     
                     c.execute( 'REPLACE INTO main.active_mappings SELECT * FROM active_mappings_db.active_mappings;' )
                     
-                    wx.GetApp().SetSplashText( 'consolidating db - 4/4' )
+                    HC.app.SetSplashText( 'consolidating db - 4/4' )
                     
                     c.execute( 'REPLACE INTO main.deleted_files SELECT * FROM files_info_db.deleted_files;' )
                     c.execute( 'REPLACE INTO main.files_info SELECT * FROM files_info_db.files_info;' )
@@ -6495,7 +6497,7 @@ class DB( ServiceDB ):
                     
                     c.execute( 'COMMIT' )
                     
-                    wx.GetApp().SetSplashText( 'consolidating db - cleaning up' )
+                    HC.app.SetSplashText( 'consolidating db - cleaning up' )
                     
                     c.execute( 'DETACH database main_db;' )
                     c.execute( 'DETACH database files_info_db;' )
@@ -6547,17 +6549,64 @@ class DB( ServiceDB ):
         self.pub( 'service_updates_gui', service_identifiers_to_service_updates )
         
     
+    def DAEMONCheckImportFolders( self ):
+        
+        pass
+        
+        import_folder_infos = HC.app.ReadDaemon( 'import_folders' )
+        
+        for ( path, details ) in import_folder_infos:
+            
+            if int( time.time() ) > details[ 'last_checked' ] + details[ 'check_period' ]:
+                
+                filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
+                
+                raw_paths = [ path + os.path.sep + filename for filename in filenames ]
+                
+                # this needs to be a version of parseimportablepaths that doesn't make progress dialogs
+                importable_paths = ClientConstants.ParseImportablePaths( raw_paths )
+                
+                if details[ 'type' ] == some_constant_meaning_subs_folder: importable_paths = set( importable_paths ).difference( details[ 'subs_cache_or_whatever' ] )
+                
+                local_tags = details[ 'local_tags' ]
+                
+                for path in importable_paths:
+                    
+                    pass
+                    
+                    # get a read lock/read only perms or whatever to make sure it isn't being written/downloaded right now
+                    
+                    temp_path = HC.TEMP_DIR + os.path.sep + 'import_folder_file'
+                    
+                    shutil.copy( path, temp_path )
+                    
+                    with open( temp_path, 'rb' ) as f: file = f.read()
+                    
+                    HC.app.WriteDaemon( 'import_or_whatever', file, any_extra_args )
+                    
+                    if details[ 'type' ] == some_constant_meaning_subs_folder: details[ 'subs_cache_or_whatever' ].add( path )
+                    else: pass # delete path
+                    
+                    # politely wait for good time to use gui thread
+                    
+                
+                HC.app.WriteDaemon( 'import_folder', path, details )
+                # push message to gui about what we just done
+                
+            
+        
+    
     def DAEMONDownloadFiles( self ):
         
         service_identifiers_to_connections = {}
         
-        hashes = wx.GetApp().ReadDaemon( 'downloads' )
+        hashes = HC.app.ReadDaemon( 'downloads' )
         
         num_downloads = len( hashes )
         
         for hash in hashes:
             
-            ( media_result, ) = wx.GetApp().ReadDaemon( 'media_results', CC.FileSearchContext(), ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', CC.FileSearchContext(), ( hash, ) )
             
             service_identifiers = list( media_result.GetFileServiceIdentifiersCDPP().GetCurrent() )
             
@@ -6567,7 +6616,7 @@ class DB( ServiceDB ):
                 
                 if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: break
                 
-                try: file_repository = wx.GetApp().ReadDaemon( 'service', service_identifier )
+                try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
                 
                 HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
@@ -6584,11 +6633,11 @@ class DB( ServiceDB ):
                         
                         num_downloads -= 1
                         
-                        wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                        HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
                         HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
                         
-                        wx.GetApp().WriteDaemon( 'import_file', file )
+                        HC.app.WriteDaemon( 'import_file', file )
                         
                         HC.pubsub.pub( 'log_message', 'download files daemon', 'downloaded ' + hash.encode( 'hex' ) + ' from ' + service_identifier.GetName() )
                         
@@ -6609,19 +6658,19 @@ class DB( ServiceDB ):
     
     def DAEMONDownloadThumbnails( self ):
         
-        service_identifiers = wx.GetApp().ReadDaemon( 'service_identifiers', ( HC.FILE_REPOSITORY, ) )
+        service_identifiers = HC.app.ReadDaemon( 'service_identifiers', ( HC.FILE_REPOSITORY, ) )
         
         thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
         
         for service_identifier in service_identifiers:
             
-            thumbnail_hashes_i_should_have = wx.GetApp().ReadDaemon( 'thumbnail_hashes_i_should_have', service_identifier )
+            thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_identifier )
             
             thumbnail_hashes_i_need = list( thumbnail_hashes_i_should_have - thumbnail_hashes_i_have )
             
             if len( thumbnail_hashes_i_need ) > 0:
                 
-                try: file_repository = wx.GetApp().ReadDaemon( 'service', service_identifier )
+                try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
                 
                 if file_repository.CanDownload():
@@ -6640,9 +6689,9 @@ class DB( ServiceDB ):
                             
                             for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]: thumbnails.append( ( hash, connection.Get( 'thumbnail', hash = hash.encode( 'hex' ) ) ) )
                             
-                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                            HC.app.WaitUntilGoodTimeToUseGUIThread()
                             
-                            wx.GetApp().WriteDaemon( 'thumbnails', thumbnails )
+                            HC.app.WriteDaemon( 'thumbnails', thumbnails )
                             
                             self.pub( 'add_thumbnail_count', service_identifier, len( thumbnails ) )
                             
@@ -6663,7 +6712,7 @@ class DB( ServiceDB ):
         
         service_identifiers_to_service_updates = HC.MergeKeyToListDicts( list_of_service_identifiers_to_service_updates )
         
-        wx.GetApp().WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+        HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
         
     
     def DAEMONResizeThumbnails( self ):
@@ -6717,7 +6766,7 @@ class DB( ServiceDB ):
     
     def DAEMONSynchroniseAccounts( self ):
         
-        services = wx.GetApp().ReadDaemon( 'services', HC.RESTRICTED_SERVICES )
+        services = HC.app.ReadDaemon( 'services', HC.RESTRICTED_SERVICES )
         
         do_notify = False
         
@@ -6757,7 +6806,7 @@ class DB( ServiceDB ):
     
     def DAEMONSynchroniseMessages( self ):
         
-        service_identifiers = wx.GetApp().ReadDaemon( 'service_identifiers', ( HC.MESSAGE_DEPOT, ) )
+        service_identifiers = HC.app.ReadDaemon( 'service_identifiers', ( HC.MESSAGE_DEPOT, ) )
         
         for service_identifier in service_identifiers:
             
@@ -6767,7 +6816,7 @@ class DB( ServiceDB ):
                 
                 service_type = service_identifier.GetType()
                 
-                try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
+                try: service = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
                 
                 if service.CanCheck():
@@ -6788,9 +6837,9 @@ class DB( ServiceDB ):
                             
                             connection.Post( 'contact', public_key = public_key )
                             
-                            wx.GetApp().WriteDaemon( 'contact_associated', service_identifier )
+                            HC.app.WriteDaemon( 'contact_associated', service_identifier )
                             
-                            service = wx.GetApp().ReadDaemon( 'service', service_identifier )
+                            service = HC.app.ReadDaemon( 'service', service_identifier )
                             
                             contact = service.GetContact()
                             
@@ -6818,7 +6867,7 @@ class DB( ServiceDB ):
                     
                     new_last_check = int( time.time() ) - 5
                     
-                    wx.GetApp().WriteDaemon( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
+                    HC.app.WriteDaemon( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
                     
                     if len( message_keys ) > 0: HC.pubsub.pub( 'log_message', 'synchronise messages daemon', 'checked ' + service_identifier.GetName() + ' up to ' + HC.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + str( len( message_keys ) ) + ' new messages' )
                     
@@ -6829,7 +6878,7 @@ class DB( ServiceDB ):
                 
                 if service.CanDownload():
                     
-                    serverside_message_keys = wx.GetApp().ReadDaemon( 'message_keys_to_download', service_identifier )
+                    serverside_message_keys = HC.app.ReadDaemon( 'message_keys_to_download', service_identifier )
                     
                     if len( serverside_message_keys ) > 0:
                         
@@ -6849,7 +6898,7 @@ class DB( ServiceDB ):
                                 
                                 message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
                                 
-                                wx.GetApp().WriteDaemon( 'message', message, serverside_message_key = serverside_message_key )
+                                HC.app.WriteDaemon( 'message', message, serverside_message_key = serverside_message_key )
                                 
                                 num_processed += 1
                                 
@@ -6876,15 +6925,15 @@ class DB( ServiceDB ):
                 
             
         
-        wx.GetApp().WriteDaemon( 'flush_message_statuses' )
+        HC.app.WriteDaemon( 'flush_message_statuses' )
         
         # send messages to recipients and update my status to sent/failed
         
-        messages_to_send = wx.GetApp().ReadDaemon( 'messages_to_send' )
+        messages_to_send = HC.app.ReadDaemon( 'messages_to_send' )
         
         for ( message_key, contacts_to ) in messages_to_send:
             
-            message = wx.GetApp().ReadDaemon( 'transport_message', message_key )
+            message = HC.app.ReadDaemon( 'transport_message', message_key )
             
             contact_from = message.GetContactFrom()
             
@@ -6895,7 +6944,7 @@ class DB( ServiceDB ):
                 my_public_key = contact_from.GetPublicKey()
                 my_contact_key = contact_from.GetContactKey()
                 
-                my_message_depot = wx.GetApp().ReadDaemon( 'service', contact_from )
+                my_message_depot = HC.app.ReadDaemon( 'service', contact_from )
                 
                 from_connection = my_message_depot.GetConnection()
                 
@@ -6936,10 +6985,10 @@ class DB( ServiceDB ):
             
             if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
             
-            wx.GetApp().WriteDaemon( 'message_statuses', message_key, local_status_updates )
+            HC.app.WriteDaemon( 'message_statuses', message_key, local_status_updates )
             
         
-        wx.GetApp().ReadDaemon( 'status_num_inbox' )
+        HC.app.ReadDaemon( 'status_num_inbox' )
         
     
     def DAEMONSynchroniseRepositoriesAndSubscriptions( self ):
@@ -6948,7 +6997,7 @@ class DB( ServiceDB ):
         
         if not self._options[ 'pause_repo_sync' ]:
             
-            service_identifiers = wx.GetApp().ReadDaemon( 'service_identifiers', HC.REPOSITORIES )
+            service_identifiers = HC.app.ReadDaemon( 'service_identifiers', HC.REPOSITORIES )
             
             for service_identifier in service_identifiers:
                 
@@ -6960,7 +7009,7 @@ class DB( ServiceDB ):
                     
                     service_type = service_identifier.GetType()
                     
-                    try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
+                    try: service = HC.app.ReadDaemon( 'service', service_identifier )
                     except: continue
                     
                     if service.CanUpdate():
@@ -7004,7 +7053,7 @@ class DB( ServiceDB ):
                                 
                                 HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
                                 
-                                wx.GetApp().WriteDaemon( 'generate_tag_ids', update.GetTags() )
+                                HC.app.WriteDaemon( 'generate_tag_ids', update.GetTags() )
                                 
                             
                             i = 0
@@ -7024,20 +7073,20 @@ class DB( ServiceDB ):
                                     
                                     HC.pubsub.pub( 'service_status', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
                                     
-                                    wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                                    HC.app.WaitUntilGoodTimeToUseGUIThread()
                                     
                                     self.WaitUntilGoodTimeToUseDBThread()
                                     
                                     time.sleep( 0.0001 )
                                     
-                                    wx.GetApp().WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                                    HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
                                     
                                     content_updates = []
                                     current_weight = 0
                                     
                                 
                             
-                            if len( content_updates ) > 0: wx.GetApp().WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                            if len( content_updates ) > 0: HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
                             
                             HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
                             
@@ -7045,7 +7094,7 @@ class DB( ServiceDB ):
                             
                             service_identifiers_to_service_updates = { service_identifier : service_updates }
                             
-                            wx.GetApp().WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+                            HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
                             
                             HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string )
                             
@@ -7055,7 +7104,7 @@ class DB( ServiceDB ):
                             
                             time.sleep( 0.10 )
                             
-                            try: service = wx.GetApp().ReadDaemon( 'service', service_identifier )
+                            try: service = HC.app.ReadDaemon( 'service', service_identifier )
                             except: break
                             
                         
@@ -7084,7 +7133,7 @@ class DB( ServiceDB ):
         
         if not self._options[ 'pause_subs_sync' ]:
             
-            subscriptions = wx.GetApp().ReadDaemon( 'subscriptions' )
+            subscriptions = HC.app.ReadDaemon( 'subscriptions' )
             
             for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions:
                 
@@ -7108,7 +7157,7 @@ class DB( ServiceDB ):
                         
                         if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
                             
-                            try: booru = wx.GetApp().ReadDaemon( 'booru', booru_name )
+                            try: booru = HC.app.ReadDaemon( 'booru', booru_name )
                             except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
                             
                             tags = query.split( ' ' )
@@ -7243,7 +7292,7 @@ class DB( ServiceDB ):
                                 
                                 HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
                                 
-                                ( status, hash ) = wx.GetApp().ReadDaemon( 'url_status', url )
+                                ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
                                 
                                 if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
                                 
@@ -7261,7 +7310,7 @@ class DB( ServiceDB ):
                                             
                                             service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
                                             
-                                            wx.GetApp().Write( 'content_updates', service_identifiers_to_content_updates )
+                                            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
                                             
                                         except: pass
                                         
@@ -7284,7 +7333,7 @@ class DB( ServiceDB ):
                                     
                                     HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
                                     
-                                    wx.GetApp().Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                    HC.app.Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                     
                                 
                             except Exception as e:
@@ -7303,12 +7352,12 @@ class DB( ServiceDB ):
                                 
                                 subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
                                 
-                                wx.GetApp().Write( 'subscription', subscription )
+                                HC.app.Write( 'subscription', subscription )
                                 
                                 if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
                                 
                             
-                            wx.GetApp().WaitUntilGoodTimeToUseGUIThread()
+                            HC.app.WaitUntilGoodTimeToUseGUIThread()
                             
                             self.WaitUntilGoodTimeToUseDBThread()
                             
@@ -7335,7 +7384,7 @@ class DB( ServiceDB ):
                 
                 subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
                 
-                wx.GetApp().Write( 'subscription', subscription )
+                HC.app.Write( 'subscription', subscription )
                 
             
         
@@ -7352,7 +7401,7 @@ class DB( ServiceDB ):
                 
                 hash = request_args[ 'hash' ]
                 
-                file = wx.GetApp().ReadDaemon( 'file', hash )
+                file = HC.app.ReadDaemon( 'file', hash )
                 
                 mime = HC.GetMimeFromString( file )
                 
@@ -7362,7 +7411,7 @@ class DB( ServiceDB ):
                 
                 hash = request_args[ 'hash' ]
                 
-                thumbnail = wx.GetApp().ReadDaemon( 'thumbnail', hash )
+                thumbnail = HC.app.ReadDaemon( 'thumbnail', hash )
                 
                 mime = HC.GetMimeFromString( thumbnail )
                 

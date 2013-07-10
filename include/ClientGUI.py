@@ -41,7 +41,7 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def __init__( self ):
         
-        ClientGUICommon.Frame.__init__( self, None, title = wx.GetApp().PrepStringForDisplay( 'Hydrus Client' ) )
+        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Hydrus Client' ) )
         
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
         
@@ -66,7 +66,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         self._notebook.Bind( wx.EVT_RIGHT_DCLICK, self.EventNotebookMiddleClick )
         self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
         
-        wx.GetApp().SetTopWindow( self )
+        HC.app.SetTopWindow( self )
         
         self.RefreshAcceleratorTable()
         
@@ -111,11 +111,11 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             HC.pubsub.pub( 'progress_update', job_key, 0, 3, u'gathering pending and petitioned' )
             
-            result = wx.GetApp().Read( 'pending', service_identifier )
+            result = HC.app.Read( 'pending', service_identifier )
             
             service_type = service_identifier.GetType()
             
-            service = wx.GetApp().Read( 'service', service_identifier )
+            service = HC.app.Read( 'service', service_identifier )
             
             if service_type == HC.FILE_REPOSITORY:
                 
@@ -139,7 +139,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     try:
                         
-                        file = wx.GetApp().Read( 'file', hash )
+                        file = HC.app.Read( 'file', hash )
                         
                         connection.Post( 'file', file = file )
                         
@@ -181,7 +181,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 content_updates = []
                 
-                media_results = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), good_hashes )
+                media_results = HC.app.Read( 'media_results', CC.FileSearchContext(), good_hashes )
                 
                 for media_result in media_results:
                     
@@ -216,7 +216,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                 service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
                 
             
-            wx.GetApp().Write( 'content_updates', service_identfiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e:
             
@@ -259,7 +259,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     subject_access_key = dlg.GetValue().decode( 'hex' )
                     
-                    service = wx.GetApp().Read( 'service', service_identifier )
+                    service = HC.app.Read( 'service', service_identifier )
                     
                     connection = service.GetConnection()
                     
@@ -294,7 +294,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     edit_log.append( ( 'add', ( file_repo_identifier, file_repo_credentials, None ) ) )
                     
-                    wx.GetApp().Write( 'update_services', edit_log )
+                    HC.app.Write( 'update_services', edit_log )
                     
                     wx.MessageBox( 'Done!' )
                     
@@ -368,7 +368,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     edit_log.append( ( 'add', ( admin_service_identifier, admin_service_credentials, None ) ) )
                     
-                    wx.GetApp().Write( 'update_services', edit_log )
+                    HC.app.Write( 'update_services', edit_log )
                     
                     i = 0
                     
@@ -378,7 +378,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                         
                         try:
                             
-                            service = wx.GetApp().Read( 'service', admin_service_identifier )
+                            service = HC.app.Read( 'service', admin_service_identifier )
                             
                             break
                             
@@ -408,7 +408,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     connection.Post( 'services_modification', edit_log = edit_log )
                     
-                    wx.GetApp().Write( 'update_server_services', admin_service_identifier, edit_log )
+                    HC.app.Write( 'update_server_services', admin_service_identifier, edit_log )
                     
                     wx.MessageBox( 'Done! Check services->review services to see your new server and its services.' )
                     
@@ -425,7 +425,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                service = wx.GetApp().Read( 'service', service_identifier )
+                service = HC.app.Read( 'service', service_identifier )
                 
                 connection = service.GetConnection()
                 
@@ -457,7 +457,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service_identifier.GetName() + '?' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_pending', service_identifier )
+                if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_identifier )
                 
             
         except: wx.MessageBox( traceback.format_exc() )
@@ -476,7 +476,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            service = wx.GetApp().Read( 'service', service_identifier )
+            service = HC.app.Read( 'service', service_identifier )
             
             connection = service.GetConnection()
             
@@ -497,7 +497,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     hash = dlg.GetValue().decode( 'hex' )
                     
-                    service = wx.GetApp().Read( 'service', service_identifier )
+                    service = HC.app.Read( 'service', service_identifier )
                     
                     connection = service.GetConnection()
                     
@@ -681,7 +681,7 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _ModifyAccount( self, service_identifier ):
         
-        service = wx.GetApp().Read( 'service', service_identifier )
+        service = HC.app.Read( 'service', service_identifier )
         
         with wx.TextEntryDialog( self, 'Enter the access key for the account to be modified' ) as dlg:
             
@@ -818,7 +818,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         if service_identifier is not None:
             
-            service = wx.GetApp().Read( 'service', service_identifier )
+            service = HC.app.Read( 'service', service_identifier )
             
             account = service.GetAccount()
             
@@ -861,7 +861,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         if sync_type == 'repo': self._options[ 'pause_repo_sync' ] = not self._options[ 'pause_repo_sync' ]
         elif sync_type == 'subs': self._options[ 'pause_subs_sync' ] = not self._options[ 'pause_subs_sync' ]
         
-        try: wx.GetApp().Write( 'save_options' )
+        try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
         
         self.RefreshMenuBar()
@@ -879,7 +879,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 try:
                     
-                    service = wx.GetApp().Read( 'service', service_identifier )
+                    service = HC.app.Read( 'service', service_identifier )
                     
                     connection = service.GetConnection()
                     
@@ -930,7 +930,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if password == '': password = None
                 
-                wx.GetApp().Write( 'set_password', password )
+                HC.app.Write( 'set_password', password )
                 
             
         
@@ -977,7 +977,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'vacuum' )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'vacuum' )
             
         
     
@@ -1004,7 +1004,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( self._options[ 'hpos' ], self._options[ 'vpos' ] ) = page.GetSashPositions()
             
-            with wx.BusyCursor(): wx.GetApp().Write( 'save_options' )
+            with wx.BusyCursor(): HC.app.Write( 'save_options' )
             
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
@@ -1018,7 +1018,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         # for some insane reason, the read makes the controller block until the writes are done!??!
             # hence the hide, to make it appear the destroy is actually happening on time
         
-        wx.GetApp().MaintainDB()
+        HC.app.MaintainDB()
         
         self.Destroy()
         
@@ -1044,9 +1044,30 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'auto_repo_setup': self._AutoRepoSetup()
                 elif command == 'auto_server_setup': self._AutoServerSetup()
                 elif command == 'backup_service': self._BackupService( data )
-                elif command == 'clear_caches': wx.GetApp().ClearCaches()
+                elif command == 'clear_caches': HC.app.ClearCaches()
                 elif command == 'close_page': self._CloseCurrentPage()
-                elif command == 'debug_options': wx.MessageBox( str( wx.GetApp().Read( 'options' ) ) )
+                elif command == 'debug_garbage':
+                    
+                    import gc
+                    import collections
+                    
+                    count = collections.Counter()
+                    
+                    for o in gc.get_objects():
+                        
+                        count[ type( o ) ] += 1
+                        
+                    
+                    print( 'gc:' )
+                    
+                    for ( k, v ) in count.items():
+                        
+                        if v > 100: print ( k, v )
+                        
+                    
+                    print( 'garbage: ' + str( gc.garbage ) )
+                    
+                elif command == 'debug_options': wx.MessageBox( str( HC.app.Read( 'options' ) ) )
                 elif command == 'delete_pending': self._DeletePending( data )
                 elif command == 'exit': self.EventExit( event )
                 elif command == 'fetch_ip': self._FetchIP( data )
@@ -1215,9 +1236,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshMenuBar( self ):
         
-        p = wx.GetApp().PrepStringForDisplay
+        p = HC.app.PrepStringForDisplay
         
-        services = wx.GetApp().Read( 'services' )
+        services = HC.app.Read( 'services' )
         
         tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
         
@@ -1237,7 +1258,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         admin_message_depots = [ message_depot.GetServiceIdentifier() for message_depot in message_depots if message_depot.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
         
-        identities = wx.GetApp().Read( 'identities' )
+        identities = HC.app.Read( 'identities' )
         
         servers_admin = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.SERVER_ADMIN ]
         
@@ -1293,7 +1314,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         menu.Append( database, p( '&Database' ) )
         
-        nums_pending = wx.GetApp().Read( 'nums_pending' )
+        nums_pending = HC.app.Read( 'nums_pending' )
         
         pending = wx.Menu()
         
@@ -1458,6 +1479,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         help.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
         debug = wx.Menu()
         debug.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_options' ), p( 'Options' ) )
+        debug.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
         help.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
         help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
         help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_about' ), p( '&About' ) )
@@ -1517,7 +1539,7 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
     
     def __init__( self, empty_draft_message ):
         
-        ClientGUICommon.Frame.__init__( self, None, title = wx.GetApp().PrepStringForDisplay( 'Compose Message' ) )
+        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Compose Message' ) )
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
@@ -1589,7 +1611,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
             self.SetInitialSize( ( 420, 210 ) )
             
         
-        ClientGUICommon.Frame.__init__( self, None, title = wx.GetApp().PrepStringForDisplay( 'New Page' ) )
+        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'New Page' ) )
         
         self.Center()
         
@@ -1616,11 +1638,11 @@ class FramePageChooser( ClientGUICommon.Frame ):
         
         InitialisePanel()
         
-        self._services = wx.GetApp().Read( 'services' )
+        self._services = HC.app.Read( 'services' )
         
         self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
         
-        self._identities = wx.GetApp().Read( 'identities' )
+        self._identities = HC.app.Read( 'identities' )
         
         self._InitButtons( 'home' )
         
@@ -1684,7 +1706,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
             entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', 'newgrounds' ) ]
             
-            ( id, password ) = wx.GetApp().Read( 'pixiv_account' )
+            ( id, password ) = HC.app.Read( 'pixiv_account' )
             
             if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
             
@@ -1789,11 +1811,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self.SetInitialSize( ( 880, 620 ) )
             
         
-        ( pos_x, pos_y ) = wx.GetApp().GetGUI().GetPositionTuple()
+        ( pos_x, pos_y ) = HC.app.GetGUI().GetPositionTuple()
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        ClientGUICommon.Frame.__init__( self, None, title = wx.GetApp().PrepStringForDisplay( 'Review Services' ), pos = pos )
+        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Review Services' ), pos = pos )
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
@@ -1816,7 +1838,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         listbook_dict = {}
         
-        service_identifiers = wx.GetApp().Read( 'service_identifiers' )
+        service_identifiers = HC.app.Read( 'service_identifiers' )
         
         for service_identifier in service_identifiers:
             
@@ -1890,7 +1912,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
         
         self._service_identifier = service_identifier
         
-        self._service = wx.GetApp().Read( 'service', self._service_identifier )
+        self._service = HC.app.Read( 'service', self._service_identifier )
         
         service_type = service_identifier.GetType()
         
@@ -2087,7 +2109,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
     
     def _DisplayAccountInfo( self ):
         
-        self._service = wx.GetApp().Read( 'service', self._service_identifier )
+        self._service = HC.app.Read( 'service', self._service_identifier )
         
         service_type = self._service_identifier.GetType()
         
@@ -2185,7 +2207,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
         
         if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
             
-            service_info = wx.GetApp().Read( 'service_info', self._service_identifier )
+            service_info = HC.app.Read( 'service_info', self._service_identifier )
             
             if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                 
@@ -2258,7 +2280,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
         
         try:
             
-            service = wx.GetApp().Read( 'service', self._service_identifier )
+            service = HC.app.Read( 'service', self._service_identifier )
             
             connection = service.GetConnection()
             
@@ -2291,7 +2313,7 @@ class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                with wx.BusyCursor(): wx.GetApp().Write( 'reset_service', self._service_identifier )
+                with wx.BusyCursor(): HC.app.Write( 'reset_service', self._service_identifier )
                 
             
         

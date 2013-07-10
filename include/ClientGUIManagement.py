@@ -352,7 +352,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self.SetupScrolling()
         
@@ -398,7 +398,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key )
         
-        ( self._4chan_token, pin, timeout ) = wx.GetApp().Read( '4chan_pass' )
+        ( self._4chan_token, pin, timeout ) = HC.app.Read( '4chan_pass' )
         
         self._have_4chan_pass = timeout > int( time.time() )
         
@@ -1001,7 +1001,7 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                     ( hash, ) = media_to_dump.GetDisplayMedia().GetHashes()
                     
-                    file = wx.GetApp().Read( 'file', hash )
+                    file = HC.app.Read( 'file', hash )
                     
                     post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, HC.GetMimeFromString( file ), file ) ) )
                     
@@ -1182,7 +1182,7 @@ class ManagementPanelImport( ManagementPanel ):
             
             self._import_current_info.SetLabel( self._GetPreimportStatus() )
             
-            wx.GetApp().WriteDaemon( 'import_file_from_page', self._page_key, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+            HC.app.WriteDaemon( 'import_file_from_page', self._page_key, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
             
         else:
             
@@ -1681,14 +1681,14 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             
             url = url_args[0]
             
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+            ( status, hash ) = HC.app.Read( 'url_status', url )
             
             if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
             
             if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
             elif status == 'redundant':
                 
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 
@@ -1700,7 +1700,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
                     
-                    wx.GetApp().WriteDaemon( 'content_updates', service_identifiers_to_content_updates )
+                    HC.app.WriteDaemon( 'content_updates', service_identifiers_to_content_updates )
                     
                 
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -2020,14 +2020,14 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
             
             url = queue_object
             
-            ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+            ( status, hash ) = HC.app.Read( 'url_status', url )
             
             if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
             
             if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
             elif status == 'redundant':
                 
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -2216,14 +2216,14 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             ( md5, image_name, ext, filename ) = queue_object
             
-            ( status, hash ) = wx.GetApp().Read( 'md5_status', md5 )
+            ( status, hash ) = HC.app.Read( 'md5_status', md5 )
             
             if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
             
             if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
             elif status == 'redundant':
                 
-                ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
                 
                 HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -2232,14 +2232,14 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
                 url = 'http://images.4chan.org/' + self._4chan_board + '/src/' + image_name + ext
                 
-                ( status, hash ) = wx.GetApp().Read( 'url_status', url )
+                ( status, hash ) = HC.app.Read( 'url_status', url )
                 
                 if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
                 
                 if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
                 elif status == 'redundant':
                     
-                    ( media_result, ) = wx.GetApp().Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                    ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
                     
                     HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
                     HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -2387,7 +2387,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
         
-        self._service = wx.GetApp().Read( 'service', self._petition_service_identifier )
+        self._service = HC.app.Read( 'service', self._petition_service_identifier )
         self._can_ban = self._service.GetAccount().HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
@@ -2479,7 +2479,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             search_context = CC.FileSearchContext( self._file_service_identifier )
             
-            with wx.BusyCursor(): file_query_result = wx.GetApp().Read( 'media_results', search_context, self._current_petition.GetHashes() )
+            with wx.BusyCursor(): file_query_result = HC.app.Read( 'media_results', search_context, self._current_petition.GetHashes() )
             
             panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, [], file_query_result )
             
@@ -2507,7 +2507,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         connection.Post( 'update', update = update )
         
-        wx.GetApp().WriteDaemon( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
+        HC.app.WriteDaemon( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
         
         self._current_petition = None
         
@@ -2639,7 +2639,7 @@ class ManagementPanelQuery( ManagementPanel ):
                     
                     search_context = CC.FileSearchContext( self._file_service_identifier, self._tag_service_identifier, include_current, include_pending, current_predicates )
                     
-                    wx.GetApp().Read( 'do_file_query', self._query_key, search_context )
+                    HC.app.Read( 'do_file_query', self._query_key, search_context )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, self._file_service_identifier )
                     
@@ -2847,7 +2847,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
                     
                     search_context = ClientConstantsMessages.MessageSearchContext( self._identity, current_predicates )
                     
-                    wx.GetApp().Read( 'do_message_query', self._query_key, search_context )
+                    HC.app.Read( 'do_message_query', self._query_key, search_context )
                     
                 
             except: wx.MessageBox( traceback.format_exc() )

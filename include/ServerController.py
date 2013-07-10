@@ -80,6 +80,8 @@ class Controller( wx.App ):
     
     def OnInit( self ):
         
+        HC.app = self
+        
         try: self._db = ServerDB.DB()
         except Exception as e:
             

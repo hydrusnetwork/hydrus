@@ -45,7 +45,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         ListCtrlAutoWidthMixin.__init__( self )
         ColumnSorterMixin.__init__( self, 8 )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self._page_key = page_key
         self._identity = identity
@@ -240,25 +240,25 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
                 
                 identity_contact_key = self._identity.GetContactKey()
                 
-                if command == 'archive': wx.GetApp().Write( 'archive_conversation', conversation_key )
-                elif command == 'inbox': wx.GetApp().Write( 'inbox_conversation', conversation_key )
+                if command == 'archive': HC.app.Write( 'archive_conversation', conversation_key )
+                elif command == 'inbox': HC.app.Write( 'inbox_conversation', conversation_key )
                 elif command == 'read':
                     
                     message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'sent' ) )
                     
-                    for message_key in message_keys: wx.GetApp().Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
+                    for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
                     
                 elif command == 'unread':
                     
                     message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'read' ) )
                     
-                    for message_key in message_keys: wx.GetApp().Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
+                    for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
                     
                 elif command == 'delete':
                     
                     with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete this conversation?' ) as dlg:
                         
-                        if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'delete_conversation', conversation_key )
+                        if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_conversation', conversation_key )
                         
                     
                 else: event.Skip()
@@ -635,7 +635,7 @@ class DestinationPanel( wx.Panel ):
                     elif command == 'read': status = 'read'
                     elif command == 'unread': status = 'sent'
                     
-                    my_message_depot = wx.GetApp().Read( 'service', self._identity )
+                    my_message_depot = HC.app.Read( 'service', self._identity )
                     
                     connection = my_message_depot.GetConnection()
                     
@@ -654,7 +654,7 @@ class DestinationPanel( wx.Panel ):
                     
                     connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = status_updates )
                     
-                    wx.GetApp().Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
+                    HC.app.Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
                     
                 else: event.Skip()
                 
@@ -1255,19 +1255,19 @@ class DraftPanel( wx.Panel ):
         if event is not None: event.Skip()
         
     
-    def EventDeleteDraft( self, event ): wx.GetApp().Write( 'delete_draft', self._draft_key )
+    def EventDeleteDraft( self, event ): HC.app.Write( 'delete_draft', self._draft_key )
     
     def EventSend( self, event ):
         
         draft_message = self._GetDraftMessage()
         
-        transport_messages = wx.GetApp().Read( 'transport_messages_from_draft', draft_message )
+        transport_messages = HC.app.Read( 'transport_messages_from_draft', draft_message )
         
         if self._contact_from.GetName() != 'Anonymous':
             
             try:
                 
-                my_message_depot = wx.GetApp().Read( 'service', self._contact_from )
+                my_message_depot = HC.app.Read( 'service', self._contact_from )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -1307,18 +1307,18 @@ class DraftPanel( wx.Panel ):
                 
             
         
-        for transport_message in transport_messages: wx.GetApp().Write( 'message', transport_message, forced_status = 'pending' )
+        for transport_message in transport_messages: HC.app.Write( 'message', transport_message, forced_status = 'pending' )
         
         draft_key = draft_message.GetDraftKey()
         
-        wx.GetApp().Write( 'delete_draft', draft_key )
+        HC.app.Write( 'delete_draft', draft_key )
         
     
     def EventSaveDraft( self, event ):
         
         draft_message = self._GetDraftMessage()
         
-        wx.GetApp().Write( 'draft_message', draft_message )
+        HC.app.Write( 'draft_message', draft_message )
         
     
     def EventRemove( self, event ):

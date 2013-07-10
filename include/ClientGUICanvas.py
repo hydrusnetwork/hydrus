@@ -15,6 +15,7 @@ import traceback
 import urllib
 import wx
 import wx.lib.flashwin
+import wx.media
 
 ID_TIMER_ANIMATED = wx.NewId()
 ID_TIMER_FLASH = wx.NewId()
@@ -76,7 +77,7 @@ class Canvas():
         self._focus_holder.Hide()
         self._focus_holder.SetEventHandler( self )
         
-        self._options = wx.GetApp().Read( 'options' )
+        self._options = HC.app.Read( 'options' )
         
         self._current_media = None
         self._current_display_media = None
@@ -115,8 +116,10 @@ class Canvas():
             
             tags_manager = self._current_media.GetTagsManager()
             
-            current = tags_manager.GetCurrent()
-            pending = tags_manager.GetPending()
+            siblings_manager = HC.app.GetTagSiblingsManager()
+            
+            current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
+            pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
             
             tags_i_want_to_display = list( current.union( pending ) )
             
@@ -199,7 +202,7 @@ class Canvas():
                 if service_identifier in self._service_identifiers_to_services: service = self._service_identifiers_to_services[ service_identifier ]
                 else:
                     
-                    service = wx.GetApp().Read( 'service', service_identifier )
+                    service = HC.app.Read( 'service', service_identifier )
                     
                     self._service_identifiers_to_services[ service_identifier ] = service
                     
@@ -279,7 +282,8 @@ class Canvas():
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        if self._current_display_media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( 200, 45 ) # for button
+        if self._current_display_media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( 200, 45 )
+        elif self._current_display_media.GetMime() == HC.AUDIO_MP3: ( original_width, original_height ) = ( 200, 90 )
         else: ( original_width, original_height ) = self._current_display_media.GetResolution()
         
         media_width = int( round( original_width * self._current_zoom ) )
@@ -378,6 +382,7 @@ class Canvas():
         
         ( my_width, my_height ) = self.GetClientSize()
         
+        self._canvas_bmp.Destroy()
         self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
         
         if self._media_container is not None:
@@ -448,7 +453,7 @@ class CanvasPanel( Canvas, wx.Window ):
     def __init__( self, parent, page_key, file_service_identifier ):
         
         wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, file_service_identifier, wx.GetApp().GetPreviewImageCache() )
+        Canvas.__init__( self, file_service_identifier, HC.app.GetPreviewImageCache() )
         
         self._page_key = page_key
         
@@ -495,7 +500,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results ):
         
         ClientGUICommon.Frame.__init__( self, my_parent, title = 'hydrus client fullscreen media viewer' )
-        Canvas.__init__( self, file_service_identifier, wx.GetApp().GetFullscreenImageCache() )
+        Canvas.__init__( self, file_service_identifier, HC.app.GetFullscreenImageCache() )
         ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, predicates, media_results )
         
         self._page_key = page_key
@@ -519,7 +524,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             self.Show( True )
             
         
-        wx.GetApp().SetTopWindow( self )
+        HC.app.SetTopWindow( self )
         
         self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
         
@@ -561,7 +566,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         collections_string = ''
         
-        siblings_manager = wx.GetApp().GetTagSiblingsManager()
+        siblings_manager = HC.app.GetTagSiblingsManager()
         
         ( creators, series, titles, volumes, chapters, pages ) = self._current_media.GetTagsManager().GetCSTVCP()
         
@@ -669,7 +674,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
         else: extra_delay_base = 200
         
-        
         for i in range( 10 ):
             
             previous = self._GetPrevious( previous )
@@ -720,7 +724,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         if self._current_media is not None:
             
-            if self._current_media.GetMime() == HC.APPLICATION_PDF: return
+            if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
             
             for zoom in ZOOMINS:
                 
@@ -770,6 +774,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         if self._current_media is not None:
             
+            if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+            
             for zoom in ZOOMOUTS:
                 
                 if self._current_zoom > zoom:
@@ -801,7 +807,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         ( media_width, media_height ) = self._current_display_media.GetResolution()
         
-        if self._current_media.GetMime() == HC.APPLICATION_PDF: return
+        if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
         
         if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ) or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
             
@@ -986,7 +992,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1018,13 +1024,13 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
     
     def _PausePlaySlideshow( self ):
         
@@ -1063,7 +1069,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
             elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
             elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif event.KeyCode == ord( 'C' ) and event.CmdDown():
-                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
             else:
                 
                 ( modifier, key ) = HC.GetShortcutFromEvent( event )
@@ -1097,7 +1103,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                     
                     if command == 'archive': self._Archive()
                     elif command == 'copy_files':
-                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                     elif command == 'copy_path': self._CopyPathToClipboard()
                     elif command == 'delete': self._Delete()
@@ -1156,7 +1162,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
     def EventShowMenu( self, event ):
         
-        services = wx.GetApp().Read( 'services' )
+        services = HC.app.Read( 'services' )
         
         local_ratings_services = [ service for service in services if service.GetServiceIdentifier().GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
@@ -1178,7 +1184,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         #
         
-        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV, HC.APPLICATION_PDF ):
+        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV, HC.APPLICATION_PDF, HC.AUDIO_MP3 ):
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -1265,7 +1271,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
-    def _Archive( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1297,13 +1303,13 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
     
     def EventKeyDown( self, event ):
         
@@ -1404,7 +1410,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row )
                         
                     
-                    wx.GetApp().Write( 'content_updates', { service_identifier : [ content_update ] } )
+                    HC.app.Write( 'content_updates', { service_identifier : [ content_update ] } )
                     
                 
             else:
@@ -1414,7 +1420,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                 elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
                 elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
                 elif event.KeyCode == ord( 'C' ) and event.CmdDown():
-                    with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
                 else: event.Skip()
                 
             
@@ -1436,7 +1442,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                     if command == 'archive': self._Archive()
                     elif command == 'copy_files':
-                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                     elif command == 'copy_path': self._CopyPathToClipboard()
                     elif command == 'delete': self._Delete()
@@ -1502,7 +1508,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         #
         
-        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV, HC.APPLICATION_PDF ):
+        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV, HC.APPLICATION_PDF, HC.AUDIO_MP3 ):
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -1606,7 +1612,11 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     def EventButtonDelete( self, event ): self._Delete()
     def EventButtonDone( self, event ): self.EventClose( event )
     def EventButtonKeep( self, event ): self._Keep()
-    def EventButtonSkip( self, event ): self._ShowNext()
+    def EventButtonSkip( self, event ):
+        
+        if self._current_media == self._GetLast(): self.EventClose( event )
+        else: self._ShowNext()
+        
     
     def EventClose( self, event ):
         
@@ -1638,7 +1648,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                                 content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
                                 content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
                                 
-                                wx.GetApp().Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : content_updates } )
+                                HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : content_updates } )
                                 
                                 self._kept = set()
                                 self._deleted = set()
@@ -1679,7 +1689,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
             elif event.KeyCode == ord( 'C' ) and event.CmdDown():
-                with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
             elif not event.ShiftDown() and event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
                 
@@ -2016,7 +2026,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         
         #
         
-        options = wx.GetApp().Read( 'options' )
+        options = HC.app.Read( 'options' )
         
         accuracy_slider_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2024,7 +2034,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             options[ 'ratings_filter_accuracy' ] = 1
             
-            wx.GetApp().Write( 'save_options' )
+            HC.app.Write( 'save_options' )
             
         
         value = options[ 'ratings_filter_accuracy' ]
@@ -2044,7 +2054,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             options[ 'ratings_filter_compare_same' ] = False
             
-            wx.GetApp().Write( 'save_options' )
+            HC.app.Write( 'save_options' )
             
         
         compare_same = options[ 'ratings_filter_compare_same' ]
@@ -2063,7 +2073,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
             
             options[ 'ratings_filter_left_right' ] = 'left'
             
-            wx.GetApp().Write( 'save_options' )
+            HC.app.Write( 'save_options' )
             
         
         left_right = options[ 'ratings_filter_left_right' ]
@@ -2092,6 +2102,9 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         equal = wx.Button( window, label = 'they are about the same' )
         equal.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonEqual )
         
+        skip = wx.Button( window, label = 'skip' )
+        skip.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonSkip )
+        
         back = wx.Button( window, label = 'back' )
         back.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonBack )
         
@@ -2110,6 +2123,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         vbox.AddF( left, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( right, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( equal, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( dont_filter, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
@@ -2151,7 +2165,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
         CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
         
         self._rating_service_identifier = service_identifier
-        self._service = wx.GetApp().Read( 'service', service_identifier )
+        self._service = HC.app.Read( 'service', service_identifier )
         
         FullscreenPopoutFilterLike( self )
         
@@ -2188,7 +2202,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                                 content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
                                 content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
                                 
-                                wx.GetApp().Write( 'content_updates', { self._rating_service_identifier : content_updates } )
+                                HC.app.Write( 'content_updates', { self._rating_service_identifier : content_updates } )
                                 
                                 self._kept = set()
                                 self._deleted = set()
@@ -2232,14 +2246,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         if service_identifier.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
             
-            self._service = wx.GetApp().Read( 'service', service_identifier )
+            self._service = HC.app.Read( 'service', service_identifier )
             
             ( self._lower, self._upper ) = self._service.GetExtraInfo()
             
             self._score_gap = 1.0 / ( self._upper - self._lower )
             
         
-        hashes_to_min_max = wx.GetApp().Read( 'ratings_filter', service_identifier, [ media_result.GetHash() for media_result in media_results ] )
+        hashes_to_min_max = HC.app.Read( 'ratings_filter', service_identifier, [ media_result.GetHash() for media_result in media_results ] )
         
         self._media_to_initial_scores_dict = { media : hashes_to_min_max[ media.GetHash() ] for media in self._media_still_to_rate }
         
@@ -2277,7 +2291,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             self.Show( True )
             
         
-        wx.GetApp().SetTopWindow( self )
+        HC.app.SetTopWindow( self )
         
         self._left_window = self._Panel( self._splitter )
         FullscreenPopoutFilterNumerical( self._left_window, self )
@@ -2466,7 +2480,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         
         ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
         
-        media_result_to_rate_against = wx.GetApp().Read( 'ratings_media_result', self._service_identifier, min, max )
+        media_result_to_rate_against = HC.app.Read( 'ratings_media_result', self._service_identifier, min, max )
         
         if media_result_to_rate_against is not None:
             
@@ -2563,6 +2577,12 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             self._RefreshStatusBar()
             
+        
+    
+    def _Skip( self ):
+        
+        if len( self._media_still_to_rate ) == 0: self.EventClose()
+        else: self._ShowNewMedia()
         
     
     def _ProcessAction( self, action ):
@@ -2752,6 +2772,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     def EventButtonEqual( self, event ): self._ProcessAction( 'equal' )
     def EventButtonLeft( self, event ): self._ProcessAction( 'right' )
     def EventButtonRight( self, event ): self._ProcessAction( 'left' )
+    def EventButtonSkip( self, event ): self._Skip()
     
     def EventClose( self, event ):
         
@@ -2781,7 +2802,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                         content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
                         content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
                         
-                        wx.GetApp().Write( 'content_updates', { self._service_identifier : content_updates } )
+                        HC.app.Write( 'content_updates', { self._service_identifier : content_updates } )
                         
                     except:
                         
@@ -2799,14 +2820,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._ShowNewMedia()
+        if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
         elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._ProcessAction( 'equal' )
         elif event.KeyCode in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT ): self._ProcessAction( 'left' )
         elif event.KeyCode in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ): self._ProcessAction( 'right' )
         elif event.KeyCode == wx.WXK_BACK: self._GoBack()
         elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
         elif event.KeyCode == ord( 'C' ) and event.CmdDown():
-            with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+            with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
         else: event.Skip()
         
     
@@ -2884,14 +2905,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         
         self._options[ 'ratings_filter_accuracy' ] = accuracy
         
-        wx.GetApp().Write( 'save_options' )
+        HC.app.Write( 'save_options' )
         
     
     def SetCompareSame( self, compare_same ):
         
         self._options[ 'ratings_filter_compare_same' ] = compare_same
         
-        wx.GetApp().Write( 'save_options' )
+        HC.app.Write( 'save_options' )
         
         self._compare_same = compare_same
         
@@ -2900,7 +2921,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         
         self._options[ 'ratings_filter_left_right' ] = left_right
         
-        wx.GetApp().Write( 'save_options' )
+        HC.app.Write( 'save_options' )
         
         self._left_right = left_right
         
@@ -2910,7 +2931,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         def __init__( self, parent ):
             
             wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            Canvas.__init__( self, HC.LOCAL_FILE_SERVICE_IDENTIFIER, wx.GetApp().GetFullscreenImageCache() )
+            Canvas.__init__( self, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.app.GetFullscreenImageCache() )
             
             wx.CallAfter( self.Refresh )
             
@@ -2933,7 +2954,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             if self._current_media is not None:
                 
-                if self._current_media.GetMime() == HC.APPLICATION_PDF: return
+                if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
                 
                 for zoom in ZOOMINS:
                     
@@ -2978,6 +2999,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             if self._current_media is not None:
                 
+                if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+                
                 for zoom in ZOOMOUTS:
                     
                     if self._current_zoom > zoom:
@@ -3009,7 +3032,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
-            if self._current_media.GetMime() == HC.APPLICATION_PDF: return
+            if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
             
             if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ) or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
                 
@@ -3136,7 +3159,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                     elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
                     elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
                     elif event.KeyCode == ord( 'C' ) and event.CmdDown():
-                        with wx.BusyCursor(): wx.GetApp().Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     else: self.GetParent().ProcessEvent( event )
                     
             
@@ -3233,6 +3256,7 @@ class MediaContainer( wx.Window ):
             self._media_window.movie = HC.STATIC_DIR + os.path.sep + 'player_flv_maxi_1.6.0.swf'
             
         elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash() )
+        elif self._media.GetMime() == HC.AUDIO_MP3: self._media_window = MP3Button( self, self._media.GetHash() )
         
         if ShouldHaveAnimationBar( self._media ):
             
@@ -3249,14 +3273,17 @@ class MediaContainer( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        screen_position = self.ClientToScreen( event.GetPosition() )
-        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-        
-        event.SetX( x )
-        event.SetY( y )
-        
-        event.ResumePropagation( 1 )
-        event.Skip()
+        if self._media.GetMime() in HC.IMAGES:
+            
+            screen_position = self.ClientToScreen( event.GetPosition() )
+            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+            
+            event.SetX( x )
+            event.SetY( y )
+            
+            event.ResumePropagation( 1 )
+            event.Skip()
+            
         
     
     def EventResize( self, event ):
@@ -3405,6 +3432,7 @@ class AnimationBar( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
+                self._canvas_bmp.Destroy()
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._Draw()
@@ -3554,6 +3582,7 @@ class Image( wx.Window ):
                         
                     
                 
+                self._canvas_bmp.Destroy()
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._Draw()
@@ -3592,11 +3621,81 @@ class Image( wx.Window ):
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
     
+class MP3Button( wx.Window ):
+    
+    def __init__( self, parent, hash ):
+        
+        wx.Window.__init__( self, parent )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        self._hash = hash
+        self._initialised = False
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._media_ctrl = wx.media.MediaCtrl( self, size = ( 200, 100 ) )
+        self._media_ctrl.Hide()
+        
+        self._embed_button = wx.Button( self, label = 'open mp3 here', size = ( 200, 45 ) )
+        self._embed_button.Bind( wx.EVT_BUTTON, self.EventEmbedButton )
+        
+        launch_button = wx.Button( self, label = 'launch mp3', size = ( 200, 45 ) )
+        launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
+        
+        vbox.AddF( self._media_ctrl, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._embed_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( launch_button, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def EventEmbedButton( self, event ):
+        
+        if self._media_ctrl.IsShown():
+            
+            self._media_ctrl.Stop()
+            self._media_ctrl.Hide()
+            
+            self._embed_button.SetLabel( 'open mp3 here' )
+            
+        else:
+            
+            if not self._initialised:
+                
+                self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
+                
+                path = CC.GetFilePath( self._hash, HC.AUDIO_MP3 )
+                
+                self._media_ctrl.Load( path )
+                
+                self._initialised = True
+                
+            
+            self._media_ctrl.Show()
+            
+            self._embed_button.SetLabel( 'close embed' )
+            
+        
+        self.Fit()
+        self.GetParent().Fit()
+        
+    
+    def EventLaunchButton( self, event ):
+        
+        path = CC.GetFilePath( self._hash, HC.AUDIO_MP3 )
+        
+        # os.system( 'start ' + path )
+        subprocess.call( 'start "" "' + path + '"', shell = True )
+        
+    
 class PDFButton( wx.Button ):
     
     def __init__( self, parent, hash ):
         
         wx.Button.__init__( self, parent, label = 'launch pdf', size = ( 200, 45 ) )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         self._hash = hash
         

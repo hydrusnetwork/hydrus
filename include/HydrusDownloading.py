@@ -44,8 +44,8 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
     
     service_identifiers_to_tags = {}
     
-    siblings_manager = wx.GetApp().GetTagSiblingsManager()
-    parents_manager = wx.GetApp().GetTagParentsManager()
+    siblings_manager = HC.app.GetTagSiblingsManager()
+    parents_manager = HC.app.GetTagParentsManager()
     
     for ( service_identifier, namespaces ) in advanced_tag_options.items():
         
@@ -481,7 +481,7 @@ class DownloaderHentaiFoundry( Downloader ):
     
     def _EstablishSession( self, connection ):
         
-        cookies = wx.GetApp().GetWebCookies( 'hentai foundry' )
+        cookies = HC.app.GetWebCookies( 'hentai foundry' )
         
         for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
         
@@ -847,7 +847,7 @@ class DownloaderPixiv( Downloader ):
     
     def _EstablishSession( self, connection ):
         
-        cookies = wx.GetApp().GetWebCookies( 'pixiv' )
+        cookies = HC.app.GetWebCookies( 'pixiv' )
         
         for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
         

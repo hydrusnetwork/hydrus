@@ -16,7 +16,7 @@ class HydrusSessionManagerClient():
     
     def __init__( self ):
         
-        existing_sessions = wx.GetApp().Read( 'hydrus_sessions' )
+        existing_sessions = HC.app.Read( 'hydrus_sessions' )
         
         self._sessions = { service_identifier : ( session_key, expiry ) for ( service_identifier, session_key, expiry ) in existing_sessions }
         
@@ -27,7 +27,7 @@ class HydrusSessionManagerClient():
         
         with self._lock:
             
-            wx.GetApp().Write( 'delete_hydrus_session_key', service_identifier )
+            HC.app.Write( 'delete_hydrus_session_key', service_identifier )
             
             del self._sessions[ service_identifier ]
             
@@ -49,7 +49,7 @@ class HydrusSessionManagerClient():
             
             # session key expired or not found
             
-            service = wx.GetApp().Read( 'service', service_identifier )
+            service = HC.app.Read( 'service', service_identifier )
             
             connection = service.GetConnection()
             
@@ -64,7 +64,7 @@ class HydrusSessionManagerClient():
             
             self._sessions[ service_identifier ] = ( session_key, expiry )
             
-            wx.GetApp().Write( 'hydrus_session', service_identifier, session_key, expiry )
+            HC.app.Write( 'hydrus_session', service_identifier, session_key, expiry )
             
             return session_key
             
@@ -74,7 +74,7 @@ class HydrusSessionManagerServer():
     
     def __init__( self ):
         
-        existing_sessions = wx.GetApp().GetDB().Read( 'sessions', HC.HIGH_PRIORITY )
+        existing_sessions = HC.app.GetDB().Read( 'sessions', HC.HIGH_PRIORITY )
         
         self._sessions = { ( session_key, service_identifier ) : ( account_identifier, expiry ) for ( session_key, service_identifier, account_identifier, expiry ) in existing_sessions }
         
@@ -83,7 +83,7 @@ class HydrusSessionManagerServer():
     
     def AddSession( self, session_key, service_identifier, account_identifier, expiry ):
         
-        wx.GetApp().GetDB().Write( 'session', HC.HIGH_PRIORITY, session_key, service_identifier, account_identifier, expiry )
+        HC.app.GetDB().Write( 'session', HC.HIGH_PRIORITY, session_key, service_identifier, account_identifier, expiry )
         
         self._sessions[ ( session_key, service_identifier ) ] = ( account_identifier, expiry )
         
