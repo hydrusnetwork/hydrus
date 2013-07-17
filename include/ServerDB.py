@@ -3,6 +3,7 @@ import dircache
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusFileHandling
 import HydrusServer
 import itertools
 import os
@@ -113,7 +114,12 @@ class FileDB():
                     
                 
             
-            if c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone() is None: c.execute( 'INSERT OR IGNORE INTO files_info ( hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( hash_id, size, mime, width, height, duration, num_frames, num_words ) )
+            if c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone() is None:
+                
+                with self._hashes_to_mimes_lock: self._hashes_to_mimes[ hash ] = mime
+                
+                c.execute( 'INSERT OR IGNORE INTO files_info ( hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( hash_id, size, mime, width, height, duration, num_frames, num_words ) )
+                
             
             c.execute( 'INSERT OR IGNORE INTO file_map ( service_id, hash_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( service_id, hash_id, account_id, now ) )
             
@@ -1681,6 +1687,8 @@ class DB( ServiceDB ):
         
         self._UpdateDB( c )
         
+        self._InitHashToMimeCache( c )
+        
         service_identifiers = self._GetServiceIdentifiers( c )
         
         ( self._server_admin_id, ) = c.execute( 'SELECT service_id FROM services WHERE type = ?;', ( HC.SERVER_ADMIN, ) ).fetchone()
@@ -1885,6 +1893,13 @@ class DB( ServiceDB ):
             
             c.execute( 'COMMIT' )
             
+        
+    
+    def _InitHashToMimeCache( self, c ):
+        
+        self._hashes_to_mimes_lock = threading.Lock()
+        
+        self._hashes_to_mimes = { hash : mime for ( hash, mime ) in c.execute( 'SELECT hash, mime FROM hashes, files_info USING ( hash_id );' ) }
         
     
     def _MakeBackup( self, c ):
@@ -2596,7 +2611,7 @@ class DB( ServiceDB ):
             
             file = self._GetFile( hash )
             
-            mime = HC.GetMimeFromString( file )
+            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
             
             response_context = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
             
@@ -2682,7 +2697,7 @@ class DB( ServiceDB ):
             
             thumbnail = self._GetThumbnail( hash )
             
-            mime = HC.GetMimeFromString( thumbnail )
+            mime = HydrusFileHandling.GetMimeFromString( thumbnail )
             
             response_context = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
             

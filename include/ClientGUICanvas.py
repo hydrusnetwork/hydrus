@@ -30,6 +30,11 @@ ANIMATED_SCANBAR_CARET_WIDTH = 10
 ZOOMINS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
 ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01 ]
 
+NON_ZOOMABLE_MIMES = [ HC.APPLICATION_PDF ]
+NON_ZOOMABLE_MIMES.extend( HC.AUDIO )
+
+NON_LARGABLY_ZOOMABLE_MIMES = [ HC.VIDEO_FLV, HC.APPLICATION_FLASH ]
+
 # Sizer Flags
 
 FLAGS_NONE = wx.SizerFlags( 0 )
@@ -114,7 +119,7 @@ class Canvas():
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             
-            tags_manager = self._current_media.GetTagsManager()
+            tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
             
             siblings_manager = HC.app.GetTagSiblingsManager()
             
@@ -283,7 +288,7 @@ class Canvas():
         ( my_width, my_height ) = self.GetClientSize()
         
         if self._current_display_media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( 200, 45 )
-        elif self._current_display_media.GetMime() == HC.AUDIO_MP3: ( original_width, original_height ) = ( 200, 90 )
+        elif self._current_display_media.GetMime() in HC.AUDIO: ( original_width, original_height ) = ( 200, 90 )
         else: ( original_width, original_height ) = self._current_display_media.GetResolution()
         
         media_width = int( round( original_width * self._current_zoom ) )
@@ -568,7 +573,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         siblings_manager = HC.app.GetTagSiblingsManager()
         
-        ( creators, series, titles, volumes, chapters, pages ) = self._current_media.GetTagsManager().GetCSTVCP()
+        ( creators, series, titles, volumes, chapters, pages ) = self._current_media.GetDisplayMedia().GetTagsManager().GetCSTVCP()
         
         if len( creators ) > 0:
             
@@ -724,7 +729,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         if self._current_media is not None:
             
-            if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+            if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
             
             for zoom in ZOOMINS:
                 
@@ -774,7 +779,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         if self._current_media is not None:
             
-            if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+            if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
             
             for zoom in ZOOMOUTS:
                 
@@ -807,9 +812,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         ( media_width, media_height ) = self._current_display_media.GetResolution()
         
-        if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+        if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
         
-        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ) or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
+        if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
             
             new_zoom = self._current_zoom
             
@@ -1184,7 +1189,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         #
         
-        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV, HC.APPLICATION_PDF, HC.AUDIO_MP3 ):
+        if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -1355,7 +1360,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                     if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                         
-                        tags_manager = self._current_media.GetTagsManager()
+                        tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
                         
                         current = tags_manager.GetCurrent()
                         pending = tags_manager.GetPending()
@@ -1508,7 +1513,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         #
         
-        if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV, HC.APPLICATION_PDF, HC.AUDIO_MP3 ):
+        if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -2954,7 +2959,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             if self._current_media is not None:
                 
-                if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+                if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
                 
                 for zoom in ZOOMINS:
                     
@@ -2999,7 +3004,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             if self._current_media is not None:
                 
-                if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+                if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
                 
                 for zoom in ZOOMOUTS:
                     
@@ -3032,7 +3037,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
-            if self._current_media.GetMime() in ( HC.APPLICATION_PDF, HC.AUDIO_MP3 ): return
+            if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
             
             if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ) or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
                 
@@ -3256,7 +3261,7 @@ class MediaContainer( wx.Window ):
             self._media_window.movie = HC.STATIC_DIR + os.path.sep + 'player_flv_maxi_1.6.0.swf'
             
         elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash() )
-        elif self._media.GetMime() == HC.AUDIO_MP3: self._media_window = MP3Button( self, self._media.GetHash() )
+        elif self._media.GetMime() in HC.AUDIO: self._media_window = MediaButton( self, self._media.GetHash(), self._media.GetMime() )
         
         if ShouldHaveAnimationBar( self._media ):
             
@@ -3621,15 +3626,16 @@ class Image( wx.Window ):
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
     
-class MP3Button( wx.Window ):
+class MediaButton( wx.Window ):
     
-    def __init__( self, parent, hash ):
+    def __init__( self, parent, hash, mime ):
         
         wx.Window.__init__( self, parent )
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         self._hash = hash
+        self._mime = mime
         self._initialised = False
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -3637,10 +3643,10 @@ class MP3Button( wx.Window ):
         self._media_ctrl = wx.media.MediaCtrl( self, size = ( 200, 100 ) )
         self._media_ctrl.Hide()
         
-        self._embed_button = wx.Button( self, label = 'open mp3 here', size = ( 200, 45 ) )
+        self._embed_button = wx.Button( self, label = 'open media here', size = ( 200, 45 ) )
         self._embed_button.Bind( wx.EVT_BUTTON, self.EventEmbedButton )
         
-        launch_button = wx.Button( self, label = 'launch mp3', size = ( 200, 45 ) )
+        launch_button = wx.Button( self, label = 'launch media externally', size = ( 200, 45 ) )
         launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
         
         vbox.AddF( self._media_ctrl, FLAGS_EXPAND_BOTH_WAYS )
@@ -3657,7 +3663,7 @@ class MP3Button( wx.Window ):
             self._media_ctrl.Stop()
             self._media_ctrl.Hide()
             
-            self._embed_button.SetLabel( 'open mp3 here' )
+            self._embed_button.SetLabel( 'open media here' )
             
         else:
             
@@ -3665,7 +3671,7 @@ class MP3Button( wx.Window ):
                 
                 self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
                 
-                path = CC.GetFilePath( self._hash, HC.AUDIO_MP3 )
+                path = CC.GetFilePath( self._hash, self._mime )
                 
                 self._media_ctrl.Load( path )
                 
@@ -3683,7 +3689,7 @@ class MP3Button( wx.Window ):
     
     def EventLaunchButton( self, event ):
         
-        path = CC.GetFilePath( self._hash, HC.AUDIO_MP3 )
+        path = CC.GetFilePath( self._hash, self._mime )
         
         # os.system( 'start ' + path )
         subprocess.call( 'start "" "' + path + '"', shell = True )

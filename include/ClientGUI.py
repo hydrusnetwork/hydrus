@@ -573,6 +573,15 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
     
+    def _ManageImportFolders( self ):
+        
+        try:
+            
+            with ClientGUIDialogs.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
+            
+        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        
+    
     def _ManageOptions( self, service_identifier ):
         
         try:
@@ -1081,6 +1090,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 elif command == 'manage_boorus': self._ManageBoorus()
                 elif command == 'manage_contacts': self._ManageContacts()
                 elif command == 'manage_imageboards': self._ManageImageboards()
+                elif command == 'manage_import_folders': self._ManageImportFolders()
                 elif command == 'manage_pixiv_account': self._ManagePixivAccount()
                 elif command == 'manage_server_services': self._ManageServer( data )
                 elif command == 'manage_services': self._ManageServices()
@@ -1268,6 +1278,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         file = wx.Menu()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
         file.AppendSeparator()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&Options' ) )

@@ -1,6 +1,7 @@
 import collections
 import ClientConstants as CC
 import HydrusConstants as HC
+import HydrusTags
 import random
 import time
 import traceback
@@ -457,7 +458,9 @@ class MediaCollection( MediaList, Media ):
         
         tags_managers = [ m.GetTagsManager() for m in self._sorted_media ]
         
-        self._tags_manager = CC.MergeTags( tags_managers )
+        t_s_p = HC.app.Read( 'tag_service_precedence' )
+        
+        self._tags_manager = HydrusTags.MergeTagsManagers( t_s_p, tags_managers )
         
         # horrible compromise
         if len( self._sorted_media ) > 0: self._ratings = self._sorted_media[0].GetRatings()

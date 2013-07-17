@@ -2,6 +2,7 @@ import gc
 import HydrusConstants as HC
 import HydrusImageHandling
 import HydrusSessions
+import HydrusTags
 import ClientConstants as CC
 import ClientDB
 import ClientGUI
@@ -201,8 +202,8 @@ class Controller( wx.App ):
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()
-            self._tag_parents_manager = CC.TagParentsManager()
-            self._tag_siblings_manager = CC.TagSiblingsManager()
+            self._tag_parents_manager = HydrusTags.TagParentsManager()
+            self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
             self._undo_manager = CC.UndoManager()
             
             self.SetSplashText( 'caches' )

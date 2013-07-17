@@ -3,16 +3,14 @@ import dircache
 import hashlib
 import httplib
 import itertools
-import HydrusAudioHandling
 import HydrusConstants as HC
-import HydrusDocumentHandling
 import HydrusDownloading
 import HydrusEncryption
-import HydrusFlashHandling
+import HydrusFileHandling
 import HydrusImageHandling
 import HydrusMessageHandling
-import HydrusVideoHandling
 import HydrusServer
+import HydrusTags
 import ClientConstants as CC
 import ClientConstantsMessages
 import os
@@ -28,6 +26,7 @@ import traceback
 import urlparse
 import wx
 import yaml
+import zipfile
 
 class FileDB():
     
@@ -170,6 +169,20 @@ class FileDB():
         except: raise Exception( 'Could not find that file!' )
         
         return file
+        
+    
+    def _GetFileAndMime( self, hash ):
+        
+        try:
+            
+            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+            
+            with open( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
+            
+        except MemoryError: print( 'Memory error!' )
+        except: raise Exception( 'Could not find that file!' )
+        
+        return ( file, mime )
         
     
     def _GetHash( self, c, hash_id ):
@@ -2166,6 +2179,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return sessions
         
     
+    def _GetImportFolders( self, c ):
+        
+        results = c.execute( 'SELECT path, details FROM import_folders;' ).fetchall()
+        
+        return results
+        
+    
     def _GetMD5Status( self, c, md5 ):
         
         result = c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( md5 ), ) ).fetchone()
@@ -2345,7 +2365,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_identifiers_to_statuses_to_tags.update( { service_ids_to_service_identifiers[ service_id ] : HC.BuildKeyToSetDict( tags_info ) for ( service_id, tags_info ) in tags_dict.items() } )
             
-            tags_manager = CC.TagsManager( self._tag_service_precedence, service_identifiers_to_statuses_to_tags )
+            tags_manager = HydrusTags.TagsManager( self._tag_service_precedence, service_identifiers_to_statuses_to_tags )
             
             if not system_predicates.OkSecondRound( tags_manager.GetNumTags( tag_service_identifier, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags ) ): continue
             
@@ -3003,19 +3023,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         file = HydrusImageHandling.ConvertToPngIfBmp( file )
         
-        size = len( file )
-        
-        if size == 0: can_add = False
-        
-        if HC.GetMimeFromString( file ) not in HC.ALLOWED_MIMES: can_add = False
-        
-        if 'min_size' in advanced_import_options:
-            
-            min_size = advanced_import_options[ 'min_size' ]
-            
-            if size < min_size: raise Exception( 'File too small' )
-            
-        
         hash = hashlib.sha256( file ).digest()
         
         hash_id = self._GetHashId( c, hash )
@@ -3052,40 +3059,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if can_add:
             
-            mime = HC.GetMimeFromString( file )
-            
-            width = None
-            height = None
-            duration = None
-            num_frames = None
-            num_words = None
-            
-            if mime in HC.IMAGES:
-                
-                image_container = HydrusImageHandling.RenderImageFromFile( file, hash )
-                
-                ( width, height ) = image_container.GetSize()
-                
-                image_container = HydrusImageHandling.RenderImageFromFile( file, hash )
-                
-                ( width, height ) = image_container.GetSize()
-                
-                if image_container.IsAnimated():
-                    
-                    duration = image_container.GetTotalDuration()
-                    num_frames = image_container.GetNumFrames()
-                    
-                
-            elif mime == HC.APPLICATION_FLASH:
-                
-                ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( file )
-                
-            elif mime == HC.VIDEO_FLV:
-                
-                ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( file )
-                
-            elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( file )
-            elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( file )
+            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( file, hash )
             
             if width is not None and height is not None:
                 
@@ -3097,8 +3071,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 
             
-        
-        if can_add:
+            if 'min_size' in advanced_import_options:
+                
+                min_size = advanced_import_options[ 'min_size' ]
+                
+                if size < min_size: raise Exception( 'File too small' )
+                
             
             timestamp = int( time.time() )
             
@@ -3692,6 +3670,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT INTO favourite_custom_filter_actions ( name, actions ) VALUES ( ?, ? );', [ ( name, actions ) for ( name, actions ) in favourites.items() ] )
         
     
+    def _SetImportFolders( self, c, import_folders ):
+        
+        c.execute( 'DELETE FROM import_folders;' )
+        
+        c.executemany( 'INSERT INTO import_folders ( path, details ) VALUES ( ?, ? );', import_folders )
+        
+        self.pub( 'notify_new_import_folders' )
+        
+    
     def _SetPixivAccount( self, c, pixiv_id, password ):
         
         c.execute( 'DELETE FROM pixiv_account;' )
@@ -3751,6 +3738,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
         c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
+        
+    
+    def _UpdateImportFolder( self, c, path, details ):
+        
+        c.execute( 'DELETE FROM import_folders WHERE path = ?;', ( path, ) )
+        
+        c.execute( 'INSERT INTO import_folders ( path, details ) VALUES ( ?, ? );', ( path, details ) )
         
     
     def _UpdateMappings( self, c, service_id, mappings_ids = [], deleted_mappings_ids = [], pending_mappings_ids = [], pending_rescinded_mappings_ids = [], petitioned_mappings_ids = [], petitioned_rescinded_mappings_ids = [] ):
@@ -4381,42 +4375,6 @@ class DB( ServiceDB ):
         threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
         
     
-    def _InitHashToMimeCache( self, c ):
-        
-        self._hashes_to_mimes_lock = threading.Lock()
-        
-        self._hashes_to_mimes = { hash : mime for ( hash, mime ) in c.execute( 'SELECT hash, mime FROM hashes, files_info USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
-        
-    
-    def _InitPostGUI( self ):
-        
-        port = HC.DEFAULT_LOCAL_FILE_PORT
-        
-        local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
-        
-        self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
-        
-        server_thread = threading.Thread( target=self._server.serve_forever )
-        server_thread.start()
-        
-        connection = httplib.HTTPConnection( '127.0.0.1:' + str( port ) )
-        
-        try:
-            
-            connection.connect()
-            connection.close()
-            
-        except: print( 'Could not bind the client to port ' + str( port ) )
-        
-        HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
-        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 600 )
-        HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
-        HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
-        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', self.DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
-        HC.DAEMONQueue( 'FlushRepositoryUpdates', self.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
-        
-    
     def _CheckPassword( self ):
         
         if self._options[ 'password' ] is not None:
@@ -4581,6 +4539,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE imageboard_sites ( site_id INTEGER PRIMARY KEY, name TEXT );', )
             
             c.execute( 'CREATE TABLE imageboards ( site_id INTEGER, name TEXT, imageboard TEXT_YAML, PRIMARY KEY ( site_id, name ) );', )
+            
+            c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
             
             c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES );' )
             c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
@@ -4846,6 +4806,43 @@ class DB( ServiceDB ):
             
             c.execute( 'COMMIT' )
             
+        
+    
+    def _InitHashToMimeCache( self, c ):
+        
+        self._hashes_to_mimes_lock = threading.Lock()
+        
+        self._hashes_to_mimes = { hash : mime for ( hash, mime ) in c.execute( 'SELECT hash, mime FROM hashes, files_info USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
+        
+    
+    def _InitPostGUI( self ):
+        
+        port = HC.DEFAULT_LOCAL_FILE_PORT
+        
+        local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
+        
+        self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
+        
+        server_thread = threading.Thread( target=self._server.serve_forever )
+        server_thread.start()
+        
+        connection = httplib.HTTPConnection( '127.0.0.1:' + str( port ) )
+        
+        try:
+            
+            connection.connect()
+            connection.close()
+            
+        except: print( 'Could not bind the client to port ' + str( port ) )
+        
+        HC.DAEMONWorker( 'CheckImportFolders', self.DAEMONCheckImportFolders, ( 'notify_new_import_folders', ), period = 180 )
+        HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
+        HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
+        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 600 )
+        HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
+        HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
+        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', self.DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
+        HC.DAEMONQueue( 'FlushRepositoryUpdates', self.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
         
     
     def _SaveOptions( self, c ):
@@ -5253,6 +5250,11 @@ class DB( ServiceDB ):
                     self._RecalcCombinedMappings( c )
                     
                     self._FattenAutocompleteCache( c )
+                    
+                
+                if version < 77:
+                    
+                    c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
                     
                 
                 unknown_account = HC.GetUnknownAccount()
@@ -6291,7 +6293,7 @@ class DB( ServiceDB ):
                         
                         old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
                         
-                        mime = HC.GetMimeFromPath( old_path )
+                        mime = HydrusFileHandling.GetMimeFromPath( old_path )
                         
                         new_path = old_path + HC.mime_ext_lookup[ mime ]
                         
@@ -6551,47 +6553,91 @@ class DB( ServiceDB ):
     
     def DAEMONCheckImportFolders( self ):
         
-        pass
+        import_folders = HC.app.ReadDaemon( 'import_folders' )
         
-        import_folder_infos = HC.app.ReadDaemon( 'import_folders' )
-        
-        for ( path, details ) in import_folder_infos:
+        for ( folder_path, details ) in import_folders:
             
-            if int( time.time() ) > details[ 'last_checked' ] + details[ 'check_period' ]:
+            now = int( time.time() )
+            
+            if now > details[ 'last_checked' ] + details[ 'check_period' ]:
                 
-                filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
-                
-                raw_paths = [ path + os.path.sep + filename for filename in filenames ]
-                
-                # this needs to be a version of parseimportablepaths that doesn't make progress dialogs
-                importable_paths = ClientConstants.ParseImportablePaths( raw_paths )
-                
-                if details[ 'type' ] == some_constant_meaning_subs_folder: importable_paths = set( importable_paths ).difference( details[ 'subs_cache_or_whatever' ] )
-                
-                local_tags = details[ 'local_tags' ]
-                
-                for path in importable_paths:
+                if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                     
-                    pass
+                    filenames = dircache.listdir( folder_path )
                     
-                    # get a read lock/read only perms or whatever to make sure it isn't being written/downloaded right now
+                    raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
                     
-                    temp_path = HC.TEMP_DIR + os.path.sep + 'import_folder_file'
+                    importable_path_infos = CC.ParseImportablePaths( raw_paths, quiet = True )
                     
-                    shutil.copy( path, temp_path )
+                    HC.pubsub.pub( 'service_status', 'Found ' + str( len( importable_path_infos ) ) + ' files to import from ' + folder_path )
                     
-                    with open( temp_path, 'rb' ) as f: file = f.read()
+                    if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
+                        
+                        importable_path_infos = [ ( path_type, mime, size, extra_info ) for ( path_type, mime, size, extra_info ) in importable_path_infos if extra_info not in details[ 'cached_imported_paths' ] ]
+                        
                     
-                    HC.app.WriteDaemon( 'import_or_whatever', file, any_extra_args )
+                    for ( i, path_info ) in enumerate( importable_path_infos ):
+                        
+                        HC.pubsub.pub( 'service_status', 'Importing ' + str( i ) + ' of ' + str( len( importable_path_infos ) ) )
+                        
+                        ( path_type, mime, size, extra_info ) = path_info
+                        
+                        if path_type == 'path':
+                            
+                            path = extra_info
+                            
+                            temp_path = HC.TEMP_DIR + os.path.sep + 'import_folder_file'
+                            
+                            try:
+                                
+                                # make read only perms to make sure it isn't being written/downloaded right now
+                                
+                                os.chmod( path, stat.S_IREAD )
+                                
+                                shutil.copy( path, temp_path )
+                                
+                                os.chmod( path, stat.S_IWRITE )
+                                
+                                with open( temp_path, 'rb' ) as f: file = f.read()
+                                
+                            except: continue
+                            
+                        elif path_type == 'zip':
+                            
+                            ( path, name ) = extra_info
+                            
+                            try:
+                                
+                                with zipfile.ZipFile( zip_path, 'r' ) as z: file = z.read( name )
+                                
+                            except: continue
+                            
+                        
+                        try:
+                            
+                            if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
+                            else: service_identifiers_to_tags = {}
+                            
+                            HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
+                            
+                        except: print( traceback.format_exc() )
+                        
+                        if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
+                            
+                            try: os.remove( path )
+                            except: pass
+                            
+                        elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( extra_info )
+                        
+                        self.WaitUntilGoodTimeToUseDBThread()
+                        
                     
-                    if details[ 'type' ] == some_constant_meaning_subs_folder: details[ 'subs_cache_or_whatever' ].add( path )
-                    else: pass # delete path
+                    details[ 'last_checked' ] = now
                     
-                    # politely wait for good time to use gui thread
+                    HC.pubsub.pub( 'service_status', '' )
                     
-                
-                HC.app.WriteDaemon( 'import_folder', path, details )
-                # push message to gui about what we just done
+                    HC.app.WriteDaemon( 'import_folder', folder_path, details )
+                    
                 
             
         
@@ -7403,7 +7449,7 @@ class DB( ServiceDB ):
                 
                 file = HC.app.ReadDaemon( 'file', hash )
                 
-                mime = HC.GetMimeFromString( file )
+                with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
                 
                 response = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
                 
@@ -7413,7 +7459,7 @@ class DB( ServiceDB ):
                 
                 thumbnail = HC.app.ReadDaemon( 'thumbnail', hash )
                 
-                mime = HC.GetMimeFromString( thumbnail )
+                mime = HydrusFileHandling.GetMimeFromString( thumbnail )
                 
                 response = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
                 
@@ -7521,11 +7567,13 @@ class DB( ServiceDB ):
         elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
         elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
         elif action == 'file': result = self._GetFile( *args, **kwargs )
+        elif action == 'file_and_mime': result = self._GetFileAndMime( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
         elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
         elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
         elif action == 'imageboards': result = self._GetImageboards( c, *args, **kwargs )
+        elif action == 'import_folders': result = self._GetImportFolders( c, *args, **kwargs )
         elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
         elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
@@ -7583,6 +7631,8 @@ class DB( ServiceDB ):
         elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
         elif action == 'import_file': self._ImportFile( c, *args, **kwargs )
         elif action == 'import_file_from_page': self._ImportFilePage( c, *args, **kwargs )
+        elif action == 'import_folder': self._UpdateImportFolder( c, *args, **kwargs )
+        elif action == 'import_folders': self._SetImportFolders( c, *args, **kwargs )
         elif action == 'inbox_conversation': self._InboxConversation( c, *args, **kwargs )
         elif action == 'message': self._AddMessage( c, *args, **kwargs )
         elif action == 'message_info_since': self._AddMessageInfoSince( c, *args, **kwargs )

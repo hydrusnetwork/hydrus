@@ -1,6 +1,7 @@
 import HydrusConstants as HC
 import HydrusAudioHandling
 import HydrusDownloading
+import HydrusFileHandling
 import HydrusImageHandling
 import ClientConstants as CC
 import ClientConstantsMessages
@@ -1001,9 +1002,9 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                     ( hash, ) = media_to_dump.GetDisplayMedia().GetHashes()
                     
-                    file = HC.app.Read( 'file', hash )
+                    ( file, mime ) = HC.app.Read( 'file_and_mime', hash )
                     
-                    post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, HC.GetMimeFromString( file ), file ) ) )
+                    post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, mime, file ) ) )
                     
                     ( ct, body ) = CC.GenerateDumpMultipartFormDataCTAndBody( post_fields )
                     

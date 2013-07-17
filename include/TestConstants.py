@@ -1,5 +1,6 @@
 import ClientConstants
 import HydrusConstants as HC
+import HydrusTags
 import os
 import random
 import TestConstants
@@ -28,8 +29,8 @@ class App():
         self._reads[ 'tag_service_precedence' ] = []
         self._reads[ 'tag_siblings' ] = {}
         
-        self._tag_parents_manager = ClientConstants.TagParentsManager()
-        self._tag_siblings_manager = ClientConstants.TagSiblingsManager()
+        self._tag_parents_manager = HydrusTags.TagParentsManager()
+        self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
         
     
     def GetTagParentsManager( self ): return self._tag_parents_manager

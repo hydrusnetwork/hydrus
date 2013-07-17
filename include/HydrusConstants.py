@@ -1,4 +1,5 @@
 import collections
+import cStringIO
 import httplib
 import HydrusPubSub
 import itertools
@@ -31,7 +32,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 76
+SOFTWARE_VERSION = 77
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -67,6 +68,9 @@ CONTENT_UPDATE_RATING = 9
 CONTENT_UPDATE_RATINGS_FILTER = 10
 CONTENT_UPDATE_DENY_PEND = 11
 CONTENT_UPDATE_DENY_PETITION = 12
+
+IMPORT_FOLDER_TYPE_DELETE = 0
+IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
 
 GET_DATA = 0
 POST_DATA = 1
@@ -198,20 +202,22 @@ APPLICATION_ZIP = 11
 APPLICATION_HYDRUS_ENCRYPTED_ZIP = 12
 AUDIO_MP3 = 13
 VIDEO_MP4 = 14
+AUDIO_OGG = 15
+AUDIO_FLAC = 16
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, APPLICATION_PDF, AUDIO_MP3 )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC )
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
 
-AUDIO = ( AUDIO_MP3, )
+AUDIO = ( AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC )
 
 VIDEO = ( VIDEO_FLV, )
 
 APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF, APPLICATION_ZIP )
 
-NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV, AUDIO_MP3 )
+NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC )
 
 ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
@@ -225,6 +231,7 @@ mime_enum_lookup[ 'collection' ] = APPLICATION_HYDRUS_CLIENT_COLLECTION
 mime_enum_lookup[ 'image/jpe' ] = IMAGE_JPEG
 mime_enum_lookup[ 'image/jpeg' ] = IMAGE_JPEG
 mime_enum_lookup[ 'image/jpg' ] = IMAGE_JPEG
+mime_enum_lookup[ 'image/x-png' ] = IMAGE_PNG
 mime_enum_lookup[ 'image/png' ] = IMAGE_PNG
 mime_enum_lookup[ 'image/gif' ] = IMAGE_GIF
 mime_enum_lookup[ 'image/bmp' ] = IMAGE_BMP
@@ -233,11 +240,14 @@ mime_enum_lookup[ 'image/vnd.microsoft.icon' ] = IMAGE_ICON
 mime_enum_lookup[ 'application/x-shockwave-flash' ] = APPLICATION_FLASH
 mime_enum_lookup[ 'application/octet-stream' ] = APPLICATION_OCTET_STREAM
 mime_enum_lookup[ 'application/x-yaml' ] = APPLICATION_YAML
+mime_enum_lookup[ 'PDF document' ] = APPLICATION_PDF
 mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
 mime_enum_lookup[ 'application/zip' ] = APPLICATION_ZIP
 mime_enum_lookup[ 'application/hydrus-encrypted-zip' ] = APPLICATION_HYDRUS_ENCRYPTED_ZIP
 mime_enum_lookup[ 'application' ] = APPLICATIONS
 mime_enum_lookup[ 'audio/mp3' ] = AUDIO_MP3
+mime_enum_lookup[ 'audio/ogg' ] = AUDIO_OGG
+mime_enum_lookup[ 'audio/flac' ] = AUDIO_FLAC
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
 mime_enum_lookup[ 'unknown mime' ] = APPLICATION_UNKNOWN
@@ -259,6 +269,8 @@ mime_string_lookup[ APPLICATION_ZIP ] = 'application/zip'
 mime_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
 mime_string_lookup[ APPLICATIONS ] = 'application'
 mime_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
+mime_string_lookup[ AUDIO_OGG ] = 'audio/ogg'
+mime_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
@@ -278,28 +290,14 @@ mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
 mime_ext_lookup[ APPLICATION_ZIP ] = '.zip'
 mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
 mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
+mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
+mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
 #mime_ext_lookup[ 'application/x-rar-compressed' ] = '.rar'
 
 ALLOWED_MIME_EXTENSIONS = [ mime_ext_lookup[ mime ] for mime in ALLOWED_MIMES ]
-
-header_and_mime = [
-    ( 0, '\xff\xd8', IMAGE_JPEG ),
-    ( 0, 'GIF87a', IMAGE_GIF ),
-    ( 0, 'GIF89a', IMAGE_GIF ),
-    ( 0, '\x89PNG', IMAGE_PNG ),
-    ( 0, 'BM', IMAGE_BMP ),
-    ( 0, 'CWS', APPLICATION_FLASH ),
-    ( 0, 'FWS', APPLICATION_FLASH ),
-    ( 0, 'FLV', VIDEO_FLV ),
-    ( 0, '%PDF', APPLICATION_PDF ),
-    ( 0, 'PK\x03\x04', APPLICATION_ZIP ),
-    ( 0, 'hydrus encrypted zip', APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( 0, 'ID3', AUDIO_MP3 ), # this isn't quite right, but nvm the mutagen parser will pick up errors
-    ( 4, 'ftypmp4', VIDEO_MP4 )
-    ]
 
 PREDICATE_TYPE_SYSTEM = 0
 PREDICATE_TYPE_TAG = 1
@@ -939,44 +937,6 @@ def GetEmptyDataDict():
     
     return data
     
-def GetMimeFromPath( filename ):
-    
-    f = open( filename, 'rb' )
-    
-    return GetMimeFromFilePointer( f )
-    
-def GetMimeFromFilePointer( f ):
-    
-    try:
-        
-        f.seek( 0 )
-        
-        header = f.read( 256 )
-        
-        return GetMimeFromString( header )
-        
-    except:
-        wx.MessageBox( traceback.format_exc() )
-        raise Exception( 'I could not identify the mime of the file' )
-    
-def GetMimeFromString( file ):
-    
-    bit_to_check = file[:256]
-    
-    if type( bit_to_check ) == unicode: bit_to_check = str( bit_to_check )
-    
-    for ( offset, header, mime ) in header_and_mime:
-        
-        offset_bit_to_check = bit_to_check[ offset: ]
-        
-        if bit_to_check.startswith( header ):
-            
-            return mime
-            
-        
-    
-    return APPLICATION_OCTET_STREAM
-    
 def GetShortcutFromEvent( event ):
     
     modifier = wx.ACCEL_NORMAL
@@ -1497,6 +1457,8 @@ class AccountIdentifier( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
+    def __repr__( self ): return 'Account Identifier: ' + str( ( self._access_key.encode( 'hex' ), self._hash.encode( 'hex' ), self._tag, self._account_id ) )
+    
     def GetAccessKey( self ): return self._access_key
     
     def GetAccountId( self ): return self._account_id
@@ -1581,6 +1543,8 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     def __hash__( self ): return self._service_key.__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def __repr__( self ): return 'Client Service Identifier: ' + str( ( name, self._type, self._service_key ) )
     
     def GetInfo( self ): return ( self._service_key, self._type, self._name )
     
@@ -1714,6 +1678,8 @@ class ContentUpdate():
     def __eq__( self, other ): return self._data_type == other._data_type and self._action == other._action and self._row == other._row
     
     def __ne__( self, other ): return not self.__eq__( other )
+    
+    def __repr__( self ): return 'Content Update: ' + str( ( self._data_type, self._action, self._row ) )
     
     def GetHashes( self ):
         
@@ -1927,6 +1893,8 @@ class Predicate():
     def __hash__( self ): return ( self._predicate_type, self._value ).__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def __repr__( self ): return 'Predicate: ' + str( ( self._predicate_type, self._value, self._count ) )
     
     def AddToCount( self, count ): self._count += count
     
@@ -2177,6 +2145,8 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     def __hash__( self ): return ( self._type, self._port ).__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def __repr__( self ): return 'Server Service Identifier: ' + str( ( self._type, self._port ) )
     
     def GetPort( self ): return self._port
     
@@ -2431,6 +2401,8 @@ sqlite3.register_adapter( ServerToClientUpdate, yaml.safe_dump )
 # Custom Exceptions
 
 class DBAccessException( Exception ): pass
+class MimeException( Exception ): pass
+class SizeException( Exception ): pass
 class NetworkVersionException( Exception ): pass
 class NoContentException( Exception ): pass
 class NotFoundException( Exception ): pass

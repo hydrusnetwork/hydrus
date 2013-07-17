@@ -5,6 +5,7 @@ import httplib
 import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
+import HydrusFileHandling
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusVideoHandling
@@ -237,77 +238,34 @@ def ParseAccessKey( authorisation_text ):
     
 def ParseFileArguments( file ):
     
-    args = {}
-    
     file = HydrusImageHandling.ConvertToPngIfBmp( file )
-    
-    args[ 'file' ] = file
-    
-    size = len( file )
-    
-    if size == 0: raise HC.ForbiddenException( 'Not interested in files of zero length' )
-    
-    mime = HC.GetMimeFromString( file )
-    
-    if mime not in HC.ALLOWED_MIMES: raise HC.ForbiddenException( 'Currently, only jpg, gif, bmp, png, swf, pdf, flv and mp3 are supported.' )
     
     hash = hashlib.sha256( file ).digest()
     
+    try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( file, hash )
+    except HC.SizeException: raise HC.ForbiddenException( 'File is of zero length!' )
+    except HC.MimeException: raise HC.ForbiddenException( 'Filetype is not permitted!' )
+    except Exception as e: raise HC.ForbiddenException( unicode( e ) )
+    
+    args = {}
+    
+    args[ 'file' ] = file
     args[ 'hash' ] = hash
     args[ 'size' ] = size
     args[ 'mime' ] = mime
     
+    if width is not None: args[ 'width' ] = width
+    if height is not None: args[ 'height' ] = height
+    if duration is not None: args[ 'duration' ] = duration
+    if num_frames is not None: args[ 'num_frames' ] = num_frames
+    if num_words is not None: args[ 'num_words' ] = num_words
+    
     if mime in HC.IMAGES:
-        
-        try: image_container = HydrusImageHandling.RenderImageFromFile( file, hash )
-        except: raise HC.ForbiddenException( 'Could not load that file as an image.' )
-        
-        ( width, height ) = image_container.GetSize()
-        
-        args[ 'width' ] = width
-        args[ 'height' ] = height
-        
-        if image_container.IsAnimated():
-            
-            duration = image_container.GetTotalDuration()
-            num_frames = image_container.GetNumFrames()
-            
-            args[ 'duration' ] = duration
-            args[ 'num_frames' ] = num_frames
-            
         
         try: thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( file, HC.UNSCALED_THUMBNAIL_DIMENSIONS )
         except: raise HC.ForbiddenException( 'Could not generate thumbnail from that file.' )
         
         args[ 'thumbnail' ] = thumbnail
-        
-    elif mime == HC.APPLICATION_FLASH:
-        
-        ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( file )
-        
-        args[ 'width' ] = width
-        args[ 'height' ] = height
-        args[ 'duration' ] = duration
-        args[ 'num_frames' ] = num_frames
-        
-    elif mime == HC.VIDEO_FLV:
-        
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( file )
-        
-        args[ 'width' ] = width
-        args[ 'height' ] = height
-        args[ 'duration' ] = duration
-        args[ 'num_frames' ] = num_frames
-        
-    elif mime == HC.APPLICATION_PDF:
-        
-        num_words = HydrusDocumentHandling.GetPDFNumWords( file )
-        
-        args[ 'num_words' ] = num_words
-        
-    elif mime == HC.AUDIO_MP3:
-        
-        args[ 'duration' ] = HydrusAudioHandling.GetMP3Duration( file )
         
     
     return args

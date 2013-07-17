@@ -1,6 +1,7 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
 import HydrusEncryption
+import HydrusTags
 import ClientConstants as CC
 import ClientConstantsMessages
 import ClientGUICommon
@@ -9,6 +10,7 @@ import itertools
 import os
 import random
 import re
+import string
 import subprocess
 import time
 import traceback
@@ -679,7 +681,7 @@ class DialogInputNamespaceRegex( Dialog ):
             self._shortcuts = ClientGUICommon.RegexButton( self )
             
             self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -721,7 +723,7 @@ class DialogInputNamespaceRegex( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def GetInfo( self ):
         
@@ -758,7 +760,7 @@ class DialogInputNewAccounts( Dialog ):
             self._expiration.SetSelection( 3 ) # one year
             
             self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -800,7 +802,7 @@ class DialogInputNewAccounts( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         num = self._num.GetValue()
         
@@ -854,7 +856,7 @@ class DialogInputNewAccountType( Dialog ):
             self._max_num_requests = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly requests', max_num_requests )
             
             self._apply = wx.Button( self, label='apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -941,7 +943,7 @@ class DialogInputNewAccountType( Dialog ):
         else: self._max_num_requests.Enable()
         
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def EventRemovePermission( self, event ):
         
@@ -987,7 +989,7 @@ class DialogInputNewFormField( Dialog ):
             self._editable.SetValue( editable )
             
             self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -1035,7 +1037,7 @@ class DialogInputNewFormField( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def GetFormField( self ):
         
@@ -1073,7 +1075,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._hours.SetValue( 0 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1122,7 +1124,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._duration_ms.SetValue( ms )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1173,7 +1175,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._file_service_identifier.SetSelection( 0 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1208,7 +1210,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._hash = wx.TextCtrl( self )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1247,7 +1249,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._height.SetValue( height )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1284,7 +1286,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._limit.SetValue( limit )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1327,7 +1329,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._mime_type.SetSelection( type )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1368,7 +1370,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._num_tags.SetValue( num_tags )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1408,7 +1410,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._num_words.SetValue( num_words )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1452,7 +1454,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._value_numerical.SetValue( value )
                 
                 self._first_ok = wx.Button( self, label='Ok', id = HC.LOCAL_RATING_NUMERICAL )
-                self._first_ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._first_ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._first_ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
                 self._service_like = wx.Choice( self )
@@ -1465,7 +1467,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._value_like.SetSelection( value )
                 
                 self._second_ok = wx.Button( self, label='Ok', id = HC.LOCAL_RATING_LIKE )
-                self._second_ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._second_ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._second_ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
                 if len( self._local_numericals ) > 0: self._service_numerical.SetSelection( 0 )
@@ -1531,7 +1533,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._height.SetValue( height )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1576,7 +1578,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._unit.SetSelection( unit )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1617,7 +1619,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._width.SetValue( width )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1654,7 +1656,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._max_hamming = wx.SpinCtrl( self, initial = 5, max = 256 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1732,7 +1734,10 @@ class DialogInputFileSystemPredicate( Dialog ):
             
         elif media == 'audio':
             
+            self._mime_type.Append( 'any', HC.AUDIO )
             self._mime_type.Append( 'mp3', HC.AUDIO_MP3 )
+            self._mime_type.Append( 'ogg', HC.AUDIO_OGG )
+            self._mime_type.Append( 'flac', HC.AUDIO_FLAC )
             
         elif media == 'video':
             
@@ -1742,15 +1747,15 @@ class DialogInputFileSystemPredicate( Dialog ):
         self._mime_type.SetSelection( 0 )
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: info = ( self._sign.GetStringSelection(), self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: info = ( self._sign.GetStringSelection(), self._duration_s.GetValue() * 1000 + self._duration_ms.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_HASH:
             
-            hex_filter = lambda c: c in '0123456789abcdef'
+            hex_filter = lambda c: c in string.hexdigits
             
-            hash = filter( hex_filter, self._hash.GetValue() )
+            hash = filter( hex_filter, lower( self._hash.GetValue() ) )
             
             if len( hash ) == 0: hash == '00'
             elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
@@ -1812,9 +1817,9 @@ class DialogInputFileSystemPredicate( Dialog ):
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: info = ( self._sign.GetStringSelection(), self._width.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
             
-            hex_filter = lambda c: c in '0123456789abcdef'
+            hex_filter = lambda c: c in string.hexdigits
             
-            hash = filter( hex_filter, self._hash.GetValue() )
+            hash = filter( hex_filter, lower( self._hash.GetValue() ) )
             
             if len( hash ) == 0: hash == '00'
             elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte
@@ -1874,7 +1879,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 self._days = wx.SpinCtrl( self, initial = 7, max = 90 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1916,7 +1921,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 self._contact.SetSelection( 0 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1952,7 +1957,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 self._contact.SetSelection( 0 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -1988,7 +1993,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 self._contact.SetSelection( 0 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -2024,7 +2029,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 self._num_attachments = wx.SpinCtrl( self, initial = 4, max = 2000 )
                 
                 self._ok = wx.Button( self, label='Ok' )
-                self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+                self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
             
@@ -2067,7 +2072,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def GetString( self ):
         
@@ -2092,7 +2097,7 @@ class DialogInputShortcut( Dialog ):
             self._actions.SetSelection( self._actions.FindString( action ) )
             
             self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -2132,7 +2137,7 @@ class DialogInputShortcut( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def GetInfo( self ):
         
@@ -2186,7 +2191,7 @@ class DialogManageAccountTypes( Dialog ):
             self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
             
             self._apply = wx.Button( self, label='apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -2350,7 +2355,7 @@ class DialogManageAccountTypes( Dialog ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try:
             
@@ -2398,7 +2403,7 @@ class DialogManageBoorus( Dialog ):
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
             self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -2492,7 +2497,7 @@ class DialogManageBoorus( Dialog ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         for ( name, page ) in self._boorus.GetNameToPageDict().items():
             
@@ -2876,7 +2881,7 @@ class DialogManageContacts( Dialog ):
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
             self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -3107,7 +3112,7 @@ class DialogManageContacts( Dialog ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try: self._CheckCurrentContactIsValid()
         except Exception as e:
@@ -3386,7 +3391,7 @@ class DialogManage4chanPass( Dialog ):
             self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
             
             self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -3445,7 +3450,7 @@ class DialogManage4chanPass( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         token = self._token.GetValue()
         pin = self._pin.GetValue()
@@ -3527,7 +3532,7 @@ class DialogManageImageboards( Dialog ):
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
             self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -3621,7 +3626,7 @@ class DialogManageImageboards( Dialog ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         for ( name, page ) in self._sites.GetNameToPageDict().items():
             
@@ -4181,6 +4186,284 @@ class DialogManageImageboards( Dialog ):
                 for mime in mimes: self._mimes.Append( HC.mime_string_lookup[ mime ], mime )
                 
             
+        
+    
+class DialogManageImportFolders( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._import_folders = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'type', 120 ), ( 'check period', 120 ), ( 'local tag', 120 ) ] )
+            
+            self._import_folders.SetMinSize( ( 780, 360 ) )
+            
+            for ( path, details ) in self._original_import_folders:
+                
+                type = details[ 'type' ]
+                check_period = details[ 'check_period' ]
+                local_tag = details[ 'local_tag' ]
+                
+                ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( type, check_period, local_tag )
+                
+                self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, type, check_period, local_tag ) )
+                
+            
+            self._add_button = wx.Button( self, label='add' )
+            self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._edit_button = wx.Button( self, label='edit' )
+            self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._delete_button = wx.Button( self, label='delete' )
+            self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            self._ok_button = wx.Button( self, id = wx.ID_OK, label='ok' )
+            self._ok_button.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._close_button = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._close_button.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._close_button.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            file_buttons.AddF( self._add_button, FLAGS_MIXED )
+            file_buttons.AddF( self._edit_button, FLAGS_MIXED )
+            file_buttons.AddF( self._delete_button, FLAGS_MIXED )
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok_button, FLAGS_MIXED )
+            buttons.AddF( self._close_button, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._import_folders, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'manage import folders' )
+        
+        self._original_import_folders = HC.app.Read( 'import_folders' )
+        
+        self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddFolders ) )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+    
+    def _AddFolder( self, path ):
+        
+        all_existing_client_data = self._import_folders.GetClientData()
+        
+        if path not in ( existing_path for ( existing_path, type, check_period, local_tag ) in all_existing_client_data ):
+            
+            type = HC.IMPORT_FOLDER_TYPE_SYNCHRONISE
+            check_period = 15 * 60
+            local_tag = None
+            
+            with DialogManageImportFoldersEdit( self, path, type, check_period, local_tag ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( path, type, check_period, local_tag ) = dlg.GetInfo()
+                    
+                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( type, check_period, local_tag )
+                    
+                    self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, type, check_period, local_tag ) )
+                    
+                
+            
+        
+    
+    def _AddFolders( self, paths ):
+        
+        for path in paths:
+            
+            if os.path.isdir( path ): self._AddFolder( path )
+            
+        
+    
+    def _GetPrettyVariables( self, type, check_period, local_tag ):
+        
+        if type == HC.IMPORT_FOLDER_TYPE_DELETE: pretty_type = 'delete'
+        elif type == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: pretty_type = 'synchronise'
+        
+        pretty_check_period = str( check_period / 60 ) + ' minutes'
+        
+        if local_tag == None: pretty_local_tag = ''
+        else: pretty_local_tag = local_tag
+        
+        return ( pretty_type, pretty_check_period, pretty_local_tag )
+        
+    
+    def EventAdd( self, event ):
+        
+        with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                self._AddFolder( path )
+                
+            
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventDelete( self, event ): self._import_folders.RemoveAllSelected()
+    
+    def EventEdit( self, event ):
+        
+        indices = self._import_folders.GetAllSelected()
+        
+        for index in indices:
+            
+            ( path, type, check_period, local_tag ) = self._import_folders.GetClientData( index )
+            
+            with DialogManageImportFoldersEdit( self, path, type, check_period, local_tag ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( path, type, check_period, local_tag ) = dlg.GetInfo()
+                    
+                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( type, check_period, local_tag )
+                    
+                    self._import_folders.UpdateRow( index, ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, type, check_period, local_tag ) )
+                    
+                
+            
+        
+    
+    def EventOK( self, event ):
+        
+        client_data = self._import_folders.GetClientData()
+        
+        original_paths_to_details = dict( self._original_import_folders )
+        
+        import_folders = []
+        
+        for ( path, type, check_period, local_tag ) in client_data:
+            
+            if path in original_paths_to_details: details = original_paths_to_details[ path ]
+            else: details = { 'last_checked' : 0, 'cached_imported_paths' : set() }
+            
+            details[ 'type' ] = type
+            details[ 'check_period' ] = check_period
+            details[ 'local_tag'] = local_tag
+            
+            import_folders.append( ( path, details ) )
+            
+        
+        HC.app.Write( 'import_folders', import_folders )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+class DialogManageImportFoldersEdit( Dialog ):
+    
+    def __init__( self, parent, path, type, check_period, local_tag ):
+        
+        def InitialiseControls():
+            
+            self._path = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
+            self._path.SetPath( path )
+            
+            self._type = ClientGUICommon.BetterChoice( self )
+            
+            self._type.Append( 'delete', HC.IMPORT_FOLDER_TYPE_DELETE )
+            self._type.Append( 'synchronise', HC.IMPORT_FOLDER_TYPE_SYNCHRONISE )
+            
+            self._type.Select( type )
+            
+            message = '''delete - import all files in folder and delete them afterwards, even if they fail
+
+synchronise - import all new files in folder, and leave them alone.'''
+            
+            self._type.SetToolTipString( message )
+            
+            self._check_period = wx.SpinCtrl( self )
+            self._check_period.SetRange( 3, 180 )
+            
+            self._check_period.SetValue( check_period / 60 )
+            
+            self._local_tag = wx.TextCtrl( self )
+            
+            self._local_tag.SetToolTipString( 'add this tag on the local tag service to anything imported from the folder' )
+            
+            if local_tag is not None: self._local_tag.SetValue( local_tag )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def InitialisePanel():
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label='path:' ), FLAGS_MIXED )
+            gridbox.AddF( self._path, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label='type:' ), FLAGS_MIXED )
+            gridbox.AddF( self._type, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label='check period (minutes):' ), FLAGS_MIXED )
+            gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label='local tag:' ), FLAGS_MIXED )
+            gridbox.AddF( self._local_tag, FLAGS_EXPAND_BOTH_WAYS )
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok, FLAGS_MIXED )
+            buttons.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( 640, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'edit import folder' )
+        
+        InitialiseControls()
+        
+        InitialisePanel()
+        
+    
+    def GetInfo( self ):
+        
+        path = self._path.GetPath()
+        
+        type = self._type.GetChoice()
+        
+        check_period = self._check_period.GetValue() * 60
+        
+        local_tag = self._local_tag.GetValue()
+        
+        return ( path, type, check_period, local_tag )
         
     
 class DialogManageOptionsFileRepository( Dialog ):
@@ -5273,7 +5556,7 @@ class DialogManagePixivAccount( Dialog ):
             self._test.Bind( wx.EVT_BUTTON, self.EventTest )
             
             self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -5323,7 +5606,7 @@ class DialogManagePixivAccount( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         id = self._id.GetValue()
         password = self._password.GetValue()
@@ -5385,7 +5668,7 @@ class DialogManageRatings( Dialog ):
             for service_identifier in service_identifiers: self._panels.append( self._Panel( self, service_identifier, media ) )
             
             self._apply = wx.Button( self, label='Apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -5438,12 +5721,12 @@ class DialogManageRatings( Dialog ):
             ( command, data ) = action
             
             if command == 'manage_ratings': self.EventCancel( event )
-            elif command == 'ok': self.EventOk( event )
+            elif command == 'ok': self.EventOK( event )
             else: event.Skip()
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try:
             
@@ -5769,7 +6052,7 @@ class DialogManageServer( Dialog ):
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
             self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -5875,7 +6158,7 @@ class DialogManageServer( Dialog ):
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
@@ -6076,7 +6359,7 @@ class DialogManageServices( Dialog ):
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
             self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -6271,7 +6554,7 @@ class DialogManageServices( Dialog ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
@@ -6700,7 +6983,7 @@ class DialogManageSubscriptions( Dialog ):
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
             self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
@@ -6890,7 +7173,7 @@ class DialogManageSubscriptions( Dialog ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try: self._CheckCurrentSubscriptionIsValid()
         except Exception as e:
@@ -7554,6 +7837,8 @@ class DialogManageTagParents( Dialog ):
         
         def _CanAdd( self, potential_child, potential_parent ):
             
+            if potential_child == potential_parent: return False
+            
             current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
             
             current_children = { child for ( child, parent ) in current_pairs }
@@ -7562,20 +7847,13 @@ class DialogManageTagParents( Dialog ):
             
             if potential_parent in current_children:
                 
-                d = dict( current_pairs )
+                simple_children_to_parents = HydrusTags.BuildSimpleChildrenToParents( current_pairs )
                 
-                next_parent = potential_parent
-                
-                while next_parent in d:
+                if HydrusTags.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
                     
-                    next_parent = d[ next_parent ]
+                    wx.MessageBox( 'Adding that pair would create a loop!' )
                     
-                    if next_parent == potential_child:
-                        
-                        wx.MessageBox( 'Adding that pair would create a loop!' )
-                        
-                        return False
-                        
+                    return False
                     
                 
             
@@ -8351,7 +8629,7 @@ class DialogManageTags( Dialog ):
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
             self._apply = wx.Button( self, label='Apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
@@ -8414,12 +8692,12 @@ class DialogManageTags( Dialog ):
             
             if command == 'manage_tags': self.EventCancel( event )
             elif command == 'set_search_focus': self._SetSearchFocus()
-            elif command == 'ok': self.EventOk( event )
+            elif command == 'ok': self.EventOK( event )
             else: event.Skip()
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try:
             
@@ -8726,7 +9004,7 @@ class DialogMessage( Dialog ):
         def InitialiseControls():
             
             self._ok = wx.Button( self, id = wx.ID_CANCEL, label = ok_label )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
         
@@ -8755,7 +9033,7 @@ class DialogMessage( Dialog ):
         InitialisePanel()
         
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
 class DialogModifyAccounts( Dialog ):
     
@@ -8948,7 +9226,7 @@ class DialogNews( Dialog ):
             self._next.Bind( wx.EVT_BUTTON, self.EventNext )
             
             self._done = wx.Button( self, id = wx.ID_CANCEL, label='Done' )
-            self._done.Bind( wx.EVT_BUTTON, self.EventOk )
+            self._done.Bind( wx.EVT_BUTTON, self.EventOK )
             
         
         def InitialisePanel():
@@ -9014,7 +9292,7 @@ class DialogNews( Dialog ):
         self._ShowNews()
         
     
-    def EventOk( self, event ): self.EndModal( wx.ID_OK )
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def EventPrevious( self, event ):
         
