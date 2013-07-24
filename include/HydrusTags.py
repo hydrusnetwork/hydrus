@@ -84,7 +84,7 @@ class TagsManagerSimple():
                 elif namespace in ( 'volume', 'chapter', 'page' ):
                     
                     try: tag = int( tag )
-                    except: pass
+                    except: continue
                     
                     if namespace == 'volume': self._volumes.add( tag )
                     elif namespace == 'chapter': self._chapters.add( tag )

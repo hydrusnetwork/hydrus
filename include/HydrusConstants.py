@@ -1,6 +1,7 @@
 import collections
 import cStringIO
 import httplib
+import HydrusExceptions
 import HydrusPubSub
 import itertools
 import locale
@@ -32,7 +33,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 77
+SOFTWARE_VERSION = 78
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -71,6 +72,10 @@ CONTENT_UPDATE_DENY_PETITION = 12
 
 IMPORT_FOLDER_TYPE_DELETE = 0
 IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
+
+MESSAGE_TYPE_TEXT = 0
+MESSAGE_TYPE_ERROR = 1
+MESSAGE_TYPE_FILES = 2
 
 GET_DATA = 0
 POST_DATA = 1
@@ -271,6 +276,7 @@ mime_string_lookup[ APPLICATIONS ] = 'application'
 mime_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
 mime_string_lookup[ AUDIO_OGG ] = 'audio/ogg'
 mime_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
+mime_string_lookup[ AUDIO ] = 'audio'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
@@ -583,8 +589,17 @@ def ConvertIntToBytes( size ):
     
     return '%.0f' % size + suffixes[ suffix_index ] + 'B'
     
-def ConvertIntToPrettyString( num ): return locale.format( "%d", num, grouping = True )
-
+def ConvertIntToPrettyString( num ):
+    
+    processed_num = locale.format( "%d", num, grouping = True )
+    
+    try: return unicode( processed_num )
+    except:
+        
+        try: return processed_num.decode( locale.getpreferredencoding() )
+        except: return str( num )
+        
+    
 def ConvertMillisecondsToPrettyTime( ms ):
     
     hours = ms / 3600000
@@ -977,6 +992,15 @@ def IsCollection( mime ): return mime in ( APPLICATION_HYDRUS_CLIENT_COLLECTION,
 
 def IsImage( mime ): return mime in ( IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG, IMAGE_BMP )
 
+def Logger( file ):
+    
+    def write( self, data ):
+        
+        print( data )
+        
+        print( os.linesep )
+        
+    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )
@@ -988,6 +1012,18 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
     return result
 
+class Message():
+    
+    def __init__( self, message_type, info ):
+        
+        self._message_type = message_type
+        self._info = info
+        
+    
+    def GetInfo( self ): return self._info
+    
+    def GetType( self ): return self._message_type
+    
 def SearchEntryMatchesPredicate( search_entry, predicate ):
     
     ( predicate_type, info ) = predicate.GetInfo()
@@ -1184,7 +1220,7 @@ class AdvancedHTTPConnection():
                 if mime_string in mime_enum_lookup and mime_enum_lookup[ mime_string ] == APPLICATION_YAML:
                     
                     try: parsed_response = yaml.safe_load( raw_response )
-                    except Exception as e: raise NetworkVersionException( 'Failed to parse a response object!' + os.linesep + unicode( e ) )
+                    except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + unicode( e ) )
                     
                 else: parsed_response = raw_response
                 
@@ -1204,7 +1240,7 @@ class AdvancedHTTPConnection():
                 
                 app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
                 
-                raise WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
+                raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
                 
             
             if '?' in request: request_command = request.split( '?' )[0]
@@ -1267,7 +1303,7 @@ class AdvancedHTTPConnection():
                     
                 
             
-        elif response.status == 304: raise NotModifiedException()
+        elif response.status == 304: raise HydrusExceptions.NotModifiedException()
         else:
             
             if self._service_identifier is not None:
@@ -1278,9 +1314,9 @@ class AdvancedHTTPConnection():
                 
             
             if response.status == 401: raise PermissionsException( parsed_response )
-            elif response.status == 403: raise ForbiddenException( parsed_response )
-            elif response.status == 404: raise NotFoundException( parsed_response )
-            elif response.status == 426: raise NetworkVersionException( parsed_response )
+            elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
+            elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
+            elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
             elif response.status in ( 500, 501, 502, 503 ):
                 
                 try: print( parsed_response )
@@ -1343,19 +1379,19 @@ class Account( HydrusYAMLBase ):
         
         if type( permissions ) == int: permissions = ( permissions, )
         
-        if self._IsBanned(): raise PermissionException( 'This account is banned!' )
+        if self._IsBanned(): raise HydrusExceptions.PermissionException( 'This account is banned!' )
         
-        if self._IsExpired(): raise PermissionException( 'This account is expired.' )
+        if self._IsExpired(): raise HydrusExceptions.PermissionException( 'This account is expired.' )
         
         ( max_num_bytes, max_num_requests ) = self._account_type.GetMaxMonthlyData()
         
         ( used_bytes, used_requests ) = self._used_data
         
-        if max_num_bytes is not None and used_bytes > max_num_bytes: raise PermissionException( 'You have hit your data transfer limit (' + ConvertIntToBytes( max_num_bytes ) + '), and cannot download any more for the month.' )
+        if max_num_bytes is not None and used_bytes > max_num_bytes: raise HydrusExceptions.PermissionException( 'You have hit your data transfer limit (' + ConvertIntToBytes( max_num_bytes ) + '), and cannot download any more for the month.' )
         
-        if max_num_requests is not None and used_requests > max_num_requests: raise PermissionException( 'You have hit your requests limit (' + ConvertIntToPrettyString( max_num_requests ) + '), and cannot download any more for the month.' )
+        if max_num_requests is not None and used_requests > max_num_requests: raise HydrusExceptions.PermissionException( 'You have hit your requests limit (' + ConvertIntToPrettyString( max_num_requests ) + '), and cannot download any more for the month.' )
         
-        if len( permissions ) > 0 and True not in [ self._account_type.HasPermission( permission ) for permission in permissions ]: raise PermissionException( 'You do not have permission to do that.' )
+        if len( permissions ) > 0 and True not in [ self._account_type.HasPermission( permission ) for permission in permissions ]: raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
         
     
     def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._created ) + os.linesep + self._account_type.ConvertToString( self._used_data ) + os.linesep + 'which '+ ConvertTimestampToPrettyExpires( self._expires )
@@ -2397,18 +2433,3 @@ sqlite3.register_converter( 'INTEGER_BOOLEAN', integer_boolean_to_bool )
 
 # no converters in this case, since we always want to send the dumped string, not the object, to the network
 sqlite3.register_adapter( ServerToClientUpdate, yaml.safe_dump )
-
-# Custom Exceptions
-
-class DBAccessException( Exception ): pass
-class MimeException( Exception ): pass
-class SizeException( Exception ): pass
-class NetworkVersionException( Exception ): pass
-class NoContentException( Exception ): pass
-class NotFoundException( Exception ): pass
-class NotModifiedException( Exception ): pass
-class ForbiddenException( Exception ): pass
-class PermissionException( Exception ): pass
-class SessionException( Exception ): pass
-class ShutdownException( Exception ): pass
-class WrongServiceTypeException( Exception ): pass

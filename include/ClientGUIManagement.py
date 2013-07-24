@@ -1,6 +1,7 @@
 import HydrusConstants as HC
 import HydrusAudioHandling
 import HydrusDownloading
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import ClientConstants as CC
@@ -1776,7 +1777,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
             
-        except HC.NotFoundException: pass
+        except HydrusExceptions.NotFoundException: pass
         except Exception as e:
             print( traceback.format_exc() )
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
@@ -2189,7 +2190,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             if len( image_infos_i_can_add ) > 0: wx.CallAfter( self.CALLBACKAddToImportQueue, image_infos_i_can_add )
             
-        except HC.NotFoundException:
+        except HydrusExceptions.NotFoundException:
             
             HC.pubsub.pub( 'set_thread_info', self._page_key, 'Thread 404' )
             

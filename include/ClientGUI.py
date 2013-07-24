@@ -4,6 +4,7 @@ import ClientConstants as CC
 import ClientConstantsMessages
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIDialogsManage
 import ClientGUIMessages
 import ClientGUIPages
 import os
@@ -69,6 +70,8 @@ class FrameGUI( ClientGUICommon.Frame ):
         HC.app.SetTopWindow( self )
         
         self.RefreshAcceleratorTable()
+        
+        self._message_manager = ClientGUICommon.PopupMessageManager( self )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_CLOSE, self.EventExit )
@@ -532,7 +535,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) )
         
@@ -541,7 +544,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageAccountTypes( self, service_identifier ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_identifier ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) )
         
@@ -550,7 +553,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -559,7 +562,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageContacts( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageContacts( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -568,7 +571,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -577,7 +580,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -588,25 +591,25 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             if service_identifier.GetType() == HC.LOCAL_FILE:
                 
-                with ClientGUIDialogs.DialogManageOptionsLocal( self ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogsManage.DialogManageOptionsLocal( self ) as dlg: dlg.ShowModal()
                 
             else:
                 
                 if service_identifier.GetType() == HC.FILE_REPOSITORY:
                     
-                    with ClientGUIDialogs.DialogManageOptionsFileRepository( self, service_identifier ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageOptionsFileRepository( self, service_identifier ) as dlg: dlg.ShowModal()
                     
                 elif service_identifier.GetType() == HC.TAG_REPOSITORY:
                     
-                    with ClientGUIDialogs.DialogManageOptionsTagRepository( self, service_identifier ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageOptionsTagRepository( self, service_identifier ) as dlg: dlg.ShowModal()
                     
                 elif service_identifier.GetType() == HC.MESSAGE_DEPOT:
                     
-                    with ClientGUIDialogs.DialogManageOptionsMessageDepot( self, service_identifier ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageOptionsMessageDepot( self, service_identifier ) as dlg: dlg.ShowModal()
                     
                 elif service_identifier.GetType() == HC.SERVER_ADMIN:
                     
-                    with ClientGUIDialogs.DialogManageOptionsServerAdmin( self, service_identifier ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageOptionsServerAdmin( self, service_identifier ) as dlg: dlg.ShowModal()
                     
                 
             
@@ -617,7 +620,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) )
         
@@ -626,7 +629,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -639,7 +642,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageServices( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageServices( self ) as dlg: dlg.ShowModal()
             
         except: wx.MessageBox( traceback.format_exc() )
         
@@ -654,7 +657,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -665,7 +668,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -674,7 +677,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageTagServicePrecedence( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTagServicePrecedence( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -683,7 +686,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
             
         except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
         
@@ -1902,7 +1905,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         try:
             
-            with ClientGUIDialogs.DialogManageServices( self ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageServices( self ) as dlg: dlg.ShowModal()
             
         except: wx.MessageBox( traceback.format_exc() )
         

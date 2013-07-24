@@ -2010,6 +2010,199 @@ class OnOffButton( wx.Button ):
     
     def IsOn( self ): return self._on
     
+class PopupMessage( wx.Window ):
+    
+    def __init__( self, parent ):
+        
+        wx.Window.__init__( self, parent, style = wx.BORDER_SIMPLE )
+        
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+    
+    def EventDismiss( self, event ):
+        
+        self.GetParent().Dismiss( self )
+        
+    
+class PopupMessageError( PopupMessage ):
+    
+    def __init__( self, parent, message_string ):
+        
+        PopupMessage.__init__( self, parent )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        error = wx.StaticText( self, label = 'error', style = wx.ALIGN_CENTER )
+        error.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        vbox.AddF( error, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+class PopupMessageFiles( PopupMessage ):
+    
+    def __init__( self, parent, message_string, hashes ):
+        
+        PopupMessage.__init__( self, parent )
+        
+        self._hashes = hashes
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        button = wx.Button( self, label = 'show files in new page' )
+        button.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( button, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def EventButton( self, event ):
+    
+        search_context = CC.FileSearchContext()
+        
+        unsorted_file_query_result = HC.app.Read( 'media_results', search_context, self._hashes )
+        
+        media_results = { media_result for media_result in unsorted_file_query_result }
+        
+        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+        
+    
+class PopupMessageText( PopupMessage ):
+    
+    def __init__( self, parent, message_string ):
+        
+        PopupMessage.__init__( self, parent )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+class PopupMessageManager( wx.Frame ):
+    
+    def __init__( self, top_level_parent ):
+        
+        wx.Frame.__init__( self, top_level_parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE )
+        
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self.SetSizer( vbox )
+        
+        self._message_windows = []
+        
+        top_level_parent.Bind( wx.EVT_SIZE, self.EventMove )
+        top_level_parent.Bind( wx.EVT_MOVE, self.EventMove )
+        
+        self._SizeAndPositionAndShow()
+        
+        HC.pubsub.sub( self, 'AddMessage', 'message' )
+        # maybe make a ding noise when a new message arrives
+        
+        # on right mouse click, dismiss relevant message and refit
+        
+    
+    def _CreateMessageWindow( self, message ):
+        
+        message_type = message.GetType()
+        info = message.GetInfo()
+        
+        if message_type == HC.MESSAGE_TYPE_TEXT:
+            
+            message_string = info
+            
+            print( 'message: ' + message_string )
+            
+            window = PopupMessageText( self, message_string )
+            
+        elif message_type == HC.MESSAGE_TYPE_ERROR:
+            
+            exception = info
+            
+            message_string = str( exception )
+            
+            print( 'error: ' + message_string )
+            
+            window = PopupMessageError( self, message_string )
+            
+        elif message_type == HC.MESSAGE_TYPE_FILES:
+            
+            ( message_string, hashes ) = info
+            
+            window = PopupMessageFiles( self, message_string, hashes )
+            
+        
+        return window
+        
+    
+    def _SizeAndPositionAndShow( self ):
+        
+        self.Fit()
+        
+        parent = self.GetParent()
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        my_x = ( parent_width - my_width ) - 5
+        my_y = ( parent_height - my_height ) - 15
+        
+        self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+        
+        if len( self._message_windows ) > 0: self.Show()
+        else: self.Hide()
+        
+    
+    def AddMessage( self, message ):
+        
+        window = self._CreateMessageWindow( message )
+        
+        self._message_windows.append( window )
+        
+        vbox = self.GetSizer()
+        
+        vbox.AddF( window, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._SizeAndPositionAndShow()
+        
+    
+    def Dismiss( self, window ):
+        
+        self._message_windows.remove( window )
+        
+        vbox = self.GetSizer()
+        
+        vbox.Detach( window )
+        
+        window.Destroy()
+        
+        self._SizeAndPositionAndShow()
+        
+    
+    def EventMove( self, event ):
+        
+        self._SizeAndPositionAndShow()
+        
+        event.Skip()
+        
+    
 class RegexButton( wx.Button ):
     
     ID_REGEX_WHITESPACE = 0
@@ -2843,6 +3036,81 @@ class TagsBox( ListBox ):
         else: ( r, g, b ) = namespace_colours[ '' ]
         
         return ( r, g, b )
+        
+    
+    def EventMenu( self, event ):
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            try:
+                
+                ( command, data ) = action
+                
+                if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+                elif command in ( 'parent', 'sibling' ):
+                    
+                    tag = data
+                    
+                    import ClientGUIDialogsManage
+                    
+                    if command == 'parent':
+                        
+                        with ClientGUIDialogsManage.DialogManageTagParents( self, tag ) as dlg: dlg.ShowModal()
+                        
+                    elif command == 'sibling':
+                        
+                        with ClientGUIDialogsManage.DialogManageTagSiblings( self, tag ) as dlg: dlg.ShowModal()
+                        
+                    
+                else:
+                    
+                    event.Skip()
+                    
+                    return # this is about select_up and select_down
+                    
+                
+            except Exception as e:
+                
+                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( traceback.format_exc() )
+                
+            
+        
+    
+    def EventMouseRightClick( self, event ):
+        
+        index = self._GetIndexUnderMouse( event )
+        
+        self._Select( index )
+        
+        if self._current_selected_index is not None:
+            
+            menu = wx.Menu()
+            
+            term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', term ), 'copy ' + term )
+            
+            if ':' in term:
+                
+                sub_term = term.split( ':', 1 )[1]
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', sub_term ), 'copy ' + sub_term )
+                
+            
+            menu.AppendSeparator()
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent', term ), 'add parent to ' + term )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling', term ), 'add sibling to ' + term )
+            
+            self.PopupMenu( menu )
+            
+            menu.Destroy()
+            
+        
+        event.Skip()
         
     
 class TagsBoxActiveOnly( TagsBox ):

@@ -3,6 +3,7 @@ import dircache
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusServer
 import itertools
@@ -90,7 +91,7 @@ class FileDB():
                 # this is wrong! no service_id in files_info. need to cross with file_map or w/e
                 ( current_storage, ) = c.execute( 'SELECT SUM( size ) FROM file_map, files_info USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
                 
-                if current_storage + size > max_storage: raise HC.ForbiddenException( 'The service is full! It cannot take any more files!' )
+                if current_storage + size > max_storage: raise HydrusExceptions.ForbiddenException( 'The service is full! It cannot take any more files!' )
                 
             
             dest_path = GetPath( 'file', hash )
@@ -248,7 +249,7 @@ class FileDB():
             
             with open( path, 'rb' ) as f: file = f.read()
             
-        except: raise HC.NotFoundException( 'Could not find that file!' )
+        except: raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
         
         return file
         
@@ -257,7 +258,7 @@ class FileDB():
         
         result = c.execute( 'SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? ORDER BY RANDOM() LIMIT 1;', ( service_id, HC.PETITIONED ) ).fetchone()
         
-        if result is None: raise HC.NotFoundException( 'No petitions!' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'No petitions!' )
         
         ( account_id, reason_id ) = result
         
@@ -341,7 +342,7 @@ class FileDB():
         
         result = c.execute( 'SELECT ip, timestamp FROM ip_addresses WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
-        if result is None: raise HC.ForbiddenException( 'Did not find ip information for that hash.' )
+        if result is None: raise HydrusExceptions.ForbiddenException( 'Did not find ip information for that hash.' )
         
         return result
         
@@ -358,7 +359,7 @@ class FileDB():
             
             return thumbnail
             
-        except: raise HC.NotFoundException( 'Could not find that thumbnail!' )
+        except: raise HydrusExceptions.NotFoundException( 'Could not find that thumbnail!' )
         
     
     def _RewardFilePetitioners( self, c, service_id, hash_ids, multiplier ):
@@ -373,7 +374,7 @@ class MessageDB():
     def _AddMessage( self, c, contact_key, message ):
         
         try: ( service_id, account_id ) = c.execute( 'SELECT service_id, account_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
-        except: raise HC.ForbiddenException( 'Did not find that contact key for the message depot!' )
+        except: raise HydrusExceptions.ForbiddenException( 'Did not find that contact key for the message depot!' )
         
         message_key = os.urandom( 32 )
         
@@ -387,7 +388,7 @@ class MessageDB():
     def _AddStatuses( self, c, contact_key, statuses ):
         
         try: ( service_id, account_id ) = c.execute( 'SELECT service_id, account_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
-        except: raise HC.ForbiddenException( 'Did not find that contact key for the message depot!' )
+        except: raise HydrusExceptions.ForbiddenException( 'Did not find that contact key for the message depot!' )
         
         now = int( time.time() )
         
@@ -402,7 +403,7 @@ class MessageDB():
             
             ( existing_public_key, ) = result
             
-            if existing_public_key != public_key: raise HC.ForbiddenException( 'This account already has a public key!' )
+            if existing_public_key != public_key: raise HydrusExceptions.ForbiddenException( 'This account already has a public key!' )
             else: return
             
         
@@ -415,7 +416,7 @@ class MessageDB():
         
         result = c.execute( 'SELECT 1 FROM messages WHERE service_id = ? AND account_id = ? AND message_key = ?;', ( service_id, account_id, sqlite3.Binary( message_key ) ) ).fetchone()
         
-        if result is None: raise HC.ForbiddenException( 'Could not find that message key on message depot!' )
+        if result is None: raise HydrusExceptions.ForbiddenException( 'Could not find that message key on message depot!' )
         
         try:
             
@@ -423,7 +424,7 @@ class MessageDB():
             
             with open( path, 'rb' ) as f: message = f.read()
             
-        except: raise HC.NotFoundException( 'Could not find that message!' )
+        except: raise HydrusExceptions.NotFoundException( 'Could not find that message!' )
         
         return message
         
@@ -765,7 +766,7 @@ class TagDB():
         
         tag = HC.CleanTag( tag )
         
-        if tag == '': raise HC.ForbiddenException( 'Tag of zero length!' )
+        if tag == '': raise HydrusExceptions.ForbiddenException( 'Tag of zero length!' )
         
         result = c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
         
@@ -837,7 +838,7 @@ class TagDB():
             return HC.ServerToClientPetition( petition_type, action, petitioner_account_identifier, petition_data, reason )
             
         
-        raise HC.NotFoundException( 'No petitions!' )
+        raise HydrusExceptions.NotFoundException( 'No petitions!' )
         
     
     def _RewardMappingPetitioners( self, c, service_id, tag_id, hash_ids, multiplier ):
@@ -1185,7 +1186,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     def _GetAccessKey( self, c, registration_key ):
         
         try: ( access_key, ) = c.execute( 'SELECT access_key FROM registration_keys WHERE registration_key = ?;', ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), ) ).fetchone()
-        except: raise HC.ForbiddenException( 'The service could not find that registration key in its database.' )
+        except: raise HydrusExceptions.ForbiddenException( 'The service could not find that registration key in its database.' )
         
         return access_key
         
@@ -1197,7 +1198,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             access_key = account_identifier.GetAccessKey()
             
             try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
-            except: raise HC.ForbiddenException( 'The service could not find that account in its database.' )
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         elif account_identifier.HasMapping():
             
@@ -1208,15 +1209,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 tag_id = self._GetTagId( c, tag )
                 hash_id = self._GetHashId( c, hash )
                 
-            except: raise HC.ForbiddenException( 'The service could not find that mapping in its database.' )
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that mapping in its database.' )
             
             try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, mappings USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND tag_id = ? AND hash_id = ?;', ( service_id, tag_id, hash_id ) ).fetchone()
-            except: raise HC.ForbiddenException( 'The service could not find that account in its database.' )
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         elif account_identifier.HasHash():
             
             try: hash_id = self._GetHashId( c, account_identifier.GetHash() )
-            except: raise HC.ForbiddenException( 'The service could not find that hash in its database.' )
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.' )
             
             try:
                 
@@ -1226,12 +1227,12 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 ( account_id, account_type, created, expires, used_bytes, used_requests ) = result
                 
-            except: raise HC.ForbiddenException( 'The service could not find that account in its database.' )
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         elif account_identifier.HasAccountId():
             
             try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, account_map USING ( account_type_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_identifier.GetAccountId() ) ).fetchone()
-            except: raise HC.ForbiddenException( 'The service could not find that account in its database.' )
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         
         used_data = ( used_bytes, used_requests )
@@ -1270,7 +1271,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     def _GetAccountIdentifier( self, c, access_key ):
         
         try: ( account_id, ) = c.execute( 'SELECT account_id FROM accounts WHERE access_key = ?;', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
-        except: raise HC.ForbiddenException( 'The service could not find that account in its database.' )
+        except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
         
         return HC.AccountIdentifier( account_id = account_id )
         
@@ -1281,7 +1282,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             ( account_id, ) = c.execute( 'SELECT account_id FROM contacts WHERE service_id = ? AND contact_key = ?;', ( service_id, sqlite3.Binary( contact_key ) ) ).fetchone()
             
-        except: raise HC.NotFoundException( 'Could not find that contact key!' )
+        except: raise HydrusExceptions.NotFoundException( 'Could not find that contact key!' )
         
         return account_id
         
@@ -1330,7 +1331,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         result = c.execute( 'SELECT account_type_id FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
         
-        if result is None: raise HC.NotFoundException( 'Could not find account title ' + str( title ) + ' in db for this service.' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + str( title ) + ' in db for this service.' )
         
         ( account_type_id, ) = result
         
@@ -1348,7 +1349,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         if result is None: result = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND ? BETWEEN begin AND end;', ( service_id, begin ) ).fetchone()
         
-        if result is None: raise HC.NotFoundException( 'Could not find that update!' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that update!' )
         
         ( update_key, ) = result
         
@@ -1493,7 +1494,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 title = account_type.GetTitle()
                 
-                if self._AccountTypeExists( c, service_id, title ): raise HC.ForbiddenException( 'Already found account type ' + str( title ) + ' in the db for this service, so could not add!' )
+                if self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + str( title ) + ' in the db for this service, so could not add!' )
                 
                 c.execute( 'INSERT OR IGNORE INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( title, account_type ) )
                 
@@ -1522,7 +1523,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 title = account_type.GetTitle()
                 
-                if old_title != title and self._AccountTypeExists( c, service_id, title ): raise HC.ForbiddenException( 'Already found account type ' + str( title ) + ' in the database, so could not rename ' + str( old_title ) + '!' )
+                if old_title != title and self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + str( title ) + ' in the database, so could not rename ' + str( old_title ) + '!' )
                 
                 account_type_id = self._GetAccountTypeId( c, service_id, old_title )
                 
@@ -1650,7 +1651,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     def _TryToRegisterAccount( self, c, service_id, access_key ):
         
         try: ( account_type_id, expiry ) = c.execute( 'SELECT account_type_id, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
-        except: raise HC.ForbiddenException( 'Could not register that account.' )
+        except: raise HydrusExceptions.ForbiddenException( 'Could not register that account.' )
         
         c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
         
@@ -2473,7 +2474,7 @@ class DB( ServiceDB ):
         
         service_type = service_identifier.GetType()
         
-        if ( service_type, request_type, request ) in HC.BANDWIDTH_CONSUMING_REQUESTS and ( self._over_monthly_data or service_identifier in self._services_over_monthly_data ):  job.PutResult( HC.PermissionException( 'This service has exceeded its monthly data allowance, please check back on the 1st.' ) )
+        if ( service_type, request_type, request ) in HC.BANDWIDTH_CONSUMING_REQUESTS and ( self._over_monthly_data or service_identifier in self._services_over_monthly_data ):  job.PutResult( HydrusExceptions.PermissionException( 'This service has exceeded its monthly data allowance, please check back on the 1st.' ) )
         else:
             
             if request_type == HC.GET and request != 'accesskeys': c.execute( 'BEGIN DEFERRED' )
@@ -2617,7 +2618,7 @@ class DB( ServiceDB ):
             
         elif request == 'init':
             
-            if c.execute( 'SELECT 1 FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone() is not None: raise HC.ForbiddenException( 'This server is already initialised!' )
+            if c.execute( 'SELECT 1 FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone() is not None: raise HydrusExceptions.ForbiddenException( 'This server is already initialised!' )
             
             account_type_id = self._GetAccountTypeId( c, service_id, 'server admin' )
             

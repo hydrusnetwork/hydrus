@@ -1,6 +1,7 @@
 import collections
 import httplib
 import HydrusConstants as HC
+import HydrusExceptions
 import os
 import Queue
 import re
@@ -104,7 +105,7 @@ class HydrusSessionManagerServer():
             
             # session not found, or expired
             
-            raise HC.SessionException()
+            raise HydrusExceptions.SessionException()
             
         
     

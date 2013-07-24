@@ -2,6 +2,7 @@ import HydrusConstants as HC
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIDialogsManage
 import ClientGUICanvas
 import ClientGUIMixins
 import itertools
@@ -398,7 +399,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                         else: flat_media.append( media )
                         
                     
-                    with ClientGUIDialogs.DialogManageRatings( None, flat_media ) as dlg: dlg.ShowModal()
+                    with ClientGUIDialogsManage.DialogManageRatings( None, flat_media ) as dlg: dlg.ShowModal()
                     
                     self.SetFocus()
                     
@@ -413,7 +414,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             try:
                 
-                with ClientGUIDialogs.DialogManageTags( None, self._file_service_identifier, self._selected_media ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogsManage.DialogManageTags( None, self._file_service_identifier, self._selected_media ) as dlg: dlg.ShowModal()
                 
                 self.SetFocus()
                 
@@ -535,6 +536,28 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self.GenerateMediaResults() )
         
     
+    def _RescindPetitionFiles( self, file_service_identifier ):
+        
+        hashes = self._GetSelectedHashes()
+        
+        if hashes is not None and len( hashes ) > 0:   
+            
+            try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
+            except Exception as e: wx.MessageBox( unicode( e ) )
+            
+        
+    
+    def _RescindUploadFiles( self, file_service_identifier ):
+        
+        hashes = self._GetSelectedHashes()
+        
+        if hashes is not None and len( hashes ) > 0:   
+            
+            try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, hashes ) ] } )
+            except Exception as e: wx.MessageBox( unicode( e ) )
+            
+        
+    
     def _ScrollEnd( self ):
         
         if len( self._sorted_media ) > 0:
@@ -576,7 +599,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            search_context = CC.FileSearchContext()
+            search_context = CC.FileSearchContext( file_service_identifier = self._file_service_identifier )
             
             unsorted_file_query_result = HC.app.Read( 'media_results', search_context, hashes )
             
@@ -1149,6 +1172,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 elif command == 'petition': self._PetitionFiles( data )
                 elif command == 'ratings_filter': self._RatingsFilter( data )
                 elif command == 'remove': self._Remove()
+                elif command == 'rescind_petition': self._RescindPetitionFiles( data )
+                elif command == 'rescind_upload': self._RescindUploadFiles( data )
                 elif command == 'scroll_end': self._ScrollEnd()
                 elif command == 'scroll_home': self._ScrollHome()
                 elif command == 'select_all': self._SelectAll()
@@ -1293,7 +1318,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     download_phrase = 'download all possible'
                     upload_phrase = 'upload all possible to'
+                    rescind_upload_phrase = 'rescind pending uploads to'
                     petition_phrase = 'petition all possible for removal from'
+                    rescind_petition_phrase = 'rescind petitions for'
                     remote_delete_phrase = 'delete all possible from'
                     modify_account_phrase = 'modify the accounts that uploaded these to'
                     
@@ -1318,7 +1345,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     download_phrase = 'download'
                     upload_phrase = 'upload to'
+                    rescind_upload_phrase = 'rescind pending upload to'
                     petition_phrase = 'petition for removal from'
+                    rescind_petition_phrase = 'rescind petition for'
                     remote_delete_phrase = 'delete from'
                     modify_account_phrase = 'modify the account that uploaded this to'
                     
@@ -1351,11 +1380,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 some_pending_file_service_identifiers = MassUnion( all_pending_file_service_identifiers ) - pending_file_service_identifiers
                 
+                selection_uploaded_file_service_identifiers = some_pending_file_service_identifiers.union( pending_file_service_identifiers )
+                
                 all_petitioned_file_service_identifiers = [ service_identifiers.GetPetitionedRemote() for service_identifiers in all_service_identifiers ]
                 
                 petitioned_file_service_identifiers = HC.IntelligentMassIntersect( all_petitioned_file_service_identifiers )
                 
                 some_petitioned_file_service_identifiers = MassUnion( all_petitioned_file_service_identifiers ) - petitioned_file_service_identifiers
+                
+                selection_petitioned_file_service_identifiers = some_petitioned_file_service_identifiers.union( petitioned_file_service_identifiers )
                 
                 all_deleted_file_service_identifiers = [ service_identifiers.GetDeletedRemote() for service_identifiers in all_service_identifiers ]
                 
@@ -1440,7 +1473,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                if len( selection_downloadable_file_service_identifiers ) > 0 or len( selection_uploadable_file_service_identifiers ) > 0 or len( selection_petitionable_file_service_identifiers ) > 0 or len( selection_deletable_file_service_identifiers ) > 0 or len( selection_modifyable_file_service_identifiers ) > 0:
+                len_interesting_file_service_identifiers = 0
+                
+                len_interesting_file_service_identifiers += len( selection_downloadable_file_service_identifiers )
+                len_interesting_file_service_identifiers += len( selection_uploadable_file_service_identifiers )
+                len_interesting_file_service_identifiers += len( selection_uploaded_file_service_identifiers )
+                len_interesting_file_service_identifiers += len( selection_petitionable_file_service_identifiers )
+                len_interesting_file_service_identifiers += len( selection_petitioned_file_service_identifiers )
+                len_interesting_file_service_identifiers += len( selection_deletable_file_service_identifiers )
+                len_interesting_file_service_identifiers += len( selection_modifyable_file_service_identifiers )
+                
+                if len_interesting_file_service_identifiers > 0:
                     
                     file_repo_menu = wx.Menu()
                     
@@ -1448,7 +1491,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if len( selection_uploadable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_uploadable_file_service_identifiers, upload_phrase, 'upload' )
                     
+                    if len( selection_uploaded_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_uploaded_file_service_identifiers, rescind_upload_phrase, 'rescind_upload' )
+                    
                     if len( selection_petitionable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_petitionable_file_service_identifiers, petition_phrase, 'petition' )
+                    
+                    if len( selection_petitioned_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_petitioned_file_service_identifiers, rescind_petition_phrase, 'rescind_petition' )
                     
                     if len( selection_deletable_file_service_identifiers ) > 0: AddFileServiceIdentifiersToMenu( file_repo_menu, selection_deletable_file_service_identifiers, remote_delete_phrase, 'delete' )
                     

@@ -1,6 +1,7 @@
 import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
+import HydrusExceptions
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusVideoHandling
@@ -25,11 +26,11 @@ def GetFileInfo( file, hash ):
     
     size = len( file )
     
-    if size == 0: raise HC.SizeException( 'File is of zero length!' )
+    if size == 0: raise HydrusExceptions.SizeException( 'File is of zero length!' )
     
     mime = GetMimeFromString( file )
     
-    if mime not in HC.ALLOWED_MIMES: raise HC.MimeException( 'Filetype is not permitted!' )
+    if mime not in HC.ALLOWED_MIMES: raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
     
     width = None
     height = None
@@ -40,7 +41,7 @@ def GetFileInfo( file, hash ):
     if mime in HC.IMAGES:
         
         try: image_container = HydrusImageHandling.RenderImageFromFile( file, hash )
-        except: raise HC.ForbiddenException( 'Could not load that file as an image.' )
+        except: raise HydrusExceptions.ForbiddenException( 'Could not load that file as an image.' )
         
         ( width, height ) = image_container.GetSize()
         

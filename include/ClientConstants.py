@@ -5,6 +5,7 @@ import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusEncryption
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusMessageHandling
@@ -479,7 +480,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
         
         if size == 0:
             
-            odd_paths.append( ( path, HC.SizeException() ) )
+            odd_paths.append( ( path, HydrusExceptions.SizeException() ) )
             
             continue
             
@@ -583,7 +584,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
                     
                 
             
-        else: odd_paths.append( ( path, HC.MimeException() ) )
+        else: odd_paths.append( ( path, HydrusExceptions.MimeException() ) )
         
     
     if not quiet: progress.Destroy()
@@ -592,8 +593,8 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
         
         for ( odd_path, e ) in odd_paths:
             
-            if type( e ) == HC.MimeException: print( odd_path + ' could not be imported because its mime is not supported.' )
-            elif type( e ) == HC.SizeException: print( odd_path + ' could not be imported because it is empty!' )
+            if type( e ) == HydrusExceptions.MimeException: print( odd_path + ' could not be imported because its mime is not supported.' )
+            elif type( e ) == HydrusExceptions.SizeException: print( odd_path + ' could not be imported because it is empty!' )
             else:
                 
                 print( odd_path + ' could not be imported because of this error:' )
@@ -1041,7 +1042,7 @@ class ConnectionToService():
         # send
         
         try: response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
-        except HC.ForbiddenException as e:
+        except HydrusExceptions.ForbiddenException as e:
             
             if unicode( e ) == 'Session not found!':
                 
@@ -1247,22 +1248,25 @@ class DataCache():
     
     def AddData( self, key, data ):
         
-        while self._total_estimated_memory_footprint > self._options[ self._cache_size_key ]:
+        if key not in self._keys_to_data:
             
-            deletee_key = self._keys_fifo.pop( 0 )
+            while self._total_estimated_memory_footprint > self._options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
+                
+                deletee_key = self._keys_fifo.pop( 0 )
+                
+                deletee_data = self._keys_to_data[ deletee_key ]
+                
+                self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
+                
+                del self._keys_to_data[ deletee_key ]
+                
             
-            deletee_data = self._keys_to_data[ deletee_key ]
+            self._keys_to_data[ key ] = data
             
-            self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
+            self._keys_fifo.append( key )
             
-            del self._keys_to_data[ deletee_key ]
+            self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
             
-        
-        self._keys_to_data[ key ] = data
-        
-        self._keys_fifo.append( key )
-        
-        self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
         
     
     def GetData( self, key ):

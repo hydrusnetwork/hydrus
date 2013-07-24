@@ -6,6 +6,7 @@ import itertools
 import HydrusConstants as HC
 import HydrusDownloading
 import HydrusEncryption
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusMessageHandling
@@ -2401,6 +2402,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         query_hash_ids = set( self._GetHashIds( c, hashes ) )
         
+        file_service_identifier = search_context.GetFileServiceIdentifier()
+        
+        if file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER: file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER
+        
+        service_id = self._GetServiceId( c, file_service_identifier )
+        
+        query_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ';', ( service_id, ) ) }
+        
         return self._GetMediaResults( c, search_context, query_hash_ids )
         
     
@@ -2455,7 +2464,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         result = c.execute( 'SELECT mime FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
-        if result is None: raise HC.NotFoundException( 'Could not find that file\'s mime!' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that file\'s mime!' )
         
         ( mime, ) = result
         
@@ -3241,8 +3250,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hash_ids = self._GetHashIds( c, hashes )
                             
-                            service_id = self._GetServiceId( c, service_identifier )
-                            
                             c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in hash_ids ] )
                             
                             if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: notify_new_downloads = True
@@ -3259,6 +3266,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
                             
                             c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
+                            
+                            notify_new_pending = True
+                            
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING:
+                            
+                            hashes = row
+                            
+                            hash_ids = self._GetHashIds( c, hashes )
+                            
+                            c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
+                            
+                            notify_new_pending = True
+                            
+                        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                            
+                            hashes = row
+                            
+                            hash_ids = self._GetHashIds( c, hashes )
+                            
+                            c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
                             
                             notify_new_pending = True
                             
@@ -3538,7 +3565,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         for ( post, timestamp ) in news_rows:
                             
-                            if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post )
+                            if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post ) )
                             
                         
                     elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
@@ -4338,7 +4365,7 @@ class DB( ServiceDB ):
         self._UpdateDB( c )
         
         try: c.execute( 'BEGIN IMMEDIATE' )
-        except Exception as e: raise HC.DBAccessException( unicode( e ) )
+        except Exception as e: raise HydrusExceptions.DBAccessException( unicode( e ) )
         
         try:
             
@@ -4370,7 +4397,7 @@ class DB( ServiceDB ):
         
         self._RebuildTagServicePrecedenceCache( c )
         
-        if not self._CheckPassword(): raise HC.PermissionException( 'No password!' )
+        if not self._CheckPassword(): raise HydrusExceptions.PermissionException( 'No password!' )
         
         threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
         
@@ -4491,7 +4518,7 @@ class DB( ServiceDB ):
             c.execute( 'PRAGMA journal_mode=WAL;' )
             
             try: c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e: raise HC.DBAccessException( unicode( e ) )
+            except Exception as e: raise HydrusExceptions.DBAccessException( unicode( e ) )
             
             c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, name TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
@@ -4966,7 +4993,7 @@ class DB( ServiceDB ):
         if version < HC.SOFTWARE_VERSION:
             
             try: c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e: raise HC.DBAccessException( unicode( e ) )
+            except Exception as e: raise HydrusExceptions.DBAccessException( unicode( e ) )
             
             try:
                 
@@ -6576,6 +6603,8 @@ class DB( ServiceDB ):
                         importable_path_infos = [ ( path_type, mime, size, extra_info ) for ( path_type, mime, size, extra_info ) in importable_path_infos if extra_info not in details[ 'cached_imported_paths' ] ]
                         
                     
+                    successful_hashes = set()
+                    
                     for ( i, path_info ) in enumerate( importable_path_infos ):
                         
                         HC.pubsub.pub( 'service_status', 'Importing ' + str( i ) + ' of ' + str( len( importable_path_infos ) ) )
@@ -6620,6 +6649,10 @@ class DB( ServiceDB ):
                             
                             HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
                             
+                            #( result, hash ) = HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
+                            
+                            #if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                            
                         except: print( traceback.format_exc() )
                         
                         if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
@@ -6630,6 +6663,13 @@ class DB( ServiceDB ):
                         elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( extra_info )
                         
                         self.WaitUntilGoodTimeToUseDBThread()
+                        
+                    
+                    if len( successful_hashes ) > 0:
+                        
+                        message_text = str( len( successful_hashes ) ) + ' files imported from ' + folder_path
+                        
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
                         
                     
                     details[ 'last_checked' ] = now
@@ -7017,7 +7057,7 @@ class DB( ServiceDB ):
                     
                     print( traceback.format_exc() )
                     
-                    HC.pubsub.pub( 'message', 'Sending a message failed: ' + os.linesep + traceback.format_exc() )
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'Sending a message failed: ' + os.linesep + traceback.format_exc() ) )
                     
                     status = 'failed'
                     
@@ -7308,6 +7348,8 @@ class DB( ServiceDB ):
                         
                         num_new = 0
                         
+                        successful_hashes = set()
+                        
                         for url_args in all_url_args:
                             
                             while self._options[ 'pause_subs_sync' ]:
@@ -7381,11 +7423,15 @@ class DB( ServiceDB ):
                                     
                                     HC.app.Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                     
+                                    #( status, hash ) = HC.app.Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                    
+                                    #if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                                    
                                 
                             except Exception as e:
                                 
                                 print( 'while trying to execute a subscription, the url ' + url + ' caused this problem:' )
-                                print( unicode( e ) )
+                                print( traceback.format_exc() )
                                 
                                 HC.pubsub.pub( 'log_error', 'synchronise subscriptions daemon', 'problem with ' + name + ' ' + unicode( e ) )
                                 
@@ -7406,6 +7452,13 @@ class DB( ServiceDB ):
                             HC.app.WaitUntilGoodTimeToUseGUIThread()
                             
                             self.WaitUntilGoodTimeToUseDBThread()
+                            
+                        
+                        if len( successful_hashes ) > 0:
+                            
+                            message_text = str( len( successful_hashes ) ) + ' files imported from ' + name
+                            
+                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
                             
                         
                         HC.pubsub.pub( 'log_message', 'synchronise subscriptions daemon', 'found ' + HC.ConvertIntToPrettyString( num_new ) + ' new files for ' + name )
@@ -7500,7 +7553,7 @@ class DB( ServiceDB ):
                 
                 c.execute( 'ROLLBACK' )
                 
-                HC.pubsub.pub( 'exception', Exception( 'The client is running out of memory! Restart it asap!' ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'The client is running out of memory! Restart it asap!' ) ) )
                 
                 ( exception_type, value, tb ) = sys.exc_info()
                 
@@ -7547,7 +7600,7 @@ class DB( ServiceDB ):
                 
                 new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
                 
-                if action not in ( 'import_file', 'import_file_from_page' ): HC.pubsub.pub( 'exception', new_e )
+                if action not in ( 'import_file', 'import_file_from_page' ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, new_e ) )
                 
             
         

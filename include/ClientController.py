@@ -1,5 +1,6 @@
 import gc
 import HydrusConstants as HC
+import HydrusExceptions
 import HydrusImageHandling
 import HydrusSessions
 import HydrusTags
@@ -9,6 +10,7 @@ import ClientGUI
 import ClientGUIDialogs
 import os
 import sqlite3
+import sys
 import threading
 import time
 import traceback
@@ -120,8 +122,6 @@ class Controller( wx.App ):
         pubsubs_queue.task_done()
         
     
-    def Exception( self, exception ): wx.MessageBox( unicode( exception ) )
-    
     def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
     
     def GetGUI( self ): return self._gui
@@ -142,6 +142,9 @@ class Controller( wx.App ):
     
     def MaintainDB( self ):
         
+        sys.stdout.flush()
+        sys.stderr.flush()
+        
         gc.collect()
         
         now = int( time.time() )
@@ -153,8 +156,6 @@ class Controller( wx.App ):
         #if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE ] > 50000: self.Write( 'fatten_autocomplete_cache' )
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > 86400 * 3: self.Write( 'delete_orphans' )
         
-    
-    def Message( self, message ): wx.MessageBox( message )
     
     def OnInit( self ):
         
@@ -182,7 +183,7 @@ class Controller( wx.App ):
                     
                     db_initialised = True
                     
-                except HC.DBAccessException as e:
+                except HydrusExceptions.DBAccessException as e:
                     
                     print( unicode( e ) )
                     
@@ -219,8 +220,6 @@ class Controller( wx.App ):
             
             self._gui = ClientGUI.FrameGUI()
             
-            HC.pubsub.sub( self, 'Exception', 'exception' )
-            HC.pubsub.sub( self, 'Message', 'message' )
             HC.pubsub.sub( self, 'Clipboard', 'clipboard' )
             
             self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
@@ -259,7 +258,7 @@ class Controller( wx.App ):
             
             return False
             
-        except HC.PermissionException as e: pass
+        except HydrusExceptions.PermissionException as e: pass
         except:
             
             wx.MessageBox( 'Woah, bad error:' + os.linesep + os.linesep + traceback.format_exc() )

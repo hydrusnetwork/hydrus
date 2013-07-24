@@ -13,22 +13,34 @@ string.whitespace
 import locale
 print( locale.setlocale( locale.LC_ALL, '' ) )
 
-
+import sys
 import os
 from include import HydrusConstants as HC
 from include import ClientController
 
-try:
+initial_sys_stdout = sys.stdout
+initial_sys_stderr = sys.stderr
+
+with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
     
-    app = ClientController.Controller( True, HC.LOGS_DIR + os.path.sep + 'client.log' )
+    sys.stdout = f
+    sys.stderr = f
     
-    app.MainLoop()
+    try:
+        
+        app = ClientController.Controller()
+        
+        app.MainLoop()
+        
+    except:
+        
+        import traceback
+        print( traceback.format_exc() )
+        
     
-except:
-    
-    import traceback
-    print( traceback.format_exc() )
-    
+
+sys.stdout = initial_sys_stdout
+sys.stderr = initial_sys_stderr
 
 HC.shutdown = True
 

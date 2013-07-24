@@ -2,6 +2,7 @@ import HydrusConstants as HC
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIDialogsManage
 import ClientGUIMixins
 import collections
 import os
@@ -287,8 +288,8 @@ class Canvas():
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        if self._current_display_media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( 200, 45 )
-        elif self._current_display_media.GetMime() in HC.AUDIO: ( original_width, original_height ) = ( 200, 90 )
+        if self._current_display_media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( min( my_width, 200 ), min( my_height, 45 ) )
+        elif self._current_display_media.GetMime() in HC.AUDIO: ( original_width, original_height ) = ( min( my_width, 360 ) , min( my_height, 240 ) )
         else: ( original_width, original_height ) = self._current_display_media.GetResolution()
         
         media_width = int( round( original_width * self._current_zoom ) )
@@ -315,7 +316,7 @@ class Canvas():
         if self._current_media is not None:
             
             try:
-                with ClientGUIDialogs.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
             except: wx.MessageBox( 'Had a problem displaying the manage ratings dialog from fullscreen.' )
             
         
@@ -325,7 +326,7 @@ class Canvas():
         if self._current_media is not None:
             
             try:
-                with ClientGUIDialogs.DialogManageTags( self, self._file_service_identifier, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_identifier, ( self._current_media, ) ) as dlg: dlg.ShowModal()
             except: wx.MessageBox( 'Had a problem displaying the manage tags dialog from fullscreen.' )
             
         
@@ -3225,8 +3226,29 @@ class MediaContainer( wx.Window ):
         
         self._image_cache = image_cache
         self._media = media
+        self._media_window = None
+        self._embed_button = None
         
-        ( media_initial_size, media_initial_position ) = ( initial_size, ( 0, 0 ) )
+        self._MakeMediaWindow()
+        
+        self.Bind( wx.EVT_SIZE, self.EventResize )
+        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+        
+        self.EventResize( None )
+        
+    
+    def _MakeMediaWindow( self, do_embed_button = True ):
+        
+        ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
+        
+        if do_embed_button and self._media.GetMime() in ( HC.VIDEO_FLV, HC.APPLICATION_FLASH ):
+            
+            self._embed_button = EmbedButton( self, media_initial_size )
+            self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
+            
+            return
+            
+        elif self._embed_button is not None: self._embed_button.Hide()
         
         if ShouldHaveAnimationBar( self._media ):
             
@@ -3260,8 +3282,8 @@ class MediaContainer( wx.Window ):
             self._media_window.flashvars = f
             self._media_window.movie = HC.STATIC_DIR + os.path.sep + 'player_flv_maxi_1.6.0.swf'
             
-        elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash() )
-        elif self._media.GetMime() in HC.AUDIO: self._media_window = MediaButton( self, self._media.GetHash(), self._media.GetMime() )
+        elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash(), media_initial_size )
+        elif self._media.GetMime() in HC.AUDIO: self._media_window = EmbedWindowAudio( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
         
         if ShouldHaveAnimationBar( self._media ):
             
@@ -3270,10 +3292,10 @@ class MediaContainer( wx.Window ):
             if self._media.GetMime() == HC.IMAGE_GIF: self._media_window.SetAnimationBar( self._animation_bar )
             
         
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+    
+    def EventEmbedButton( self, event ):
         
-        self.EventResize( None )
+        self._MakeMediaWindow( do_embed_button = False )
         
     
     def EventPropagateMouse( self, event ):
@@ -3295,41 +3317,51 @@ class MediaContainer( wx.Window ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        ( media_width, media_height ) = ( my_width, my_height )
-        
-        if ShouldHaveAnimationBar( self._media ):
+        if self._media_window is None:
             
-            media_height -= ANIMATED_SCANBAR_HEIGHT
+            self._embed_button.SetSize( ( my_width, my_height ) )
             
-            self._animation_bar.SetSize( ( my_width, ANIMATED_SCANBAR_HEIGHT ) )
-            self._animation_bar.SetPosition( ( 0, my_height - ANIMATED_SCANBAR_HEIGHT ) )
+        else:
             
-        
-        self._media_window.SetSize( ( media_width, media_height ) )
-        self._media_window.SetPosition( ( 0, 0 ) )
+            ( media_width, media_height ) = ( my_width, my_height )
+            
+            if ShouldHaveAnimationBar( self._media ):
+                
+                media_height -= ANIMATED_SCANBAR_HEIGHT
+                
+                self._animation_bar.SetSize( ( my_width, ANIMATED_SCANBAR_HEIGHT ) )
+                self._animation_bar.SetPosition( ( 0, my_height - ANIMATED_SCANBAR_HEIGHT ) )
+                
+            
+            self._media_window.SetSize( ( media_width, media_height ) )
+            self._media_window.SetPosition( ( 0, 0 ) )
+            
         
     
     def GotoPreviousOrNextFrame( self, direction ):
         
-        if ShouldHaveAnimationBar( self._media ):
+        if self._media_window is not None:
             
-            current_frame_index = self._media_window.CurrentFrame()
-            
-            num_frames = self._media.GetNumFrames()
-            
-            if direction == 1:
+            if ShouldHaveAnimationBar( self._media ):
                 
-                if current_frame_index == num_frames - 1: current_frame_index = 0
-                else: current_frame_index += 1
+                current_frame_index = self._media_window.CurrentFrame()
                 
-            else:
+                num_frames = self._media.GetNumFrames()
                 
-                if current_frame_index == 0: current_frame_index = num_frames - 1
-                else: current_frame_index -= 1
+                if direction == 1:
+                    
+                    if current_frame_index == num_frames - 1: current_frame_index = 0
+                    else: current_frame_index += 1
+                    
+                else:
+                    
+                    if current_frame_index == 0: current_frame_index = num_frames - 1
+                    else: current_frame_index -= 1
+                    
                 
-            
-            self._media_window.GotoFrame( current_frame_index )
-            self._animation_bar.GotoFrame( current_frame_index )
+                self._media_window.GotoFrame( current_frame_index )
+                self._animation_bar.GotoFrame( current_frame_index )
+                
             
         
     
@@ -3342,6 +3374,8 @@ class AnimationBar( wx.Window ):
         wx.Window.__init__( self, parent, size = ( parent_width, ANIMATED_SCANBAR_HEIGHT ), pos = ( 0, parent_height - ANIMATED_SCANBAR_HEIGHT ) )
         
         self._canvas_bmp = wx.EmptyBitmap( parent_width, ANIMATED_SCANBAR_HEIGHT, 24 )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         self._media = media
         self._media_window = media_window
@@ -3467,6 +3501,121 @@ class AnimationBar( wx.Window ):
         self._current_frame_index = frame_index
         
         self._Draw()
+        
+    
+class EmbedButton( wx.Window ):
+    
+    def __init__( self, parent, size ):
+        
+        wx.Window.__init__( self, parent, size = size )
+        
+        self._Redraw()
+        
+        self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_SIZE, self.EventResize )
+        
+    
+    def _Redraw( self ):
+        
+        ( x, y ) = self.GetClientSize()
+        
+        self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
+        
+        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        
+        dc.SetBackground( wx.WHITE_BRUSH )
+        
+        dc.Clear() # gcdc doesn't support clear
+        
+        dc = wx.GCDC( dc )
+        
+        center_x = x / 2
+        center_y = y / 2
+        radius = min( center_x, center_y ) - 5
+        
+        dc.SetPen( wx.TRANSPARENT_PEN )
+        
+        dc.SetBrush( wx.Brush( wx.Colour( 215, 215, 215 ) ) )
+        
+        dc.DrawCircle( center_x, center_y, radius )
+        
+        dc.SetBrush( wx.WHITE_BRUSH )
+        
+        m = ( 2 ** 0.5 ) / 2 # 45 degree angle
+        
+        half_radius = radius / 2
+        
+        angle_half_radius = m * half_radius
+        
+        points = []
+        
+        points.append( ( center_x - angle_half_radius, center_y - angle_half_radius ) )
+        points.append( ( center_x + half_radius, center_y ) )
+        points.append( ( center_x - angle_half_radius, center_y + angle_half_radius ) )
+        
+        dc.DrawPolygon( points )
+        
+    
+    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    
+    def EventResize( self, event ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
+        
+        if my_width != current_bmp_width or my_height != current_bmp_height:
+            
+            if my_width > 0 and my_height > 0: self._Redraw()
+            
+        
+    
+class EmbedWindowAudio( wx.Window ):
+    
+    def __init__( self, parent, hash, mime, size ):
+        
+        wx.Window.__init__( self, parent, size = size )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        self._hash = hash
+        self._mime = mime
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        ( width, height ) = size
+        
+        media_height = height - 45
+        
+        self._media_ctrl = wx.media.MediaCtrl( self, size = ( width, media_height ) )
+        self._media_ctrl.Hide()
+        
+        self._embed_button = EmbedButton( self, size = ( width, media_height ) )
+        self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
+        
+        launch_button = wx.Button( self, label = 'launch ' + HC.mime_string_lookup[ mime ] + ' externally', size = ( width, 45 ), pos = ( 0, media_height ) )
+        launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
+        
+    
+    def EventEmbedButton( self, event ):
+        
+        self._embed_button.Hide()
+        
+        self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
+        
+        path = CC.GetFilePath( self._hash, self._mime )
+        
+        self._media_ctrl.Load( path )
+        
+        self._media_ctrl.Show()
+        
+    
+    def EventLaunchButton( self, event ):
+        
+        path = CC.GetFilePath( self._hash, self._mime )
+        
+        # os.system( 'start ' + path )
+        subprocess.call( 'start "" "' + path + '"', shell = True )
         
     
 class Image( wx.Window ):
@@ -3626,80 +3775,11 @@ class Image( wx.Window ):
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
     
-class MediaButton( wx.Window ):
-    
-    def __init__( self, parent, hash, mime ):
-        
-        wx.Window.__init__( self, parent )
-        
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        self._hash = hash
-        self._mime = mime
-        self._initialised = False
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._media_ctrl = wx.media.MediaCtrl( self, size = ( 200, 100 ) )
-        self._media_ctrl.Hide()
-        
-        self._embed_button = wx.Button( self, label = 'open media here', size = ( 200, 45 ) )
-        self._embed_button.Bind( wx.EVT_BUTTON, self.EventEmbedButton )
-        
-        launch_button = wx.Button( self, label = 'launch media externally', size = ( 200, 45 ) )
-        launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
-        
-        vbox.AddF( self._media_ctrl, FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._embed_button, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( launch_button, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-    
-    def EventEmbedButton( self, event ):
-        
-        if self._media_ctrl.IsShown():
-            
-            self._media_ctrl.Stop()
-            self._media_ctrl.Hide()
-            
-            self._embed_button.SetLabel( 'open media here' )
-            
-        else:
-            
-            if not self._initialised:
-                
-                self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
-                
-                path = CC.GetFilePath( self._hash, self._mime )
-                
-                self._media_ctrl.Load( path )
-                
-                self._initialised = True
-                
-            
-            self._media_ctrl.Show()
-            
-            self._embed_button.SetLabel( 'close embed' )
-            
-        
-        self.Fit()
-        self.GetParent().Fit()
-        
-    
-    def EventLaunchButton( self, event ):
-        
-        path = CC.GetFilePath( self._hash, self._mime )
-        
-        # os.system( 'start ' + path )
-        subprocess.call( 'start "" "' + path + '"', shell = True )
-        
-    
 class PDFButton( wx.Button ):
     
-    def __init__( self, parent, hash ):
+    def __init__( self, parent, hash, size ):
         
-        wx.Button.__init__( self, parent, label = 'launch pdf', size = ( 200, 45 ) )
+        wx.Button.__init__( self, parent, label = 'launch pdf', size = size )
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         

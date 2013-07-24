@@ -5,6 +5,7 @@ import httplib
 import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusFlashHandling
 import HydrusImageHandling
@@ -228,10 +229,10 @@ def ParseAccessKey( authorisation_text ):
         
         ( format, access_key_encoded ) = authorisation_text.split( ' ' )
         
-        if format != 'hydrus_network': raise HC.ForbiddenException( 'Authorisation format error!' )
+        if format != 'hydrus_network': raise HydrusExceptions.ForbiddenException( 'Authorisation format error!' )
         
         try: access_key = access_key_encoded.decode( 'hex' )
-        except: raise HC.ForbiddenException( 'Attempted to parse access key, but could not understand it.' )
+        except: raise HydrusExceptions.ForbiddenException( 'Attempted to parse access key, but could not understand it.' )
         
     
     return access_key
@@ -243,9 +244,9 @@ def ParseFileArguments( file ):
     hash = hashlib.sha256( file ).digest()
     
     try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( file, hash )
-    except HC.SizeException: raise HC.ForbiddenException( 'File is of zero length!' )
-    except HC.MimeException: raise HC.ForbiddenException( 'Filetype is not permitted!' )
-    except Exception as e: raise HC.ForbiddenException( unicode( e ) )
+    except HydrusExceptions.SizeException: raise HydrusExceptions.ForbiddenException( 'File is of zero length!' )
+    except HydrusExceptions.MimeException: raise HydrusExceptions.ForbiddenException( 'Filetype is not permitted!' )
+    except Exception as e: raise HydrusExceptions.ForbiddenException( unicode( e ) )
     
     args = {}
     
@@ -263,7 +264,7 @@ def ParseFileArguments( file ):
     if mime in HC.IMAGES:
         
         try: thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( file, HC.UNSCALED_THUMBNAIL_DIMENSIONS )
-        except: raise HC.ForbiddenException( 'Could not generate thumbnail from that file.' )
+        except: raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file.' )
         
         args[ 'thumbnail' ] = thumbnail
         
@@ -289,12 +290,12 @@ def ParseHTTPGETArguments( path ):
                 if name in ( 'begin', 'num', 'expiration', 'subject_account_id', 'service_type', 'service_port', 'since' ):
                     
                     try: arguments[ name ] = int( value )
-                    except: raise HC.ForbiddenException( 'I was expecting to parse ' + name + ' as an integer, but it failed.' )
+                    except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse ' + name + ' as an integer, but it failed.' )
                     
                 elif name in ( 'access_key', 'title', 'subject_access_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key' ):
                     
                     try: arguments[ name ] = value.decode( 'hex' )
-                    except: raise HC.ForbiddenException( 'I was expecting to parse ' + name + ' as a hex-encoded string, but it failed.' )
+                    except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse ' + name + ' as a hex-encoded string, but it failed.' )
                     
                 
             
@@ -415,7 +416,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                                     if network_version < HC.NETWORK_VERSION: message = 'Please download the latest release.'
                                     else: message = 'Please ask this server\'s admin to update to the latest release.'
                                     
-                                    raise HC.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
+                                    raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
                                     
                                 
                             
@@ -426,11 +427,11 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                 
                 service_type = self._service_identifier.GetType()
                 
-                if service_type == HC.LOCAL_FILE and ip != '127.0.0.1': raise HC.ForbiddenException( 'Only local access allowed!' )
+                if service_type == HC.LOCAL_FILE and ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
                 
                 request = ParseHTTPRequest( self.path )
                 
-                if ( service_type, request_type, request ) not in HC.ALLOWED_REQUESTS: raise HC.ForbiddenException( 'This service does not support that request.' )
+                if ( service_type, request_type, request ) not in HC.ALLOWED_REQUESTS: raise HydrusExceptions.ForbiddenException( 'This service does not support that request.' )
                 
                 if request_type == HC.GET:
                     
@@ -478,11 +479,11 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                 
             
         except KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing.' ) )
-        except HC.PermissionException as e: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( e ) )
-        except HC.ForbiddenException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( e ) )
-        except HC.NotFoundException as e:response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
-        except HC.NetworkVersionException as e: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( e ) )
-        except HC.SessionException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
+        except HydrusExceptions.PermissionException as e: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( e ) )
+        except HydrusExceptions.ForbiddenException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( e ) )
+        except HydrusExceptions.NotFoundException as e:response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
+        except HydrusExceptions.NetworkVersionException as e: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( e ) )
+        except HydrusExceptions.SessionException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
         except Exception as e:
             
             self.log_string( traceback.format_exc() )
@@ -535,7 +536,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         
         service_type = self._service_identifier.GetType()
         
-        if service_type == HC.LOCAL_FILE and ip != '127.0.0.1': raise HC.ForbiddenException( 'Only local access allowed!' )
+        if service_type == HC.LOCAL_FILE and ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
         
         request = ParseHTTPRequest( self.path )
         

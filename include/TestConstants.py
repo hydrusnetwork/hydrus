@@ -17,25 +17,3 @@ def GenerateClientServiceIdentifier( service_type ):
         return HC.ClientServiceIdentifier( service_key, service_type, service_name )
         
     
-class App():
-    
-    def __init__( self ):
-        
-        HC.app = self
-        
-        self._reads = {}
-        
-        self._reads[ 'tag_parents' ] = {}
-        self._reads[ 'tag_service_precedence' ] = []
-        self._reads[ 'tag_siblings' ] = {}
-        
-        self._tag_parents_manager = HydrusTags.TagParentsManager()
-        self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
-        
-    
-    def GetTagParentsManager( self ): return self._tag_parents_manager
-    def GetTagSiblingsManager( self ): return self._tag_siblings_manager
-    
-    def Read( self, name ): return self._reads[ name ]
-    
-    def SetRead( self, name, value ): self._reads[ name ] = value
