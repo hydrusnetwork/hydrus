@@ -6,9 +6,10 @@
 	</head>
 	<body>
 		<div class="content">
-			<p class="warning">This is another area under active development right now. I will expand this as I add remote siblings.</p>
+			<h3>quick version</h3>
+			<p>Tag siblings let you replace a bad tag with a better tag.</p>
 			<h3>what's the problem?</h3>
-			<p>It is a common problem, in communal tagging, for ambiguity to arise when different tags with the same meaning are applied non-uniformly.</p>
+			<p>It is a common, in communal tagging, to encounter ambiguity when synonyms are applied non-uniformly.</p>
 			<p>A great example is in Japanese names, which are natively written surname first. <i>character:ayanami rei</i> and <i>character:rei ayanami</i> have the same meaning, but different users will use one, or the other, or even both.</p>
 			<p>Other examples are tiny syntactic changes, common misspellings, and unique acronyms:
 			<ul>
@@ -43,10 +44,12 @@
 			<p><img src="tag_siblings_dialog.png" /></p>
 			<p>The client will automatically collapse the tagspace to whatever you set. It'll even work with autocomplete, so when you start to type in 'rei ayanami' in search, it will show <i>character:ayanami rei</i> instead:</p>
 			<p><img src="tag_siblings_rei.png" /></p>
-			<p>It will not collapse in anywhere you 'write' tags, such as the manage tags dialog. You will be able to add or remove A as normal, but it will be written in some form of "A (B)" to let you know that, ultimately, the tag will end up displaying in the main gui as B:</p>
+			<p>Please note that siblings' autocomplete counts may be slightly inaccurate, as unioning the <i>count</i> is difficult to quickly estimate.</p>
+			<p>The client will not collapse siblings anywhere you 'write' tags, such as the manage tags dialog. You will be able to add or remove A as normal, but it will be written in some form of "A (B)" to let you know that, ultimately, the tag will end up displaying in the main gui as B:</p>
 			<p><img src="tag_siblings_ac_write.png" /></p>
 			<p>Although the client may present A as B, it will secretly remember A! You can remove the association A->B, and everything will return to how it was. <b>No information is lost at any point.</b></p>
-			<p>At the moment, this only supports local siblings. Just like tags, don't go crazy and try to do everything yourself. Have a play with local, but please wait for remote support so your efforts are shared.</p>
+			<h3>remote siblings</h3>
+			<p>Whenever you add or remove a tag sibling pair to a tag repository, you will have to supply a reason (like when you petition a tag). A janitor will review this petition, and will approve or deny it. If it is approved, all users who synchronise with that tag repository will gain that sibling pair. If it is denied, only you will see it.</p>
 		</div>
 	</body>
 </html>

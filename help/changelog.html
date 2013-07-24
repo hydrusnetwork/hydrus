@@ -8,11 +8,196 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 78</h3></li>
+				<ul>
+					<li>expanded parents testing with a namespace example</li>
+					<li>made getgstvcp in tags manager only return numbers for vcp</li>
+					<li>refactored ManageDialogs to their own file</li>
+					<li>refactored Exceptions to their own file</li>
+					<li>improved my testing framework so it can do wx gui elements</li>
+					<li>added test for dialogchoosenewservicemethod, fixed a tuypo</li>
+					<li>added test for dialogfinishfiltering</li>
+					<li>added test for dialogfinishratingfiltering</li>
+					<li>those two finish filter dialogs are a little simpler, now</li>
+					<li>set up a system so dialogs are a bit simpler, in terms of button event processing</li>
+					<li>added test for dialogfirststart</li>
+					<li>added 'add parent to tag' on tag right click menu</li>
+					<li>added 'add sibling to tag' on tag right click menu</li>
+					<li>made manage parents/siblings dialog focus selection more intelligent</li>
+					<li>'audio - any' mime search fixed</li>
+					<li>reworked audio embed container significantly</li>
+					<li>added embed button</li>
+					<li>all noisy mimes are now protected by embed button</li>
+					<li>you can now rescind pending file uploads or petitions from thumbnail right click menu</li>
+					<li>fixed a redundant bit of code in process content updates</li>
+					<li>in modify account dialog, set account expiry to 'does not expire' fixed</li>
+					<li>logging now happens a little more synchronously for client</li>
+					<li>popup messages prototype done</li>
+					<li>popup message for normal text</li>
+					<li>popup message for some errors</li>
+					<li>fixed a small redundancy bug in data cache</li>
+					<li>fixed a localisation bug when converting numbers (1234) to formatted version (1,234, 1.234, 1 234)</li>
+					<li>improved the code behind 'open selection in new page' in two ways</li>
+				</ul>
+				<li><h3>version 77</h3></li>
+				<ul>
+					<li>tag parents manager unit tests done</li>
+					<li>completely rewrote parents pair generation</li>
+					<li>rewrote parents pair retrieval to be much faster</li>
+					<li>parents manager is much more resistant to loops</li>
+					<li>in two ways!</li>
+					<li>loop detection fixed in manage parents dialog, as well</li>
+					<li>fixed how deleted parents are applied to combined service identifier</li>
+					<li>fixed how deleted parents are applied to specific service identifier</li>
+					<li>tag manager unit tests done, and everything was working ok!</li>
+					<li>shuffled objects around a bit, unified some tag code</li>
+					<li>tag manager merge unit tests done, and everything was working ok!</li>
+					<li>tag manager merge code simplified and result rewritten to a new, simpler class</li>
+					<li>small bug in how preview canvas fetches tags fixed</li>
+					<li>finished off import folders daemon</li>
+					<li>added import folders gui</li>
+					<li>added flac support</li>
+					<li>added ogg support</li>
+					<li>added a secondary layer of mime detection for greater accuracy</li>
+					<li>added a tertiary layer of mime detection for greater mp3 accuracy!</li>
+					<li>fixed an offset bug in mime detection</li>
+					<li>simplified and unified client/server file info parsing</li>
+					<li>import error handling improved</li>
+					<li>neatened how special thumbs are stored, refreshed, and retrieved</li>
+					<li>neatened how the bmp->png conversion happens</li>
+					<li>improved hash->mime caching for both client and server, to speed up http retrieval time for the new filetypes</li>
+					<li>better mime fetch in dumper, too</li>
+					<li>improved debugging messages for a bunch of my custom objects</li>
+				</ul>
+				<li><h3>version 76</h3></li>
+				<ul>
+					<li>made unit testing framework</li>
+					<li>tag siblings object now tested properly</li>
+					<li>hydrusdownloading functions now tested properly</li>
+					<li>added simple mp3 support to client, with external launch or embed</li>
+					<li>added search by mp3 mime</li>
+					<li>added mp3 to server</li>
+					<li>higher precedence deleted tag siblings now overrule lower existing pairs</li>
+					<li>tag sibling closed loop pairs ( a, a ) are skipped</li>
+					<li>neatened predicate sibling matching in two ways</li>
+					<li>improved tag autocomplete matching logic</li>
+					<li>skip logic improved for like ratings filter</li>
+					<li>skip logic improved and button added for numerical ratings filter</li>
+					<li>did a little work on reducing memory usage</li>
+					<li>reordered data cache's memory purge, which will make huge images load better</li>
+					<li>fixed a zoom bug with pdf buttons</li>
+					<li>added some select all, select none and refresh to thumbnail right click menus</li>
+					<li>reorganised menus a bit anyway</li>
+					<li>fullscreen tags on the left are now sibling-collapsed</li>
+				</ul>
+				<li><h3>version 75</h3></li>
+				<ul>
+					<li>fullscreenpopup window added</li>
+					<li>fullscreenpopup window can be dragged about</li>
+					<li>fullscreenpopupfilterinbox</li>
+					<li>fullscreenpopupfilterlike</li>
+					<li>fullscreenpopupfilternumerical</li>
+					<li>accuracy slider moved to popup</li>
+					<li>compare same image until done added to popup</li>
+					<li>keep on left/random/right added to popup</li>
+					<li>'don't ratings filter this' added to popup</li>
+					<li>that annoying as hell thumbnail selection drawing state bug is fixed</li>
+					<li>display of flash with only one frame fixed</li>
+					<li>downloaded tags now work again, sorry for the disruption!</li>
+					<li>deleted tags will now always show in manage tags dialog</li>
+					<li>fixed the various problems that were stopping DELETED->PENDING->CURRENT working for tags</li>
+					<li>fixed the children can only have one parent bug</li>
+					<li>fixed a deleted tag parents bug</li>
+					<li>a little counting logic improved in the special deleted_pending case</li>
+					<li>fixed a typo re uploading file to a repo</li>
+					<li>main guis statusbar now has a little 'db locked' indicator</li>
+				</ul>
+				<li><h3>version 74</h3></li>
+				<ul>
+					<li>flash scanbar added</li>
+					<li>made new mediacontainer class for media canvas</li>
+					<li>extracted scanbar to separate class</li>
+					<li>made animation frame tracking and control more sensible overall</li>
+					<li>previous_frame/next_frame shortcut now works for flash as well</li>
+					<li>fixed age predicate for > hours</li>
+					<li>fixed an important 'all known tags' A/C count cache bug when multiple services have the same tags for a file</li>
+					<li>if you have resolve_petitions permission for a tag service, tag siblings and parents petitions need no reason</li>
+					<li>slight change in how un-namespaced totals are calculated in A/C read</li>
+					<li>collection now obeys siblings</li>
+					<li>thumbnail upper text now obeys siblings</li>
+					<li>fullscreen text now obeys siblings</li>
+					<li>bit of siblings code cleanup</li>
+					<li>a little changeup to how showselectioninnewpage collects its media</li>
+					<li>/asp/, /gd/, /lgbt/, /vr/ and /wsg/ added to default dumper support</li>
+					<li>trying out making the server non-daemon, to see how that manages</li>
+				</ul>
+				<li><h3>version 73</h3></li>
+				<ul>
+					<li>every file operation from fullscreen was broke due to a single-character typo that got propagated</li>
+					<li>fixed local ratings, which were broken five different ways</li>
+					<li>ditched the deleted_pending concept, which was actually making things more complicated</li>
+					<li>possible fix to review services opening on bottom level</li>
+					<li>dumper no longer says it is still dumping on page close if it is done dumping</li>
+					<li>you can now scroll the dumper's upper comment box</li>
+					<li>moved site links over to github</li>
+					<li>fixed a typo re downloading a file that is already in the db and adding tags at the same time</li>
+					<li>local tags delete fixed</li>
+					<li>tag parents now apply globally, like siblings</li>
+					<li>thumbnail resizer daemon is less verbose and more helpful on IOErrors</li>
+					<li>fixed namespace colours in manage tags dialog</li>
+					<li>open selection in a new page now works for single-file selections</li>
+					<li>upload tags progress bar misalign fixed</li>
+					<li>namespaced counts no longer total up in A/C writes</li>
+					<li>manage siblings dialog now catches collisions when you put in the old, not the pair, and asks you what you want to do</li>
+					<li>age predicate now supports hours</li>
+					<li>while search is not synchronised, A/C will now query db when it might have queried the current media</li>
+					<li>think I fixed a sometimes-not-initially-showing-first-frame-of-gifs problem</li>
+					<li>downloaders now run parsed tags through siblings and parents managers</li>
+					<li>maaaybe fixed a cache counts error</li>
+					<li>wrote a little more sibling and parent help, and updated schema</li>
+				</ul>
+				<li><h3>version 72</h3></li>
+				<ul>
+					<li>remote tag siblings!</li>
+					<li>remote tag parents!</li>
+					<li>simplified update nomenclature</li>
+					<li>streamlined client-to-server update objects and processing</li>
+					<li>streamlined server-to-client update objects and processing</li>
+					<li>did a bunch of work on content_updates</li>
+					<li>did some work on service_updates, too</li>
+					<li>improved client-side petition handling</li>
+					<li>a bunch of changes to how uploadpending works</li>
+					<li>the way pending downloads are stored is improved</li>
+					<li>mappings tables are collapsed server-side</li>
+					<li>file tables are collapsed server-side</li>
+					<li>moved tag siblings and parents to content_updates</li>
+					<li>moved file upload/download to content_updates</li>
+					<li>reworked tag content_updates to be more streamlined</li>
+					<li>addfile/tagrepositoryupdate is made entirely content_updates, now</li>
+					<li>simplification in the way deleted content is stored</li>
+					<li>repo update processing string is muchly improved</li>
+					<li>repo update processing is smoother!</li>
+					<li>a slight change to default behind-the-scenes searches</li>
+					<li>improved how the server creates updates on service init</li>
+					<li>improvements to service_identifiers_to_statuses_to_tags sub-init and related parts of tags_manager</li>
+					<li>some misc nomenclature improvements</li>
+					<li>fixed a denypetition bug for file repositories</li>
+					<li>fixed optimised petition handling in server</li>
+					<li>fixed posting tags in dumper</li>
+					<li>fixed a problem with getunknownaccount</li>
+					<li>server now analyses on vacuum, like client</li>
+					<li>fixed a lolbug in thumbnail resizer daemon that was continually resizing thumbs</li>
+					<li>fixed a bug in cache counts, which should fix the 'pending menu disappeared' problem</li>
+					<li>corrected num_archive count in file repos</li>
+					<li>downloading files is simpler and faster; download menu is simpler</li>
+					<li>fixed server initialisation</li>
+					<li>updated to new sqlite version</li>
+				</ul>
 				<li><h3>version 71</h3></li>
 				<ul>
 					<li>collapsed the four mappings tables into two tables</li>
 					<li>merged the two active_mappings tables into the mappings table</li>
-					<li>made a _great_ number of changes to how mappings and active_mappings are stored and processed throughout</li>
+					<li>made a <i>great</i> number of changes to how mappings and active_mappings are stored and processed throughout</li>
 					<li>'active' and 'null' nomenclature is now 'combined'; null service_ids are now just ints</li>
 					<li>improved deletepending so it isn't so tough on the a/c cache</li>
 					<li>tags regex dialog entries 'for all files' and 'just for this file' was all broke</li>
