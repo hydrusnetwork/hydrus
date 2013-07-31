@@ -39,7 +39,7 @@ class FileDB():
             
             thumbnail_path = CC.GetThumbnailPath( hash )
             
-            with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
+            with HC.o( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
             phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail )
             
@@ -79,7 +79,7 @@ class FileDB():
                     
                     paths.append( path_to )
                     
-                except Exception as e: error_messages.add( unicode( e ) )
+                except Exception as e: error_messages.add( HC.u( e ) )
                 
             
             self.pub( 'clipboard', 'paths', paths )
@@ -129,7 +129,7 @@ class FileDB():
                     
                     if cancel_event.isSet(): break
                     
-                except Exception as e: error_messages.add( unicode( e ) )
+                except Exception as e: error_messages.add( HC.u( e ) )
                 
             
             if len( error_messages ) > 0:
@@ -164,9 +164,12 @@ class FileDB():
             
             with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
             
-            with open( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
+            with HC.o( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
             
-        except MemoryError: print( 'Memory error!' )
+        except MemoryError:
+            print( 'Memory error!' )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'Memory error! Restart client ASAP!' ) ) )
+            raise
         except: raise Exception( 'Could not find that file!' )
         
         return file
@@ -178,9 +181,12 @@ class FileDB():
             
             with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
             
-            with open( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
+            with HC.o( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
             
-        except MemoryError: print( 'Memory error!' )
+        except MemoryError:
+            print( 'Memory error!' )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'Memory error! Restart client ASAP!' ) ) )
+            raise
         except: raise Exception( 'Could not find that file!' )
         
         return ( file, mime )
@@ -256,19 +262,19 @@ class FileDB():
             
             if not os.path.exists( path ):
                 
-                with open( fullsize_path, 'rb' ) as f: thumbnail_full = f.read()
+                with HC.o( fullsize_path, 'rb' ) as f: thumbnail_full = f.read()
                 
                 thumbnail_dimensions = self._options[ 'thumbnail_dimensions' ]
                 
                 thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail_full, thumbnail_dimensions )
                 
-                with open( path, 'wb' ) as f: f.write( thumbnail )
+                with HC.o( path, 'wb' ) as f: f.write( thumbnail )
                 
                 return thumbnail
                 
             
         
-        with open( path, 'rb' ) as f: thumbnail = f.read()
+        with HC.o( path, 'rb' ) as f: thumbnail = f.read()
         
         return thumbnail
         
@@ -306,7 +312,7 @@ class MessageDB():
             try: transport_message.VerifyIsFromCorrectPerson( public_key )
             except:
                 
-                self.pub( 'log_message', 'synchronise messages daemon', 'received a message that did not verify' )
+                self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'received a message that did not verify' ) )
                 
                 return
                 
@@ -510,7 +516,7 @@ class MessageDB():
             
         else:
             
-            sql_predicates = [ '( contact_id_from = ' + str( contact_id ) + ' OR contact_id_to = ' + str( contact_id ) + ' )' ]
+            sql_predicates = [ '( contact_id_from = ' + HC.u( contact_id ) + ' OR contact_id_to = ' + HC.u( contact_id ) + ' )' ]
             
             if name != 'Anonymous':
                 
@@ -525,32 +531,32 @@ class MessageDB():
                 
                 status_id = self._GetStatusId( c, status )
                 
-                sql_predicates.append( '( contact_id_to = ' + str( contact_id ) + ' AND status_id = ' + str( status_id ) + ')' )
+                sql_predicates.append( '( contact_id_to = ' + HC.u( contact_id ) + ' AND status_id = ' + HC.u( status_id ) + ')' )
                 
             
             if contact_from is not None:
                 
                 contact_id_from = self._GetContactId( c, contact_from )
                 
-                sql_predicates.append( 'contact_id_from = ' + str( contact_id_from ) )
+                sql_predicates.append( 'contact_id_from = ' + HC.u( contact_id_from ) )
                 
             
             if contact_to is not None:
                 
                 contact_id_to = self._GetContactId( c, contact_to )
                 
-                sql_predicates.append( 'contact_id_to = ' + str( contact_id_to ) )
+                sql_predicates.append( 'contact_id_to = ' + HC.u( contact_id_to ) )
                 
             
             if contact_started is not None:
                 
                 contact_id_started = self._GetContactId( c, contact_started )
                 
-                sql_predicates.append( 'conversation_id = message_id AND contact_id_from = ' + str( contact_id_started ) )
+                sql_predicates.append( 'conversation_id = message_id AND contact_id_from = ' + HC.u( contact_id_started ) )
                 
             
-            if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + str( min_timestamp ) )
-            if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + str( max_timestamp ) )
+            if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HC.u( min_timestamp ) )
+            if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HC.u( max_timestamp ) )
             
             query_message_ids = { message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM messages, message_destination_map USING ( message_id ) WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
             
@@ -591,7 +597,7 @@ class MessageDB():
         num_inbox = len( convo_ids )
         
         if num_inbox == 0: inbox_string = 'message inbox empty'
-        else: inbox_string = str( num_inbox ) + ' in message inbox'
+        else: inbox_string = HC.u( num_inbox ) + ' in message inbox'
         
         self.pub( 'inbox_status', inbox_string )
         
@@ -692,7 +698,6 @@ class MessageDB():
         elif type( parameter ) in ( str, unicode ):
             try: ( public_key, name, host, port ) = c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( parameter ), ) ).fetchone()
             except: ( public_key, name, host, port ) = c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE name = ?;', ( parameter, ) ).fetchone()
-        else: print( type( parameter ) )
         
         return ClientConstantsMessages.Contact( public_key, name, host, port )
         
@@ -724,7 +729,7 @@ class MessageDB():
                     # we have a new contact from an outside source!
                     # let's generate a name that'll fit into the db
                     
-                    while c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( name, ) ).fetchone() is not None: name += str( random.randint( 0, 9 ) )
+                    while c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( name, ) ).fetchone() is not None: name += HC.u( random.randint( 0, 9 ) )
                     
                 
             else:
@@ -1067,7 +1072,7 @@ class MessageDB():
             private_key = message_depot.GetPrivateKey()
             
         
-        timestamp = int( time.time() )
+        timestamp = HC.GetNow()
         
         contacts_to = [ self._GetContact( c, contact_name_to ) for contact_name_to in contact_names_to ]
         
@@ -1656,7 +1661,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             if os.path.exists( resized_path ): os.remove( resized_path )
             
         
-        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, int( time.time() ) ) )
+        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
         
     
     def _DeletePending( self, c, service_identifier ):
@@ -1715,13 +1720,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         include_current_tags = search_context.IncludeCurrentTags()
         include_pending_tags = search_context.IncludePendingTags()
         
-        sql_predicates = [ 'service_id = ' + str( file_service_id ) ]
+        sql_predicates = [ 'service_id = ' + HC.u( file_service_id ) ]
         
         ( hash, min_size, size, max_size, mimes, min_timestamp, max_timestamp, min_width, width, max_width, min_height, height, max_height, min_num_words, num_words, max_num_words, min_duration, duration, max_duration ) = system_predicates.GetInfo()
         
-        if min_size is not None: sql_predicates.append( 'size > ' + str( min_size ) )
-        if size is not None: sql_predicates.append( 'size = ' + str( size ) )
-        if max_size is not None: sql_predicates.append( 'size < ' + str( max_size ) )
+        if min_size is not None: sql_predicates.append( 'size > ' + HC.u( min_size ) )
+        if size is not None: sql_predicates.append( 'size = ' + HC.u( size ) )
+        if max_size is not None: sql_predicates.append( 'size < ' + HC.u( max_size ) )
         
         if mimes is not None:
             
@@ -1729,33 +1734,33 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( mime, ) = mimes
                 
-                sql_predicates.append( 'mime = ' + str( mime ) )
+                sql_predicates.append( 'mime = ' + HC.u( mime ) )
                 
             else: sql_predicates.append( 'mime IN ' + HC.SplayListForDB( mimes ) )
             
         
-        if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + str( min_timestamp ) )
-        if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + str( max_timestamp ) )
+        if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HC.u( min_timestamp ) )
+        if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HC.u( max_timestamp ) )
         
-        if min_width is not None: sql_predicates.append( 'width > ' + str( min_width ) )
-        if width is not None: sql_predicates.append( 'width = ' + str( width ) )
-        if max_width is not None: sql_predicates.append( 'width < ' + str( max_width ) )
+        if min_width is not None: sql_predicates.append( 'width > ' + HC.u( min_width ) )
+        if width is not None: sql_predicates.append( 'width = ' + HC.u( width ) )
+        if max_width is not None: sql_predicates.append( 'width < ' + HC.u( max_width ) )
         
-        if min_height is not None: sql_predicates.append( 'height > ' + str( min_height ) )
-        if height is not None: sql_predicates.append( 'height = ' + str( height ) )
-        if max_height is not None: sql_predicates.append( 'height < ' + str( max_height ) )
+        if min_height is not None: sql_predicates.append( 'height > ' + HC.u( min_height ) )
+        if height is not None: sql_predicates.append( 'height = ' + HC.u( height ) )
+        if max_height is not None: sql_predicates.append( 'height < ' + HC.u( max_height ) )
         
-        if min_num_words is not None: sql_predicates.append( 'num_words > ' + str( min_num_words ) )
-        if num_words is not None: sql_predicates.append( 'num_words = ' + str( num_words ) )
-        if max_num_words is not None: sql_predicates.append( 'num_words < ' + str( max_num_words ) )
+        if min_num_words is not None: sql_predicates.append( 'num_words > ' + HC.u( min_num_words ) )
+        if num_words is not None: sql_predicates.append( 'num_words = ' + HC.u( num_words ) )
+        if max_num_words is not None: sql_predicates.append( 'num_words < ' + HC.u( max_num_words ) )
         
-        if min_duration is not None: sql_predicates.append( 'duration > ' + str( min_duration ) )
+        if min_duration is not None: sql_predicates.append( 'duration > ' + HC.u( min_duration ) )
         if duration is not None:
             
             if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
-            else: sql_predicates.append( 'duration = ' + str( duration ) )
+            else: sql_predicates.append( 'duration = ' + HC.u( duration ) )
             
-        if max_duration is not None: sql_predicates.append( 'duration < ' + str( max_duration ) )
+        if max_duration is not None: sql_predicates.append( 'duration < ' + HC.u( max_duration ) )
         
         if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0:
             
@@ -1851,8 +1856,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             elif value == 'uncertain': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM ratings_filter WHERE service_id = ?;', ( service_id, ) ) ] )
             else:
                 
-                if operator == u'\u2248': predicate = str( value * 0.95 ) + ' < rating AND rating < ' + str( value * 1.05 )
-                else: predicate = 'rating ' + operator + ' ' + str( value )
+                if operator == u'\u2248': predicate = HC.u( value * 0.95 ) + ' < rating AND rating < ' + HC.u( value * 1.05 )
+                else: predicate = 'rating ' + operator + ' ' + HC.u( value )
                 
                 query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
                 
@@ -1870,7 +1875,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( tag_service_identifier, file_service_identifier ) in itertools.product( tag_service_identifiers, file_service_identifiers ): self._GetAutocompleteTags( c, tag_service_identifier = tag_service_identifier, file_service_identifier = file_service_identifier, collapse = False )
         
-        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, int( time.time() ) ) )
+        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, HC.GetNow() ) )
         
     
     def _Get4chanPass( self, c ):
@@ -1888,13 +1893,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER:
             
-            current_tables_phrase = 'mappings WHERE service_id = ' + str( tag_service_id ) + ' AND status = ' + str( HC.CURRENT ) + ' AND '
-            pending_tables_phrase = 'mappings WHERE service_id = ' + str( tag_service_id ) + ' AND status = ' + str( HC.PENDING ) + ' AND '
+            current_tables_phrase = 'mappings WHERE service_id = ' + HC.u( tag_service_id ) + ' AND status = ' + HC.u( HC.CURRENT ) + ' AND '
+            pending_tables_phrase = 'mappings WHERE service_id = ' + HC.u( tag_service_id ) + ' AND status = ' + HC.u( HC.PENDING ) + ' AND '
             
         else:
             
-            current_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + str( tag_service_id ) + ' AND mappings.status = ' + str( HC.CURRENT ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' AND '
-            pending_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + str( tag_service_id ) + ' AND mappings.status = ' + str( HC.PENDING ) + ' AND files_info.service_id = ' + str( file_service_id ) + ' AND '
+            current_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + HC.u( tag_service_id ) + ' AND mappings.status = ' + HC.u( HC.CURRENT ) + ' AND files_info.service_id = ' + HC.u( file_service_id ) + ' AND '
+            pending_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + HC.u( tag_service_id ) + ' AND mappings.status = ' + HC.u( HC.PENDING ) + ' AND files_info.service_id = ' + HC.u( file_service_id ) + ' AND '
             
         
         # precache search
@@ -1945,7 +1950,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         possible_tag_ids = GetPossibleTagIds()
                         
-                        predicates_phrase = 'namespace_id = ' + str( namespace_id ) + ' AND tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
+                        predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
                         
                     
                 
@@ -2162,7 +2167,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetHydrusSessions( self, c ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'DELETE FROM hydrus_sessions WHERE ? > expiry;', ( now, ) )
         
@@ -3009,7 +3014,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetWebSessions( self, c ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'DELETE FROM web_sessions WHERE ? > expiry;', ( now, ) )
         
@@ -3087,13 +3092,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 if size < min_size: raise Exception( 'File too small' )
                 
             
-            timestamp = int( time.time() )
+            timestamp = HC.GetNow()
             
             dest_path = CC.GetFilePath( hash, mime )
             
             if not os.path.exists( dest_path ):
                 
-                with open( dest_path, 'wb' ) as f: f.write( file )
+                with HC.o( dest_path, 'wb' ) as f: f.write( file )
                 
                 os.chmod( dest_path, stat.S_IREAD )
                 
@@ -3104,13 +3109,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 thumbnail_path = CC.GetThumbnailPath( hash )
                 
-                with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
+                with HC.o( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
                 
                 thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
                 
                 thumbnail_resized_path = thumbnail_path + '_resized'
                 
-                with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+                with HC.o( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
                 
                 phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail )
                 
@@ -3548,7 +3553,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         do_new_permissions = True
                         
-                    elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( int( time.time() ), service_id ) )
+                    elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( HC.GetNow(), service_id ) )
                     elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
                         
                         num_bytes = row
@@ -3561,11 +3566,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in news_rows ] )
                         
-                        now = int( time.time() )
+                        now = HC.GetNow()
                         
                         for ( post, timestamp ) in news_rows:
                             
-                            if now - timestamp < 86400 * 7: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post ) )
+                            if now - timestamp < 86400 * 7: self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post ) )
                             
                         
                     elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
@@ -3581,8 +3586,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 except Exception as e:
                     
-                    print( 'Had a service update error:' )
-                    print( unicode( e ) )
+                    message = 'Had a service update error:' + os.linesep + traceback.format_exc()
+                    
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                    
+                    print( message )
                     
                 
             
@@ -3680,7 +3688,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, new_service_identifier ) ] } )
         self.pub( 'notify_new_pending' )
         self.pub( 'permissions_are_stale' )
-        self.pub( 'log_message', 'database', 'reset ' + service_name )
+        self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'reset ' + service_name ) )
         
     
     def _Set4chanPass( self, c, token, pin, timeout ):
@@ -4154,7 +4162,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service_port = server_service_identifier.GetPort()
                 
-                service_name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + str( service_port )
+                service_name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( service_port )
                 
                 client_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, service_name )
                 
@@ -4285,7 +4293,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     while result is not None:
                         
-                        identity_name += str( random.randint( 0, 9 ) )
+                        identity_name += HC.u( random.randint( 0, 9 ) )
                         
                         result = c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( identity_name, ) ).fetchone()
                         
@@ -4365,7 +4373,7 @@ class DB( ServiceDB ):
         self._UpdateDB( c )
         
         try: c.execute( 'BEGIN IMMEDIATE' )
-        except Exception as e: raise HydrusExceptions.DBAccessException( unicode( e ) )
+        except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
         
         try:
             
@@ -4377,7 +4385,11 @@ class DB( ServiceDB ):
             
         except:
             
-            print( traceback.format_exc() )
+            message = 'Database commit error:' + os.linesep + traceback.format_exc()
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            
+            print( message )
             
             c.execute( 'ROLLBACK' )
             
@@ -4518,7 +4530,7 @@ class DB( ServiceDB ):
             c.execute( 'PRAGMA journal_mode=WAL;' )
             
             try: c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e: raise HydrusExceptions.DBAccessException( unicode( e ) )
+            except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
             
             c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, name TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
@@ -4821,7 +4833,7 @@ class DB( ServiceDB ):
             
             c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
             
-            with open( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
+            with HC.o( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
             
             ( public_key, name, host, port ) = hydrus_admin.GetInfo()
             
@@ -4853,23 +4865,30 @@ class DB( ServiceDB ):
         server_thread = threading.Thread( target=self._server.serve_forever )
         server_thread.start()
         
-        connection = httplib.HTTPConnection( '127.0.0.1:' + str( port ) )
+        connection = httplib.HTTPConnection( '127.0.0.1:' + HC.u( port ) )
         
         try:
             
             connection.connect()
             connection.close()
             
-        except: print( 'Could not bind the client to port ' + str( port ) )
+        except:
+            
+            message = 'Could not bind the client to port ' + HC.u( port )
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            
+            print( message )
+            
         
-        HC.DAEMONWorker( 'CheckImportFolders', self.DAEMONCheckImportFolders, ( 'notify_new_import_folders', ), period = 180 )
-        HC.DAEMONWorker( 'DownloadFiles', self.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HC.DAEMONWorker( 'DownloadThumbnails', self.DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
-        HC.DAEMONWorker( 'ResizeThumbnails', self.DAEMONResizeThumbnails, init_wait = 600 )
-        HC.DAEMONWorker( 'SynchroniseAccounts', self.DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
-        HC.DAEMONWorker( 'SynchroniseMessages', self.DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
-        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', self.DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
-        HC.DAEMONQueue( 'FlushRepositoryUpdates', self.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
+        HC.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_new_import_folders', ), period = 180 )
+        HC.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
+        HC.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
+        HC.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
+        HC.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
+        HC.DAEMONWorker( 'SynchroniseMessages', DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
+        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
+        HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
         
     
     def _SaveOptions( self, c ):
@@ -4993,7 +5012,7 @@ class DB( ServiceDB ):
         if version < HC.SOFTWARE_VERSION:
             
             try: c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e: raise HydrusExceptions.DBAccessException( unicode( e ) )
+            except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
             
             try:
                 
@@ -5284,6 +5303,11 @@ class DB( ServiceDB ):
                     c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
                     
                 
+                if version < 79:
+                    
+                    c.execute( 'DELETE FROM import_folders;' )
+                    
+                
                 unknown_account = HC.GetUnknownAccount()
                 
                 unknown_account.MakeStale()
@@ -5294,7 +5318,7 @@ class DB( ServiceDB ):
                 
                 c.execute( 'COMMIT' )
                 
-                wx.MessageBox( 'The client has updated successfully!' )
+                wx.MessageBox( 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
                 
             except:
                 
@@ -5545,7 +5569,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( all_local_files ), 100 ):
                 
-                HC.app.SetSplashText( 'updating db to v29 ' + str( i ) + '/' + str( len( all_local_files ) ) )
+                HC.app.SetSplashText( 'updating db to v29 ' + HC.u( i ) + '/' + HC.u( len( all_local_files ) ) )
                 
                 local_files_subset = all_local_files[ i : i + 100 ]
                 
@@ -5555,7 +5579,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with open( path_to, 'wb' ) as f: f.write( file )
+                    with HC.o( path_to, 'wb' ) as f: f.write( file )
                     
                 
                 c.execute( 'DELETE FROM files WHERE hash_id IN ' + HC.SplayListForDB( [ hash_id for ( hash_id, hash ) in local_files_subset ] ) + ';' )
@@ -5595,7 +5619,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( all_thumbnails ), 500 ):
                 
-                HC.app.SetSplashText( 'updating db to v30 ' + str( i ) + '/' + str( len( all_thumbnails ) ) )
+                HC.app.SetSplashText( 'updating db to v30 ' + HC.u( i ) + '/' + HC.u( len( all_thumbnails ) ) )
                 
                 thumbnails_subset = all_thumbnails[ i : i + 500 ]
                 
@@ -5605,7 +5629,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with open( path_to, 'wb' ) as f: f.write( thumbnail )
+                    with HC.o( path_to, 'wb' ) as f: f.write( thumbnail )
                     
                 
             
@@ -5668,7 +5692,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( hashes ), 100 ):
                 
-                HC.app.SetSplashText( 'updating db to v33 ' + str( i ) + '/' + str( len( hashes ) ) )
+                HC.app.SetSplashText( 'updating db to v33 ' + HC.u( i ) + '/' + HC.u( len( hashes ) ) )
                 
                 hashes_subset = hashes[ i : i + 100 ]
                 
@@ -5678,7 +5702,7 @@ class DB( ServiceDB ):
                     
                     path = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with open( path, 'rb' ) as f: file = f.read()
+                    with HC.o( path, 'rb' ) as f: file = f.read()
                     
                     md5 = hashlib.md5( file ).digest()
                     
@@ -5750,10 +5774,10 @@ class DB( ServiceDB ):
             c.execute( 'DROP TABLE inbox;' )
             
             inserts = []
-            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id IN ( SELECT service_id FROM files_info WHERE hash_id = new.hash_id ) AND info_type = ' + str( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
+            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id IN ( SELECT service_id FROM files_info WHERE hash_id = new.hash_id ) AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
             c.execute( 'CREATE TRIGGER file_inbox_insert_trigger AFTER INSERT ON file_inbox BEGIN ' + ' '.join( inserts ) + ' END;' )
             deletes = []
-            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id IN ( SELECT service_id FROM files_info WHERE hash_id = old.hash_id ) AND info_type = ' + str( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
+            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id IN ( SELECT service_id FROM files_info WHERE hash_id = old.hash_id ) AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
             c.execute( 'CREATE TRIGGER file_inbox_delete_trigger DELETE ON file_inbox BEGIN ' + ' '.join( deletes ) + ' END;' )
             
             # now set up new messaging stuff
@@ -5818,12 +5842,12 @@ class DB( ServiceDB ):
         
         if version < 39:
             
-            # I accidentally added some buffer public keys in v38, so this is to str() them
-            updates = [ ( str( public_key ), contact_id ) for ( contact_id, public_key ) in c.execute( 'SELECT contact_id, public_key FROM contacts;' ).fetchall() ]
+            # I accidentally added some buffer public keys in v38, so this is to HC.u() them
+            updates = [ ( HC.u( public_key ), contact_id ) for ( contact_id, public_key ) in c.execute( 'SELECT contact_id, public_key FROM contacts;' ).fetchall() ]
             
             c.executemany( 'UPDATE contacts SET public_key = ? WHERE contact_id = ?;', updates )
             
-            with open( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
+            with HC.o( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
             
             ( public_key, name, host, port ) = hydrus_admin.GetInfo()
             
@@ -5890,34 +5914,34 @@ class DB( ServiceDB ):
             inserts = []
             inserts.append( 'DELETE FROM deleted_files WHERE service_id = new.service_id AND hash_id = new.hash_id;' )
             inserts.append( 'DELETE FROM file_transfers WHERE service_id_to = new.service_id AND hash_id = new.hash_id;' )
-            inserts.append( 'UPDATE service_info SET info = info + new.size WHERE service_id = new.service_id AND info_type = ' + str( HC.SERVICE_INFO_TOTAL_SIZE ) + ';' )
-            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id = new.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_FILES ) + ';' )
-            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id = new.service_id AND new.mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS ) + ';' )
-            inserts.append( 'DELETE FROM service_info WHERE service_id = new.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
-            inserts.append( 'DELETE FROM service_info WHERE service_id = new.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';' )
+            inserts.append( 'UPDATE service_info SET info = info + new.size WHERE service_id = new.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_TOTAL_SIZE ) + ';' )
+            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id = new.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_FILES ) + ';' )
+            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id = new.service_id AND new.mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_THUMBNAILS ) + ';' )
+            inserts.append( 'DELETE FROM service_info WHERE service_id = new.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
+            inserts.append( 'DELETE FROM service_info WHERE service_id = new.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';' )
             inserts.append( 'DELETE FROM autocomplete_tags_cache WHERE file_service_id = new.service_id;' )
             c.execute( 'CREATE TRIGGER files_info_insert_trigger AFTER INSERT ON files_info BEGIN ' + ' '.join( inserts ) + ' END;' )
             deletes = []
             deletes.append( 'DELETE FROM file_petitions WHERE service_id = old.service_id AND hash_id = old.hash_id;' )
-            deletes.append( 'UPDATE service_info SET info = info - old.size WHERE service_id = old.service_id AND info_type = ' + str( HC.SERVICE_INFO_TOTAL_SIZE ) + ';' )
-            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id = old.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_FILES ) + ';' )
-            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id = old.service_id AND old.mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS ) + ';' )
-            deletes.append( 'DELETE FROM service_info WHERE service_id = old.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
-            deletes.append( 'DELETE FROM service_info WHERE service_id = old.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';' )
+            deletes.append( 'UPDATE service_info SET info = info - old.size WHERE service_id = old.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_TOTAL_SIZE ) + ';' )
+            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id = old.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_FILES ) + ';' )
+            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id = old.service_id AND old.mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_THUMBNAILS ) + ';' )
+            deletes.append( 'DELETE FROM service_info WHERE service_id = old.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_INBOX ) + ';' )
+            deletes.append( 'DELETE FROM service_info WHERE service_id = old.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) + ';' )
             deletes.append( 'DELETE FROM autocomplete_tags_cache WHERE file_service_id = old.service_id;' )
             c.execute( 'CREATE TRIGGER files_info_delete_trigger DELETE ON files_info BEGIN ' + ' '.join( deletes ) + ' END;' )
             
             inserts = []
             inserts.append( 'DELETE FROM deleted_mappings WHERE service_id = new.service_id AND hash_id = new.hash_id AND namespace_id = new.namespace_id AND tag_id = new.tag_id;' )
             inserts.append( 'DELETE FROM pending_mappings WHERE service_id = new.service_id AND hash_id = new.hash_id AND namespace_id = new.namespace_id AND tag_id = new.tag_id;' )
-            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id = new.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_MAPPINGS ) + ';' )
+            inserts.append( 'UPDATE service_info SET info = info + 1 WHERE service_id = new.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_MAPPINGS ) + ';' )
             inserts.append( 'DELETE FROM service_info WHERE service_id = new.service_id AND info_type IN ' + HC.SplayListForDB( ( HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_NAMESPACES, HC.SERVICE_INFO_NUM_TAGS ) ) + ';' )
             inserts.append( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = new.service_id AND namespace_id = new.namespace_id AND tag_id = new.tag_id;' )
             inserts.append( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IS NULL AND namespace_id = new.namespace_id AND tag_id = new.tag_id;' )
             c.execute( 'CREATE TRIGGER mappings_insert_trigger AFTER INSERT ON mappings BEGIN ' + ' '.join( inserts ) + ' END;' )
             deletes = []
             deletes.append( 'DELETE FROM mapping_petitions WHERE service_id = old.service_id AND hash_id = old.hash_id AND namespace_id = old.namespace_id AND tag_id = old.tag_id;' )
-            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id = old.service_id AND info_type = ' + str( HC.SERVICE_INFO_NUM_MAPPINGS ) + ';' )
+            deletes.append( 'UPDATE service_info SET info = info - 1 WHERE service_id = old.service_id AND info_type = ' + HC.u( HC.SERVICE_INFO_NUM_MAPPINGS ) + ';' )
             deletes.append( 'DELETE FROM service_info WHERE service_id = old.service_id AND info_type IN ' + HC.SplayListForDB( ( HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_NAMESPACES, HC.SERVICE_INFO_NUM_TAGS ) ) + ';' )
             deletes.append( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = old.service_id AND namespace_id = old.namespace_id AND tag_id = old.tag_id;' )
             deletes.append( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IS NULL AND namespace_id = old.namespace_id AND tag_id = old.tag_id;' )
@@ -6559,9 +6583,9 @@ class DB( ServiceDB ):
         
         c.execute( 'ANALYZE' )
         
-        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, int( time.time() ) ) )
+        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, HC.GetNow() ) )
         
-        self.pub( 'log_message', 'database', 'vacuumed successfully' )
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'vacuumed successfully' ) )
         
     
     def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
@@ -6576,918 +6600,6 @@ class DB( ServiceDB ):
         
         self.pub( 'service_updates_data', service_identifiers_to_service_updates )
         self.pub( 'service_updates_gui', service_identifiers_to_service_updates )
-        
-    
-    def DAEMONCheckImportFolders( self ):
-        
-        import_folders = HC.app.ReadDaemon( 'import_folders' )
-        
-        for ( folder_path, details ) in import_folders:
-            
-            now = int( time.time() )
-            
-            if now > details[ 'last_checked' ] + details[ 'check_period' ]:
-                
-                if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
-                    
-                    filenames = dircache.listdir( folder_path )
-                    
-                    raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
-                    
-                    importable_path_infos = CC.ParseImportablePaths( raw_paths, quiet = True )
-                    
-                    HC.pubsub.pub( 'service_status', 'Found ' + str( len( importable_path_infos ) ) + ' files to import from ' + folder_path )
-                    
-                    if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
-                        
-                        importable_path_infos = [ ( path_type, mime, size, extra_info ) for ( path_type, mime, size, extra_info ) in importable_path_infos if extra_info not in details[ 'cached_imported_paths' ] ]
-                        
-                    
-                    successful_hashes = set()
-                    
-                    for ( i, path_info ) in enumerate( importable_path_infos ):
-                        
-                        HC.pubsub.pub( 'service_status', 'Importing ' + str( i ) + ' of ' + str( len( importable_path_infos ) ) )
-                        
-                        ( path_type, mime, size, extra_info ) = path_info
-                        
-                        if path_type == 'path':
-                            
-                            path = extra_info
-                            
-                            temp_path = HC.TEMP_DIR + os.path.sep + 'import_folder_file'
-                            
-                            try:
-                                
-                                # make read only perms to make sure it isn't being written/downloaded right now
-                                
-                                os.chmod( path, stat.S_IREAD )
-                                
-                                shutil.copy( path, temp_path )
-                                
-                                os.chmod( path, stat.S_IWRITE )
-                                
-                                with open( temp_path, 'rb' ) as f: file = f.read()
-                                
-                            except: continue
-                            
-                        elif path_type == 'zip':
-                            
-                            ( path, name ) = extra_info
-                            
-                            try:
-                                
-                                with zipfile.ZipFile( zip_path, 'r' ) as z: file = z.read( name )
-                                
-                            except: continue
-                            
-                        
-                        try:
-                            
-                            if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
-                            else: service_identifiers_to_tags = {}
-                            
-                            HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
-                            
-                            #( result, hash ) = HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
-                            
-                            #if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
-                            
-                        except: print( traceback.format_exc() )
-                        
-                        if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
-                            
-                            try: os.remove( path )
-                            except: pass
-                            
-                        elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( extra_info )
-                        
-                        self.WaitUntilGoodTimeToUseDBThread()
-                        
-                    
-                    if len( successful_hashes ) > 0:
-                        
-                        message_text = str( len( successful_hashes ) ) + ' files imported from ' + folder_path
-                        
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
-                        
-                    
-                    details[ 'last_checked' ] = now
-                    
-                    HC.pubsub.pub( 'service_status', '' )
-                    
-                    HC.app.WriteDaemon( 'import_folder', folder_path, details )
-                    
-                
-            
-        
-    
-    def DAEMONDownloadFiles( self ):
-        
-        service_identifiers_to_connections = {}
-        
-        hashes = HC.app.ReadDaemon( 'downloads' )
-        
-        num_downloads = len( hashes )
-        
-        for hash in hashes:
-            
-            ( media_result, ) = HC.app.ReadDaemon( 'media_results', CC.FileSearchContext(), ( hash, ) )
-            
-            service_identifiers = list( media_result.GetFileServiceIdentifiersCDPP().GetCurrent() )
-            
-            random.shuffle( service_identifiers )
-            
-            for service_identifier in service_identifiers:
-                
-                if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: break
-                
-                try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
-                except: continue
-                
-                HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
-                
-                if file_repository.CanDownload(): 
-                    
-                    try:
-                        
-                        if service_identifier not in service_identifiers_to_connections: service_identifiers_to_connections[ service_identifier ] = file_repository.GetConnection()
-                        
-                        connection = service_identifiers_to_connections[ service_identifier ]
-                        
-                        file = connection.Get( 'file', hash = hash.encode( 'hex' ) )
-                        
-                        num_downloads -= 1
-                        
-                        HC.app.WaitUntilGoodTimeToUseGUIThread()
-                        
-                        HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
-                        
-                        HC.app.WriteDaemon( 'import_file', file )
-                        
-                        HC.pubsub.pub( 'log_message', 'download files daemon', 'downloaded ' + hash.encode( 'hex' ) + ' from ' + service_identifier.GetName() )
-                        
-                        break
-                        
-                    except:
-                        print( traceback.format_exc() )
-                        pass
-                    
-                
-                if HC.shutdown: return
-                
-            
-        
-        if num_downloads == 0: HC.pubsub.pub( 'downloads_status', 'no file downloads' )
-        elif num_downloads > 0: HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' inactive file downloads' )
-        
-    
-    def DAEMONDownloadThumbnails( self ):
-        
-        service_identifiers = HC.app.ReadDaemon( 'service_identifiers', ( HC.FILE_REPOSITORY, ) )
-        
-        thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
-        
-        for service_identifier in service_identifiers:
-            
-            thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_identifier )
-            
-            thumbnail_hashes_i_need = list( thumbnail_hashes_i_should_have - thumbnail_hashes_i_have )
-            
-            if len( thumbnail_hashes_i_need ) > 0:
-                
-                try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
-                except: continue
-                
-                if file_repository.CanDownload():
-                    
-                    try:
-                        
-                        connection = file_repository.GetConnection()
-                        
-                        num_per_round = 50
-                        
-                        for i in range( 0, len( thumbnail_hashes_i_need ), num_per_round ):
-                            
-                            if HC.shutdown: return
-                            
-                            thumbnails = []
-                            
-                            for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]: thumbnails.append( ( hash, connection.Get( 'thumbnail', hash = hash.encode( 'hex' ) ) ) )
-                            
-                            HC.app.WaitUntilGoodTimeToUseGUIThread()
-                            
-                            HC.app.WriteDaemon( 'thumbnails', thumbnails )
-                            
-                            self.pub( 'add_thumbnail_count', service_identifier, len( thumbnails ) )
-                            
-                            thumbnail_hashes_i_have.update( { hash for ( hash, thumbnail ) in thumbnails } )
-                            
-                            self.pub( 'log_message', 'download thumbnails daemon', 'downloaded ' + str( len( thumbnails ) ) + ' thumbnails from ' + service_identifier.GetName() )
-                            
-                            time.sleep( 0.25 )
-                            
-                        
-                    except: pass # if bad download, the repo gets dinged an error. no need to do anything here
-                    
-                
-            
-        
-    
-    def DAEMONFlushServiceUpdates( self, list_of_service_identifiers_to_service_updates ):
-        
-        service_identifiers_to_service_updates = HC.MergeKeyToListDicts( list_of_service_identifiers_to_service_updates )
-        
-        HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
-        
-    
-    def DAEMONResizeThumbnails( self ):
-        
-        full_size_thumbnail_paths = { path for path in CC.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
-        
-        resized_thumbnail_paths = { path[:-8] for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
-        
-        thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
-        
-        random.shuffle( thumbnail_paths_to_render )
-        
-        i = 0
-        
-        limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
-        
-        for thumbnail_path in thumbnail_paths_to_render:
-            
-            try:
-                
-                with open( thumbnail_path, 'rb' ) as f: thumbnail = f.read()
-                
-                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
-                
-                thumbnail_resized_path = thumbnail_path + '_resized'
-                
-                with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
-                
-            except IOError as e:
-                
-                print( 'thumbnail rendering error' )
-                print( thumbnail_path )
-                
-            except: print( traceback.format_exc() )
-            
-            if i % 10 == 0: time.sleep( 2 )
-            else:
-                
-                if limit > 10000: time.sleep( 0.05 )
-                elif limit > 1000: time.sleep( 0.25 )
-                else: time.sleep( 0.5 )
-                
-            
-            i += 1
-            
-            if i > limit: break
-            
-            if HC.shutdown: break
-            
-        
-    
-    def DAEMONSynchroniseAccounts( self ):
-        
-        services = HC.app.ReadDaemon( 'services', HC.RESTRICTED_SERVICES )
-        
-        do_notify = False
-        
-        for service in services:
-            
-            account = service.GetAccount()
-            service_identifier = service.GetServiceIdentifier()
-            credentials = service.GetCredentials()
-            
-            if not account.IsBanned() and account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
-                
-                try:
-                    
-                    connection = service.GetConnection()
-                    
-                    connection.Get( 'account' )
-                    
-                    HC.pubsub.pub( 'log_message', 'synchronise accounts daemon', 'successfully refreshed account for ' + service_identifier.GetName() )
-                    
-                    do_notify = True
-                    
-                except Exception as e:
-                    
-                    name = service_identifier.GetName()
-                    
-                    error_message = 'failed to refresh account for ' + name + ':' + os.linesep + os.linesep + unicode( e )
-                    
-                    HC.pubsub.pub( 'log_error', 'synchronise accounts daemon', error_message )
-                    
-                    print( error_message )
-                    
-                
-            
-        
-        if do_notify: HC.pubsub.pub( 'notify_new_permissions' )
-        
-    
-    def DAEMONSynchroniseMessages( self ):
-        
-        service_identifiers = HC.app.ReadDaemon( 'service_identifiers', ( HC.MESSAGE_DEPOT, ) )
-        
-        for service_identifier in service_identifiers:
-            
-            try:
-                
-                name = service_identifier.GetName()
-                
-                service_type = service_identifier.GetType()
-                
-                try: service = HC.app.ReadDaemon( 'service', service_identifier )
-                except: continue
-                
-                if service.CanCheck():
-                    
-                    contact = service.GetContact()
-                    
-                    connection = service.GetConnection()
-                    
-                    private_key = service.GetPrivateKey()
-                    
-                    # is the account associated?
-                    
-                    if not contact.HasPublicKey():
-                        
-                        try:
-                            
-                            public_key = HydrusEncryption.GetPublicKey( private_key )
-                            
-                            connection.Post( 'contact', public_key = public_key )
-                            
-                            HC.app.WriteDaemon( 'contact_associated', service_identifier )
-                            
-                            service = HC.app.ReadDaemon( 'service', service_identifier )
-                            
-                            contact = service.GetContact()
-                            
-                            HC.pubsub.pub( 'log_message', 'synchronise messages daemon', 'associated public key with account at ' + service_identifier.GetName() )
-                            
-                        except:
-                            
-                            continue
-                            
-                        
-                    
-                    # see if there are any new message_keys to download or statuses
-                    
-                    last_check = service.GetLastCheck()
-                    
-                    ( message_keys, statuses ) = connection.Get( 'message_info_since', since = last_check )
-                    
-                    decrypted_statuses = []
-                    
-                    for status in statuses:
-                        
-                        try: decrypted_statuses.append( HydrusMessageHandling.UnpackageDeliveredStatus( status, private_key ) )
-                        except: pass
-                        
-                    
-                    new_last_check = int( time.time() ) - 5
-                    
-                    HC.app.WriteDaemon( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
-                    
-                    if len( message_keys ) > 0: HC.pubsub.pub( 'log_message', 'synchronise messages daemon', 'checked ' + service_identifier.GetName() + ' up to ' + HC.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + str( len( message_keys ) ) + ' new messages' )
-                    
-                
-                self.WaitUntilGoodTimeToUseDBThread()
-                
-                # try to download any messages that still need downloading
-                
-                if service.CanDownload():
-                    
-                    serverside_message_keys = HC.app.ReadDaemon( 'message_keys_to_download', service_identifier )
-                    
-                    if len( serverside_message_keys ) > 0:
-                        
-                        connection = service.GetConnection()
-                        
-                        private_key = service.GetPrivateKey()
-                        
-                        num_processed = 0
-                        
-                        for serverside_message_key in serverside_message_keys:
-                            
-                            self.WaitUntilGoodTimeToUseDBThread()
-                            
-                            try:
-                                
-                                encrypted_message = connection.Get( 'message', message_key = serverside_message_key.encode( 'hex' ) )
-                                
-                                message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
-                                
-                                HC.app.WriteDaemon( 'message', message, serverside_message_key = serverside_message_key )
-                                
-                                num_processed += 1
-                                
-                            except Exception as e:
-                                
-                                if issubclass( e, httplib.HTTPException ): break # it was an http error; try again later
-                                
-                            
-                        
-                        if num_processed > 0:
-                            
-                            HC.pubsub.pub( 'log_message', 'synchronise messages daemon', 'downloaded and parsed ' + str( num_processed ) + ' messages from ' + service_identifier.GetName() )
-                            
-                        
-                    
-                
-            except Exception as e:
-                
-                error_message = 'failed to check ' + name + ':' + os.linesep + os.linesep + unicode( e )
-                
-                HC.pubsub.pub( 'log_error', 'synchronise messages daemon', error_message )
-                
-                print( error_message )
-                
-            
-        
-        HC.app.WriteDaemon( 'flush_message_statuses' )
-        
-        # send messages to recipients and update my status to sent/failed
-        
-        messages_to_send = HC.app.ReadDaemon( 'messages_to_send' )
-        
-        for ( message_key, contacts_to ) in messages_to_send:
-            
-            message = HC.app.ReadDaemon( 'transport_message', message_key )
-            
-            contact_from = message.GetContactFrom()
-            
-            from_anon = contact_from is None or contact_from.GetName() == 'Anonymous'
-            
-            if not from_anon:
-                
-                my_public_key = contact_from.GetPublicKey()
-                my_contact_key = contact_from.GetContactKey()
-                
-                my_message_depot = HC.app.ReadDaemon( 'service', contact_from )
-                
-                from_connection = my_message_depot.GetConnection()
-                
-            
-            service_status_updates = []
-            local_status_updates = []
-            
-            for contact_to in contacts_to:
-                
-                public_key = contact_to.GetPublicKey()
-                contact_key = contact_to.GetContactKey()
-                
-                encrypted_message = HydrusMessageHandling.PackageMessageForDelivery( message, public_key )
-                
-                try:
-                    
-                    to_connection = contact_to.GetConnection()
-                    
-                    to_connection.Post( 'message', message = encrypted_message, contact_key = contact_key )
-                    
-                    status = 'sent'
-                    
-                except:
-                    
-                    print( traceback.format_exc() )
-                    
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'Sending a message failed: ' + os.linesep + traceback.format_exc() ) )
-                    
-                    status = 'failed'
-                    
-                
-                status_key = hashlib.sha256( contact_key + message_key ).digest()
-                
-                if not from_anon: service_status_updates.append( ( status_key, HydrusMessageHandling.PackageStatusForDelivery( ( message_key, contact_key, status ), my_public_key ) ) )
-                
-                local_status_updates.append( ( contact_key, status ) )
-                
-            
-            if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
-            
-            HC.app.WriteDaemon( 'message_statuses', message_key, local_status_updates )
-            
-        
-        HC.app.ReadDaemon( 'status_num_inbox' )
-        
-    
-    def DAEMONSynchroniseRepositoriesAndSubscriptions( self ):
-        
-        HC.repos_or_subs_changed = False
-        
-        if not self._options[ 'pause_repo_sync' ]:
-            
-            service_identifiers = HC.app.ReadDaemon( 'service_identifiers', HC.REPOSITORIES )
-            
-            for service_identifier in service_identifiers:
-                
-                if HC.shutdown: raise Exception( 'Application shutting down!' )
-                
-                try:
-                    
-                    name = service_identifier.GetName()
-                    
-                    service_type = service_identifier.GetType()
-                    
-                    try: service = HC.app.ReadDaemon( 'service', service_identifier )
-                    except: continue
-                    
-                    if service.CanUpdate():
-                        
-                        connection = service.GetConnection()
-                        
-                        while service.CanUpdate():
-                            
-                            while self._options[ 'pause_repo_sync' ]:
-                                
-                                HC.pubsub.pub( 'service_status', 'Repository synchronisation paused' )
-                                
-                                time.sleep( 5 )
-                                
-                                if HC.shutdown: raise Exception( 'Application shutting down!' )
-                                
-                                if HC.repos_or_subs_changed:
-                                    
-                                    HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
-                                    
-                                    return
-                                    
-                                
-                            
-                            if HC.shutdown: raise Exception( 'Application shutting down!' )
-                            
-                            first_begin = service.GetFirstBegin()
-                            
-                            next_begin = service.GetNextBegin()
-                            
-                            if first_begin == 0: update_index_string = 'initial update'
-                            else: update_index_string = 'update ' + str( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
-                            
-                            prefix_string = name + ' ' + update_index_string + ': '
-                            
-                            HC.pubsub.pub( 'service_status', prefix_string + 'downloading and parsing' )
-                            
-                            update = connection.Get( 'update', begin = next_begin )
-                            
-                            if service_type == HC.TAG_REPOSITORY:
-                                
-                                HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
-                                
-                                HC.app.WriteDaemon( 'generate_tag_ids', update.GetTags() )
-                                
-                            
-                            i = 0
-                            num_content_updates = update.GetNumContentUpdates()
-                            content_updates = []
-                            current_weight = 0
-                            
-                            for content_update in update.IterateContentUpdates():
-                                
-                                content_updates.append( content_update )
-                                
-                                current_weight += len( content_update.GetHashes() )
-                                
-                                i += 1
-                                
-                                if current_weight > 50:
-                                    
-                                    HC.pubsub.pub( 'service_status', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
-                                    
-                                    HC.app.WaitUntilGoodTimeToUseGUIThread()
-                                    
-                                    self.WaitUntilGoodTimeToUseDBThread()
-                                    
-                                    time.sleep( 0.0001 )
-                                    
-                                    HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
-                                    
-                                    content_updates = []
-                                    current_weight = 0
-                                    
-                                
-                            
-                            if len( content_updates ) > 0: HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
-                            
-                            HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
-                            
-                            service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
-                            
-                            service_identifiers_to_service_updates = { service_identifier : service_updates }
-                            
-                            HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
-                            
-                            HC.pubsub.pub( 'log_message', 'synchronise repositories daemon', 'successfully updated ' + service_identifier.GetName() + ' to ' + update_index_string )
-                            
-                            HC.pubsub.pub( 'notify_new_pending' )
-                            
-                            self.WaitUntilGoodTimeToUseDBThread()
-                            
-                            time.sleep( 0.10 )
-                            
-                            try: service = HC.app.ReadDaemon( 'service', service_identifier )
-                            except: break
-                            
-                        
-                        HC.pubsub.pub( 'service_status', '' )
-                        
-                    
-                except Exception as e:
-                    
-                    error_message = 'failed to update ' + name + ':' + os.linesep + os.linesep + unicode( e )
-                    
-                    HC.pubsub.pub( 'log_error', 'synchronise repositories daemon', error_message )
-                    
-                    HC.pubsub.pub( 'service_status', error_message )
-                    
-                    print( error_message )
-                    print( traceback.format_exc() )
-                    
-                    time.sleep( 3 )
-                    
-                
-            
-            time.sleep( 5 )
-            
-        
-        # subs
-        
-        if not self._options[ 'pause_subs_sync' ]:
-            
-            subscriptions = HC.app.ReadDaemon( 'subscriptions' )
-            
-            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions:
-                
-                if paused: continue
-                
-                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
-                
-                advanced_tag_options = dict( advanced_tag_options )
-                
-                try:
-                    
-                    HC.pubsub.pub( 'service_status', 'checking ' + name + ' subscription' )
-                    
-                    now = int( time.time() )
-                    
-                    do_tags = len( advanced_tag_options ) > 0
-                    
-                    if last_checked is None: last_checked = 0
-                    
-                    if last_checked + ( frequency_type * frequency_number ) < now:
-                        
-                        if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
-                            
-                            try: booru = HC.app.ReadDaemon( 'booru', booru_name )
-                            except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
-                            
-                            tags = query.split( ' ' )
-                            
-                            all_args = ( ( booru, tags ), )
-                            
-                        elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY:
-                            
-                            info = {}
-                            
-                            info[ 'rating_nudity' ] = 3
-                            info[ 'rating_violence' ] = 3
-                            info[ 'rating_profanity' ] = 3
-                            info[ 'rating_racism' ] = 3
-                            info[ 'rating_sex' ] = 3
-                            info[ 'rating_spoilers' ] = 3
-                            
-                            info[ 'rating_yaoi' ] = 1
-                            info[ 'rating_yuri' ] = 1
-                            info[ 'rating_loli' ] = 1
-                            info[ 'rating_shota' ] = 1
-                            info[ 'rating_teen' ] = 1
-                            info[ 'rating_guro' ] = 1
-                            info[ 'rating_furry' ] = 1
-                            info[ 'rating_beast' ] = 1
-                            info[ 'rating_male' ] = 1
-                            info[ 'rating_female' ] = 1
-                            info[ 'rating_futa' ] = 1
-                            info[ 'rating_other' ] = 1
-                            
-                            info[ 'filter_media' ] = 'A'
-                            info[ 'filter_order' ] = 'date_new'
-                            info[ 'filter_type' ] = 0
-                            
-                            advanced_hentai_foundry_options = info
-                            
-                            if query_type == 'artist': all_args = ( ( 'artist pictures', query, advanced_hentai_foundry_options ), ( 'artist scraps', query, advanced_hentai_foundry_options ) )
-                            else:
-                                
-                                tags = query.split( ' ' )
-                                
-                                all_args = ( ( query_type, tags, advanced_hentai_foundry_options ), )
-                                
-                            
-                        elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: all_args = ( ( query_type, query ), )
-                        else: all_args = ( ( query, ), )
-                        
-                        downloaders = [ HydrusDownloading.GetDownloader( site_download_type, *args ) for args in all_args ]
-                        
-                        downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
-                        
-                        all_url_args = []
-                        
-                        while True:
-                            
-                            while self._options[ 'pause_subs_sync' ]:
-                                
-                                HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
-                                
-                                time.sleep( 5 )
-                                
-                                if HC.shutdown: return
-                                
-                                if HC.repos_or_subs_changed:
-                                    
-                                    HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
-                                    
-                                    return
-                                    
-                                
-                            
-                            if HC.shutdown: return
-                            
-                            downloaders_to_remove = []
-                            
-                            for downloader in downloaders:
-                                
-                                page_of_url_args = downloader.GetAnotherPage()
-                                
-                                if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
-                                else:
-                                    
-                                    fresh_url_args = [ url_args for url_args in page_of_url_args if url_args[0] not in url_cache ]
-                                    
-                                    # i.e. we have hit the url cache, so no need to fetch any more pages
-                                    if len( fresh_url_args ) == 0 or len( fresh_url_args ) != len( page_of_url_args ): downloaders_to_remove.append( downloader )
-                                    
-                                    all_url_args.extend( fresh_url_args )
-                                    
-                                    HC.pubsub.pub( 'service_status', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
-                                    
-                                
-                            
-                            for downloader in downloaders_to_remove: downloaders.remove( downloader )
-                            
-                            if len( downloaders ) == 0: break
-                            
-                        
-                        all_url_args.reverse() # to do oldest first, which means we can save incrementally
-                        
-                        i = 1
-                        
-                        num_new = 0
-                        
-                        successful_hashes = set()
-                        
-                        for url_args in all_url_args:
-                            
-                            while self._options[ 'pause_subs_sync' ]:
-                                
-                                HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
-                                
-                                time.sleep( 5 )
-                                
-                                if HC.shutdown: return
-                                
-                                if HC.repos_or_subs_changed:
-                                    
-                                    HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
-                                    
-                                    return
-                                    
-                                
-                            
-                            if HC.shutdown: return
-                            
-                            try:
-                                
-                                url = url_args[0]
-                                
-                                url_cache.add( url )
-                                
-                                x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
-                                
-                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
-                                
-                                ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
-                                
-                                if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
-                                
-                                if status == 'redundant':
-                                    
-                                    if do_tags:
-                                        
-                                        try:
-                                            
-                                            HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
-                                            
-                                            tags = downloader.GetTags( *url_args )
-                                            
-                                            service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                                            
-                                            service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
-                                            
-                                            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
-                                            
-                                        except: pass
-                                        
-                                    
-                                elif status == 'new':
-                                    
-                                    num_new += 1
-                                    
-                                    HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : downloading file' )
-                                    
-                                    if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
-                                    else:
-                                        
-                                        file = downloader.GetFile( *url_args )
-                                        
-                                        tags = []
-                                        
-                                    
-                                    service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                                    
-                                    HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
-                                    
-                                    HC.app.Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
-                                    
-                                    #( status, hash ) = HC.app.Write( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
-                                    
-                                    #if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
-                                    
-                                
-                            except Exception as e:
-                                
-                                print( 'while trying to execute a subscription, the url ' + url + ' caused this problem:' )
-                                print( traceback.format_exc() )
-                                
-                                HC.pubsub.pub( 'log_error', 'synchronise subscriptions daemon', 'problem with ' + name + ' ' + unicode( e ) )
-                                
-                            
-                            i += 1
-                            
-                            if i % 20 == 0:
-                                
-                                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
-                                
-                                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-                                
-                                HC.app.Write( 'subscription', subscription )
-                                
-                                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
-                                
-                            
-                            HC.app.WaitUntilGoodTimeToUseGUIThread()
-                            
-                            self.WaitUntilGoodTimeToUseDBThread()
-                            
-                        
-                        if len( successful_hashes ) > 0:
-                            
-                            message_text = str( len( successful_hashes ) ) + ' files imported from ' + name
-                            
-                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
-                            
-                        
-                        HC.pubsub.pub( 'log_message', 'synchronise subscriptions daemon', 'found ' + HC.ConvertIntToPrettyString( num_new ) + ' new files for ' + name )
-                        
-                        last_checked = now
-                        
-                    
-                except Exception as e:
-                    
-                    last_checked = now + HC.UPDATE_DURATION
-                    
-                    print( traceback.format_exc() )
-                    
-                    HC.pubsub.pub( 'log_error', 'synchronise subscriptions daemon', 'problem with ' + name + ' ' + unicode( e ) )
-                    
-                    time.sleep( 3 )
-                    
-                
-                HC.pubsub.pub( 'service_status', '' )
-                
-                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
-                
-                subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-                
-                HC.app.Write( 'subscription', subscription )
-                
-            
-        
-        HC.pubsub.pub( 'service_status', '' )
         
     
     def ProcessRequest( self, request_type, request, request_args ):
@@ -7565,8 +6677,11 @@ class DB( ServiceDB ):
                 
                 c.execute( 'ROLLBACK' )
                 
-                print( 'while attempting a read on the database, the hydrus client encountered the following problem:' )
-                print( traceback.format_exc() )
+                message = 'Problem attempting a read on the database:' + os.linesep + traceback.format_exc()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
                 
                 ( exception_type, value, tb ) = sys.exc_info()
                 
@@ -7581,24 +6696,31 @@ class DB( ServiceDB ):
             
             try:
                 
-                self._MainLoop_Write( c, action, args, kwargs )
+                result = self._MainLoop_Write( c, action, args, kwargs )
                 
                 if job_type == 'write': c.execute( 'COMMIT' )
                 
                 for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
                 
+                job.PutResult( result )
+                
             except Exception as e:
                 
                 if job_type == 'write': c.execute( 'ROLLBACK' )
                 
-                print( 'while attempting a write on the database, the hydrus client encountered the following problem:' )
-                print( traceback.format_exc() )
+                message = 'Problem attempting a write on the database:' + os.linesep + traceback.format_exc()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
                 
                 action = job.GetAction()
                 
                 ( exception_type, value, tb ) = sys.exc_info()
                 
                 new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
+                
+                job.PutResult( new_e )
                 
                 if action not in ( 'import_file', 'import_file_from_page' ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, new_e ) )
                 
@@ -7682,7 +6804,7 @@ class DB( ServiceDB ):
         elif action == 'flush_message_statuses': self._FlushMessageStatuses( c, *args, **kwargs )
         elif action == 'generate_tag_ids': self._GenerateTagIdsEfficiently( c, *args, **kwargs )
         elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
-        elif action == 'import_file': self._ImportFile( c, *args, **kwargs )
+        elif action == 'import_file': return self._ImportFile( c, *args, **kwargs )
         elif action == 'import_file_from_page': self._ImportFilePage( c, *args, **kwargs )
         elif action == 'import_folder': self._UpdateImportFolder( c, *args, **kwargs )
         elif action == 'import_folders': self._SetImportFolders( c, *args, **kwargs )
@@ -7782,7 +6904,7 @@ class DB( ServiceDB ):
             
         
     
-    def Write( self, action, priority, *args, **kwargs ):
+    def Write( self, action, priority, synchronous, *args, **kwargs ):
         
         if action == 'vacuum': job_type = 'write_special'
         else: job_type = 'write'
@@ -7793,4 +6915,918 @@ class DB( ServiceDB ):
         
         self._jobs.put( ( priority, job ) )
         
+        if synchronous: return job.GetResult()
+        
+    
+def DAEMONCheckImportFolders():
+    
+    import_folders = HC.app.ReadDaemon( 'import_folders' )
+    
+    for ( folder_path, details ) in import_folders:
+        
+        now = HC.GetNow()
+        
+        if now > details[ 'last_checked' ] + details[ 'check_period' ]:
+            
+            if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
+                
+                filenames = dircache.listdir( folder_path )
+                
+                raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
+                
+                all_paths = CC.GetAllPaths( raw_paths, quiet = True )
+                
+                HC.pubsub.pub( 'service_status', 'Found ' + HC.u( len( all_paths ) ) + ' files to import from ' + folder_path )
+                
+                if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
+                    
+                    all_paths = [ path for path in all_paths if path not in details[ 'cached_imported_paths' ] ]
+                    
+                
+                all_paths = [ path for path in all_paths if path not in details[ 'failed_imported_paths' ] ]
+                
+                successful_hashes = set()
+                
+                for ( i, path ) in enumerate( all_paths ):
+                    
+                    should_import = True
+                    should_action = True
+                    
+                    HC.pubsub.pub( 'service_status', 'Importing ' + HC.u( i ) + ' of ' + HC.u( len( all_paths ) ) )
+                    
+                    temp_path = HC.TEMP_DIR + os.path.sep + 'import_folder_file'
+                    
+                    try:
+                        
+                        # make read only perms to make sure it isn't being written/downloaded right now
+                        
+                        os.chmod( path, stat.S_IREAD )
+                        
+                        os.chmod( path, stat.S_IWRITE )
+                        
+                        shutil.copy( path, temp_path )
+                        
+                        os.chmod( temp_path, stat.S_IWRITE )
+                        
+                        with HC.o( temp_path, 'rb' ) as f: file = f.read()
+                        
+                    except:
+                        
+                        # could not lock, so try again later
+                        
+                        should_import = False
+                        should_action = False
+                        
+                    
+                    if should_import:
+                        
+                        try:
+                            
+                            if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
+                            else: service_identifiers_to_tags = {}
+                            
+                            ( result, hash ) = HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
+                            
+                            if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                            elif result == 'deleted':
+                                
+                                details[ 'failed_imported_paths' ].add( path )
+                                
+                            
+                        except:
+                            
+                            details[ 'failed_imported_paths' ].add( path )
+                            
+                            message = 'Import folder failed to import a file: ' + os.linesep + path + os.linesep + traceback.format_exc()
+                            
+                            HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) )
+                            
+                            should_action = False
+                            
+                        
+                    
+                    if should_action:
+                        
+                        if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
+                            
+                            try: os.remove( path )
+                            except: details[ 'failed_imported_paths' ].add( path )
+                            
+                        elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( path )
+                        
+                    
+                
+                if len( successful_hashes ) > 0:
+                    
+                    message_text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
+                    
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
+                    
+                
+                details[ 'last_checked' ] = now
+                
+                HC.pubsub.pub( 'service_status', '' )
+                
+                HC.app.WriteDaemon( 'import_folder', folder_path, details )
+                
+            
+        
+    
+def DAEMONDownloadFiles():
+    
+    service_identifiers_to_connections = {}
+    
+    hashes = HC.app.ReadDaemon( 'downloads' )
+    
+    num_downloads = len( hashes )
+    
+    for hash in hashes:
+        
+        ( media_result, ) = HC.app.ReadDaemon( 'media_results', CC.FileSearchContext(), ( hash, ) )
+        
+        service_identifiers = list( media_result.GetFileServiceIdentifiersCDPP().GetCurrent() )
+        
+        random.shuffle( service_identifiers )
+        
+        for service_identifier in service_identifiers:
+            
+            if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: break
+            
+            try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
+            except: continue
+            
+            HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
+            
+            if file_repository.CanDownload(): 
+                
+                try:
+                    
+                    if service_identifier not in service_identifiers_to_connections: service_identifiers_to_connections[ service_identifier ] = file_repository.GetConnection()
+                    
+                    connection = service_identifiers_to_connections[ service_identifier ]
+                    
+                    file = connection.Get( 'file', hash = hash.encode( 'hex' ) )
+                    
+                    num_downloads -= 1
+                    
+                    HC.app.WaitUntilGoodTimeToUseGUIThread()
+                    
+                    HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
+                    
+                    HC.app.WriteDaemon( 'import_file', file )
+                    
+                    break
+                    
+                except:
+                    
+                    message = 'Error downloading file:' + os.linesep + traceback.format_exc()
+                    
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                    
+                    print( message )
+                    
+                
+            
+            if HC.shutdown: return
+            
+        
+    
+    if num_downloads == 0: HC.pubsub.pub( 'downloads_status', 'no file downloads' )
+    elif num_downloads > 0: HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' inactive file downloads' )
+    
+def DAEMONDownloadThumbnails():
+    
+    service_identifiers = HC.app.ReadDaemon( 'service_identifiers', ( HC.FILE_REPOSITORY, ) )
+    
+    thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
+    
+    for service_identifier in service_identifiers:
+        
+        thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_identifier )
+        
+        thumbnail_hashes_i_need = list( thumbnail_hashes_i_should_have - thumbnail_hashes_i_have )
+        
+        if len( thumbnail_hashes_i_need ) > 0:
+            
+            try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
+            except: continue
+            
+            if file_repository.CanDownload():
+                
+                try:
+                    
+                    connection = file_repository.GetConnection()
+                    
+                    num_per_round = 50
+                    
+                    for i in range( 0, len( thumbnail_hashes_i_need ), num_per_round ):
+                        
+                        if HC.shutdown: return
+                        
+                        thumbnails = []
+                        
+                        for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]: thumbnails.append( ( hash, connection.Get( 'thumbnail', hash = hash.encode( 'hex' ) ) ) )
+                        
+                        HC.app.WaitUntilGoodTimeToUseGUIThread()
+                        
+                        HC.app.WriteDaemon( 'thumbnails', thumbnails )
+                        
+                        HC.pubsub.pub( 'add_thumbnail_count', service_identifier, len( thumbnails ) )
+                        
+                        thumbnail_hashes_i_have.update( { hash for ( hash, thumbnail ) in thumbnails } )
+                        
+                        time.sleep( 0.25 )
+                        
+                    
+                except: pass # if bad download, the repo gets dinged an error. no need to do anything here
+                
+            
+        
+    
+def DAEMONFlushServiceUpdates( list_of_service_identifiers_to_service_updates ):
+    
+    service_identifiers_to_service_updates = HC.MergeKeyToListDicts( list_of_service_identifiers_to_service_updates )
+    
+    HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+    
+def DAEMONResizeThumbnails():
+    
+    full_size_thumbnail_paths = { path for path in CC.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
+    
+    resized_thumbnail_paths = { path[:-8] for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
+    
+    thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
+    
+    random.shuffle( thumbnail_paths_to_render )
+    
+    i = 0
+    
+    limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
+    
+    for thumbnail_path in thumbnail_paths_to_render:
+        
+        try:
+            
+            with HC.o( thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+            
+            options = HC.app.Read( 'options' )
+            
+            thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, options[ 'thumbnail_dimensions' ] )
+            
+            thumbnail_resized_path = thumbnail_path + '_resized'
+            
+            with HC.o( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+            
+        except IOError as e:
+            
+            message = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            
+            print( message )
+            
+        except Exception as e:
+            
+            message = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+            
+            print( message )
+            
+        
+        if i % 10 == 0: time.sleep( 2 )
+        else:
+            
+            if limit > 10000: time.sleep( 0.05 )
+            elif limit > 1000: time.sleep( 0.25 )
+            else: time.sleep( 0.5 )
+            
+        
+        i += 1
+        
+        if i > limit: break
+        
+        if HC.shutdown: break
+        
+    
+def DAEMONSynchroniseAccounts():
+    
+    services = HC.app.ReadDaemon( 'services', HC.RESTRICTED_SERVICES )
+    
+    do_notify = False
+    
+    for service in services:
+        
+        account = service.GetAccount()
+        service_identifier = service.GetServiceIdentifier()
+        credentials = service.GetCredentials()
+        
+        if not account.IsBanned() and account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
+            
+            try:
+                
+                connection = service.GetConnection()
+                
+                connection.Get( 'account' )
+                
+                do_notify = True
+                
+            except Exception as e:
+                
+                name = service_identifier.GetName()
+                
+                message = 'Failed to refresh account for ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
+                
+            
+        
+    
+    if do_notify: HC.pubsub.pub( 'notify_new_permissions' )
+    
+def DAEMONSynchroniseMessages():
+    
+    service_identifiers = HC.app.ReadDaemon( 'service_identifiers', ( HC.MESSAGE_DEPOT, ) )
+    
+    for service_identifier in service_identifiers:
+        
+        try:
+            
+            name = service_identifier.GetName()
+            
+            service_type = service_identifier.GetType()
+            
+            try: service = HC.app.ReadDaemon( 'service', service_identifier )
+            except: continue
+            
+            if service.CanCheck():
+                
+                contact = service.GetContact()
+                
+                connection = service.GetConnection()
+                
+                private_key = service.GetPrivateKey()
+                
+                # is the account associated?
+                
+                if not contact.HasPublicKey():
+                    
+                    try:
+                        
+                        public_key = HydrusEncryption.GetPublicKey( private_key )
+                        
+                        connection.Post( 'contact', public_key = public_key )
+                        
+                        HC.app.WriteDaemon( 'contact_associated', service_identifier )
+                        
+                        service = HC.app.ReadDaemon( 'service', service_identifier )
+                        
+                        contact = service.GetContact()
+                        
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'associated public key with account at ' + service_identifier.GetName() ) )
+                        
+                    except:
+                        
+                        continue
+                        
+                    
+                
+                # see if there are any new message_keys to download or statuses
+                
+                last_check = service.GetLastCheck()
+                
+                ( message_keys, statuses ) = connection.Get( 'message_info_since', since = last_check )
+                
+                decrypted_statuses = []
+                
+                for status in statuses:
+                    
+                    try: decrypted_statuses.append( HydrusMessageHandling.UnpackageDeliveredStatus( status, private_key ) )
+                    except: pass
+                    
+                
+                new_last_check = HC.GetNow() - 5
+                
+                HC.app.WriteDaemon( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
+                
+                if len( message_keys ) > 0: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'checked ' + service_identifier.GetName() + ' up to ' + HC.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + HC.u( len( message_keys ) ) + ' new messages' ) )
+                
+            
+            # try to download any messages that still need downloading
+            
+            if service.CanDownload():
+                
+                serverside_message_keys = HC.app.ReadDaemon( 'message_keys_to_download', service_identifier )
+                
+                if len( serverside_message_keys ) > 0:
+                    
+                    connection = service.GetConnection()
+                    
+                    private_key = service.GetPrivateKey()
+                    
+                    num_processed = 0
+                    
+                    for serverside_message_key in serverside_message_keys:
+                        
+                        try:
+                            
+                            encrypted_message = connection.Get( 'message', message_key = serverside_message_key.encode( 'hex' ) )
+                            
+                            message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
+                            
+                            HC.app.WriteDaemon( 'message', message, serverside_message_key = serverside_message_key )
+                            
+                            num_processed += 1
+                            
+                        except Exception as e:
+                            
+                            if issubclass( e, httplib.HTTPException ): break # it was an http error; try again later
+                            
+                        
+                    
+                    if num_processed > 0:
+                        
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'downloaded and parsed ' + HC.u( num_processed ) + ' messages from ' + service_identifier.GetName() ) )
+                        
+                    
+                
+            
+        except Exception as e:
+            
+            message = 'Failed to check ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            
+            print( message )
+            
+        
+    
+    HC.app.WriteDaemon( 'flush_message_statuses' )
+    
+    # send messages to recipients and update my status to sent/failed
+    
+    messages_to_send = HC.app.ReadDaemon( 'messages_to_send' )
+    
+    for ( message_key, contacts_to ) in messages_to_send:
+        
+        message = HC.app.ReadDaemon( 'transport_message', message_key )
+        
+        contact_from = message.GetContactFrom()
+        
+        from_anon = contact_from is None or contact_from.GetName() == 'Anonymous'
+        
+        if not from_anon:
+            
+            my_public_key = contact_from.GetPublicKey()
+            my_contact_key = contact_from.GetContactKey()
+            
+            my_message_depot = HC.app.ReadDaemon( 'service', contact_from )
+            
+            from_connection = my_message_depot.GetConnection()
+            
+        
+        service_status_updates = []
+        local_status_updates = []
+        
+        for contact_to in contacts_to:
+            
+            public_key = contact_to.GetPublicKey()
+            contact_key = contact_to.GetContactKey()
+            
+            encrypted_message = HydrusMessageHandling.PackageMessageForDelivery( message, public_key )
+            
+            try:
+                
+                to_connection = contact_to.GetConnection()
+                
+                to_connection.Post( 'message', message = encrypted_message, contact_key = contact_key )
+                
+                status = 'sent'
+                
+            except:
+                
+                message = 'Sending a message failed: ' + os.linesep + traceback.format_exc()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
+                
+                status = 'failed'
+                
+            
+            status_key = hashlib.sha256( contact_key + message_key ).digest()
+            
+            if not from_anon: service_status_updates.append( ( status_key, HydrusMessageHandling.PackageStatusForDelivery( ( message_key, contact_key, status ), my_public_key ) ) )
+            
+            local_status_updates.append( ( contact_key, status ) )
+            
+        
+        if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
+        
+        HC.app.WriteDaemon( 'message_statuses', message_key, local_status_updates )
+        
+    
+    HC.app.ReadDaemon( 'status_num_inbox' )
+    
+def DAEMONSynchroniseRepositoriesAndSubscriptions():
+    
+    HC.repos_or_subs_changed = False
+    
+    options = HC.app.Read( 'options' )
+    
+    if not options[ 'pause_repo_sync' ]:
+        
+        service_identifiers = HC.app.ReadDaemon( 'service_identifiers', HC.REPOSITORIES )
+        
+        for service_identifier in service_identifiers:
+            
+            if HC.shutdown: raise Exception( 'Application shutting down!' )
+            
+            try:
+                
+                name = service_identifier.GetName()
+                
+                service_type = service_identifier.GetType()
+                
+                try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                except: continue
+                
+                if service.CanUpdate():
+                    
+                    connection = service.GetConnection()
+                    
+                    while service.CanUpdate():
+                        
+                        while options[ 'pause_repo_sync' ]:
+                            
+                            HC.pubsub.pub( 'service_status', 'Repository synchronisation paused' )
+                            
+                            time.sleep( 5 )
+                            
+                            if HC.shutdown: raise Exception( 'Application shutting down!' )
+                            
+                            if HC.repos_or_subs_changed:
+                                
+                                HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
+                                
+                                return
+                                
+                            
+                        
+                        if HC.shutdown: raise Exception( 'Application shutting down!' )
+                        
+                        first_begin = service.GetFirstBegin()
+                        
+                        next_begin = service.GetNextBegin()
+                        
+                        if first_begin == 0: update_index_string = 'initial update'
+                        else: update_index_string = 'update ' + HC.u( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
+                        
+                        prefix_string = name + ' ' + update_index_string + ': '
+                        
+                        HC.pubsub.pub( 'service_status', prefix_string + 'downloading and parsing' )
+                        
+                        update = connection.Get( 'update', begin = next_begin )
+                        
+                        if service_type == HC.TAG_REPOSITORY:
+                            
+                            HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
+                            
+                            HC.app.WriteDaemon( 'generate_tag_ids', update.GetTags() )
+                            
+                        
+                        i = 0
+                        num_content_updates = update.GetNumContentUpdates()
+                        content_updates = []
+                        current_weight = 0
+                        
+                        for content_update in update.IterateContentUpdates():
+                            
+                            content_updates.append( content_update )
+                            
+                            current_weight += len( content_update.GetHashes() )
+                            
+                            i += 1
+                            
+                            if current_weight > 50:
+                                
+                                HC.pubsub.pub( 'service_status', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
+                                
+                                HC.app.WaitUntilGoodTimeToUseGUIThread()
+                                
+                                time.sleep( 0.0001 )
+                                
+                                HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                                
+                                content_updates = []
+                                current_weight = 0
+                                
+                            
+                        
+                        if len( content_updates ) > 0: HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                        
+                        HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
+                        
+                        service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
+                        
+                        service_identifiers_to_service_updates = { service_identifier : service_updates }
+                        
+                        HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+                        
+                        HC.pubsub.pub( 'notify_new_pending' )
+                        
+                        time.sleep( 0.10 )
+                        
+                        try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                        except: break
+                        
+                    
+                    HC.pubsub.pub( 'service_status', '' )
+                    
+                
+            except Exception as e:
+                
+                message = 'Failed to update ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
+                
+                HC.pubsub.pub( 'service_status', message )
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
+                
+                time.sleep( 3 )
+                
+            
+        
+        time.sleep( 5 )
+        
+    
+    # subs
+    
+    if not options[ 'pause_subs_sync' ]:
+        
+        subscriptions = HC.app.ReadDaemon( 'subscriptions' )
+        
+        for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions:
+            
+            if paused: continue
+            
+            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
+            
+            advanced_tag_options = dict( advanced_tag_options )
+            
+            try:
+                
+                HC.pubsub.pub( 'service_status', 'checking ' + name + ' subscription' )
+                
+                now = HC.GetNow()
+                
+                do_tags = len( advanced_tag_options ) > 0
+                
+                if last_checked is None: last_checked = 0
+                
+                if last_checked + ( frequency_type * frequency_number ) < now:
+                    
+                    if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
+                        
+                        try: booru = HC.app.ReadDaemon( 'booru', booru_name )
+                        except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
+                        
+                        tags = query.split( ' ' )
+                        
+                        all_args = ( ( booru, tags ), )
+                        
+                    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY:
+                        
+                        info = {}
+                        
+                        info[ 'rating_nudity' ] = 3
+                        info[ 'rating_violence' ] = 3
+                        info[ 'rating_profanity' ] = 3
+                        info[ 'rating_racism' ] = 3
+                        info[ 'rating_sex' ] = 3
+                        info[ 'rating_spoilers' ] = 3
+                        
+                        info[ 'rating_yaoi' ] = 1
+                        info[ 'rating_yuri' ] = 1
+                        info[ 'rating_loli' ] = 1
+                        info[ 'rating_shota' ] = 1
+                        info[ 'rating_teen' ] = 1
+                        info[ 'rating_guro' ] = 1
+                        info[ 'rating_furry' ] = 1
+                        info[ 'rating_beast' ] = 1
+                        info[ 'rating_male' ] = 1
+                        info[ 'rating_female' ] = 1
+                        info[ 'rating_futa' ] = 1
+                        info[ 'rating_other' ] = 1
+                        
+                        info[ 'filter_media' ] = 'A'
+                        info[ 'filter_order' ] = 'date_new'
+                        info[ 'filter_type' ] = 0
+                        
+                        advanced_hentai_foundry_options = info
+                        
+                        if query_type == 'artist': all_args = ( ( 'artist pictures', query, advanced_hentai_foundry_options ), ( 'artist scraps', query, advanced_hentai_foundry_options ) )
+                        else:
+                            
+                            tags = query.split( ' ' )
+                            
+                            all_args = ( ( query_type, tags, advanced_hentai_foundry_options ), )
+                            
+                        
+                    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: all_args = ( ( query_type, query ), )
+                    else: all_args = ( ( query, ), )
+                    
+                    downloaders = [ HydrusDownloading.GetDownloader( site_download_type, *args ) for args in all_args ]
+                    
+                    downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
+                    
+                    all_url_args = []
+                    
+                    while True:
+                        
+                        while options[ 'pause_subs_sync' ]:
+                            
+                            HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
+                            
+                            time.sleep( 5 )
+                            
+                            if HC.shutdown: return
+                            
+                            if HC.repos_or_subs_changed:
+                                
+                                HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
+                                
+                                return
+                                
+                            
+                        
+                        if HC.shutdown: return
+                        
+                        downloaders_to_remove = []
+                        
+                        for downloader in downloaders:
+                            
+                            page_of_url_args = downloader.GetAnotherPage()
+                            
+                            if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                            else:
+                                
+                                fresh_url_args = [ url_args for url_args in page_of_url_args if url_args[0] not in url_cache ]
+                                
+                                # i.e. we have hit the url cache, so no need to fetch any more pages
+                                if len( fresh_url_args ) == 0 or len( fresh_url_args ) != len( page_of_url_args ): downloaders_to_remove.append( downloader )
+                                
+                                all_url_args.extend( fresh_url_args )
+                                
+                                HC.pubsub.pub( 'service_status', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
+                                
+                            
+                        
+                        for downloader in downloaders_to_remove: downloaders.remove( downloader )
+                        
+                        if len( downloaders ) == 0: break
+                        
+                    
+                    all_url_args.reverse() # to do oldest first, which means we can save incrementally
+                    
+                    i = 1
+                    
+                    num_new = 0
+                    
+                    successful_hashes = set()
+                    
+                    for url_args in all_url_args:
+                        
+                        while options[ 'pause_subs_sync' ]:
+                            
+                            HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
+                            
+                            time.sleep( 5 )
+                            
+                            if HC.shutdown: return
+                            
+                            if HC.repos_or_subs_changed:
+                                
+                                HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
+                                
+                                return
+                                
+                            
+                        
+                        if HC.shutdown: return
+                        
+                        try:
+                            
+                            url = url_args[0]
+                            
+                            url_cache.add( url )
+                            
+                            x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
+                            
+                            HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : checking url status' )
+                            
+                            ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
+                            
+                            if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
+                            
+                            if status == 'redundant':
+                                
+                                if do_tags:
+                                    
+                                    try:
+                                        
+                                        HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                        
+                                        tags = downloader.GetTags( *url_args )
+                                        
+                                        service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                        
+                                        service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
+                                        
+                                        HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                                        
+                                    except: pass
+                                    
+                                
+                            elif status == 'new':
+                                
+                                num_new += 1
+                                
+                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : downloading file' )
+                                
+                                if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
+                                else:
+                                    
+                                    file = downloader.GetFile( *url_args )
+                                    
+                                    tags = []
+                                    
+                                
+                                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                                
+                                HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
+                                
+                                ( status, hash ) = HC.app.WriteDaemon( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                
+                                if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                                
+                            
+                        except Exception as e:
+                            
+                            message = 'While trying to execute a subscription, the url ' + url + ' caused this problem:' + os.linesep + traceback.format_exc()
+                            
+                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                            
+                        
+                        i += 1
+                        
+                        if i % 20 == 0:
+                            
+                            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
+                            
+                            subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
+                            
+                            HC.app.Write( 'subscription', subscription )
+                            
+                            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
+                            
+                        
+                        HC.app.WaitUntilGoodTimeToUseGUIThread()
+                        
+                    
+                    if len( successful_hashes ) > 0:
+                        
+                        message_text = HC.u( len( successful_hashes ) ) + ' files imported from ' + name
+                        
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
+                        
+                    
+                    last_checked = now
+                    
+                
+            except Exception as e:
+                
+                last_checked = now + HC.UPDATE_DURATION
+                
+                message = 'Problem with ' + name + ' ' + traceback.format_exc()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                time.sleep( 3 )
+                
+            
+            HC.pubsub.pub( 'service_status', '' )
+            
+            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
+            
+            subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
+            
+            HC.app.Write( 'subscription', subscription )
+            
+        
+    
+    HC.pubsub.pub( 'service_status', '' )
     

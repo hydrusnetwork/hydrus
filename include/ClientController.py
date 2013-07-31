@@ -30,7 +30,7 @@ class Controller( wx.App ):
         else: return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
         
     
-    def _Write( self, action, priority, *args, **kwargs ): self._db.Write( action, priority, *args, **kwargs )
+    def _Write( self, action, priority, synchronous, *args, **kwargs ): return self._db.Write( action, priority, synchronous, *args, **kwargs )
     
     def ClearCaches( self ):
         
@@ -93,12 +93,12 @@ class Controller( wx.App ):
     
     def EventMaintenanceTimer( self, event ):
         
-        if int( time.time() ) - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
+        if HC.GetNow() - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
             
-            self._last_idle_time = int( time.time() )
+            self._last_idle_time = HC.GetNow()
             
         
-        if int( time.time() ) - self._last_idle_time > 20 * 60: # 20 mins since last user-initiated db request
+        if HC.GetNow() - self._last_idle_time > 20 * 60: # 20 mins since last user-initiated db request
             
             self.MaintainDB()
             
@@ -115,8 +115,10 @@ class Controller( wx.App ):
         except TypeError: pass
         except Exception as e:
             
-            print( type( e ) )
-            print( traceback.format_exc() )
+            message = type( e ).__name__ + os.linesep + traceback.format_exc()
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            print( message )
             
         
         pubsubs_queue.task_done()
@@ -147,7 +149,7 @@ class Controller( wx.App ):
         
         gc.collect()
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
@@ -185,7 +187,7 @@ class Controller( wx.App ):
                     
                 except HydrusExceptions.DBAccessException as e:
                     
-                    print( unicode( e ) )
+                    print( HC.u( e ) )
                     
                     message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
                     message += os.linesep + os.linesep
@@ -247,10 +249,8 @@ class Controller( wx.App ):
             self._maintenance_event_timer.Start( 20 * 60000, wx.TIMER_CONTINUOUS )
             
         except sqlite3.OperationalError as e:
-            print( traceback.format_exc() )
-            message = 'Database error!'
-            message += os.linesep + os.linesep
-            message += unicode( e )
+            
+            message = 'Database error!' + os.linesep + os.linesep + traceback.format_exc()
             
             print message
             
@@ -284,12 +284,19 @@ class Controller( wx.App ):
     
     def Read( self, action, *args, **kwargs ):
         
-        self._last_idle_time = int( time.time() )
+        self._last_idle_time = HC.GetNow()
         
         return self._Read( action, *args, **kwargs )
         
     
-    def ReadDaemon( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
+    def ReadDaemon( self, action, *args, **kwargs ):
+        
+        result = self._Read( action, *args, **kwargs )
+        
+        time.sleep( 0.1 )
+        
+        return result
+        
     
     def SetSplashText( self, text ):
         
@@ -311,14 +318,21 @@ class Controller( wx.App ):
     
     def Write( self, action, *args, **kwargs ):
         
-        self._last_idle_time = int( time.time() )
+        self._last_idle_time = HC.GetNow()
         
         if False and action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
         
-        self._Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
         
     
-    def WriteDaemon( self, action, *args, **kwargs ): self._Write( action, HC.LOW_PRIORITY, *args, **kwargs )
+    def WriteDaemon( self, action, *args, **kwargs ):
+        
+        result = self._Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
+        
+        time.sleep( 0.1 )
+        
+        return result
+        
     
-    def WriteLowPriority( self, action, *args, **kwargs ): self._Write( action, HC.LOW_PRIORITY, *args, **kwargs )
+    def WriteLowPriority( self, action, *args, **kwargs ): return self._Write( action, HC.LOW_PRIORITY, False, *args, **kwargs )
     

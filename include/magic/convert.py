@@ -66,7 +66,7 @@ def __is_number_start(text):
 # End of Assume
 
 def base10 (text,base):
-	number = str(text).lower()
+	number = HC.u(text).lower()
 	result=0L
 	for digit in number:
 		result*=base

@@ -14,7 +14,7 @@ class Controller( wx.App ):
     
     def _AlreadyRunning( self, port ):
         
-        connection = httplib.HTTPConnection( 'localhost:' + str( port ) )
+        connection = httplib.HTTPConnection( 'localhost:' + HC.u( port ) )
         
         try:
             
@@ -36,7 +36,7 @@ class Controller( wx.App ):
         server_daemon.setDaemon( True )
         server_daemon.start()
         
-        connection = httplib.HTTPConnection( 'localhost:' + str( port ) )
+        connection = httplib.HTTPConnection( 'localhost:' + HC.u( port ) )
         
         connection.connect()
         

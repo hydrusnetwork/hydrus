@@ -114,7 +114,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
     def _GetPrettyStatus( self ):
         
         if len( self._conversations ) == 1: return '1 conversation'
-        else: return str( len( self._conversations ) ) + ' conversations'
+        else: return HC.u( len( self._conversations ) ) + ' conversations'
         
     
     def _SetConversations( self, conversations ):
@@ -147,7 +147,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
                 updated_string = HC.ConvertTimestampToHumanPrettyTime( updated )
                 
             
-            self.Append( ( '', subject, name_from, ', '.join( [ contact.GetName() for contact in participants if contact.GetName() != name_from ] ), str( message_count ), str( unread_count ), created_string, updated_string ) )
+            self.Append( ( '', subject, name_from, ', '.join( [ contact.GetName() for contact in participants if contact.GetName() != name_from ] ), HC.u( message_count ), HC.u( unread_count ), created_string, updated_string ) )
             
             data_index = i
             
@@ -186,8 +186,8 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
             if inbox: self.SetItemImage( selection, 1 )
             else: self.SetItemImage( selection, 0 )
             
-            self.SetStringItem( selection, 4, str( message_count ) )
-            self.SetStringItem( selection, 5, str( unread_count ) )
+            self.SetStringItem( selection, 4, HC.u( message_count ) )
+            self.SetStringItem( selection, 5, HC.u( unread_count ) )
             
             if created is None:
                 
@@ -265,7 +265,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
             
         
@@ -662,7 +662,7 @@ class DestinationPanel( wx.Panel ):
                 
                 wx.MessageBox( 'Could not contact your message depot, so could not update status!' )
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
                 
             
@@ -1300,7 +1300,10 @@ class DraftPanel( wx.Panel ):
                 
             except:
                 
-                wx.MessageBox( 'The hydrus client could not connect to your message depot, so the message could not be sent!' )
+                message = 'The hydrus client could not connect to your message depot, so the message could not be sent!'
+                
+                wx.MessageBox( message )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
                 print( traceback.format_exc() )
                 
                 return

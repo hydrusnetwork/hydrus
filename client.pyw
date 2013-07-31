@@ -21,7 +21,7 @@ from include import ClientController
 initial_sys_stdout = sys.stdout
 initial_sys_stderr = sys.stderr
 
-with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
+with HC.o( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
     
     sys.stdout = f
     sys.stderr = f

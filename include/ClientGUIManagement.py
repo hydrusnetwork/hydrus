@@ -222,7 +222,7 @@ class CaptchaControl( wx.Panel ):
     
     def EnableWithValues( self, challenge, bitmap, captcha_runs_out, entry, ready ):
         
-        if int( time.time() ) > captcha_runs_out: self.Enable()
+        if HC.GetNow() > captcha_runs_out: self.Enable()
         else:
             
             self._captcha_challenge = challenge
@@ -249,7 +249,7 @@ class CaptchaControl( wx.Panel ):
         
         try:
             
-            connection = HC.AdvancedHTTPConnection( scheme = 'http', host = 'www.google.com', port = 80 )
+            connection = HC.get_connection( scheme = 'http', host = 'www.google.com', port = 80 )
             
             javascript_string = connection.request( 'GET', '/recaptcha/api/challenge?k=' + self._captcha_key )
             
@@ -261,7 +261,7 @@ class CaptchaControl( wx.Panel ):
             
             self._bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( jpeg )
             
-            self._captcha_runs_out = int( time.time() ) + 5 * 60 - 15
+            self._captcha_runs_out = HC.GetNow() + 5 * 60 - 15
             
             self._DrawMain()
             self._DrawEntry( '' )
@@ -277,7 +277,7 @@ class CaptchaControl( wx.Panel ):
     
     def EventTimer( self, event ):
         
-        if int( time.time() ) > self._captcha_runs_out: self.Enable()
+        if HC.GetNow() > self._captcha_runs_out: self.Enable()
         else: self._DrawMain()
         
     
@@ -402,7 +402,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         ( self._4chan_token, pin, timeout ) = HC.app.Read( '4chan_pass' )
         
-        self._have_4chan_pass = timeout > int( time.time() )
+        self._have_4chan_pass = timeout > HC.GetNow()
         
         self._imageboard = imageboard
         
@@ -584,13 +584,13 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            connection = HC.AdvancedHTTPConnection( scheme = self._post_scheme, host = self._post_host, port = self._post_port )
+            connection = HC.get_connection( scheme = self._post_scheme, host = self._post_host, port = self._post_port )
             
             data = connection.request( 'POST', self._post_request, headers = headers, body = body )
             
             ( status, phrase ) = ClientParsers.Parse4chanPostScreen( data )
             
-        except Exception as e: ( status, phrase ) = ( 'big error', unicode( e ) )
+        except Exception as e: ( status, phrase ) = ( 'big error', HC.u( e ) )
         
         wx.CallAfter( self.CALLBACKDoneDump, media_to_dump, post_field_info, status, phrase )
         
@@ -622,11 +622,11 @@ class ManagementPanelDumper( ManagementPanel ):
             
             total_size = sum( [ m.GetSize() for m in self._media_list.GetSortedMedia() ] )
             
-            initial = 'Hydrus Network Client is starting a dump of ' + str( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) + ':' + os.linesep + os.linesep
+            initial = 'Hydrus Network Client is starting a dump of ' + HC.u( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) + ':' + os.linesep + os.linesep
             
         else: initial = ''
         
-        initial += str( index + 1 ) + '/' + str( num_files )
+        initial += HC.u( index + 1 ) + '/' + HC.u( num_files )
         
         advanced_tag_options = self._advanced_tag_options.GetInfo()
         
@@ -674,7 +674,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             index = self._media_list.GetMediaIndex( self._current_media )
             
-            self._post_info.SetLabel( str( index + 1 ) + '/' + str( num_files ) + ': ' + dump_status_string )
+            self._post_info.SetLabel( HC.u( index + 1 ) + '/' + HC.u( num_files ) + ': ' + dump_status_string )
             
             for ( name, type, value ) in post_field_info:
                 
@@ -763,7 +763,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             if self._current_media == media_to_dump: HC.pubsub.pub( 'set_focus', self._page_key, None )
             
-            self._next_dump_time = int( time.time() ) + self._flood_time
+            self._next_dump_time = HC.GetNow() + self._flood_time
             
             self._num_dumped += 1
             
@@ -776,7 +776,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_RECOVERABLE_ERROR
             dump_status_string = 'captcha was incorrect'
             
-            self._next_dump_time = int( time.time() ) + 10
+            self._next_dump_time = HC.GetNow() + 10
             
             new_post_field_info = []
             
@@ -802,7 +802,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._progress_info.SetLabel( 'Flood limit hit, retrying.' )
             
-            self._next_dump_time = int( time.time() ) + self._flood_time
+            self._next_dump_time = HC.GetNow() + self._flood_time
             
         elif status == 'big error':
             
@@ -833,7 +833,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             if self._current_media == media_to_dump: HC.pubsub.pub( 'set_focus', self._page_key, None )
             
-            self._next_dump_time = int( time.time() ) + self._flood_time
+            self._next_dump_time = HC.GetNow() + self._flood_time
             
             self._next_dump_index += 1
             
@@ -846,7 +846,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._next_dump_index == len( self._media_list.GetSortedMedia() ):
             
-            self._progress_info.SetLabel( 'done - ' + str( self._num_dumped ) + ' dumped' )
+            self._progress_info.SetLabel( 'done - ' + HC.u( self._num_dumped ) + ' dumped' )
             
             self._start_button.Disable()
             
@@ -882,7 +882,7 @@ class ManagementPanelDumper( ManagementPanel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 
             
         
@@ -910,7 +910,7 @@ class ManagementPanelDumper( ManagementPanel ):
             self._dumping = True
             self._start_button.SetLabel( 'pause' )
             
-            if self._next_dump_time == 0: self._next_dump_time = int( time.time() ) + 5
+            if self._next_dump_time == 0: self._next_dump_time = HC.GetNow() + 5
             
             # disable thread fields here
             
@@ -931,7 +931,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._dumping:
             
-            time_left = self._next_dump_time - int( time.time() )
+            time_left = self._next_dump_time - HC.GetNow()
             
             if time_left < 1:
                 
@@ -957,7 +957,7 @@ class ManagementPanelDumper( ManagementPanel ):
                             
                             ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
                             
-                            if int( time.time() ) > captcha_runs_out or not ready:
+                            if HC.GetNow() > captcha_runs_out or not ready:
                                 
                                 wait = True
                                 
@@ -1018,12 +1018,12 @@ class ManagementPanelDumper( ManagementPanel ):
                     threading.Thread( target = self._THREADDoDump, args = ( media_to_dump, post_field_info, headers, body ) ).start()
                     
                 
-            else: self._progress_info.SetLabel( 'dumping next file in ' + str( time_left ) + ' seconds' )
+            else: self._progress_info.SetLabel( 'dumping next file in ' + HC.u( time_left ) + ' seconds' )
             
         else:
             
             if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
-            else: self._progress_info.SetLabel( 'paused after ' + str( self._num_dumped ) + ' files dumped' )
+            else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
             
         
     
@@ -1135,7 +1135,7 @@ class ManagementPanelImport( ManagementPanel ):
     
     def _GetPreimportStatus( self ):
         
-        status = 'importing ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
+        status = 'importing ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
         
         return status
         
@@ -1146,10 +1146,10 @@ class ManagementPanelImport( ManagementPanel ):
         
         strs = []
         
-        if self._successful > 0: strs.append( str( self._successful ) + ' successful' )
-        if self._failed > 0: strs.append( str( self._failed ) + ' failed' )
-        if self._deleted > 0: strs.append( str( self._deleted ) + ' already deleted' )
-        if self._redundant > 0: strs.append( str( self._redundant ) + ' already in db' )
+        if self._successful > 0: strs.append( HC.u( self._successful ) + ' successful' )
+        if self._failed > 0: strs.append( HC.u( self._failed ) + ' failed' )
+        if self._deleted > 0: strs.append( HC.u( self._deleted ) + ' already deleted' )
+        if self._redundant > 0: strs.append( HC.u( self._redundant ) + ' already in db' )
         
         return strs
         
@@ -1189,7 +1189,7 @@ class ManagementPanelImport( ManagementPanel ):
         else:
             
             self._currently_importing = False
-            self._import_current_info.SetLabel( unicode( exception ) )
+            self._import_current_info.SetLabel( HC.u( exception ) )
             self._import_gauge.SetValue( self._import_queue_position + 1 )
             self._import_queue_position += 1
             
@@ -1292,9 +1292,13 @@ class ManagementPanelImport( ManagementPanel ):
             if exception is None: self._timer_process_import_queue.Start( 10, wx.TIMER_ONE_SHOT )
             else:
                 
-                print( os.linesep + 'Had trouble importing ' + str( self._import_queue[ self._import_queue_position - 1 ] ) + ':' + os.linesep + unicode( exception ) )
+                message = os.linesep + 'Had trouble importing ' + HC.u( self._import_queue[ self._import_queue_position - 1 ] ) + ':' + os.linesep + HC.u( exception )
                 
-                self._import_current_info.SetLabel( unicode( exception ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
+                
+                self._import_current_info.SetLabel( HC.u( exception ) )
                 
                 self._timer_process_import_queue.Start( 2000, wx.TIMER_ONE_SHOT )
                 
@@ -1357,7 +1361,7 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
                 
                 path = path_info
                 
-                with open( path, 'rb' ) as f: file = f.read()
+                with HC.o( path, 'rb' ) as f: file = f.read()
                 
             elif path_type == 'zip':
                 
@@ -1374,13 +1378,14 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
             wx.CallAfter( self.CALLBACKImportArgs, file, self._advanced_import_options, service_identifiers_to_tags )
             
         except Exception as e:
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
             print( traceback.format_exc() )
             wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
         
     
     def _GetPreprocessStatus( self ):
         
-        status = 'reading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
+        status = 'reading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
         
         return status
         
@@ -1448,7 +1453,7 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
     
     def _GetPreprocessStatus( self ):
         
-        status = 'checking url status ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
+        status = 'checking url status ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
         
         return status
         
@@ -1709,7 +1714,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
             else:
                 
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
                 
                 if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
                 else:
@@ -1727,6 +1732,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
             
         except Exception as e:
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
             print( traceback.format_exc() )
             wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
         
@@ -1752,7 +1758,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
                 for downloader in downloaders:
                     
-                    HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + str( total_urls_found ) + ' urls' )
+                    HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'found ' + HC.u( total_urls_found ) + ' urls' )
                     
                     while self._pause_outer_queue: time.sleep( 1 )
                     
@@ -1779,8 +1785,9 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             
         except HydrusExceptions.NotFoundException: pass
         except Exception as e:
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
             print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, HC.u( e ) )
         
         HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
         
@@ -2036,13 +2043,13 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
                 
             else:
                 
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
                 
                 parse_result = urlparse.urlparse( url )
                 
                 ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
@@ -2056,6 +2063,7 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
                 
             
         except Exception as e:
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
             print( traceback.format_exc() )
             wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
         
@@ -2076,7 +2084,7 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, 'Connecting to address' )
             
-            try: connection = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+            try: connection = HC.get_connection( scheme = scheme, host = host, port = port )
             except: raise Exception( 'Could not connect to server' )
             
             try: html = connection.geturl( url )
@@ -2089,7 +2097,7 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
             
             wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
             
-        except Exception as e: HC.pubsub.pub( 'set_outer_queue_info', self._page_key, unicode( e ) )
+        except Exception as e: HC.pubsub.pub( 'set_outer_queue_info', self._page_key, HC.u( e ) )
         
         HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
         
@@ -2174,7 +2182,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         try:
             
-            connection = HC.AdvancedHTTPConnection( url = url )
+            connection = HC.get_connection( url = url )
             
             raw_json = connection.geturl( url )
             
@@ -2182,7 +2190,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             posts_list = json_dict[ 'posts' ]
             
-            image_infos = [ ( post[ 'md5' ].decode( 'base64' ), str( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
+            image_infos = [ ( post[ 'md5' ].decode( 'base64' ), HC.u( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
             
             image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in self._image_infos_already_added ]
             
@@ -2200,14 +2208,14 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
         except Exception as e:
             
-            HC.pubsub.pub( 'set_thread_info', self._page_key, unicode( e ) )
+            HC.pubsub.pub( 'set_thread_info', self._page_key, HC.u( e ) )
             
             wx.CallAfter( self._thread_pause_button.Disable )
             
             return
             
         
-        self._last_thread_check = int( time.time() )
+        self._last_thread_check = HC.GetNow()
         
         self._currently_checking_thread = False
         
@@ -2248,13 +2256,13 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                     
                 else:
                     
-                    HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) ) )
+                    HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
                     
                     parse_result = urlparse.urlparse( url )
                     
                     ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                     
-                    if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+                    if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
                     
                     connection = self._connections[ ( scheme, host, port ) ]
                     
@@ -2273,13 +2281,14 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
             
         except Exception as e:
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
             print( traceback.format_exc() )
             wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
         
     
     def _GetPreprocessStatus( self ):
         
-        status = 'checking url/hash status ' + str( self._import_queue_position + 1 ) + '/' + str( len( self._import_queue ) )
+        status = 'checking url/hash status ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
         
         return status
         
@@ -2313,7 +2322,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
             except Exception as e:
                 
-                self._thread_info.SetLabel( unicode( e ) )
+                self._thread_info.SetLabel( HC.u( e ) )
                 
                 return
                 
@@ -2341,7 +2350,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             next_thread_check = self._last_thread_check + thread_time
             
-            if next_thread_check < int( time.time() ):
+            if next_thread_check < HC.GetNow():
                 
                 self._currently_checking_thread = True
                 
@@ -2572,7 +2581,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._num_petitions > 0: self.EventGetPetition( event )
             
-        except Exception as e: self._num_petitions_text.SetLabel( unicode( e ) )
+        except Exception as e: self._num_petitions_text.SetLabel( HC.u( e ) )
         
     
     def RefreshQuery( self, page_key ):

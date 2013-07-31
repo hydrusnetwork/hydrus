@@ -87,9 +87,9 @@ class PageLog( PageBase, wx.Panel ):
         
         log = HC.app.GetLog()
         
-        self._log_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'type', 60 ), ( 'source', 180 ), ( 'message', -1 ), ( 'time', 120 ) ] )
+        self._log_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'type', 60 ), ( 'message', -1 ), ( 'time', 120 ) ] )
         
-        for ( type, source, message, time ) in log: self._AddEntry( type, source, message, time )
+        for ( message, timestamp ) in log: self.AddMessage( message, timestamp )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -97,24 +97,40 @@ class PageLog( PageBase, wx.Panel ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'AddError', 'log_error' )
-        HC.pubsub.sub( self, 'AddMessage', 'log_message' )
+        HC.pubsub.sub( self, 'AddMessage', 'message' )
         
     
-    def _AddEntry( self, type, source, message, time ): self._log_list_ctrl.Append( ( CC.log_string_lookup[ type ], source, message, HC.ConvertTimestampToPrettyTime( time ) ), ( CC.log_string_lookup[ type ], source, message, time ) )
+    def _AddEntry( self, message_type_string, message_string, timestamp ): self._log_list_ctrl.Append( ( message_type_string, message_string, HC.ConvertTimestampToPrettyTime( timestamp ) ), ( message_type_string, message_string, timestamp ) )
     
-    def AddError( self, source, message ):
+    def AddMessage( self, message, timestamp = None ):
         
-        # assuming we want to show errors right now
+        if timestamp is None: timestamp = HC.GetNow()
         
-        self._AddEntry( CC.LOG_ERROR, source, message, time.time() )
+        message_type = message.GetType()
+        info = message.GetInfo()
         
-    
-    def AddMessage( self, source, message ):
+        if message_type == HC.MESSAGE_TYPE_TEXT:
+            
+            message_type_string = 'message'
+            
+            message_string = info
+            
+        elif message_type == HC.MESSAGE_TYPE_ERROR:
+            
+            message_type_string = 'error'
+            
+            exception = info
+            
+            message_string = HC.u( exception )
+            
+        elif message_type == HC.MESSAGE_TYPE_FILES:
+            
+            message_type_string = 'files'
+            
+            ( message_string, hashes ) = info
+            
         
-        # assuming we want to show messages right now
-        
-        self._AddEntry( CC.LOG_MESSAGE, source, message, time.time() )
+        self._AddEntry( message_type_string, message_string, timestamp )
         
     
 class PageMessages( PageBase, wx.SplitterWindow ):

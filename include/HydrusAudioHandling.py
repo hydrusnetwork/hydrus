@@ -16,7 +16,7 @@ def GetFLACDuration( file ):
     
     path = HC.TEMP_DIR + os.path.sep + 'flac_parse.flac'
     
-    with open( path, 'wb' ) as f: f.write( file )
+    with HC.o( path, 'wb' ) as f: f.write( file )
     
     try: flac_object = mutagen.flac.FLAC( path )
     except: raise Exception( 'Could not parse the ogg!' )
@@ -35,7 +35,7 @@ def GetMP3Duration( file ):
     
     path = HC.TEMP_DIR + os.path.sep + 'mp3_parse.mp3'
     
-    with open( path, 'wb' ) as f: f.write( file )
+    with HC.o( path, 'wb' ) as f: f.write( file )
     
     try: mp3_object = mutagen.mp3.MP3( path )
     except: raise Exception( 'Could not parse the mp3!' )
@@ -54,7 +54,7 @@ def GetOGGVorbisDuration( file ):
     
     path = HC.TEMP_DIR + os.path.sep + 'oggvorbis_parse.ogg'
     
-    with open( path, 'wb' ) as f: f.write( file )
+    with HC.o( path, 'wb' ) as f: f.write( file )
     
     try: ogg_object = mutagen.oggvorbis.OggVorbis( path )
     except: raise Exception( 'Could not parse the ogg!' )

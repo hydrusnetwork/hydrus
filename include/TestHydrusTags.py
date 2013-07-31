@@ -68,7 +68,9 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        self.assertEqual( tags_manager.GetCSTVCP(), ( { 'tsutomu nihei' }, { 'blame!' }, { 'double page spread' }, { 3 }, { 1, 2 }, { 4, 5 } ) )
+        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'double page spread' }, 'volume' : { 3 }, 'chapter' : { 1, 2 }, 'page' : { 4, 5 } }
+        
+        self.assertEqual( tags_manager.GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) ), result )
         
         self.assertEqual( tags_manager.GetNamespaceSlice( ( 'character', ) ), frozenset( { 'character:cibo' } ) )
         
@@ -130,8 +132,9 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_cstvcp( self ):
         
-        # volume, chapter and page can only return numbers, so broken_volume etc. are discarded
-        self.assertEqual( self._tags_manager.GetCSTVCP(), ( { 'tsutomu nihei' }, { 'blame!' }, { 'test title' }, { 3 }, { 2 }, { 1 } ) )
+        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'test title' }, 'volume' : { 3 }, 'chapter' : { 2 }, 'page' : { 1 } }
+        
+        self.assertEqual( self._tags_manager.GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) ), result )
         
     
     def test_delete_pending( self ):

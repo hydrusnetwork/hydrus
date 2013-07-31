@@ -112,14 +112,6 @@ field_string_lookup[ FIELD_FILE ] = 'file'
 field_string_lookup[ FIELD_THREAD_ID ] = 'thread id'
 field_string_lookup[ FIELD_PASSWORD ] = 'password'
 
-LOG_ERROR = 0
-LOG_MESSAGE = 1
-
-log_string_lookup = {}
-
-log_string_lookup[ LOG_ERROR ] = 'error'
-log_string_lookup[ LOG_MESSAGE ] = 'message'
-
 RESTRICTION_MIN_RESOLUTION = 0
 RESTRICTION_MAX_RESOLUTION = 1
 RESTRICTION_MAX_FILE_SIZE = 2
@@ -245,7 +237,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     for ( name, type, value ) in fields:
         
-        if type in ( FIELD_TEXT, FIELD_COMMENT, FIELD_PASSWORD, FIELD_VERIFICATION_RECAPTCHA, FIELD_THREAD_ID ): m.field( name, str( value ) )
+        if type in ( FIELD_TEXT, FIELD_COMMENT, FIELD_PASSWORD, FIELD_VERIFICATION_RECAPTCHA, FIELD_THREAD_ID ): m.field( name, HC.u( value ) )
         elif type == FIELD_CHECKBOX:
             
             if value: 
@@ -269,7 +261,7 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     m = multipart.Multipart()
     
-    for ( name, value ) in fields.items(): m.field( name, str( value ) )
+    for ( name, value ) in fields.items(): m.field( name, HC.u( value ) )
     
     return m.get()
     
@@ -291,6 +283,79 @@ def GetAllFileHashes():
         
     
     return file_hashes
+    
+def GetAllPaths( raw_paths, quiet = False ):
+    
+    file_paths = []
+    
+    title = 'Parsing files and subdirectories'
+    
+    if not quiet: progress = wx.ProgressDialog( title, u'Preparing', 1000, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    
+    try:
+        
+        paths_to_process = raw_paths
+        
+        total_paths_to_process = len( paths_to_process )
+        
+        num_processed = 0
+        
+        while len( paths_to_process ) > 0:
+            
+            next_paths_to_process = []
+            
+            for path in paths_to_process:
+                
+                if not quiet:
+                    
+                    # would rather use progress.SetRange( total_paths_to_process ) here, but for some reason wx python doesn't support it!
+                    
+                    permill = int( 1000 * ( float( num_processed ) / float( total_paths_to_process ) ) )
+                    
+                    ( should_continue, skip ) = progress.Update( permill, 'Done ' + HC.u( num_processed ) + '/' + HC.u( total_paths_to_process ) )
+                    
+                    if not should_continue:
+                        
+                        progress.Destroy()
+                        
+                        return []
+                        
+                    
+                
+                if os.path.isdir( path ):
+                    
+                    subpaths = [ path + os.path.sep + filename for filename in dircache.listdir( path ) ]
+                    
+                    total_paths_to_process += len( subpaths )
+                    
+                    next_paths_to_process.extend( subpaths )
+                    
+                else: file_paths.append( path )
+                
+                num_processed += 1
+                
+            
+            paths_to_process = next_paths_to_process
+            
+        
+    except:
+        
+        message = 'While parsing files, encountered this error:' + os.linesep + traceback.format_exc()
+        
+        if not quiet:
+            
+            wx.MessageBox( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            
+        
+        print( message )
+        
+    
+    if not quiet: progress.Destroy()
+    
+    gc.collect()
+    
+    return file_paths
     
 def GetAllThumbnailHashes():
     
@@ -387,74 +452,9 @@ def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_I
     
     return ( current, deleted, pending, petitioned )
     
-def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
+def ParseImportablePaths( raw_paths, quiet = False ):
     
-    file_paths = []
-    
-    if include_subdirs: title = 'Parsing files and subdirectories'
-    else: title = 'Parsing files'
-    
-    if not quiet: progress = wx.ProgressDialog( title, u'Preparing', 1000, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
-    
-    try:
-        
-        paths_to_process = raw_paths
-        
-        total_paths_to_process = len( paths_to_process )
-        
-        num_processed = 0
-        
-        while len( paths_to_process ) > 0:
-            
-            next_paths_to_process = []
-            
-            for path in paths_to_process:
-                
-                if not quiet:
-                    
-                    # would rather use progress.SetRange( total_paths_to_process ) here, but for some reason wx python doesn't support it!
-                    
-                    permill = int( 1000 * ( float( num_processed ) / float( total_paths_to_process ) ) )
-                    
-                    ( should_continue, skip ) = progress.Update( permill, 'Done ' + str( num_processed ) + '/' + str( total_paths_to_process ) )
-                    
-                    if not should_continue:
-                        
-                        progress.Destroy()
-                        
-                        return []
-                        
-                    
-                
-                if os.path.isdir( path ):
-                    
-                    if include_subdirs:
-                        
-                        subpaths = [ path + os.path.sep + filename for filename in dircache.listdir( path ) ]
-                        
-                        total_paths_to_process += len( subpaths )
-                        
-                        next_paths_to_process.extend( subpaths )
-                        
-                    
-                else: file_paths.append( path )
-                
-                num_processed += 1
-                
-            
-            paths_to_process = next_paths_to_process
-            
-        
-    except:
-        
-        if not quiet: wx.MessageBox( traceback.format_exc() )
-        
-        print( traceback.format_exc() )
-        
-    
-    if not quiet: progress.Destroy()
-    
-    gc.collect()
+    file_paths = GetAllPaths( raw_paths, quiet )
     
     good_paths_info = []
     odd_paths = []
@@ -469,7 +469,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
         
         if not quiet:
             
-            ( should_continue, skip ) = progress.Update( i, 'Done ' + str( i ) + '/' + str( num_file_paths ) )
+            ( should_continue, skip ) = progress.Update( i, 'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
             
             if not should_continue: break
             
@@ -505,7 +505,7 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
                         
                         if os.path.exists( potential_key_path ):
                             
-                            with open( potential_key_path, 'rb' ) as f: key_text = f.read()
+                            with HC.o( potential_key_path, 'rb' ) as f: key_text = f.read()
                             
                             ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
                             
@@ -514,7 +514,9 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
                         
                         message = 'Tried to read a key, but did not understand it.'
                         
-                        if not quiet: wx.MessageBox( message )
+                        if not quiet:
+                            wx.MessageBox( message )
+                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
                         
                         print( message )
                         
@@ -598,11 +600,17 @@ def ParseImportablePaths( raw_paths, include_subdirs = True, quiet = False ):
             else:
                 
                 print( odd_path + ' could not be imported because of this error:' )
-                print( unicode( e ) )
+                print( HC.u( e ) )
                 
             
         
-        if not quiet: wx.MessageBox( str( len( odd_paths ) ) + ' files could not be added. Their paths and exact errors have been written to the log.' )
+        if not quiet:
+            
+            message = HC.u( len( odd_paths ) ) + ' files could not be added. Their paths and exact errors have been written to the log.'
+            
+            wx.MessageBox( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+            
         
     
     return good_paths_info
@@ -936,7 +944,7 @@ class ConnectionToService():
             
             ( host, port ) = self._credentials.GetAddress()
             
-            self._connection = HC.AdvancedHTTPConnection( host = host, port = port, service_identifier = self._service_identifier, accept_cookies = True )
+            self._connection = HC.get_connection( host = host, port = port, service_identifier = self._service_identifier, accept_cookies = True )
             
             self._connection.connect()
             
@@ -1023,7 +1031,7 @@ class ConnectionToService():
                 request_args[ 'title' ] = request_args[ 'title' ].encode( 'hex' )
                 
             
-            if len( request_args ) > 0: request_string += '?' + '&'.join( [ key + '=' + str( value ) for ( key, value ) in request_args.items() ] )
+            if len( request_args ) > 0: request_string += '?' + '&'.join( [ key + '=' + HC.u( value ) for ( key, value ) in request_args.items() ] )
             
             body = None
             
@@ -1044,7 +1052,7 @@ class ConnectionToService():
         try: response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
         except HydrusExceptions.ForbiddenException as e:
             
-            if unicode( e ) == 'Session not found!':
+            if HC.u( e ) == 'Session not found!':
                 
                 HC.app.DeleteSessionKey( self._service_identifier )
                 
@@ -1095,7 +1103,7 @@ class ConnectionToService():
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
+                    with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( body )
                     
                 
             
@@ -1204,7 +1212,7 @@ class Credentials( HC.HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Credentials: ' + str( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
+    def __repr__( self ): return 'Credentials: ' + HC.u( ( self._host, self._port, self._access_key.encode( 'hex' ) ) )
     
     def GetAccessKey( self ): return self._access_key
     
@@ -1216,7 +1224,7 @@ class Credentials( HC.HydrusYAMLBase ):
         
         if self._access_key is not None: connection_string += self._access_key.encode( 'hex' ) + '@'
         
-        connection_string += self._host + ':' + str( self._port )
+        connection_string += self._host + ':' + HC.u( self._port )
         
         return connection_string
         
@@ -1544,7 +1552,7 @@ class FileSystemPredicates():
                 
                 ( operator, years, months, days, hours ) = info
                 
-                timestamp = int( time.time() ) - ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                timestamp = HC.GetNow() - ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
                 
                 # this is backwards because we are talking about age, not timestamp
                 
@@ -1957,15 +1965,12 @@ class Log():
         
         self._entries = []
         
-        HC.pubsub.sub( self, 'AddMessage', 'log_message' )
-        HC.pubsub.sub( self, 'AddError', 'log_error' )
+        HC.pubsub.sub( self, 'AddMessage', 'message' )
         
     
     def __iter__( self ): return self._entries.__iter__()
     
-    def AddError( self, source, message ): self._entries.append( ( LOG_ERROR, source, message, time.time() ) )
-    
-    def AddMessage( self, source, message ): self._entries.append( ( LOG_MESSAGE, source, message, time.time() ) )
+    def AddMessage( self, message ): self._entries.append( ( message, HC.GetNow() ) )
 
 class MediaResult():
     
@@ -2018,9 +2023,7 @@ class MediaResult():
         
         service_type = service_identifier.GetType()
         
-        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-            try: tags_manager.ProcessContentUpdate( service_identifier, content_update )
-            except: print( traceback.format_exc() )
+        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_identifier, content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
             
             if service_type == HC.LOCAL_FILE:
@@ -2127,6 +2130,8 @@ class RenderedImageCache():
             
             print( traceback.format_exc() )
             
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( traceback.format_exc() ) ) )
+            
             raise
             
         
@@ -2215,7 +2220,7 @@ class ServiceRemote( Service ):
     
     def GetRecentErrorPending( self ): return HC.ConvertTimestampToPrettyPending( self._last_error + 600 )
     
-    def HasRecentError( self ): return self._last_error + 600 > int( time.time() )
+    def HasRecentError( self ): return self._last_error + 600 > HC.GetNow()
     
     def SetCredentials( self, credentials ): self._credentials = credentials
     
@@ -2229,7 +2234,7 @@ class ServiceRemote( Service ):
                     
                     ( action, row ) = service_update.ToTuple()
                     
-                    if action == HC.SERVICE_UPDATE_ERROR: self._last_error = int( time.time() )
+                    if action == HC.SERVICE_UPDATE_ERROR: self._last_error = HC.GetNow()
                     elif action == HC.SERVICE_UPDATE_RESET:
                         
                         self._service_identifier = row
@@ -2266,8 +2271,8 @@ class ServiceRemoteRestricted( ServiceRemote ):
     
     def HasRecentError( self ):
         
-        if self._account.HasPermission( HC.GENERAL_ADMIN ): return self._last_error + 600 > int( time.time() )
-        else: return self._last_error + 3600 * 4 > int( time.time() )
+        if self._account.HasPermission( HC.GENERAL_ADMIN ): return self._last_error + 600 > HC.GetNow()
+        else: return self._last_error + 3600 * 4 > HC.GetNow()
         
     
     def IsInitialised( self ):
@@ -2340,7 +2345,7 @@ class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
             
         
     
-    def HasUpdateDue( self ): return self._next_begin + HC.UPDATE_DURATION + 1800 < int( time.time() )
+    def HasUpdateDue( self ): return self._next_begin + HC.UPDATE_DURATION + 1800 < HC.GetNow()
     
     def SetNextBegin( self, next_begin ):
         
@@ -2444,7 +2449,7 @@ class ServiceRemoteRestrictedDepot( ServiceRemoteRestricted ):
             
         
     
-    def HasCheckDue( self ): return self._last_check + self._check_period + 5 < int( time.time() )
+    def HasCheckDue( self ): return self._last_check + self._check_period + 5 < HC.GetNow()
     
     def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
@@ -2521,7 +2526,7 @@ class ThumbnailCache():
         
         for name in names:
             
-            with open( HC.STATIC_DIR + os.path.sep + name + '.png', 'rb' ) as f: file = f.read()
+            with HC.o( HC.STATIC_DIR + os.path.sep + name + '.png', 'rb' ) as f: file = f.read()
             
             thumbnail = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( file, self._options[ 'thumbnail_dimensions' ] ) )
             
@@ -2816,7 +2821,7 @@ class WebSessionManagerClient():
     
     def GetCookies( self, name ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         with self._lock:
             
@@ -2832,7 +2837,7 @@ class WebSessionManagerClient():
             
             if name == 'hentai foundry':
                 
-                connection = HC.AdvancedHTTPConnection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
+                connection = HC.get_connection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
                 
                 # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
                 connection.request( 'GET', '/?enterAgree=1' )
@@ -2850,7 +2855,7 @@ class WebSessionManagerClient():
                     raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
                     
                 
-                connection = HC.AdvancedHTTPConnection( url = 'http://www.pixiv.net', accept_cookies = True )
+                connection = HC.get_connection( url = 'http://www.pixiv.net', accept_cookies = True )
                 
                 form_fields = {}
                 

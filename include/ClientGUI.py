@@ -58,7 +58,24 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
-        self.SetMinSize( ( 920, 600 ) )
+        min_width = 920
+        min_height = 600
+        
+        self.SetMinSize( ( min_width, min_height ) )
+        
+        display_index = wx.Display.GetFromWindow( self )
+        
+        if display_index != wx.NOT_FOUND:
+            
+            display = wx.Display( display_index )
+            
+            ( display_width, display_height ) = display.GetGeometry().GetSize()
+            
+            initial_width = max( int( display_width * 0.75 ), min_width )
+            initial_height = max( int( display_height * 0.75 ), min_height )
+            
+            self.SetInitialSize( ( initial_width, initial_height ) )
+            
         
         self.Maximize()
         
@@ -72,6 +89,13 @@ class FrameGUI( ClientGUICommon.Frame ):
         self.RefreshAcceleratorTable()
         
         self._message_manager = ClientGUICommon.PopupMessageManager( self )
+        
+        #HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'hello, this is a test message' ) )
+        #HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'this is an error' ) ) )
+        
+        #hashes = { hash.decode( 'hex' ) for hash in [ 'abcd', 'db802063183492dcbcecc8546c258802c8aa65c6201b4eba000541b467574896', '9df53f70560d38d752712afc2ff2f3fc0d2077ce2e522512aa3ce1349c1af813', '06b7e099fde058f96e5575f2ecbcf53feeb036aeb0f86a99a6daf8f4ba70b799' ] }
+        
+        #HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( 'some files got done downloaded', hashes ) ) )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_CLOSE, self.EventExit )
@@ -150,17 +174,17 @@ class FrameGUI( ClientGUICommon.Frame ):
                         
                     except Exception as e:
                         
-                        message = 'Error: ' + unicode( e )
+                        message = 'Upload pending files error:' + os.linesep + traceback.format_exc()
                         
-                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, message )
+                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, 'Error' )
+                        
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
                         
                         print( message )
                         
                         time.sleep( 1 )
                         
                     
-                
-                if len( good_hashes ) > 0: HC.pubsub.pub( 'log_message', 'upload files', 'uploaded ' + HC.ConvertIntToPrettyString( len( good_hashes ) ) + ' files to ' + service_identifier.GetName() )
                 
                 if not update.IsEmpty():
                     
@@ -170,13 +194,15 @@ class FrameGUI( ClientGUICommon.Frame ):
                         
                         connection.Post( 'update', update = update )
                         
-                        HC.pubsub.pub( 'log_message', 'upload files', 'uploaded a file update to ' + service_identifier.GetName() )
-                        
                     except Exception as e:
                         
-                        print( traceback.format_exc() )
+                        message = 'Problem while trying to uploads petitions to '+ service_identifier.GetName() + ':' + os.linesep + traceback.format_exc()
                         
-                        raise Exception( 'Encountered an error while trying to uploads petitions to '+ service_identifier.GetName() + ':' + os.linesep + unicode( e ) )
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                        
+                        print message
+                        
+                        raise
                         
                     
                 
@@ -190,7 +216,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = media_result.ToTuple()
                     
-                    timestamp = int( time.time() )
+                    timestamp = HC.GetNow()
                     
                     content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
                     
@@ -212,21 +238,23 @@ class FrameGUI( ClientGUICommon.Frame ):
                 HC.pubsub.pub( 'progress_update', job_key, 2, 3, u'posting update' )
                 
                 try: connection.Post( 'update', update = update )
-                except Exception as e: raise Exception( 'Encountered an error while uploading tags:' + os.linesep + unicode( e ) )
-                
-                HC.pubsub.pub( 'log_message', 'upload mappings', 'uploaded a tag update to ' + service_identifier.GetName() )
+                except Exception as e:
+                    
+                    message = 'Problem while uploading tags:' + os.linesep + traceback.format_exc()
+                    
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                    
+                    print message
+                    
+                    raise
+                    
                 
                 service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
                 
             
             HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
             
-        except Exception as e:
-            
-            print( traceback.format_exc() )
-            
-            HC.pubsub.pub( 'exception', unicode( e ) )
-            
+        except Exception as e: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
         
         HC.pubsub.pub( 'progress_update', job_key, 3, 3, u'done!' )
         
@@ -239,10 +267,10 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         aboutinfo.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         aboutinfo.SetName( 'hydrus client' )
-        aboutinfo.SetVersion( str( HC.SOFTWARE_VERSION ) )
+        aboutinfo.SetVersion( HC.u( HC.SOFTWARE_VERSION ) )
         aboutinfo.SetDescription( CC.CLIENT_DESCRIPTION )
         
-        with open( HC.BASE_DIR + os.path.sep + 'license.txt', 'rb' ) as f: license = f.read()
+        with HC.o( HC.BASE_DIR + os.path.sep + 'license.txt', 'rb' ) as f: license = f.read()
         
         aboutinfo.SetLicense( license )
         
@@ -268,9 +296,9 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     account_info = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
                     
-                    wx.MessageBox( str( account_info ) )
+                    wx.MessageBox( HC.u( account_info ) )
                     
-                except Exception as e: wx.MessageBox( unicode( e ) )
+                except Exception as e: wx.MessageBox( HC.u( e ) )
                 
             
         
@@ -333,7 +361,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     if already_running:
                         
-                        message = 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' + os.linesep + 'Would you like to try to initialise the server that is already running?'
+                        message = 'The server appears to be already running. Either that, or something else is using port ' + HC.u( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' + os.linesep + 'Would you like to try to initialise the server that is already running?'
                         
                         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                             
@@ -485,9 +513,9 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             stats = connection.Get( 'stats' )
             
-            wx.MessageBox( str( stats ) )
+            wx.MessageBox( HC.u( stats ) )
             
-        except Exception as e: wx.MessageBox( unicode( e ) )
+        except Exception as e: wx.MessageBox( HC.u( e ) )
         
     
     def _FetchIP( self, service_identifier ):
@@ -514,7 +542,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                 except Exception as e:
                     wx.MessageBox( traceback.format_exc() )
-                    wx.MessageBox( unicode( e ) )
+                    wx.MessageBox( HC.u( e ) )
                 
             
         
@@ -528,7 +556,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         except Exception as e:
             
             wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( unicode( e ) )
+            wx.MessageBox( HC.u( e ) )
         
     
     def _Manage4chanPass( self ):
@@ -537,7 +565,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) )
+        except Exception as e: wx.MessageBox( HC.u( e ) )
         
     
     def _ManageAccountTypes( self, service_identifier ):
@@ -546,7 +574,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_identifier ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) )
+        except Exception as e: wx.MessageBox( HC.u( e ) )
         
     
     def _ManageBoorus( self ):
@@ -555,7 +583,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageContacts( self ):
@@ -564,7 +592,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageContacts( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageImageboards( self ):
@@ -573,7 +601,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageImportFolders( self ):
@@ -582,7 +610,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageOptions( self, service_identifier ):
@@ -613,7 +641,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                 
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManagePixivAccount( self ):
@@ -622,7 +650,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) )
+        except Exception as e: wx.MessageBox( HC.u( e ) )
         
     
     def _ManageServer( self, service_identifier ):
@@ -631,7 +659,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageServices( self ):
@@ -659,7 +687,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
         self._options[ 'pause_subs_sync' ] = original_pause_status
         
@@ -670,7 +698,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageTagServicePrecedence( self ):
@@ -679,7 +707,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageTagServicePrecedence( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManageTagSiblings( self ):
@@ -688,7 +716,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) + traceback.format_exc() )
+        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ModifyAccount( self, service_identifier ):
@@ -713,7 +741,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     with ClientGUIDialogs.DialogModifyAccounts( self, service_identifier, subject_identifiers ) as dlg2: dlg2.ShowModal()
                     
-                except Exception as e: wx.MessageBox( unicode( e ) )
+                except Exception as e: wx.MessageBox( HC.u( e ) )
                 
             
         
@@ -724,7 +752,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             with ClientGUIDialogs.DialogInputNewAccounts( self, service_identifier ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( unicode( e ) )
+        except Exception as e: wx.MessageBox( HC.u( e ) )
         
     
     def _NewPageImportBooru( self ):
@@ -749,7 +777,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
         except Exception as e:
             wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( unicode( e ) )
+            wx.MessageBox( HC.u( e ) )
         
     
     def _NewPageImportGallery( self, name ):
@@ -773,7 +801,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
         except Exception as e:
             wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( unicode( e ) )
+            wx.MessageBox( HC.u( e ) )
         
     
     def _NewPageImportThreadWatcher( self ):
@@ -790,7 +818,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             
         except Exception as e:
             wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( unicode( e ) )
+            wx.MessageBox( HC.u( e ) )
         
     
     def _NewPageImportURL( self ):
@@ -897,7 +925,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     with wx.BusyCursor(): connection.Post( 'news', news = news )
                     
-                except Exception as e: wx.MessageBox( unicode( e ) )
+                except Exception as e: wx.MessageBox( HC.u( e ) )
                 
             
         
@@ -1062,12 +1090,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     import gc
                     import collections
+                    import types
+                    
+                    gc.collect()
                     
                     count = collections.Counter()
+                    
+                    class_count = collections.Counter()
                     
                     for o in gc.get_objects():
                         
                         count[ type( o ) ] += 1
+                        
+                        if type( o ) == types.InstanceType: class_count[ o.__class__.__name__ ] += 1
+                        elif type( o ) == types.BuiltinFunctionType: class_count[ o.__name__ ] += 1
+                        elif type( o ) == types.BuiltinMethodType: class_count[ o.__name__ ] += 1
                         
                     
                     print( 'gc:' )
@@ -1077,9 +1114,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         if v > 100: print ( k, v )
                         
                     
-                    print( 'garbage: ' + str( gc.garbage ) )
+                    for ( k, v ) in class_count.items():
+                        
+                        if v > 100: print ( k, v )
+                        
                     
-                elif command == 'debug_options': wx.MessageBox( str( HC.app.Read( 'options' ) ) )
+                    print( 'garbage: ' + HC.u( gc.garbage ) )
+                    
+                elif command == 'debug_options': wx.MessageBox( HC.u( HC.app.Read( 'options' ) ) )
                 elif command == 'delete_pending': self._DeletePending( data )
                 elif command == 'exit': self.EventExit( event )
                 elif command == 'fetch_ip': self._FetchIP( data )
@@ -1144,7 +1186,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
                 
             
@@ -1604,7 +1646,12 @@ class FramePageChooser( ClientGUICommon.Frame ):
             self._button_9 = wx.Button( self, label = '', id = 9 )
             
         
-        def InitialisePanel():
+        def PopulateControls():
+            
+            pass
+            
+        
+        def ArrangeControls():
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
@@ -1650,7 +1697,9 @@ class FramePageChooser( ClientGUICommon.Frame ):
         
         InitialiseControls()
         
-        InitialisePanel()
+        PopulateControls()
+        
+        ArrangeControls()
         
         self._services = HC.app.Read( 'services' )
         
@@ -1811,7 +1860,12 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
         
-        def InitialisePanel():
+        def PopulateControls():
+            
+            self._InitialiseServices()
+            
+        
+        def ArrangeControls():
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
@@ -1835,15 +1889,17 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         InitialiseControls()
         
-        self._InitialiseServices()
+        PopulateControls()
         
-        InitialisePanel()
+        ArrangeControls()
         
         self.Show( True )
         
         HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services' )
         
         wx.CallAfter( self.Raise )
+        
+        wx.CallAfter( self._ok.SetFocus )
         
     
     def _InitialiseServices( self ):
@@ -1860,7 +1916,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in ( HC.LOCAL_FILE, HC.LOCAL_TAG ):
                 
-                page = FrameReviewServicesServicePanel( self._listbook, service_identifier )
+                page = self._Panel( self._listbook, service_identifier )
                 
                 name = service_identifier.GetName()
                 
@@ -1886,7 +1942,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 listbook = listbook_dict[ service_type ]
                 
-                page = ( FrameReviewServicesServicePanel, [ listbook, service_identifier ], {} )
+                page = ( self._Panel, [ listbook, service_identifier ], {} )
                 
                 name = service_identifier.GetName()
                 
@@ -1916,459 +1972,467 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     def RefreshServices( self ): self._InitialiseServices()
     
-class FrameReviewServicesServicePanel( wx.ScrolledWindow ):
-    
-    def __init__( self, parent, service_identifier ):
+    class _Panel( wx.ScrolledWindow ):
         
-        wx.ScrolledWindow.__init__( self, parent )
-        
-        self.SetScrollRate( 0, 20 )
-        
-        self._service_identifier = service_identifier
-        
-        self._service = HC.app.Read( 'service', self._service_identifier )
-        
-        service_type = service_identifier.GetType()
-        
-        if service_type in HC.RESTRICTED_SERVICES:
+        def __init__( self, parent, service_identifier ):
             
-            account = self._service.GetAccount()
-            
-            account_type = account.GetAccountType()
-            
-            expires = account.GetExpires()
-            
-        
-        def InitialiseControls():
-            
-            if service_type in HC.RESTRICTED_SERVICES:
+            def InitialiseControls():
                 
-                self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
-                
-                self._account_type = wx.StaticText( self._permissions_panel )
-                
-                self._age = ClientGUICommon.Gauge( self._permissions_panel )
-                
-                self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                
-                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                
-                self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
-                
-                self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                
-                self._requests = ClientGUICommon.Gauge( self._permissions_panel )
-                
-                self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                
-                if max_num_bytes is None: self._bytes.Hide()
-                if expires is None: self._age.Hide()
-                if max_num_requests is None: self._requests.Hide()
-                
-            
-            if service_type in HC.REPOSITORIES:
-                
-                self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
-                
-                self._updates = ClientGUICommon.Gauge( self._synchro_panel )
-                
-                self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                
-            
-            if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
-                
-                self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
-                
-                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+                if service_type in HC.RESTRICTED_SERVICES:
                     
-                    self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
                     
-                    self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    self._account_type = wx.StaticText( self._permissions_panel )
                     
-                    if service_type == HC.FILE_REPOSITORY:
-                        
-                        self._num_thumbs = 0
-                        self._num_local_thumbs = 0
-                        
-                        self._thumbnails = ClientGUICommon.Gauge( self._info_panel )
-                        
-                        self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
+                    self._age = ClientGUICommon.Gauge( self._permissions_panel )
                     
-                elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                    self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
                     
-                    if service_type == HC.TAG_REPOSITORY:
-                        
-                        self._deleted_tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                        
+                    self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
                     
-                elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                    self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    self._ratings_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    self._requests = ClientGUICommon.Gauge( self._permissions_panel )
                     
-                
-            
-            if service_type in HC.RESTRICTED_SERVICES:
+                    self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    if max_num_bytes is None: self._bytes.Hide()
+                    if expires is None: self._age.Hide()
+                    if max_num_requests is None: self._requests.Hide()
+                    
                 
                 if service_type in HC.REPOSITORIES:
                     
-                    self._reset = wx.Button( self, label='reset cache' )
-                    self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
+                    self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
+                    
+                    self._updates = ClientGUICommon.Gauge( self._synchro_panel )
+                    
+                    self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
                 
-                if service_type == HC.SERVER_ADMIN:
+                if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
                     
-                    self._init = wx.Button( self, label='initialise server' )
-                    self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
+                    self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
+                    
+                    if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+                        
+                        self._files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                        self._deleted_files_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                        if service_type == HC.FILE_REPOSITORY:
+                            
+                            self._num_thumbs = 0
+                            self._num_local_thumbs = 0
+                            
+                            self._thumbnails = ClientGUICommon.Gauge( self._info_panel )
+                            
+                            self._thumbnails_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                            
+                        
+                    elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                        
+                        self._tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                        if service_type == HC.TAG_REPOSITORY:
+                            
+                            self._deleted_tags_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                            
+                        
+                    elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                        
+                        self._ratings_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
                     
                 
-                self._refresh = wx.Button( self, label='refresh account' )
-                self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
+                if service_type in HC.RESTRICTED_SERVICES:
+                    
+                    if service_type in HC.REPOSITORIES:
+                        
+                        self._reset = wx.Button( self, label='reset cache' )
+                        self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
+                        
+                    
+                    if service_type == HC.SERVER_ADMIN:
+                        
+                        self._init = wx.Button( self, label='initialise server' )
+                        self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
+                        
+                    
+                    self._refresh = wx.Button( self, label='refresh account' )
+                    self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
+                    
                 
             
-        
-        def InitialisePanel():
+            def PopulateControls():
+                
+                self._DisplayService()
+                
             
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            def ArrangeControls():
+                
+                self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                if service_type in HC.RESTRICTED_SERVICES:
+                    
+                    self._permissions_panel.AddF( self._account_type, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._age, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._age_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._requests, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._requests_text, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    self._synchro_panel.AddF( self._updates, FLAGS_EXPAND_PERPENDICULAR )
+                    self._synchro_panel.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    vbox.AddF( self._synchro_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+                    
+                    if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
+                        
+                        self._info_panel.AddF( self._files_text, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._deleted_files_text, FLAGS_EXPAND_PERPENDICULAR )
+                        
+                        if service_type == HC.FILE_REPOSITORY:
+                            
+                            self._info_panel.AddF( self._thumbnails, FLAGS_EXPAND_PERPENDICULAR )
+                            self._info_panel.AddF( self._thumbnails_text, FLAGS_EXPAND_PERPENDICULAR )
+                            
+                        
+                    elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                        
+                        self._info_panel.AddF( self._tags_text, FLAGS_EXPAND_PERPENDICULAR )
+                        
+                        if service_type == HC.TAG_REPOSITORY:
+                            
+                            self._info_panel.AddF( self._deleted_tags_text, FLAGS_EXPAND_PERPENDICULAR )
+                            
+                        
+                    elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                        
+                        self._info_panel.AddF( self._ratings_text, FLAGS_EXPAND_PERPENDICULAR )
+                        
+                    
+                    vbox.AddF( self._info_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type in HC.RESTRICTED_SERVICES:
+                    
+                    repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                    
+                    if service_type in HC.REPOSITORIES: repo_buttons_hbox.AddF( self._reset, FLAGS_MIXED )
+                    
+                    if service_type == HC.SERVER_ADMIN: repo_buttons_hbox.AddF( self._init, FLAGS_MIXED )
+                    
+                    repo_buttons_hbox.AddF( self._refresh, FLAGS_MIXED )
+                    
+                    vbox.AddF( repo_buttons_hbox, FLAGS_BUTTON_SIZERS )
+                    
+                
+                self.SetSizer( vbox )
+                
             
-            vbox = wx.BoxSizer( wx.VERTICAL )
+            wx.ScrolledWindow.__init__( self, parent )
+            
+            self.SetScrollRate( 0, 20 )
+            
+            self._service_identifier = service_identifier
+            
+            self._service = HC.app.Read( 'service', self._service_identifier )
+            
+            service_type = service_identifier.GetType()
             
             if service_type in HC.RESTRICTED_SERVICES:
                 
-                self._permissions_panel.AddF( self._account_type, FLAGS_EXPAND_PERPENDICULAR )
-                self._permissions_panel.AddF( self._age, FLAGS_EXPAND_PERPENDICULAR )
-                self._permissions_panel.AddF( self._age_text, FLAGS_EXPAND_PERPENDICULAR )
-                self._permissions_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
-                self._permissions_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
-                self._permissions_panel.AddF( self._requests, FLAGS_EXPAND_PERPENDICULAR )
-                self._permissions_panel.AddF( self._requests_text, FLAGS_EXPAND_PERPENDICULAR )
+                account = self._service.GetAccount()
                 
-                vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
+                account_type = account.GetAccountType()
                 
+                expires = account.GetExpires()
+                
+            
+            InitialiseControls()
+            
+            PopulateControls()
+            
+            ArrangeControls()
+            
+            self._timer_updates = wx.Timer( self, id = ID_TIMER_UPDATES )
             
             if service_type in HC.REPOSITORIES:
                 
-                self._synchro_panel.AddF( self._updates, FLAGS_EXPAND_PERPENDICULAR )
-                self._synchro_panel.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
+                self.Bind( wx.EVT_TIMER, self.EventTimerUpdates, id = ID_TIMER_UPDATES )
                 
-                vbox.AddF( self._synchro_panel, FLAGS_EXPAND_PERPENDICULAR )
+                self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
                 
+            
+            HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+            HC.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
+            
+        
+        def _DisplayAccountInfo( self ):
+            
+            self._service = HC.app.Read( 'service', self._service_identifier )
+            
+            service_type = self._service_identifier.GetType()
+            
+            now = HC.GetNow()
+            
+            if service_type in HC.RESTRICTED_SERVICES:
+                
+                account = self._service.GetAccount()
+                
+                account_type = account.GetAccountType()
+                
+                self._account_type.SetLabel( account_type.ConvertToString() )
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    if not account.IsBanned():
+                        
+                        created = account.GetCreated()
+                        expires = account.GetExpires()
+                        
+                        if expires is None: self._age.Hide()
+                        else:
+                            
+                            self._age.Show()
+                            
+                            self._age.SetRange( expires - created )
+                            self._age.SetValue( min( now - created, expires - created ) )
+                            
+                        
+                        self._age_text.SetLabel( account.GetExpiresString() )
+                        
+                        first_begin = self._service.GetFirstBegin()
+                        next_begin = self._service.GetNextBegin()
+                        
+                        if first_begin == 0:
+                            
+                            num_updates = 0
+                            num_updates_downloaded = 0
+                            
+                            self._updates.SetValue( 0 )
+                            
+                        else:
+                            
+                            num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
+                            num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
+                            
+                            self._updates.SetRange( num_updates )
+                            self._updates.SetValue( num_updates_downloaded )
+                            
+                        
+                        self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
+                        
+                        ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                        ( used_bytes, used_requests ) = account.GetUsedData()
+                        
+                        if max_num_bytes is None: self._bytes.Hide()
+                        else:
+                            
+                            self._bytes.Show()
+                            
+                            self._bytes.SetRange( max_num_bytes )
+                            self._bytes.SetValue( used_bytes )
+                            
+                        
+                        self._bytes_text.SetLabel( account.GetUsedBytesString() )
+                        
+                        if max_num_requests is None: self._requests.Hide()
+                        else:
+                            
+                            self._requests.Show()
+                            
+                            self._requests.SetValue( max_num_requests )
+                            self._requests.SetValue( min( used_requests, max_num_requests ) )
+                            
+                        
+                        self._requests_text.SetLabel( account.GetUsedRequestsString() )
+                        
+                    
+                
+            
+        
+        def _DisplayNumThumbs( self ):
+            
+            self._thumbnails.SetRange( self._num_thumbs )
+            self._thumbnails.SetValue( min( self._num_local_thumbs, self._num_thumbs ) )
+            
+            self._thumbnails_text.SetLabel( HC.ConvertIntToPrettyString( self._num_local_thumbs ) + '/' + HC.ConvertIntToPrettyString( self._num_thumbs ) + ' thumbnails downloaded' )
+            
+        
+        def _DisplayService( self ):
+            
+            service_type = self._service_identifier.GetType()
+            
+            self._DisplayAccountInfo()
             
             if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
                 
-                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
+                service_info = HC.app.Read( 'service_info', self._service_identifier )
+                
+                if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                     
-                    self._info_panel.AddF( self._files_text, FLAGS_EXPAND_PERPENDICULAR )
-                    self._info_panel.AddF( self._deleted_files_text, FLAGS_EXPAND_PERPENDICULAR )
+                    num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+                    num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
+                    
+                    self._files_text.SetLabel( HC.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) )
+                    
+                    self._deleted_files_text.SetLabel( HC.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
                     
                     if service_type == HC.FILE_REPOSITORY:
                         
-                        self._info_panel.AddF( self._thumbnails, FLAGS_EXPAND_PERPENDICULAR )
-                        self._info_panel.AddF( self._thumbnails_text, FLAGS_EXPAND_PERPENDICULAR )
+                        self._num_thumbs = service_info[ HC.SERVICE_INFO_NUM_THUMBNAILS ]
+                        self._num_local_thumbs = service_info[ HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ]
+                        
+                        self._DisplayNumThumbs()
                         
                     
                 elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
-                    self._info_panel.AddF( self._tags_text, FLAGS_EXPAND_PERPENDICULAR )
+                    num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    num_namespaces = service_info[ HC.SERVICE_INFO_NUM_NAMESPACES ]
+                    num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
+                    num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
+                    
+                    self._tags_text.SetLabel( HC.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HC.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HC.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HC.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
                     
                     if service_type == HC.TAG_REPOSITORY:
                         
-                        self._info_panel.AddF( self._deleted_tags_text, FLAGS_EXPAND_PERPENDICULAR )
+                        num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
+                        
+                        self._deleted_tags_text.SetLabel( HC.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
                         
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    self._info_panel.AddF( self._ratings_text, FLAGS_EXPAND_PERPENDICULAR )
+                    num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+                    
+                    self._ratings_text.SetLabel( HC.u( num_ratings ) + ' files rated' )
                     
                 
-                vbox.AddF( self._info_panel, FLAGS_EXPAND_PERPENDICULAR )
+            
+            if service_type == HC.SERVER_ADMIN:
                 
-            
-            if service_type in HC.RESTRICTED_SERVICES:
-                
-                repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                if service_type in HC.REPOSITORIES: repo_buttons_hbox.AddF( self._reset, FLAGS_MIXED )
-                
-                if service_type == HC.SERVER_ADMIN: repo_buttons_hbox.AddF( self._init, FLAGS_MIXED )
-                
-                repo_buttons_hbox.AddF( self._refresh, FLAGS_MIXED )
-                
-                vbox.AddF( repo_buttons_hbox, FLAGS_BUTTON_SIZERS )
-                
-            
-            self.SetSizer( vbox )
-            
-        
-        InitialiseControls()
-        
-        InitialisePanel()
-        
-        self._DisplayService()
-        
-        self._timer_updates = wx.Timer( self, id = ID_TIMER_UPDATES )
-        
-        if service_type in HC.REPOSITORIES:
-            
-            self.Bind( wx.EVT_TIMER, self.EventTimerUpdates, id = ID_TIMER_UPDATES )
-            
-            self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
-            
-        
-        HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
-        HC.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
-        
-    
-    def _DisplayAccountInfo( self ):
-        
-        self._service = HC.app.Read( 'service', self._service_identifier )
-        
-        service_type = self._service_identifier.GetType()
-        
-        now = int( time.time() )
-        
-        if service_type in HC.RESTRICTED_SERVICES:
-            
-            account = self._service.GetAccount()
-            
-            account_type = account.GetAccountType()
-            
-            self._account_type.SetLabel( account_type.ConvertToString() )
-            
-            if service_type in HC.REPOSITORIES:
-                
-                if not account.IsBanned():
+                if self._service.IsInitialised():
                     
-                    created = account.GetCreated()
-                    expires = account.GetExpires()
+                    self._init.Disable()
+                    self._refresh.Enable()
                     
-                    if expires is None: self._age.Hide()
-                    else:
-                        
-                        self._age.Show()
-                        
-                        self._age.SetRange( expires - created )
-                        self._age.SetValue( min( now - created, expires - created ) )
-                        
+                else:
                     
-                    self._age_text.SetLabel( account.GetExpiresString() )
-                    
-                    first_begin = self._service.GetFirstBegin()
-                    next_begin = self._service.GetNextBegin()
-                    
-                    if first_begin == 0:
-                        
-                        num_updates = 0
-                        num_updates_downloaded = 0
-                        
-                        self._updates.SetValue( 0 )
-                        
-                    else:
-                        
-                        num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
-                        num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
-                        
-                        self._updates.SetRange( num_updates )
-                        self._updates.SetValue( num_updates_downloaded )
-                        
-                    
-                    self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
-                    
-                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                    ( used_bytes, used_requests ) = account.GetUsedData()
-                    
-                    if max_num_bytes is None: self._bytes.Hide()
-                    else:
-                        
-                        self._bytes.Show()
-                        
-                        self._bytes.SetRange( max_num_bytes )
-                        self._bytes.SetValue( used_bytes )
-                        
-                    
-                    self._bytes_text.SetLabel( account.GetUsedBytesString() )
-                    
-                    if max_num_requests is None: self._requests.Hide()
-                    else:
-                        
-                        self._requests.Show()
-                        
-                        self._requests.SetValue( max_num_requests )
-                        self._requests.SetValue( min( used_requests, max_num_requests ) )
-                        
-                    
-                    self._requests_text.SetLabel( account.GetUsedRequestsString() )
+                    self._init.Enable()
+                    self._refresh.Disable()
                     
                 
             
         
-    
-    def _DisplayNumThumbs( self ):
-        
-        self._thumbnails.SetRange( self._num_thumbs )
-        self._thumbnails.SetValue( min( self._num_local_thumbs, self._num_thumbs ) )
-        
-        self._thumbnails_text.SetLabel( HC.ConvertIntToPrettyString( self._num_local_thumbs ) + '/' + HC.ConvertIntToPrettyString( self._num_thumbs ) + ' thumbnails downloaded' )
-        
-    
-    def _DisplayService( self ):
-        
-        service_type = self._service_identifier.GetType()
-        
-        self._DisplayAccountInfo()
-        
-        if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+        def AddThumbnailCount( self, service_identifier, count ):
             
-            service_info = HC.app.Read( 'service_info', self._service_identifier )
-            
-            if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
+            if service_identifier == self._service_identifier:
                 
-                num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-                num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
+                self._num_local_thumbs += count
                 
-                self._files_text.SetLabel( HC.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) )
-                
-                self._deleted_files_text.SetLabel( HC.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
-                
-                if service_type == HC.FILE_REPOSITORY:
-                    
-                    self._num_thumbs = service_info[ HC.SERVICE_INFO_NUM_THUMBNAILS ]
-                    self._num_local_thumbs = service_info[ HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ]
-                    
-                    self._DisplayNumThumbs()
-                    
-                
-            elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
-                
-                num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                num_namespaces = service_info[ HC.SERVICE_INFO_NUM_NAMESPACES ]
-                num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
-                num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
-                
-                self._tags_text.SetLabel( HC.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HC.ConvertIntToPrettyString( num_namespaces ) + ' namespaces, ' + HC.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HC.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
-                
-                if service_type == HC.TAG_REPOSITORY:
-                    
-                    num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
-                    
-                    self._deleted_tags_text.SetLabel( HC.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
-                    
-                
-            elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                
-                num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                
-                self._ratings_text.SetLabel( str( num_ratings ) + ' files rated' )
+                self._DisplayNumThumbs()
                 
             
         
-        if service_type == HC.SERVER_ADMIN:
+        def EventServerInitialise( self, event ):
             
-            if self._service.IsInitialised():
+            try:
                 
-                self._init.Disable()
-                self._refresh.Enable()
+                service = HC.app.Read( 'service', self._service_identifier )
+                
+                connection = service.GetConnection()
+                
+                connection.Get( 'init' )
+                
+            except Exception as e: wx.MessageBox( HC.u( e ) )
+            
+        
+        def EventServiceRefreshAccount( self, event ):
+            
+            try:
+                
+                connection = self._service.GetConnection()
+                
+                connection.Get( 'account' )
+                
+            except Exception as e:
+                
+                wx.MessageBox( HC.u( e ) )
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                
+                print( traceback.format_exc() )
+                
+            
+        
+        def EventServiceReset( self, event ):
+            
+            message = 'This will remove all cached information for ' + self._service_identifier.GetName() + ' from the database. It will take a minute for the database to finish the operation, during which time the gui may freeze.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    with wx.BusyCursor(): HC.app.Write( 'reset_service', self._service_identifier )
+                    
+                
+            
+        
+        def EventTimerUpdates( self, event ):
+            
+            now = HC.GetNow()
+            
+            first_begin = self._service.GetFirstBegin()
+            next_begin = self._service.GetNextBegin()
+            
+            if first_begin == 0:
+                
+                num_updates = 0
+                num_updates_downloaded = 0
                 
             else:
                 
-                self._init.Enable()
-                self._refresh.Disable()
+                num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
+                num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
                 
             
-        
-    
-    def AddThumbnailCount( self, service_identifier, count ):
-        
-        if service_identifier == self._service_identifier:
-            
-            self._num_local_thumbs += count
-            
-            self._DisplayNumThumbs()
+            self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
             
         
-    
-    def EventServerInitialise( self, event ):
-        
-        try:
+        def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
             
-            service = HC.app.Read( 'service', self._service_identifier )
-            
-            connection = service.GetConnection()
-            
-            connection.Get( 'init' )
-            
-        except Exception as e: wx.MessageBox( unicode( e ) )
-        
-    
-    def EventServiceRefreshAccount( self, event ):
-        
-        try:
-            
-            connection = self._service.GetConnection()
-            
-            connection.Get( 'account' )
-            
-        except Exception as e:
-            
-            wx.MessageBox( unicode( e ) )
-            
-            print( traceback.format_exc() )
-            
-        
-    
-    def EventServiceReset( self, event ):
-        
-        message = 'This will remove all cached information for ' + self._service_identifier.GetName() + ' from the database. It will take a minute for the database to finish the operation, during which time the gui may freeze.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
+            for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
                 
-                with wx.BusyCursor(): HC.app.Write( 'reset_service', self._service_identifier )
-                
-            
-        
-    
-    def EventTimerUpdates( self, event ):
-        
-        now = int( time.time() )
-        
-        first_begin = self._service.GetFirstBegin()
-        next_begin = self._service.GetNextBegin()
-        
-        if first_begin == 0:
-            
-            num_updates = 0
-            num_updates_downloaded = 0
-            
-        else:
-            
-            num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
-            num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
-            
-        
-        self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
-        
-    
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
-        
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
-            
-            for service_update in service_updates:
-                
-                if service_identifier == self._service_identifier:
+                for service_update in service_updates:
                     
-                    ( action, row ) = service_update.ToTuple()
-                    
-                    if action == HC.SERVICE_UPDATE_RESET: self._service_identifier = row
-                    
-                    if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 600, self._DisplayAccountInfo )
-                    else:
-                        wx.CallLater( 200, self._DisplayService )
-                        wx.CallLater( 400, self.Layout ) # ugly hack, but it works for now
+                    if service_identifier == self._service_identifier:
+                        
+                        ( action, row ) = service_update.ToTuple()
+                        
+                        if action == HC.SERVICE_UPDATE_RESET: self._service_identifier = row
+                        
+                        if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 600, self._DisplayAccountInfo )
+                        else:
+                            wx.CallLater( 200, self._DisplayService )
+                            wx.CallLater( 400, self.Layout ) # ugly hack, but it works for now
+                        
                     
                 
             

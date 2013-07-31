@@ -94,7 +94,7 @@ class Downloader():
         
         if ( scheme, host, port ) not in self._connections:
             
-            connection = HC.AdvancedHTTPConnection( scheme = scheme, host = host, port = port )
+            connection = HC.get_connection( scheme = scheme, host = host, port = port )
             
             self._EstablishSession( connection )
             
@@ -178,7 +178,7 @@ class DownloaderBooru( Downloader ):
             else: index = self._num_pages_done * self._gallery_advance_num
             
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', str( index ) )
+        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', HC.u( index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -324,7 +324,7 @@ class DownloaderDeviantArt( Downloader ):
         Downloader.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url + str( self._num_pages_done * 24 )
+    def _GetNextGalleryPageURL( self ): return self._gallery_url + HC.u( self._num_pages_done * 24 )
     
     def _ParseGalleryPage( self, html, url_base ):
         
@@ -427,7 +427,7 @@ class DownloaderGiphy( Downloader ):
         Downloader.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url + str( self._num_pages_done + 1 )
+    def _GetNextGalleryPageURL( self ): return self._gallery_url + HC.u( self._num_pages_done + 1 )
     
     def _ParseGalleryPage( self, data, url_base ):
         
@@ -444,7 +444,7 @@ class DownloaderGiphy( Downloader ):
     
     def GetTags( self, url, id ):
         
-        url = 'http://giphy.com/api/gifs/' + str( id )
+        url = 'http://giphy.com/api/gifs/' + HC.u( id )
         
         connection = self._GetConnection( url )
         
@@ -503,7 +503,7 @@ class DownloaderHentaiFoundry( Downloader ):
             
             gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist
             
-            return gallery_url + '/page/' + str( self._num_pages_done + 1 )
+            return gallery_url + '/page/' + HC.u( self._num_pages_done + 1 )
             
         elif self._query_type == 'artist scraps':
             
@@ -511,13 +511,13 @@ class DownloaderHentaiFoundry( Downloader ):
             
             gallery_url = 'http://www.hentai-foundry.com/pictures/user/' + artist + '/scraps'
             
-            return gallery_url + '/page/' + str( self._num_pages_done + 1 )
+            return gallery_url + '/page/' + HC.u( self._num_pages_done + 1 )
             
         elif self._query_type == 'tags':
             
             tags = self._query
             
-            return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + str( self._num_pages_done + 1 )
+            return 'http://www.hentai-foundry.com/search/pictures?query=' + '+'.join( tags ) + '&search_in=all&scraps=-1&page=' + HC.u( self._num_pages_done + 1 )
             # scraps = 0 hide
             # -1 means show both
             # 1 means scraps only. wetf
@@ -592,7 +592,7 @@ class DownloaderHentaiFoundry( Downloader ):
             
             title = soup.find( 'title' )
             
-            ( data, nothing ) = unicode( title.string ).split( ' - Hentai Foundry' )
+            ( data, nothing ) = HC.u( title.string ).split( ' - Hentai Foundry' )
             
             data_reversed = data[::-1] # want to do it right-side first, because title might have ' by ' in it
             
@@ -733,7 +733,7 @@ class DownloaderNewgrounds( Downloader ):
         
         soup = bs4.BeautifulSoup( html )
         
-        tags = []
+        tags = set()
         
         author_links = soup.find( 'ul', class_ = 'authorlinks' )
         
@@ -751,7 +751,7 @@ class DownloaderNewgrounds( Downloader ):
                     
                     creator = href.replace( 'http://', '' ).replace( '.newgrounds.com', '' )
                     
-                    tags.append( 'creator:' + creator )
+                    tags.add( u'creator:' + creator )
                     
                 except: pass
                 
@@ -761,7 +761,7 @@ class DownloaderNewgrounds( Downloader ):
             
             title = soup.find( 'title' )
             
-            tags.append( 'title:' + title.string )
+            tags.add( u'title:' + title.string )
             
         except: pass
         
@@ -773,7 +773,7 @@ class DownloaderNewgrounds( Downloader ):
                 
                 href = link[ 'href' ]
                 
-                if '/browse/tag/' in href: tags.append( link.string )
+                if '/browse/tag/' in href: tags.add( link.string )
                 
             except: pass
             
@@ -782,7 +782,7 @@ class DownloaderNewgrounds( Downloader ):
         
         try:
             
-            components = html.split( '"src"' )
+            components = html.split( '"http://uploads.ungrounded.net/' )
             
             # there is sometimes another bit of api flash earlier on that we don't want
             # it is called http://uploads.ungrounded.net/apiassets/sandbox.swf
@@ -790,20 +790,13 @@ class DownloaderNewgrounds( Downloader ):
             if len( components ) == 2: flash_url = components[1]
             else: flash_url = components[2]
             
-            #"src":							"http:\/\/flash.ngfiles.com\/video_player\/videoplayer.swf",
-            #"width":						"100%",
+            flash_url = flash_url.split( '"', 1 )[0]
             
-            #"src":							"http:\/\/uploads.ungrounded.net\/593000\/593806_Kitty.swf",
-            #"width":						"100%",
+            flash_url = 'http://uploads.ungrounded.net/' + flash_url
             
-            flash_url = flash_url.split( '"width"', 1 )[0]
-            
-            flash_url = flash_url.split( '"' )[1]
-            flash_url = flash_url.replace( '\\/', '/' )
-            
-        except: raise Exception( 'Could not find the swf file!' )
-        
-        if flash_url == 'http://flash.ngfiles.com/video_player/videoplayer.swf': raise Exception( 'It was an mp4 movie, not a swf!' )
+        except:
+            print( traceback.format_exc())
+            raise Exception( 'Could not find the swf file! It was probably an mp4!' )
         
         return ( flash_url, tags )
         
@@ -858,7 +851,7 @@ class DownloaderPixiv( Downloader ):
             
             artist_id = self._query
             
-            gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + str( artist_id )
+            gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + HC.u( artist_id )
             
         elif self._query_type == 'tag':
             
@@ -869,7 +862,7 @@ class DownloaderPixiv( Downloader ):
             gallery_url = 'http://www.pixiv.net/search.php?word=' + tag + '&s_mode=s_tag_full&order=date_d'
             
         
-        return gallery_url + '&p=' + str( self._num_pages_done + 1 )
+        return gallery_url + '&p=' + HC.u( self._num_pages_done + 1 )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -981,7 +974,7 @@ class DownloaderTumblr( Downloader ):
         Downloader.__init__( self )
         
     
-    def _GetNextGalleryPageURL( self ): return self._gallery_url.replace( '%start%', str( self._num_pages_done * 50 ) )
+    def _GetNextGalleryPageURL( self ): return self._gallery_url.replace( '%start%', HC.u( self._num_pages_done * 50 ) )
     
     def _ParseGalleryPage( self, data, url_base ):
         

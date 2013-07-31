@@ -68,7 +68,7 @@ def GetFileInfo( file, hash ):
     
 def GetMimeFromPath( filename ):
     
-    with open( filename, 'rb' ) as f: return GetMimeFromFilePointer( f )
+    with HC.o( filename, 'rb' ) as f: return GetMimeFromFilePointer( f )
     
 header_and_mime = [
     ( 0, '\xff\xd8', HC.IMAGE_JPEG ),
@@ -109,7 +109,7 @@ def GetMimeFromFilePointer( f ):
             
             path = HC.TEMP_DIR + os.path.sep + 'mime_parsing'
             
-            with open( path, 'wb' ) as temp_f:
+            with HC.o( path, 'wb' ) as temp_f:
                 
                 block = f.read( 65536 )
                 
@@ -121,29 +121,23 @@ def GetMimeFromFilePointer( f ):
                     
                 
             
-            try:
+            mutagen_object = mutagen.File( path )
+            
+            if type( mutagen_object ) == mutagen.oggvorbis.OggVorbis: return HC.AUDIO_OGG
+            elif type( mutagen_object ) == mutagen.flac.FLAC: return HC.AUDIO_FLAC
+            elif type( mutagen_object ) == mutagen.mp3.MP3: return HC.AUDIO_MP3
+            elif type( mutagen_object ) == mutagen.mp4.MP4 or mutagen_object is None:
                 
-                mutagen_object = mutagen.File( path )
+                # mutagen sometimes does not auto-detect mp3s properly, so try it explicitly
+                mutagen_object = mutagen.mp3.MP3( path )
                 
-                if type( mutagen_object ) == mutagen.oggvorbis.OggVorbis: return HC.AUDIO_OGG
-                elif type( mutagen_object ) == mutagen.flac.FLAC: return HC.AUDIO_FLAC
-                elif type( mutagen_object ) == mutagen.mp3.MP3: return HC.AUDIO_MP3
-                elif type( mutagen_object ) == mutagen.mp4.MP4 or mutagen_object is None:
-                    
-                    # mutagen sometimes does not auto-detect mp3s properly, so try it explicitly
-                    mutagen_object = mutagen.mp3.MP3( path )
-                    
-                    if type( mutagen_object ) == mutagen.mp3.MP3: return HC.AUDIO_MP3
-                    
+                if type( mutagen_object ) == mutagen.mp3.MP3: return HC.AUDIO_MP3
                 
-            except: print( traceback.format_exc() )
             
             return HC.mime_enum_lookup[ 'unknown mime' ]
             
         
-    except:
-        wx.MessageBox( traceback.format_exc() )
-        raise Exception( 'I could not identify the mime of the file' )
+    except: return HC.APPLICATION_UNKNOWN
     
 def GetMimeFromString( file ):
     

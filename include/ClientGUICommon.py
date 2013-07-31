@@ -50,7 +50,7 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         self._timestamp = timestamp
         self._suffix = suffix
         
-        self._last_tick = int( time.time() )
+        self._last_tick = HC.GetNow()
         
         wx.StaticText.__init__( self, parent, label = self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
         
@@ -61,7 +61,7 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         
         update = False
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         difference = abs( now - self._timestamp )
         
@@ -471,7 +471,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
                 
             
@@ -1281,7 +1281,7 @@ class ListBook( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
                 
             
@@ -1658,7 +1658,7 @@ class ListBox( wx.ScrolledWindow ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
                 
             
@@ -1853,7 +1853,7 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
     
 class NoneableSpinCtrl( wx.Panel ):
     
-    def __init__( self, parent, message, value, none_phrase = 'no limit', max = 1000000, multiplier = 1, num_dimensions = 1 ):
+    def __init__( self, parent, message, none_phrase = 'no limit', max = 1000000, multiplier = 1, num_dimensions = 1 ):
         
         wx.Panel.__init__( self, parent )
         
@@ -1863,36 +1863,12 @@ class NoneableSpinCtrl( wx.Panel ):
         self._checkbox = wx.CheckBox( self, label = none_phrase )
         self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
         
-        if value is None:
-            
-            self._one = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
-            self._one.Disable()
-            
-            if num_dimensions == 2:
-                
-                self._two = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
-                self._two.Disable()
-                
-            
-            self._checkbox.SetValue( True )
-            
-        else:
-            
-            if num_dimensions == 2:
-                
-                ( value, value_2 ) = value
-                
-                self._two = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
-                self._two.SetValue( value_2 / multiplier )
-                
-            
-            self._one = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
-            self._one.SetValue( value / multiplier )
-            
-            self._checkbox.SetValue( False )
-            
+        self._one = wx.SpinCtrl( self, max = max, size = ( 80, -1 ) )
+        
+        if num_dimensions == 2: self._two = wx.SpinCtrl( self, initial = 0, max = max, size = ( 80, -1 ) )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
         hbox.AddF( wx.StaticText( self, label=message + ': ' ), FLAGS_MIXED )
         hbox.AddF( self._one, FLAGS_MIXED )
         
@@ -1944,15 +1920,16 @@ class NoneableSpinCtrl( wx.Panel ):
             
             self._checkbox.SetValue( False )
             
-            self._one.Enable()
-            if self._num_dimensions == 2: self._two.Enable()
-            
             if self._num_dimensions == 2:
+                
+                self._two.Enable()
                 
                 ( value, y ) = value
                 
                 self._two.SetValue( y / self._multiplier )
                 
+            
+            self._one.Enable()
             
             self._one.SetValue( value / self._multiplier )
             
@@ -2026,16 +2003,17 @@ class PopupMessage( wx.Window ):
     
 class PopupMessageError( PopupMessage ):
     
-    def __init__( self, parent, message_string ):
+    def __init__( self, parent, exception ):
         
         PopupMessage.__init__( self, parent )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        error = wx.StaticText( self, label = 'error', style = wx.ALIGN_CENTER )
+        error = wx.StaticText( self, label = type( exception ).__name__, style = wx.ALIGN_CENTER )
         error.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text = wx.StaticText( self, label = HC.u( exception ) )
+        text.Wrap( 380 )
         text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         vbox.AddF( error, FLAGS_EXPAND_PERPENDICULAR )
@@ -2054,7 +2032,8 @@ class PopupMessageFiles( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text = wx.StaticText( self, label = message_string )
+        text.Wrap( 380 )
         text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         button = wx.Button( self, label = 'show files in new page' )
@@ -2086,6 +2065,7 @@ class PopupMessageText( PopupMessage ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text.Wrap( 380 )
         text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
@@ -2101,10 +2081,13 @@ class PopupMessageManager( wx.Frame ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
+        self._max_messages_to_display = 10
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self.SetSizer( vbox )
         
+        self._pending_messages = []
         self._message_windows = []
         
         top_level_parent.Bind( wx.EVT_SIZE, self.EventMove )
@@ -2115,7 +2098,23 @@ class PopupMessageManager( wx.Frame ):
         HC.pubsub.sub( self, 'AddMessage', 'message' )
         # maybe make a ding noise when a new message arrives
         
-        # on right mouse click, dismiss relevant message and refit
+    
+    def _CheckPending( self ):
+        
+        if len( self._pending_messages ) > 0 and len( self._message_windows ) < self._max_messages_to_display:
+            
+            message = self._pending_messages.pop( 0 )
+            
+            window = self._CreateMessageWindow( message )
+            
+            self._message_windows.append( window )
+            
+            vbox = self.GetSizer()
+            
+            vbox.AddF( window, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._SizeAndPositionAndShow()
+            
         
     
     def _CreateMessageWindow( self, message ):
@@ -2135,11 +2134,11 @@ class PopupMessageManager( wx.Frame ):
             
             exception = info
             
-            message_string = str( exception )
+            message_string = HC.u( exception )
             
             print( 'error: ' + message_string )
             
-            window = PopupMessageError( self, message_string )
+            window = PopupMessageError( self, exception )
             
         elif message_type == HC.MESSAGE_TYPE_FILES:
             
@@ -2172,15 +2171,9 @@ class PopupMessageManager( wx.Frame ):
     
     def AddMessage( self, message ):
         
-        window = self._CreateMessageWindow( message )
+        self._pending_messages.append( message )
         
-        self._message_windows.append( window )
-        
-        vbox = self.GetSizer()
-        
-        vbox.AddF( window, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._SizeAndPositionAndShow()
+        self._CheckPending()
         
     
     def Dismiss( self, window ):
@@ -2194,6 +2187,8 @@ class PopupMessageManager( wx.Frame ):
         window.Destroy()
         
         self._SizeAndPositionAndShow()
+        
+        self._CheckPending()
         
     
     def EventMove( self, event ):
@@ -2766,9 +2761,11 @@ class AdvancedImportOptions( AdvancedOptions ):
         
         self._exclude_deleted = wx.CheckBox( panel )
         
-        self._min_size = NoneableSpinCtrl( panel, 'minimum size (KB): ', 5120, multiplier = 1024 )
+        self._min_size = NoneableSpinCtrl( panel, 'minimum size (KB): ', multiplier = 1024 )
+        self._min_size.SetValue( 5120 )
         
-        self._min_resolution = NoneableSpinCtrl( panel, 'minimum resolution: ', ( 50, 50 ), num_dimensions = 2 )
+        self._min_resolution = NoneableSpinCtrl( panel, 'minimum resolution: ', num_dimensions = 2 )
+        self._min_resolution.SetValue( ( 50, 50 ) )
         
         hbox1 = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -3073,7 +3070,7 @@ class TagsBox( ListBox ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 wx.MessageBox( traceback.format_exc() )
                 
             

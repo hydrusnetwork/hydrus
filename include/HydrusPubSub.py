@@ -47,7 +47,7 @@ class HydrusPubSub():
                                     wx.PostEvent( HC.app, PubSubEvent() )
                                     
                                 except wx.PyDeadObjectError: pass
-                                except: print( topic + ' for ' + str( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )
+                                except: print( topic + ' for ' + HC.u( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )
                                 
                             
                         
@@ -77,7 +77,7 @@ class HydrusPubSub():
                                 
                                 try: getattr( object, method_name )( *args, **kwargs )
                                 except wx.PyDeadObjectError: pass
-                                except: print( topic + ' for ' + str( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )
+                                except: print( topic + ' for ' + HC.u( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )
                                 
                             
                         

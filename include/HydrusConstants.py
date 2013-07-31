@@ -17,6 +17,12 @@ import urlparse
 import wx
 import yaml
 
+# open
+
+o = open
+
+# dirs
+
 BASE_DIR = sys.path[0]
 
 DB_DIR = BASE_DIR + os.path.sep + 'db'
@@ -33,7 +39,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 78
+SOFTWARE_VERSION = 79
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -548,7 +554,7 @@ def CleanTag( tag ):
     
     tag = tag.lower()
     
-    tag = unicode( tag )
+    tag = u( tag )
     
     tag = re.sub( '[\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
     
@@ -589,37 +595,28 @@ def ConvertIntToBytes( size ):
     
     return '%.0f' % size + suffixes[ suffix_index ] + 'B'
     
-def ConvertIntToPrettyString( num ):
-    
-    processed_num = locale.format( "%d", num, grouping = True )
-    
-    try: return unicode( processed_num )
-    except:
-        
-        try: return processed_num.decode( locale.getpreferredencoding() )
-        except: return str( num )
-        
-    
+def ConvertIntToPrettyString( num ): return u( locale.format( "%d", num, grouping = True ) )
+
 def ConvertMillisecondsToPrettyTime( ms ):
     
     hours = ms / 3600000
     
     if hours == 1: hours_result = '1 hour'
-    else: hours_result = str( hours ) + ' hours'
+    else: hours_result = u( hours ) + ' hours'
     
     ms = ms % 3600000
     
     minutes = ms / 60000
     
     if minutes == 1: minutes_result = '1 minute'
-    else: minutes_result = str( minutes ) + ' minutes'
+    else: minutes_result = u( minutes ) + ' minutes'
     
     ms = ms % 60000
     
     seconds = ms / 1000
     
     if seconds == 1: seconds_result = '1 second'
-    else: seconds_result = str( seconds ) + ' seconds'
+    else: seconds_result = u( seconds ) + ' seconds'
     
     detailed_seconds = float( ms ) / 1000.0
     
@@ -629,7 +626,7 @@ def ConvertMillisecondsToPrettyTime( ms ):
     ms = ms % 1000
     
     if ms == 1: milliseconds_result = '1 millisecond'
-    else: milliseconds_result = str( ms ) + ' milliseconds'
+    else: milliseconds_result = u( ms ) + ' milliseconds'
     
     if hours > 0: return hours_result + ' ' + minutes_result
     
@@ -643,12 +640,12 @@ def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result =
     
     rating_converted = ( rating * ( upper - lower ) ) + lower
     
-    if rounded_result: s = str( '%.2f' % round( rating_converted ) )
-    else: s = str( '%.2f' % rating_converted )
+    if rounded_result: s = u( '%.2f' % round( rating_converted ) )
+    else: s = u( '%.2f' % rating_converted )
     
     if out_of:
         
-        if lower in ( 0, 1 ): s += '/' + str( '%.2f' % upper )
+        if lower in ( 0, 1 ): s += '/' + u( '%.2f' % upper )
         
     
     return s
@@ -688,35 +685,35 @@ def ConvertTimestampToPrettyAge( timestamp ):
     
     if timestamp == 0 or timestamp is None: return 'unknown age'
     
-    age = int( time.time() ) - timestamp
+    age = GetNow() - timestamp
     
     seconds = age % 60
     if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
+    else: s = u( seconds ) + ' seconds'
     
     age = age / 60
     minutes = age % 60
     if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
+    else: m = u( minutes ) + ' minutes'
     
     age = age / 60
     hours = age % 24
     if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
+    else: h = u( hours ) + ' hours'
     
     age = age / 24
     days = age % 30
     if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
+    else: d = u( days ) + ' days'
     
     age = age / 30
     months = age % 12
     if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
+    else: mo = u( months ) + ' months'
     
     years = age / 12
     if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
+    else: y = u( years ) + ' years'
     
     if years > 0: return ' '.join( ( y, mo ) ) + ' old'
     elif months > 0: return ' '.join( ( mo, d ) ) + ' old'
@@ -728,35 +725,35 @@ def ConvertTimestampToPrettyAgo( timestamp ):
     
     if timestamp == 0: return 'unknown time'
     
-    age = int( time.time() ) - timestamp
+    age = GetNow() - timestamp
     
     seconds = age % 60
     if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
+    else: s = u( seconds ) + ' seconds'
     
     age = age / 60
     minutes = age % 60
     if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
+    else: m = u( minutes ) + ' minutes'
     
     age = age / 60
     hours = age % 24
     if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
+    else: h = u( hours ) + ' hours'
     
     age = age / 24
     days = age % 30
     if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
+    else: d = u( days ) + ' days'
     
     age = age / 30
     months = age % 12
     if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
+    else: mo = u( months ) + ' months'
     
     years = age / 12
     if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
+    else: y = u( years ) + ' years'
     
     if years > 0: return ' '.join( ( y, mo ) ) + ' ago'
     elif months > 0: return ' '.join( ( mo, d ) ) + ' ago'
@@ -769,7 +766,7 @@ def ConvertTimestampToPrettyExpires( timestamp ):
     if timestamp is None: return 'does not expire'
     if timestamp == 0: return 'unknown expiry'
     
-    expires = int( time.time() ) - timestamp
+    expires = GetNow() - timestamp
     
     if expires >= 0: already_happend = True
     else:
@@ -781,31 +778,31 @@ def ConvertTimestampToPrettyExpires( timestamp ):
     
     seconds = expires % 60
     if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
+    else: s = u( seconds ) + ' seconds'
     
     expires = expires / 60
     minutes = expires % 60
     if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
+    else: m = u( minutes ) + ' minutes'
     
     expires = expires / 60
     hours = expires % 24
     if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
+    else: h = u( hours ) + ' hours'
     
     expires = expires / 24
     days = expires % 30
     if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
+    else: d = u( days ) + ' days'
     
     expires = expires / 30
     months = expires % 12
     if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
+    else: mo = u( months ) + ' months'
     
     years = expires / 12
     if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
+    else: y = u( years ) + ' years'
     
     if already_happend:
         
@@ -829,38 +826,38 @@ def ConvertTimestampToPrettyPending( timestamp ):
     if timestamp is None: return ''
     if timestamp == 0: return 'imminent'
     
-    pending = int( time.time() ) - timestamp
+    pending = GetNow() - timestamp
     
     if pending >= 0: return 'imminent'
     else: pending *= -1
     
     seconds = pending % 60
     if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
+    else: s = u( seconds ) + ' seconds'
     
     pending = pending / 60
     minutes = pending % 60
     if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
+    else: m = u( minutes ) + ' minutes'
     
     pending = pending / 60
     hours = pending % 24
     if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
+    else: h = u( hours ) + ' hours'
     
     pending = pending / 24
     days = pending % 30
     if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
+    else: d = u( days ) + ' days'
     
     pending = pending / 30
     months = pending % 12
     if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
+    else: mo = u( months ) + ' months'
     
     years = pending / 12
     if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
+    else: y = u( years ) + ' years'
     
     if years > 0: return 'in ' + ' '.join( ( y, mo ) )
     elif months > 0: return 'in ' + ' '.join( ( mo, d ) )
@@ -872,35 +869,35 @@ def ConvertTimestampToPrettySync( timestamp ):
     
     if timestamp == 0: return 'not updated'
     
-    age = int( time.time() ) - timestamp
+    age = GetNow() - timestamp
     
     seconds = age % 60
     if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
+    else: s = u( seconds ) + ' seconds'
     
     age = age / 60
     minutes = age % 60
     if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
+    else: m = u( minutes ) + ' minutes'
     
     age = age / 60
     hours = age % 24
     if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
+    else: h = u( hours ) + ' hours'
     
     age = age / 24
     days = age % 30
     if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
+    else: d = u( days ) + ' days'
     
     age = age / 30
     months = age % 12
     if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
+    else: mo = u( months ) + ' months'
     
     years = age / 12
     if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
+    else: y = u( years ) + ' years'
     
     if years > 0: return 'updated to ' + ' '.join( ( y, mo ) ) + ' ago'
     elif months > 0: return 'updated to ' + ' '.join( ( mo, d ) ) + ' ago'
@@ -912,7 +909,7 @@ def ConvertTimestampToPrettyTime( timestamp ): return time.strftime( '%Y/%m/%d %
 
 def ConvertTimestampToHumanPrettyTime( timestamp ):
     
-    now = int( time.time() )
+    now = GetNow()
     
     difference = now - timestamp
     
@@ -952,6 +949,8 @@ def GetEmptyDataDict():
     
     return data
     
+def GetNow(): return int( time.time() )
+
 def GetShortcutFromEvent( event ):
     
     modifier = wx.ACCEL_NORMAL
@@ -1012,17 +1011,17 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
     return result
 
-class Message():
+def u( text_producing_object ):
     
-    def __init__( self, message_type, info ):
+    if type( text_producing_object ) in ( str, unicode ): text = text_producing_object
+    else: text = str( text_producing_object ) # dealing with exceptions, etc...
+    
+    try: return unicode( text )
+    except:
         
-        self._message_type = message_type
-        self._info = info
+        try: return text.decode( locale.getpreferredencoding() )
+        except: return str( text )
         
-    
-    def GetInfo( self ): return self._info
-    
-    def GetType( self ): return self._message_type
     
 def SearchEntryMatchesPredicate( search_entry, predicate ):
     
@@ -1063,9 +1062,9 @@ def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
     
     return False
     
-def SplayListForDB( xs ): return '(' + ','.join( [ '"' + str( x ) + '"' for x in xs ] ) + ')'
+def SplayListForDB( xs ): return '(' + ','.join( [ '"' + u( x ) + '"' for x in xs ] ) + ')'
 
-def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + str( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
+def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + u( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
 
 def ThumbnailResolution( original_resolution, target_resolution ):
     
@@ -1133,7 +1132,7 @@ class AdvancedHTTPConnection():
     
     def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True ):
         
-        if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + str( NETWORK_VERSION )
+        if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + u( NETWORK_VERSION )
         
         if len( self._cookies ) > 0: headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in self._cookies.items() ] )
         
@@ -1148,9 +1147,8 @@ class AdvancedHTTPConnection():
         except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
             
             # for some reason, we can't send a request on the current connection, so let's make a new one!
-            
             try:
-                
+            
                 if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
                 else: self._connection = httplib.HTTPSConnection( self._host, self._port )
                 
@@ -1220,7 +1218,7 @@ class AdvancedHTTPConnection():
                 if mime_string in mime_enum_lookup and mime_enum_lookup[ mime_string ] == APPLICATION_YAML:
                     
                     try: parsed_response = yaml.safe_load( raw_response )
-                    except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + unicode( e ) )
+                    except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + u( e ) )
                     
                 else: parsed_response = raw_response
                 
@@ -1330,6 +1328,8 @@ class AdvancedHTTPConnection():
     
     def SetCookie( self, key, value ): self._cookies[ key ] = value
     
+get_connection = AdvancedHTTPConnection
+
 class HydrusYAMLBase( yaml.YAMLObject ):
     
     yaml_loader = yaml.SafeLoader
@@ -1350,7 +1350,7 @@ class Account( HydrusYAMLBase ):
         self._used_data = used_data
         self._banned_info = banned_info
         
-        self._object_instantiation_timestamp = int( time.time() )
+        self._object_instantiation_timestamp = GetNow()
         
     
     def __repr__( self ): return self.ConvertToString()
@@ -1365,14 +1365,14 @@ class Account( HydrusYAMLBase ):
             ( reason, created, expires ) = self._banned_info
             
             if expires is None: return True
-            else: return int( time.time() ) > expires
+            else: return GetNow() > expires
             
         
     
     def _IsExpired( self ):
         
         if self._expires is None: return False
-        else: return int( time.time() ) > self._expires
+        else: return GetNow() > self._expires
         
     
     def CheckPermissions( self, permissions ):
@@ -1457,9 +1457,9 @@ class Account( HydrusYAMLBase ):
     
     def IsBanned( self ): return self._IsBanned()
     
-    def IsStale( self ): return self._object_instantiation_timestamp + UPDATE_DURATION * 5 < int( time.time() )
+    def IsStale( self ): return self._object_instantiation_timestamp + UPDATE_DURATION * 5 < GetNow()
     
-    def MakeFresh( self ): self._object_instantiation_timestamp = int( time.time() )
+    def MakeFresh( self ): self._object_instantiation_timestamp = GetNow()
     
     def MakeStale( self ): self._object_instantiation_timestamp = 0
     
@@ -1493,7 +1493,7 @@ class AccountIdentifier( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Account Identifier: ' + str( ( self._access_key.encode( 'hex' ), self._hash.encode( 'hex' ), self._tag, self._account_id ) )
+    def __repr__( self ): return 'Account Identifier: ' + u( ( self._access_key.encode( 'hex' ), self._hash.encode( 'hex' ), self._tag, self._account_id ) )
     
     def GetAccessKey( self ): return self._access_key
     
@@ -1580,7 +1580,7 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Client Service Identifier: ' + str( ( name, self._type, self._service_key ) )
+    def __repr__( self ): return 'Client Service Identifier: ' + u( ( self._name, self._type, self._service_key ) )
     
     def GetInfo( self ): return ( self._service_key, self._type, self._name )
     
@@ -1715,7 +1715,7 @@ class ContentUpdate():
     
     def __ne__( self, other ): return not self.__eq__( other )
     
-    def __repr__( self ): return 'Content Update: ' + str( ( self._data_type, self._action, self._row ) )
+    def __repr__( self ): return 'Content Update: ' + u( ( self._data_type, self._action, self._row ) )
     
     def GetHashes( self ):
         
@@ -1755,6 +1755,7 @@ class DAEMON( threading.Thread ):
         
         threading.Thread.__init__( self, name = name )
         
+        self._name = name
         self._callable = callable
         self._period = period
         
@@ -1801,7 +1802,14 @@ class DAEMONQueue( DAEMON ):
             while self._queue.qsize() > 0: items.append( self._queue.get() )
             
             try: self._callable( items )
-            except: print( traceback.format_exc() )
+            except Exception as e:
+                
+                message = self._name + os.linesep + type( e ).__name__ + os.linesep + traceback.format_exc()
+                
+                pubsub.pub( 'message', Message( MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
+                
             
         
     
@@ -1828,7 +1836,14 @@ class DAEMONWorker( DAEMON ):
             if shutdown: return
             
             try: self._callable()
-            except: print( traceback.format_exc() )
+            except Exception as e:
+                
+                message = self._name + os.linesep + type( e ).__name__ + os.linesep + traceback.format_exc()
+                
+                pubsub.pub( 'message', Message( MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                print( message )
+                
             
             if shutdown: return
             
@@ -1839,6 +1854,18 @@ class DAEMONWorker( DAEMON ):
         
     
     def set( self, *args, **kwargs ): self._event.set()
+    
+class Message():
+    
+    def __init__( self, message_type, info ):
+        
+        self._message_type = message_type
+        self._info = info
+        
+    
+    def GetInfo( self ): return self._info
+    
+    def GetType( self ): return self._message_type
     
 class JobInternal():
     
@@ -1930,7 +1957,7 @@ class Predicate():
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Predicate: ' + str( ( self._predicate_type, self._value, self._count ) )
+    def __repr__( self ): return 'Predicate: ' + u( ( self._predicate_type, self._value, self._count ) )
     
     def AddToCount( self, count ): self._count += count
     
@@ -1969,7 +1996,7 @@ class Predicate():
                     
                     ( operator, value ) = info
                     
-                    base += u' ' + operator + u' ' + unicode( value )
+                    base += u' ' + operator + u' ' + u( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIZE:
@@ -1980,7 +2007,7 @@ class Predicate():
                     
                     ( operator, size, unit ) = info
                     
-                    base += u' ' + operator + u' ' + unicode( size ) + ConvertUnitToString( unit )
+                    base += u' ' + operator + u' ' + u( size ) + ConvertUnitToString( unit )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_LIMIT:
@@ -1991,7 +2018,7 @@ class Predicate():
                     
                     value = info
                     
-                    base += u' is ' + unicode( value )
+                    base += u' is ' + u( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_AGE:
@@ -2002,7 +2029,7 @@ class Predicate():
                     
                     ( operator, years, months, days, hours ) = info
                     
-                    base += u' ' + operator + u' ' + unicode( years ) + u'y' + unicode( months ) + u'm' + unicode( days ) + u'd' + unicode( hours ) + u'h'
+                    base += u' ' + operator + u' ' + u( years ) + u'y' + u( months ) + u'm' + u( days ) + u'd' + u( hours ) + u'h'
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HASH:
@@ -2035,7 +2062,7 @@ class Predicate():
                     
                     ( service_identifier, operator, value ) = info
                     
-                    base += u' for ' + service_identifier.GetName() + u' ' + operator + u' ' + unicode( value )
+                    base += u' for ' + service_identifier.GetName() + u' ' + operator + u' ' + u( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
@@ -2046,7 +2073,7 @@ class Predicate():
                     
                     ( hash, max_hamming ) = info
                     
-                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + unicode( max_hamming )
+                    base += u' ' + hash.encode( 'hex' ) + u' using max hamming of ' + u( max_hamming )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
@@ -2182,7 +2209,7 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Server Service Identifier: ' + str( ( self._type, self._port ) )
+    def __repr__( self ): return 'Server Service Identifier: ' + u( ( self._type, self._port ) )
     
     def GetPort( self ): return self._port
     

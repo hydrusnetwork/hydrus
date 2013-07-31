@@ -113,7 +113,7 @@ eris = '''<html><head><title>hydrus</title></head><body><pre>
                  <font color="gray">MM</font>:::::<font color="gray">M</font>:::::::::::::::::::::<font color="gray">MMM</font>
                   <font color="gray">MM</font>::::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font> 
                   <font color="gray">MM</font>:::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font>
-                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>              THIS IS THE HYDRUS SERVER ADMIN SERVICE, VERSION ''' + str( HC.SOFTWARE_VERSION ) + '''
+                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>              THIS IS THE HYDRUS SERVER ADMIN SERVICE, VERSION ''' + HC.u( HC.SOFTWARE_VERSION ) + '''
                    <font color="gray">MM</font>:<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>
                     <font color="gray">MMM</font>::::::::::::::::::<font color="gray">MMM</font>
                     <font color="gray">MM</font>::::::::::::::::::<font color="gray">MMM</font>
@@ -205,7 +205,7 @@ CLIENT_ROOT_MESSAGE = '''<html>
         <title>hydrus client</title>
     </head>
     <body>
-        <p>This hydrus client uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus client uses software version ''' + HC.u( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HC.u( HC.NETWORK_VERSION ) + '''.</p>
         <p>It only serves requests from 127.0.0.1.</p>
     </body>
 </html>'''
@@ -215,7 +215,7 @@ ROOT_MESSAGE_BEGIN = '''<html>
         <title>hydrus service</title>
     </head>
     <body>
-        <p>This hydrus service uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
+        <p>This hydrus service uses software version ''' + HC.u( HC.SOFTWARE_VERSION ) + ''' and network version ''' + HC.u( HC.NETWORK_VERSION ) + '''.</p>
         <p>'''
 
 ROOT_MESSAGE_END = '''</p>
@@ -246,7 +246,7 @@ def ParseFileArguments( file ):
     try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( file, hash )
     except HydrusExceptions.SizeException: raise HydrusExceptions.ForbiddenException( 'File is of zero length!' )
     except HydrusExceptions.MimeException: raise HydrusExceptions.ForbiddenException( 'Filetype is not permitted!' )
-    except Exception as e: raise HydrusExceptions.ForbiddenException( unicode( e ) )
+    except Exception as e: raise HydrusExceptions.ForbiddenException( HC.u( e ) )
     
     args = {}
     
@@ -370,10 +370,10 @@ class HydrusHTTPServer( SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer )
     
 class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
     
-    server_version = 'hydrus/' + str( HC.NETWORK_VERSION )
+    server_version = 'hydrus/' + HC.u( HC.NETWORK_VERSION )
     protocol_version = 'HTTP/1.1'
     
-    with open( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', 'rb' ) as f: _favicon = f.read()
+    with HC.o( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', 'rb' ) as f: _favicon = f.read()
     
     def __init__( self, request, client_address, server ):
         
@@ -390,7 +390,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
             try:
                 
                 default_mime = HC.TEXT_HTML
-                default_encoding = lambda x: unicode( x )
+                default_encoding = lambda x: HC.u( x )
                 
                 user_agent_text = self.headers.getheader( 'User-Agent' )
                 
@@ -407,7 +407,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                             if client == 'hydrus':
                                 
                                 default_mime = HC.APPLICATION_YAML
-                                default_encoding = lambda x: yaml.safe_dump( unicode( x ) )
+                                default_encoding = lambda x: yaml.safe_dump( HC.u( x ) )
                                 
                                 network_version = int( network_version )
                                 
@@ -416,7 +416,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                                     if network_version < HC.NETWORK_VERSION: message = 'Please download the latest release.'
                                     else: message = 'Please ask this server\'s admin to update to the latest release.'
                                     
-                                    raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
+                                    raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HC.u( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HC.u( network_version ) + '! ' + message )
                                     
                                 
                             
@@ -555,7 +555,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
     
     def log_message( self, format, *args ): print( "[%s] %s%s" % ( self.log_date_time_string(), format%args, os.linesep ) )
     
-    def log_request( self, *args ): pass # to start logging a little about every request, just delete this def. the default pushes to log_message
+    def log_request( self, *args ): pass
     
     def log_string( self, message ): print( message )
     
@@ -564,7 +564,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         
         service_type = self._service_identifier.GetType()
         
-        server_version = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
+        server_version = HC.service_string_lookup[ service_type ] + '/' + HC.u( HC.NETWORK_VERSION )
         
         return server_version + ' ' + self.sys_version
         

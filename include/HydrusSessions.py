@@ -36,7 +36,7 @@ class HydrusSessionManagerClient():
     
     def GetSessionKey( self, service_identifier ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         with self._lock:
             
@@ -91,7 +91,7 @@ class HydrusSessionManagerServer():
     
     def GetAccountIdentifier( self, session_key, service_identifier ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         with self._lock:
             

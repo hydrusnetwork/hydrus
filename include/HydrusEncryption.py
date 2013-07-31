@@ -42,9 +42,9 @@ def DecryptAESFile( aes_key, iv, path ):
     if '.encrypted' in path: path_to = path.replace( '.encrypted', '' )
     else: path_to = path + '.decrypted'
     
-    with open( path, 'rb' ) as encrypted_f:
+    with HC.o( path, 'rb' ) as encrypted_f:
         
-        with open( path_to, 'wb' ) as decrypted_f:
+        with HC.o( path_to, 'wb' ) as decrypted_f:
             
             next_block = encrypted_f.read( 65536 )
             
@@ -96,9 +96,9 @@ def EncryptAESFile( path, preface = '' ):
     
     aes_cipher = Crypto.Cipher.AES.new( aes_key, Crypto.Cipher.AES.MODE_CFB, iv )
     
-    with open( path, 'rb' ) as decrypted_f:
+    with HC.o( path, 'rb' ) as decrypted_f:
         
-        with open( path + '.encrypted', 'wb' ) as encrypted_f:
+        with HC.o( path + '.encrypted', 'wb' ) as encrypted_f:
             
             encrypted_f.write( preface )
             
@@ -128,7 +128,7 @@ def EncryptAESFile( path, preface = '' ):
     
     aes_key_text = AESKeyToText( aes_key, iv )
     
-    with open( path + '.key', 'wb' ) as f: f.write( aes_key_text )
+    with HC.o( path + '.key', 'wb' ) as f: f.write( aes_key_text )
     
 def EncryptPKCS( public_key, message ):
     

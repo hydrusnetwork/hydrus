@@ -60,7 +60,7 @@ class FileDB():
         
         hash_id = self._GetHashId( c, hash )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         if c.execute( 'SELECT 1 FROM file_map WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone() is None or c.execute( 'SELECT 1 FROM file_petitions WHERE service_id = ? AND hash_id = ? AND status = ?;', ( service_id, hash_id, HC.DELETED ) ).fetchone() is None:
             
@@ -100,7 +100,7 @@ class FileDB():
                 
                 file = file_dict[ 'file' ]
                 
-                with open( dest_path, 'wb' ) as f: f.write( file )
+                with HC.o( dest_path, 'wb' ) as f: f.write( file )
                 
             
             if 'thumbnail' in file_dict:
@@ -111,7 +111,7 @@ class FileDB():
                     
                     thumbnail = file_dict[ 'thumbnail' ]
                     
-                    with open( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
+                    with HC.o( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
                     
                 
             
@@ -142,7 +142,7 @@ class FileDB():
         # this clears out any old reasons, if the user wants to overwrite them
         c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ' AND status = ?;', ( service_id, account_id, HC.PETITIONED ) )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
         
@@ -174,7 +174,7 @@ class FileDB():
         c.execute( 'DELETE FROM file_map WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
         c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, account_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( ( service_id, account_id, hash_id, reason_id, now, HC.DELETED ) for hash_id in hash_ids ) )
         
@@ -247,7 +247,7 @@ class FileDB():
             
             path = GetPath( 'file', hash )
             
-            with open( path, 'rb' ) as f: file = f.read()
+            with HC.o( path, 'rb' ) as f: file = f.read()
             
         except: raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
         
@@ -355,7 +355,7 @@ class FileDB():
             
             path = GetPath( 'thumbnail', hash )
             
-            with open( path, 'rb' ) as f: thumbnail = f.read()
+            with HC.o( path, 'rb' ) as f: thumbnail = f.read()
             
             return thumbnail
             
@@ -378,11 +378,11 @@ class MessageDB():
         
         message_key = os.urandom( 32 )
         
-        c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, int( time.time() ) ) )
+        c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HC.GetNow() ) )
         
         dest_path = GetPath( 'message', message_key )
         
-        with open( dest_path, 'wb' ) as f: f.write( message )
+        with HC.o( dest_path, 'wb' ) as f: f.write( message )
         
     
     def _AddStatuses( self, c, contact_key, statuses ):
@@ -390,7 +390,7 @@ class MessageDB():
         try: ( service_id, account_id ) = c.execute( 'SELECT service_id, account_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
         except: raise HydrusExceptions.ForbiddenException( 'Did not find that contact key for the message depot!' )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.executemany( 'INSERT OR REPLACE INTO message_statuses ( status_key, service_id, account_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ? );', [ ( sqlite3.Binary( status_key ), service_id, account_id, sqlite3.Binary( status ), now ) for ( status_key, status ) in statuses ] )
         
@@ -422,7 +422,7 @@ class MessageDB():
             
             path = GetPath( 'message', message_key )
             
-            with open( path, 'rb' ) as f: message = f.read()
+            with HC.o( path, 'rb' ) as f: message = f.read()
             
         except: raise HydrusExceptions.NotFoundException( 'Could not find that message!' )
         
@@ -466,7 +466,7 @@ class TagDB():
             hash_ids = set( hash_ids ).difference( already_deleted )
             
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, tag_id, hash_id, account_id, timestamp ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, tag_id, hash_id, account_id, now ) for hash_id in hash_ids ] )
         
@@ -479,7 +479,7 @@ class TagDB():
         
         c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( valid_hash_ids ) + ' AND STATUS = ?;', ( service_id, account_id, tag_id, HC.PETITIONED ) )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, account_id, tag_id, hash_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, tag_id, hash_id, reason_id, now, HC.PETITIONED ) for hash_id in valid_hash_ids ] )
         
@@ -501,7 +501,7 @@ class TagDB():
         
         c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND account_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, account_id, old_tag_id, new_tag_id, status ) )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, now ) )
         
@@ -523,7 +523,7 @@ class TagDB():
         
         c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND account_id = ? AND old_tag_id = ? AND new_tag_id = ? AND status = ?;', ( service_id, account_id, old_tag_id, new_tag_id, status ) )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, now ) )
         
@@ -572,7 +572,7 @@ class TagDB():
         if status == HC.PENDING: new_status = HC.CURRENT
         elif status == HC.PETITIONED: new_status = HC.DELETED
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
         
@@ -605,7 +605,7 @@ class TagDB():
         if status == HC.PENDING: new_status = HC.CURRENT
         elif status == HC.PETITIONED: new_status = HC.DELETED
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, account_id, old_tag_id, new_tag_id, reason_id, status, timestamp ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, old_tag_id, new_tag_id, reason_id, new_status, now ) )
         
@@ -621,7 +621,7 @@ class TagDB():
         c.execute( 'DELETE FROM mappings WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, tag_id ) )
         c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND tag_id = ? AND hash_id IN ' + splayed_hash_ids + ' AND status = ?;', ( service_id, tag_id, HC.PETITIONED ) )
         
-        c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, int( time.time() ), HC.DELETED ) for hash_id in hash_ids ) )
+        c.executemany( 'INSERT OR IGNORE INTO mapping_petitions ( service_id, tag_id, hash_id, account_id, reason_id, timestamp, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( ( service_id, tag_id, hash_id, account_id, reason_id, HC.GetNow(), HC.DELETED ) for hash_id in hash_ids ) )
         
         self._RefreshUpdateCache( c, service_id, affected_timestamps )
         
@@ -923,7 +923,7 @@ class RatingDB():
         
         hash_ids_to_new_timestamps = { hash_id : new_timestamp for ( hash_id, new_timestamp ) in c.execute( 'SELECT hash_id, new_timestamp FROM aggregate_ratings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) }
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         for ( hash_id, total_score, count ) in aggregates:
             
@@ -947,7 +947,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _AccountTypeExists( self, c, service_id, title ): return c.execute( 'SELECT 1 FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
-    def _AddNews( self, c, service_id, news ): c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, int( time.time() ) ) )
+    def _AddNews( self, c, service_id, news ): c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, HC.GetNow() ) )
     
     def _AddSession( self, c, session_key, service_identifier, account_identifier, expiry ):
         
@@ -964,7 +964,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         splayed_subject_account_ids = HC.SplayListForDB( subject_account_ids )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         if expiration is not None: expires = expiration + now
         else: expires = None
@@ -1077,14 +1077,14 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         path = GetPath( 'update', update_key_bytes )
         
-        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
+        with HC.o( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
         c.execute( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND begin = ?;', ( False, service_id, begin ) )
         
     
     def _ClearBans( self, c ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'DELETE FROM bans WHERE expires < ?;', ( now, ) )
         
@@ -1102,7 +1102,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         path = GetPath( 'update', update_key_bytes )
         
-        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
+        with HC.o( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
         c.execute( 'INSERT OR REPLACE INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, False ) )
         
@@ -1159,9 +1159,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         account_ids = self._GetAccountIds( c, access_keys )
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
-        if expiration is not None: expires = expiration + int( time.time() )
+        if expiration is not None: expires = expiration + HC.GetNow()
         else: expires = None
         
         c.executemany( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, account_type_id, now, expires, 0, 0 ) for account_id in account_ids ] )
@@ -1171,9 +1171,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GenerateRegistrationKeys( self, c, service_id, num, account_type_id, expiration ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
-        if expiration is not None: expiry = expiration + int( time.time() )
+        if expiration is not None: expiry = expiration + HC.GetNow()
         else: expiry = None
         
         keys = [ ( os.urandom( HC.HYDRUS_KEY_LENGTH ), os.urandom( HC.HYDRUS_KEY_LENGTH ) ) for i in range( num ) ]
@@ -1331,7 +1331,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         result = c.execute( 'SELECT account_type_id FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + str( title ) + ' in db for this service.' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HC.u( title ) + ' in db for this service.' )
         
         ( account_type_id, ) = result
         
@@ -1357,7 +1357,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         path = GetPath( 'update', update_key_bytes )
         
-        with open( path, 'rb' ) as f: update = f.read()
+        with HC.o( path, 'rb' ) as f: update = f.read()
         
         return update
         
@@ -1451,7 +1451,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetSessions( self, c ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'DELETE FROM sessions WHERE ? > expiry;', ( now, ) )
         
@@ -1494,7 +1494,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 title = account_type.GetTitle()
                 
-                if self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + str( title ) + ' in the db for this service, so could not add!' )
+                if self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HC.u( title ) + ' in the db for this service, so could not add!' )
                 
                 c.execute( 'INSERT OR IGNORE INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( title, account_type ) )
                 
@@ -1523,7 +1523,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 title = account_type.GetTitle()
                 
-                if old_title != title and self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + str( title ) + ' in the database, so could not rename ' + str( old_title ) + '!' )
+                if old_title != title and self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HC.u( title ) + ' in the database, so could not rename ' + HC.u( old_title ) + '!' )
                 
                 account_type_id = self._GetAccountTypeId( c, service_id, old_title )
                 
@@ -1534,7 +1534,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _ModifyServices( self, c, account_id, edit_log ):
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         for ( action, data ) in edit_log:
             
@@ -1545,7 +1545,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 service_type = service_identifier.GetType()
                 port = service_identifier.GetPort()
                 
-                if c.execute( 'SELECT 1 FROM services WHERE port = ?;', ( port, ) ).fetchone() is not None: raise Exception( 'There is already a service hosted at port ' + str( port ) )
+                if c.execute( 'SELECT 1 FROM services WHERE port = ?;', ( port, ) ).fetchone() is not None: raise Exception( 'There is already a service hosted at port ' + HC.u( port ) )
                 
                 c.execute( 'INSERT INTO services ( type, port, options ) VALUES ( ?, ?, ? );', ( service_type, port, yaml.safe_dump( HC.DEFAULT_OPTIONS[ service_type ] ) ) )
                 
@@ -1564,7 +1564,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 if service_type in HC.REPOSITORIES:
                     
                     begin = 0
-                    end = int( time.time() )
+                    end = HC.GetNow()
                     
                     self._CreateUpdate( c, service_id, begin, end )
                     
@@ -1575,7 +1575,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 service_id = self._GetServiceId( c, service_identifier )
                 
-                if c.execute( 'SELECT 1 FROM services WHERE port = ?;', ( new_port, ) ).fetchone() is not None: raise Exception( 'There is already a service hosted at port ' + str( port ) )
+                if c.execute( 'SELECT 1 FROM services WHERE port = ?;', ( new_port, ) ).fetchone() is not None: raise Exception( 'There is already a service hosted at port ' + HC.u( port ) )
                 
                 c.execute( 'UPDATE services SET port = ? WHERE service_id = ?;', ( new_port, service_id ) )
                 
@@ -1661,7 +1661,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         account_id = c.lastrowid
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, account_type_id, now, expiry, 0, 0 ) )
         
@@ -1719,7 +1719,7 @@ class DB( ServiceDB ):
                     already_running = False
                     
                 
-                if already_running: raise Exception( 'The server appears to be running already!' + os.linesep + 'Either that, or something else is using port ' + str( port ) + '.' )
+                if already_running: raise Exception( 'The server appears to be running already!' + os.linesep + 'Either that, or something else is using port ' + HC.u( port ) + '.' )
                 
             
             service_id = self._GetServiceId( c, service_identifier )
@@ -1785,7 +1785,7 @@ class DB( ServiceDB ):
             c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
             c.execute( 'PRAGMA journal_mode=WAL;' )
             
-            now = int( time.time() )
+            now = HC.GetNow()
             
             c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, type INTEGER, port INTEGER, options TEXT_YAML );' )
             
@@ -2005,7 +2005,7 @@ class DB( ServiceDB ):
                     
                     #
                     
-                    now = int( time.time() )
+                    now = HC.GetNow()
                     
                     #
                     
@@ -2125,7 +2125,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.SERVER_FILES_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with open( path_to, 'wb' ) as f: f.write( file )
+                    with HC.o( path_to, 'wb' ) as f: f.write( file )
                     
                 
                 c.execute( 'DELETE FROM files WHERE hash_id IN ' + HC.SplayListForDB( local_files_subset ) + ';' )
@@ -2170,7 +2170,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.SERVER_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with open( path_to, 'wb' ) as f: f.write( thumbnail )
+                    with HC.o( path_to, 'wb' ) as f: f.write( thumbnail )
                     
                 
             
@@ -2256,7 +2256,7 @@ class DB( ServiceDB ):
                 
                 update_key = update_key_bytes.encode( 'hex' )
                 
-                with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( update )
+                with HC.o( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( update )
                 
                 c.execute( 'INSERT INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, dirty ) )
                 
@@ -2388,7 +2388,7 @@ class DB( ServiceDB ):
         
         for ( service_id, biggest_end ) in update_ends:
             
-            now = int( time.time() )
+            now = HC.GetNow()
             
             next_begin = biggest_end + 1
             next_end = biggest_end + HC.UPDATE_DURATION
@@ -2399,7 +2399,7 @@ class DB( ServiceDB ):
                 
                 biggest_end = next_end
                 
-                now = int( time.time() )
+                now = HC.GetNow()
                 
                 next_begin = biggest_end + 1
                 next_end = biggest_end + HC.UPDATE_DURATION
@@ -2500,11 +2500,11 @@ class DB( ServiceDB ):
                     
                     max_age = 30 * 86400
                     
-                    expiry = int( time.time() ) + max_age
+                    expiry = HC.GetNow() + max_age
                     
                     HC.app.AddSession( session_key, service_identifier, account_identifier, expiry )
                     
-                    cookies = [ 'session_key=' + session_key.encode( 'hex' ) + '; Max-Age=' + str( max_age ) + '; Path=/' ]
+                    cookies = [ 'session_key=' + session_key.encode( 'hex' ) + '; Max-Age=' + HC.u( max_age ) + '; Path=/' ]
                     
                     response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = '', cookies = cookies )
                     
@@ -2809,6 +2809,8 @@ class DB( ServiceDB ):
         elif request == 'options':
             
             options = request_args[ 'options' ]
+            
+            service_identifier = self._GetServiceIdentifier( c, service_id )
             
             self._SetOptions( c, service_id, service_identifier, options )
             

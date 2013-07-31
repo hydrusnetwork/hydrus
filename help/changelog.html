@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 79</h3></li>
+				<ul>
+					<li>popup messages will now report whenever a subscription or import folder successfully imports some files, with a button to show them in a new search</li>
+					<li>popup messages now wrap</li>
+					<li>slightly better error popup</li>
+					<li>many more errors reported through error popup</li>
+					<li>old logging system switched over to new messaging system</li>
+					<li>popup message manager will only show ten messages at once, now</li>
+					<li>selectfromlistofstrings now supports enter key to select</li>
+					<li>completely reworked how dialog cancel works; absolutely all dialogs should now close with escape key</li>
+					<li>reworked how a bunch of dialogs do ok</li>
+					<li>a huge amount of dialog refactoring</li>
+					<li>made ok button initial focus of all dialogs</li>
+					<li>couple of bugs in service options dialog fixed</li>
+					<li>rejiggered some button names and focus behaviour a bit more</li>
+					<li>some classname refactoring</li>
+					<li>muchly improved string->unicode handling</li>
+					<li>improved timestamp generation</li>
+					<li>fixed a clientserviceidentifier->text bug</li>
+					<li>reworked how namespace cache in tagsmanager object is calculated</li>
+					<li>improved instantiation of noneablespinctrls</li>
+					<li>fixed a bug in the thumbnails download daemon</li>
+					<li>changed the way daemons wait for the db, much to the better</li>
+					<li>moved daemons out of the db object</li>
+					<li>rejiggered writedaemon synchrony so exceptions work</li>
+					<li>fiddled around with some help links</li>
+					<li>default, non-maximised size of client is a little more comfortable</li>
+					<li>custom filter now has a popup that'll let you change the custom actions mid-filter</li>
+					<li>server now uses new synchronous logging system</li>
+					<li>fixed an options save bug for server</li>
+					<li>updated server diagram in help</li>
+					<li>added test for dialog selectfromlistofstrings</li>
+					<li>added test for dialogyesno</li>
+					<li>made a framework for testing that requires network stuff</li>
+					<li>made a newgrounds test</li>
+					<li>fixed newgrounds swf parsing</li>
+					<li>made a framework for testing that requires file reads and writes</li>
+					<li>fixed a graceful-exception bug in mime parsing</li>
+					<li>added test for synchronous import_folders</li>
+					<li>added test for delete import_folders</li>
+					<li>wrote a test for importfolders daemon</li>
+					<li>import folders no longer delete or reattempt failed imports; they'll just ignore them</li>
+					<li>import folders are deleted on update, since old objects are obselete</li>
+					<li>import folders won't try to do zips any more; they'll just ignore them</li>
+					<li>rejiggered how import folders does its path parsing to remove mime calc cpu usage</li>
+				</ul>
 				<li><h3>version 78</h3></li>
 				<ul>
 					<li>expanded parents testing with a namespace example</li>
@@ -15,7 +61,7 @@
 					<li>refactored ManageDialogs to their own file</li>
 					<li>refactored Exceptions to their own file</li>
 					<li>improved my testing framework so it can do wx gui elements</li>
-					<li>added test for dialogchoosenewservicemethod, fixed a tuypo</li>
+					<li>added test for dialogchoosenewservicemethod, fixed a typo</li>
 					<li>added test for dialogfinishfiltering</li>
 					<li>added test for dialogfinishratingfiltering</li>
 					<li>those two finish filter dialogs are a little simpler, now</li>

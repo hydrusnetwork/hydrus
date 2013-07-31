@@ -50,7 +50,7 @@ def GetMP4Duration( file ):
     
     filename = HC.TEMP_DIR + os.path.sep + 'mp4_parse.mp4'
     
-    with open( filename, 'wb' ) as f: f.write( file )
+    with HC.o( filename, 'wb' ) as f: f.write( file )
     
     try: mp4_object = mutagen.mp4.MP4( filename )
     except: raise Exception( 'Could not parse the mp4!' )

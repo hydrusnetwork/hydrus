@@ -574,7 +574,14 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         siblings_manager = HC.app.GetTagSiblingsManager()
         
-        ( creators, series, titles, volumes, chapters, pages ) = self._current_media.GetDisplayMedia().GetTagsManager().GetCSTVCP()
+        namespaces = self._current_media.GetDisplayMedia().GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
+        
+        creators = namespaces[ 'creator' ]
+        series = namespaces[ 'series' ]
+        titles = namespaces[ 'title' ]
+        volumes = namespaces[ 'volume' ]
+        chapters = namespaces[ 'chapter' ]
+        pages = namespaces[ 'page' ]
         
         if len( creators ) > 0:
             
@@ -612,9 +619,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 ( volume, ) = volumes
                 
-                collections_string_append = 'volume ' + str( volume )
+                collections_string_append = 'volume ' + HC.u( volume )
                 
-            else: collections_string_append = 'volumes ' + str( min( volumes ) ) + '-' + str( max( volumes ) )
+            else: collections_string_append = 'volumes ' + HC.u( min( volumes ) ) + '-' + HC.u( max( volumes ) )
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
             else: collections_string = collections_string_append
@@ -626,9 +633,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 ( chapter, ) = chapters
                 
-                collections_string_append = 'chapter ' + str( chapter )
+                collections_string_append = 'chapter ' + HC.u( chapter )
                 
-            else: collections_string_append = 'chapters ' + str( min( chapters ) ) + '-' + str( max( chapters ) )
+            else: collections_string_append = 'chapters ' + HC.u( min( chapters ) ) + '-' + HC.u( max( chapters ) )
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
             else: collections_string = collections_string_append
@@ -640,9 +647,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 ( page, ) = pages
                 
-                collections_string_append = 'page ' + str( page )
+                collections_string_append = 'page ' + HC.u( page )
                 
-            else: collections_string_append = 'pages ' + str( min( pages ) ) + '-' + str( max( pages ) )
+            else: collections_string_append = 'pages ' + HC.u( min( pages ) ) + '-' + HC.u( max( pages ) )
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
             else: collections_string = collections_string_append
@@ -1141,8 +1148,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( unicode( e ) )
-                    print( unicode( e ) )
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                    wx.MessageBox( HC.u( e ) )
+                    print( HC.u( e ) )
                     
                 
             
@@ -1274,6 +1282,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         self.SetMedia( self._GetFirst() )
         
+        FullscreenPopoutFilterCustom( self )
+        
         HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
         
     
@@ -1316,6 +1326,14 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
     
     def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    
+    def EventActions( self, event ):
+        
+        with ClientGUIDialogs.DialogSetupCustomFilterActions( self ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK: self._actions = dlg.GetActions()
+            
+        
     
     def EventKeyDown( self, event ):
         
@@ -1471,8 +1489,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( unicode( e ) )
-                    print( unicode( e ) )
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                    wx.MessageBox( HC.u( e ) )
+                    print( HC.u( e ) )
                     
                 
             
@@ -1659,8 +1678,9 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                                 self._kept = set()
                                 self._deleted = set()
                                 
-                            except:
+                            except Exception as e:
                                 
+                                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
                                 wx.MessageBox( traceback.format_exc() )
                                 print( traceback.format_exc() )
                                 
@@ -1762,8 +1782,9 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( unicode( e ) )
-                    print( unicode( e ) )
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                    wx.MessageBox( HC.u( e ) )
+                    print( HC.u( e ) )
                     
                 
             
@@ -1939,6 +1960,30 @@ class FullscreenPopout( wx.Frame ):
         self._SizeAndPosition()
         
         event.Skip()
+        
+    
+class FullscreenPopoutFilterCustom( FullscreenPopout ):
+    
+    def _InitialisePopoutWindow( self, sizer ):
+        
+        window = wx.Window( self )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        parent = self.GetParent()
+        
+        actions = wx.Button( window, label = 'actions' )
+        actions.Bind( wx.EVT_BUTTON, parent.EventActions )
+        
+        done = wx.Button( window, label = 'done' )
+        done.Bind( wx.EVT_BUTTON, parent.EventClose )
+        
+        vbox.AddF( actions, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        
+        window.SetSizer( vbox )
+        
+        return window
         
     
 class FullscreenPopoutFilterInbox( FullscreenPopout ):
@@ -2213,8 +2258,9 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                                 self._kept = set()
                                 self._deleted = set()
                                 
-                            except:
+                            except Exception as e:
                                 
+                                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
                                 wx.MessageBox( traceback.format_exc() )
                                 print( traceback.format_exc() )
                                 
@@ -2399,7 +2445,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                 else: against_string += ' - like'
                 
             
-            center_string = str( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + str( len( self._decision_log ) ) + ' decisions, ' + str( len( certain_ratings ) ) + ' are certain'
+            center_string = HC.u( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HC.u( len( self._decision_log ) ) + ' decisions, ' + HC.u( len( certain_ratings ) ) + ' are certain'
             
         elif service_type == HC.LOCAL_RATING_NUMERICAL:
             
@@ -2433,7 +2479,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                 against_string += ' - ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, rating )
                 
             
-            center_string = str( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + str( len( self._decision_log ) ) + ' decisions, ' + str( len( certain_ratings ) ) + ' are certain and ' + str( len( uncertain_ratings ) ) + ' are uncertain'
+            center_string = HC.u( len( self._media_to_initial_scores_dict ) ) + ' files being rated. after ' + HC.u( len( self._decision_log ) ) + ' decisions, ' + HC.u( len( certain_ratings ) ) + ' are certain and ' + HC.u( len( uncertain_ratings ) ) + ' are uncertain'
             
         
         if self._unrated_is_on_the_left:
@@ -2810,8 +2856,9 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                         
                         HC.app.Write( 'content_updates', { self._service_identifier : content_updates } )
                         
-                    except:
+                    except Exception as e:
                         
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
                         wx.MessageBox( traceback.format_exc() )
                         print( traceback.format_exc() )
                         
@@ -2852,8 +2899,9 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
-                print( unicode( e ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                wx.MessageBox( HC.u( e ) )
+                print( HC.u( e ) )
                 
             
         
@@ -3193,8 +3241,9 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                         
                     except Exception as e:
                         
-                        wx.MessageBox( unicode( e ) )
-                        print( unicode( e ) )
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                        wx.MessageBox( HC.u( e ) )
+                        print( HC.u( e ) )
                         
                     
                 

@@ -454,7 +454,7 @@ class MessageSystemPredicates():
                         days = int( days )
                         
                     
-                    timestamp = int( time.time() ) - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
+                    timestamp = HC.GetNow() - ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 86400 )
                     
                     # this is backwards because we are talking about age, not timestamp
                     

@@ -543,7 +543,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         if hashes is not None and len( hashes ) > 0:   
             
             try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
-            except Exception as e: wx.MessageBox( unicode( e ) )
+            except Exception as e: wx.MessageBox( HC.u( e ) )
             
         
     
@@ -554,7 +554,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         if hashes is not None and len( hashes ) > 0:   
             
             try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, hashes ) ] } )
-            except Exception as e: wx.MessageBox( unicode( e ) )
+            except Exception as e: wx.MessageBox( HC.u( e ) )
             
         
     
@@ -620,7 +620,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         if hashes is not None and len( hashes ) > 0:   
             
             try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, hashes ) ] } )
-            except Exception as e: wx.MessageBox( unicode( e ) )
+            except Exception as e: wx.MessageBox( HC.u( e ) )
             
         
     
@@ -1192,7 +1192,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HC.u( e ) )
                 
             
         
@@ -1864,7 +1864,14 @@ class Thumbnail( Selectable ):
         
         local = self.GetFileServiceIdentifiersCDPP().HasLocal()
         
-        ( creators, series, titles, volumes, chapters, pages ) = self.GetTagsManager().GetCSTVCP()
+        namespaces = self.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
+        
+        creators = namespaces[ 'creator' ]
+        series = namespaces[ 'series' ]
+        titles = namespaces[ 'title' ]
+        volumes = namespaces[ 'volume' ]
+        chapters = namespaces[ 'chapter' ]
+        pages = namespaces[ 'page' ]
         
         if self._hydrus_bmp is None: self._LoadFromDB()
         
@@ -1907,9 +1914,9 @@ class Thumbnail( Selectable ):
                 
                 ( volume, ) = volumes
                 
-                collections_string = 'v' + str( volume )
+                collections_string = 'v' + HC.u( volume )
                 
-            else: collections_string = 'v' + str( min( volumes ) ) + '-' + str( max( volumes ) )
+            else: collections_string = 'v' + HC.u( min( volumes ) ) + '-' + HC.u( max( volumes ) )
             
         
         if len( chapters ) > 0:
@@ -1918,9 +1925,9 @@ class Thumbnail( Selectable ):
                 
                 ( chapter, ) = chapters
                 
-                collections_string_append = 'c' + str( chapter )
+                collections_string_append = 'c' + HC.u( chapter )
                 
-            else: collections_string_append = 'c' + str( min( chapters ) ) + '-' + str( max( chapters ) )
+            else: collections_string_append = 'c' + HC.u( min( chapters ) ) + '-' + HC.u( max( chapters ) )
             
             if len( collections_string ) > 0: collections_string += '-' + collections_string_append
             else: collections_string = collections_string_append
@@ -1932,9 +1939,9 @@ class Thumbnail( Selectable ):
                 
                 ( page, ) = pages
                 
-                collections_string_append = 'p' + str( page )
+                collections_string_append = 'p' + HC.u( page )
                 
-            else: collections_string_append = 'p' + str( min( pages ) ) + '-' + str( max( pages ) )
+            else: collections_string_append = 'p' + HC.u( min( pages ) ) + '-' + HC.u( max( pages ) )
             
             if len( collections_string ) > 0: collections_string += '-' + collections_string_append
             else: collections_string = collections_string_append
@@ -2032,7 +2039,7 @@ class Thumbnail( Selectable ):
             
             dc.DrawBitmap( CC.GlobalBMPs.collection_bmp, 1, height - 17 )
             
-            num_files_str = str( len( self._hashes ) )
+            num_files_str = HC.u( len( self._hashes ) )
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             

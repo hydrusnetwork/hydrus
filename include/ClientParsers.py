@@ -14,7 +14,11 @@ def Parse4chanPostScreen( html ):
         
         print( soup )
         
-        return ( 'big error', 'you are banned from this board! html written to log' )
+        message = 'You are banned from this board! html written to log.'
+        
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( error ) ) )
+        
+        return ( 'big error', message )
         
     else:
         
@@ -27,10 +31,14 @@ def Parse4chanPostScreen( html ):
                 try: print( soup )
                 except: pass
                 
-                return ( 'error', 'unknown problem, writing 4chan html to log' )
+                message = 'Unknown problem; writing 4chan html to log.'
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                
+                return ( 'error', message )
                 
             
-            problem = str( problem_tag )
+            problem = HC.u( problem_tag )
             
             if 'CAPTCHA' in problem: return ( 'captcha', None )
             elif 'seconds' in problem: return ( 'too quick', None )

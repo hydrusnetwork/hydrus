@@ -14,22 +14,33 @@ import locale
 locale.setlocale( locale.LC_ALL, '' )
 
 import os
+import sys
 from include import HydrusConstants as HC
 from include import ServerController
 
-try:
-    
-    app = ServerController.Controller( True, HC.LOGS_DIR + os.path.sep + 'server.log' )
-    
-    app.MainLoop()
-    
-except:
-    
-    import traceback
-    print( traceback.format_exc() )
-    
+initial_sys_stdout = sys.stdout
+initial_sys_stderr = sys.stderr
 
-try: HC.shutdown = True
-except: pass
+with HC.o( HC.LOGS_DIR + os.path.sep + 'server.log', 'a' ) as f:
+    
+    sys.stdout = f
+    sys.stderr = f
+    
+    try:
+        
+        app = ServerController.Controller()
+        
+        app.MainLoop()
+        
+    except:
+        
+        import traceback
+        print( traceback.format_exc() )
+        
+    
+sys.stdout = initial_sys_stdout
+sys.stderr = initial_sys_stderr
+
+HC.shutdown = True
 
 HC.pubsub.pubimmediate( 'shutdown' )

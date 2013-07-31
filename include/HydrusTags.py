@@ -55,52 +55,43 @@ class TagsManagerSimple():
         
         self._service_identifiers_to_statuses_to_tags = service_identifiers_to_statuses_to_tags
         
-        self._cstvcp_initialised = False
+        self._combined_namespaces_cache = None
         
     
-    def _RecalcCSTVCP( self ):
+    def GetCombinedNamespaces( self, namespaces ):
         
-        self._creators = set()
-        self._series = set()
-        self._titles = set()
-        self._volumes = set()
-        self._chapters = set()
-        self._pages = set()
-        
-        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
-        
-        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
-        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
-        
-        for tag in combined_current.union( combined_pending ):
+        if self._combined_namespaces_cache is None:
+    
+            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
             
-            if ':' in tag:
+            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+            
+            self._combined_namespaces_cache = HC.BuildKeyToSetDict( tag.split( ':', 1 ) for tag in combined_current.union( combined_pending ) if ':' in tag )
+            
+            only_int_allowed = ( 'volume', 'chapter', 'page' )
+            
+            for namespace in only_int_allowed:
                 
-                ( namespace, tag ) = tag.split( ':', 1 )
+                tags = self._combined_namespaces_cache[ namespace ]
                 
-                if namespace == 'creator': self._creators.add( tag )
-                elif namespace == 'series': self._series.add( tag )
-                elif namespace == 'title': self._titles.add( tag )
-                elif namespace in ( 'volume', 'chapter', 'page' ):
+                int_tags = set()
+                
+                for tag in tags:
                     
                     try: tag = int( tag )
                     except: continue
                     
-                    if namespace == 'volume': self._volumes.add( tag )
-                    elif namespace == 'chapter': self._chapters.add( tag )
-                    elif namespace == 'page': self._pages.add( tag )
+                    int_tags.add( tag )
                     
+                
+                self._combined_namespaces_cache[ namespace ] = int_tags
                 
             
         
-        self._cstvcp_initialised = True
+        result = { namespace : self._combined_namespaces_cache[ namespace ] for namespace in namespaces }
         
-    
-    def GetCSTVCP( self ):
-        
-        if not self._cstvcp_initialised: self._RecalcCSTVCP()
-        
-        return ( self._creators, self._series, self._titles, self._volumes, self._chapters, self._pages )
+        return result
         
     
     def GetNamespaceSlice( self, namespaces, collapse = True ):
@@ -110,7 +101,7 @@ class TagsManagerSimple():
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
         
-        slice = { tag for tag in list( combined_current ) + list( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
+        slice = { tag for tag in combined_current.union( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
         
         if collapse:
             
@@ -159,7 +150,7 @@ class TagsManager( TagsManagerSimple ):
         
         self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ] = combined_statuses_to_tags
         
-        if self._cstvcp_initialised: self._RecalcCSTVCP()
+        self._combined_namespaces_cache = None
         
     
     def DeletePending( self, service_identifier ):
