@@ -8,6 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 80</h3></li>
+				<ul>
+					<li>manage tags and ratings dialogs have their initial focus corrected</li>
+					<li>custom filter now obeys tag parents for tag actions</li>
+					<li>fixed an annoying as hell multiple-page shared-thumbnail visual-selection-status bug</li>
+					<li>added e621 test</li>
+					<li>fixed e621 tag parsing, including new species namespace</li>
+					<li>might have fixed a missing thumbnail error</li>
+					<li>fixed system:hash</li>
+					<li>fixed some repo file downloading stuff</li>
+					<li>fixed some general db fetching file info stuff</li>
+					<li>made x files imported from y message a little slimmer</li>
+					<li>fixed minsize for the main gui frame</li>
+					<li>added better initialsize for the fullscreen frame</li>
+					<li>putting a thread url into the thread_id part of the dumper will auto-convert to the thread_id</li>
+					<li>added dumper's multipart form data generation test</li>
+					<li>added generic multipart form data generation test</li>
+					<li>fixed dumper unicode issue</li>
+					<li>error reporting in dumper is a little better</li>
+					<li>streamlined how mime is calced</li>
+					<li>massively improved how mp3, flac and ogg are parsed and validated</li>
+					<li>massively improved the internal import files workflow to use less memory and hdd reads and writes, particularly for video (lot of work)</li>
+					<li>similarly improved server-side import workflow</li>
+					<li>the way temp dir works is improved</li>
+					<li>sped up server file/thumbnail fetch</li>
+					<li>reworked how thumbnails are fetched in a couple places</li>
+					<li>started rework of how options is stored</li>
+					<li>wrote mp4 properties parser, but no mp4 just yet</li>
+				</ul>
 				<li><h3>version 79</h3></li>
 				<ul>
 					<li>popup messages will now report whenever a subscription or import folder successfully imports some files, with a button to show them in a new search</li>
