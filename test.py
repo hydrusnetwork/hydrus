@@ -1,5 +1,6 @@
 from include import HydrusConstants as HC
 from include import HydrusTags
+from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestConstants
 from include import TestDialogs
@@ -32,6 +33,7 @@ class App( wx.App ):
         
         suites = []
         
+        suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
         suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
         suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
         suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
@@ -76,7 +78,12 @@ class App( wx.App ):
         self._writes[ name ].append( ( args, kwargs ) )
         
         if name == 'import_file':
-            if args == ( 'blarg', ): raise Exception( 'File failed to import for some reason!' )
+            
+            ( path, ) = args
+            
+            with open( path, 'rb' ) as f: file = f.read()
+            
+            if file == 'blarg': raise Exception( 'File failed to import for some reason!' )
             else: return ( 'successful', 'hash' )
         
     

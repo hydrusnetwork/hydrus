@@ -3817,8 +3817,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         self.RefreshAcceleratorTable()
         
-        wx.CallAfter( self._apply.SetFocus )
-        
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
@@ -6874,8 +6872,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
         self.RefreshAcceleratorTable()
-        
-        wx.CallAfter( self._apply.SetFocus )
         
     
     def _SetSearchFocus( self ):

@@ -259,7 +259,11 @@ class CaptchaControl( wx.Panel ):
             
             jpeg = connection.request( 'GET', '/recaptcha/api/image?c=' + self._captcha_challenge )
             
-            self._bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( jpeg )
+            temp_path = HC.GetTempPath()
+            
+            with HC.o( temp_path, 'wb' ) as f: f.write( jpeg )
+            
+            self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
             
             self._captcha_runs_out = HC.GetNow() + 5 * 60 - 15
             
@@ -809,6 +813,8 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = ''
             
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( phrase ) ) )
+            
             self._progress_info.SetLabel( 'error: ' + phrase )
             
             self._start_button.Disable()
@@ -898,9 +904,21 @@ class ManagementPanelDumper( ManagementPanel ):
                     try: int( field.GetValue() )
                     except:
                         
-                        self._progress_info.SetLabel( 'set thread_id field first' )
+                        # let's assume they put the url in
                         
-                        return
+                        value = field.GetValue()
+                        
+                        thread_id = value.split( '/' )[ -1 ]
+                        
+                        try: int( thread_id )
+                        except:
+                            
+                            self._progress_info.SetLabel( 'set thread_id field first' )
+                            
+                            return
+                            
+                        
+                        field.SetValue( thread_id )
                         
                     
                 
@@ -927,103 +945,112 @@ class ManagementPanelDumper( ManagementPanel ):
     
     def EventTimer( self, event ):
         
-        if self._actually_dumping: return
-        
-        if self._dumping:
+        try:
             
-            time_left = self._next_dump_time - HC.GetNow()
+            if self._actually_dumping: return
             
-            if time_left < 1:
+            if self._dumping:
                 
-                media_to_dump = self._media_list.GetSortedMedia()[ self._next_dump_index ]
+                time_left = self._next_dump_time - HC.GetNow()
                 
-                wait = False
-                
-                if self._current_media == media_to_dump: self._FreezeCurrentMediaPostInfo()
-                
-                ( dump_status_enum, dump_status_string, post_field_info ) = self._media_to_dump_info[ media_to_dump ]
-                
-                for ( name, type, value ) in post_field_info:
+                if time_left < 1:
                     
-                    if type == CC.FIELD_VERIFICATION_RECAPTCHA:
-                        
-                        if value is None:
-                            
-                            wait = True
-                            
-                            break
-                            
-                        else:
-                            
-                            ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
-                            
-                            if HC.GetNow() > captcha_runs_out or not ready:
-                                
-                                wait = True
-                                
-                                break
-                                
-                            
-                        
+                    media_to_dump = self._media_list.GetSortedMedia()[ self._next_dump_index ]
                     
-                
-                if wait: self._progress_info.SetLabel( 'waiting for captcha' )
-                else:
+                    wait = False
                     
-                    self._progress_info.SetLabel( 'dumping' ) # 100% cpu time here - may or may not be desirable
+                    if self._current_media == media_to_dump: self._FreezeCurrentMediaPostInfo()
                     
-                    post_fields = []
-                    
-                    for ( name, ( type, field ) ) in self._thread_fields.items():
-                        
-                        post_fields.append( ( name, type, field.GetValue() ) )
-                        
+                    ( dump_status_enum, dump_status_string, post_field_info ) = self._media_to_dump_info[ media_to_dump ]
                     
                     for ( name, type, value ) in post_field_info:
                         
                         if type == CC.FIELD_VERIFICATION_RECAPTCHA:
                             
-                            ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
+                            if value is None:
+                                
+                                wait = True
+                                
+                                break
+                                
+                            else:
+                                
+                                ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
+                                
+                                if HC.GetNow() > captcha_runs_out or not ready:
+                                    
+                                    wait = True
+                                    
+                                    break
+                                    
+                                
                             
-                            post_fields.append( ( 'recaptcha_challenge_field', type, challenge ) )
-                            post_fields.append( ( 'recaptcha_response_field', type, entry ) )
-                            
-                        elif type == CC.FIELD_COMMENT:
-                            
-                            ( initial, append ) = value
-                            
-                            comment = initial
-                            
-                            if len( append ) > 0: comment += os.linesep + os.linesep + append
-                            
-                            post_fields.append( ( name, type, comment ) )
-                            
-                        else: post_fields.append( ( name, type, value ) )
                         
                     
-                    ( hash, ) = media_to_dump.GetDisplayMedia().GetHashes()
+                    if wait: self._progress_info.SetLabel( 'waiting for captcha' )
+                    else:
+                        
+                        self._progress_info.SetLabel( 'dumping' ) # 100% cpu time here - may or may not be desirable
+                        
+                        post_fields = []
+                        
+                        for ( name, ( type, field ) ) in self._thread_fields.items():
+                            
+                            post_fields.append( ( name, type, field.GetValue() ) )
+                            
+                        
+                        for ( name, type, value ) in post_field_info:
+                            
+                            if type == CC.FIELD_VERIFICATION_RECAPTCHA:
+                                
+                                ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
+                                
+                                post_fields.append( ( 'recaptcha_challenge_field', type, challenge ) )
+                                post_fields.append( ( 'recaptcha_response_field', type, entry ) )
+                                
+                            elif type == CC.FIELD_COMMENT:
+                                
+                                ( initial, append ) = value
+                                
+                                comment = initial
+                                
+                                if len( append ) > 0: comment += os.linesep + os.linesep + append
+                                
+                                post_fields.append( ( name, type, comment ) )
+                                
+                            else: post_fields.append( ( name, type, value ) )
+                            
+                        
+                        ( hash, ) = media_to_dump.GetDisplayMedia().GetHashes()
+                        
+                        ( file, mime ) = HC.app.Read( 'file_and_mime', hash )
+                        
+                        post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, mime, file ) ) )
+                        
+                        ( ct, body ) = CC.GenerateDumpMultipartFormDataCTAndBody( post_fields )
+                        
+                        headers = {}
+                        headers[ 'Content-Type' ] = ct
+                        if self._have_4chan_pass: headers[ 'Cookie' ] = 'pass_enabled=1; pass_id=' + self._4chan_token
+                        
+                        self._actually_dumping = True
+                        
+                        threading.Thread( target = self._THREADDoDump, args = ( media_to_dump, post_field_info, headers, body ) ).start()
+                        
                     
-                    ( file, mime ) = HC.app.Read( 'file_and_mime', hash )
-                    
-                    post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, mime, file ) ) )
-                    
-                    ( ct, body ) = CC.GenerateDumpMultipartFormDataCTAndBody( post_fields )
-                    
-                    headers = {}
-                    headers[ 'Content-Type' ] = ct
-                    if self._have_4chan_pass: headers[ 'Cookie' ] = 'pass_enabled=1; pass_id=' + self._4chan_token
-                    
-                    self._actually_dumping = True
-                    
-                    threading.Thread( target = self._THREADDoDump, args = ( media_to_dump, post_field_info, headers, body ) ).start()
-                    
+                else: self._progress_info.SetLabel( 'dumping next file in ' + HC.u( time_left ) + ' seconds' )
                 
-            else: self._progress_info.SetLabel( 'dumping next file in ' + HC.u( time_left ) + ' seconds' )
+            else:
+                
+                if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
+                else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
+                
             
-        else:
+        except Exception as e:
             
-            if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
-            else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
+            ( status, phrase ) = ( 'big error', HC.u( e ) )
+            
+            wx.CallAfter( self.CALLBACKDoneDump, media_to_dump, post_field_info, status, phrase )
             
         
     
@@ -1178,13 +1205,13 @@ class ManagementPanelImport( ManagementPanel ):
         self._import_gauge.SetRange( len( self._import_queue ) )
         
     
-    def CALLBACKImportArgs( self, file, advanced_import_options, service_identifiers_to_tags, url = None, exception = None ):
+    def CALLBACKImportArgs( self, path, advanced_import_options, service_identifiers_to_tags, url = None, exception = None ):
         
         if exception is None:
             
             self._import_current_info.SetLabel( self._GetPreimportStatus() )
             
-            HC.app.WriteDaemon( 'import_file_from_page', self._page_key, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+            HC.app.Write( 'import_file_from_page', self._page_key, path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
             
         else:
             
@@ -1361,21 +1388,22 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
                 
                 path = path_info
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
-                
             elif path_type == 'zip':
                 
                 ( zip_path, name ) = path_info
                 
-                path = zip_path + os.path.sep + name
+                path = HC.GetTempPath()
                 
-                with zipfile.ZipFile( zip_path, 'r' ) as z: file = z.read( name )
+                with HC.o( path, 'wb' ) as f:
+                    
+                    with zipfile.ZipFile( zip_path, 'r' ) as z: f.write( z.read( name ) )
+                    
                 
             
             if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
             else: service_identifiers_to_tags = {}
             
-            wx.CallAfter( self.CALLBACKImportArgs, file, self._advanced_import_options, service_identifiers_to_tags )
+            wx.CallAfter( self.CALLBACKImportArgs, path, self._advanced_import_options, service_identifiers_to_tags )
             
         except Exception as e:
             HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
@@ -1724,11 +1752,15 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     tags = []
                     
                 
+                temp_path = HC.GetTempPath()
+                
+                with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                
                 service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                 
                 advanced_import_options = self._advanced_import_options.GetInfo()
                 
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                 
             
         except Exception as e:
@@ -2055,11 +2087,15 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
                 
                 file = connection.geturl( url )
                 
+                temp_path = HC.GetTempPath()
+                
+                with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                
                 advanced_import_options = self._advanced_import_options.GetInfo()
                 
                 service_identifiers_to_tags = {}
                 
-                wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
+                wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
                 
             
         except Exception as e:
@@ -2268,6 +2304,10 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                     
                     file = connection.geturl( url )
                     
+                    temp_path = HC.GetTempPath()
+                    
+                    with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                    
                     advanced_import_options = self._advanced_import_options.GetInfo()
                     
                     advanced_tag_options = self._advanced_tag_options.GetInfo()
@@ -2276,7 +2316,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                     
                     service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                     
-                    wx.CallAfter( self.CALLBACKImportArgs, file, advanced_import_options, service_identifiers_to_tags, url = url )
+                    wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
                     
                 
             

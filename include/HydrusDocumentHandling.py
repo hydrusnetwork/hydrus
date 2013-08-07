@@ -1,4 +1,3 @@
-import cStringIO
 import HydrusConstants as HC
 import PyPDF2
 import re
@@ -14,18 +13,21 @@ def GetNumWordsFromString( s ):
     
     return num_words
     
-def GetPDFNumWords( file ):
+def GetPDFNumWords( path ):
     
     try:
         
-        pdf_object = PyPDF2.PdfFileReader( cStringIO.StringIO( file ), strict = False )
-        
-        # get.extractText() gives kooky and unreliable results
-        # num_words = sum( [ GetNumWordsFromString( page.extractText() ) for page in pdf_object.pages ] )
-        
-        # so let's just estimate
-        
-        return pdf_object.numPages * 350
+        with HC.o( path, 'rb' ) as f:
+            
+            pdf_object = PyPDF2.PdfFileReader( f, strict = False )
+            
+            # get.extractText() gives kooky and unreliable results
+            # num_words = sum( [ GetNumWordsFromString( page.extractText() ) for page in pdf_object.pages ] )
+            
+            # so let's just estimate
+            
+            return pdf_object.numPages * 350
+            
         
     except: num_words = 0
     

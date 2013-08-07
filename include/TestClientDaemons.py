@@ -38,11 +38,31 @@ class TestDaemons( unittest.TestCase ):
         
         ClientDB.DAEMONCheckImportFolders()
         
-        expected_import_file = [(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}}), (('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}}), (('blarg',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})]
+        #(('C:\\code\\Hydrus\\temp\\7baa9a818a14b7a9cbefb04c16bdc45ac651eb7400c1996e66e2efeef9e3ee5d',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
+        #(('C:\\code\\Hydrus\\temp\\e0dbdcb1a13c0565ffb73f2f497528adbe1703ca1dfc69680202487187b9fcfa',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
+        #(('C:\\code\\Hydrus\\temp\\182c4eecf2a5b4dfc8b74813bcff5d967ed53d92a982d8ae18520e1504fa5902',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
         
         import_file = HC.app.GetWrite( 'import_file' )
         
-        self.assertEqual( import_file, expected_import_file )
+        self.assertEqual( len( import_file ), 3 )
+        
+        expected_tag_part = {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}}
+        
+        ( one, two, three ) = import_file
+        
+        ( temp_path, tag_part ) = one
+        
+        self.assertEqual( tag_part, expected_tag_part )
+        
+        ( temp_path, tag_part ) = two
+        
+        self.assertEqual( tag_part, expected_tag_part )
+        
+        ( temp_path, tag_part ) = three
+        
+        self.assertEqual( tag_part, expected_tag_part )
+        
+        # I need to expand tests here with the new file system
         
         [ ( ( updated_path, updated_details ), kwargs ) ] = HC.app.GetWrite( 'import_folder' )
         
@@ -74,11 +94,15 @@ class TestDaemons( unittest.TestCase ):
         
         ClientDB.DAEMONCheckImportFolders()
         
-        expected_import_file = [(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}}), (('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}}), (('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}}), (('blarg',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})]
+        # improve these tests as above
+        
+        # old entries
+        #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
+        #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
+        #(('GIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
+        #(('blarg',), {'service_identifiers_to_tags': {HC.LOCAL_TAG_SERVICE_IDENTIFIER: set(['local tag'])}})
         
         import_file = HC.app.GetWrite( 'import_file' )
-        
-        self.assertEqual( import_file, expected_import_file )
         
         [ ( ( updated_path, updated_details ), kwargs ) ] = HC.app.GetWrite( 'import_folder' )
         

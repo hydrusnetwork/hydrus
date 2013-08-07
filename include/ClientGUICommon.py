@@ -2032,14 +2032,10 @@ class PopupMessageFiles( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        text = wx.StaticText( self, label = message_string )
-        text.Wrap( 380 )
-        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        
-        button = wx.Button( self, label = 'show files in new page' )
+        button = wx.Button( self, label = message_string )
         button.Bind( wx.EVT_BUTTON, self.EventButton )
+        button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( button, FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )

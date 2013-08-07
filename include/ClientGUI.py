@@ -61,8 +61,6 @@ class FrameGUI( ClientGUICommon.Frame ):
         min_width = 920
         min_height = 600
         
-        self.SetMinSize( ( min_width, min_height ) )
-        
         display_index = wx.Display.GetFromWindow( self )
         
         if display_index != wx.NOT_FOUND:
@@ -75,6 +73,7 @@ class FrameGUI( ClientGUICommon.Frame ):
             initial_height = max( int( display_height * 0.75 ), min_height )
             
             self.SetInitialSize( ( initial_width, initial_height ) )
+            self.SetMinSize( ( 480, 360 ) )
             
         
         self.Maximize()

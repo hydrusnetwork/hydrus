@@ -1,3 +1,9 @@
+import hashlib
+import hsaudiotag
+import hsaudiotag.auto
+import hsaudiotag.flac
+import hsaudiotag.mpeg
+import hsaudiotag.ogg
 import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
@@ -5,30 +11,25 @@ import HydrusExceptions
 import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusVideoHandling
-import mutagen
-import mutagen.flac
-import mutagen.mp3
-import mutagen.mp4
-import mutagen.oggvorbis
 import os
-import cStringIO
 import threading
 import time
 import traceback
 import wx
-from magic import magic
 
 # Mime
 
-magic_mime = magic.Magic( HC.STATIC_DIR + os.path.sep + 'magic.mime', HC.STATIC_DIR + os.path.sep + 'magic.mime.cache' )
+#magic_mime = magic.Magic( HC.STATIC_DIR + os.path.sep + 'magic.mime', HC.STATIC_DIR + os.path.sep + 'magic.mime.cache' )
 
-def GetFileInfo( file, hash ):
+def GetFileInfo( path, hash ):
     
-    size = len( file )
+    info = os.lstat( path )
+    
+    size = info[6]
     
     if size == 0: raise HydrusExceptions.SizeException( 'File is of zero length!' )
     
-    mime = GetMimeFromString( file )
+    mime = GetMime( path )
     
     if mime not in HC.ALLOWED_MIMES: raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
     
@@ -40,7 +41,7 @@ def GetFileInfo( file, hash ):
     
     if mime in HC.IMAGES:
         
-        try: image_container = HydrusImageHandling.RenderImageFromFile( file, hash )
+        try: image_container = HydrusImageHandling.RenderImage( path, hash )
         except: raise HydrusExceptions.ForbiddenException( 'Could not load that file as an image.' )
         
         ( width, height ) = image_container.GetSize()
@@ -53,22 +54,67 @@ def GetFileInfo( file, hash ):
         
     elif mime == HC.APPLICATION_FLASH:
         
-        ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( file )
+        ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
     elif mime == HC.VIDEO_FLV:
         
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( file )
+        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( path )
         
-    elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( file )
-    elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( file )
-    elif mime == HC.AUDIO_OGG: duration = HydrusAudioHandling.GetOGGVorbisDuration( file )
-    elif mime == HC.AUDIO_FLAC: duration = HydrusAudioHandling.GetFLACDuration( file )
+    elif mime == HC.VIDEO_MP4:
+        
+        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetMP4Properties( path )
+        
+    elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( path )
+    elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( path )
+    elif mime == HC.AUDIO_OGG: duration = HydrusAudioHandling.GetOGGVorbisDuration( path )
+    elif mime == HC.AUDIO_FLAC: duration = HydrusAudioHandling.GetFLACDuration( path )
     
     return ( size, mime, width, height, duration, num_frames, num_words )
     
-def GetMimeFromPath( filename ):
+def GetHashFromPath( path ):
     
-    with HC.o( filename, 'rb' ) as f: return GetMimeFromFilePointer( f )
+    h = hashlib.sha256()
+    
+    block_size = 65536
+    
+    with HC.o( path, 'rb' ) as f:
+        
+        next_block = f.read( 65536 )
+        
+        while next_block != '':
+            
+            h.update( next_block )
+            
+            next_block = f.read( 65536 )
+            
+        
+        return h.digest()
+        
+    
+def GetMD5AndSHA1FromPath( path ):
+    
+    h_md5 = hashlib.md5()
+    h_sha1 = hashlib.sha1()
+    
+    block_size = 65536
+    
+    with HC.o( path, 'rb' ) as f:
+        
+        next_block = f.read( 65536 )
+        
+        while next_block != '':
+            
+            h_md5.update( next_block )
+            h_sha1.update( next_block )
+            
+            next_block = f.read( 65536 )
+            
+        
+        md5 = h_md5.digest()
+        sha1 = h_sha1.digest()
+        
+        return ( md5, sha1 )
+        
     
 header_and_mime = [
     ( 0, '\xff\xd8', HC.IMAGE_JPEG ),
@@ -82,66 +128,34 @@ header_and_mime = [
     ( 0, '%PDF', HC.APPLICATION_PDF ),
     ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),
     ( 0, 'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( 4, 'ftypmp4', HC.VIDEO_MP4 )
+    ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
+    ( 0, 'fLaC', HC.AUDIO_FLAC )
     ]
 
-def GetMimeFromFilePointer( f ):
+def GetMime( path ):
     
-    try:
+    with HC.o( path, 'rb' ) as f:
         
-        classification = magic_mime.classify_from_file_object( f )
+        f.seek( 0 )
         
-        if classification in HC.mime_enum_lookup: return HC.mime_enum_lookup[ classification ]
-        else:
-            
-            f.seek( 0 )
-            
-            bit_to_check = f.read( 256 )
-            
-            for ( offset, header, mime ) in header_and_mime:
-                
-                offset_bit_to_check = bit_to_check[ offset: ]
-                
-                if offset_bit_to_check.startswith( header ): return mime
-                
-            
-            f.seek( 0 )
-            
-            path = HC.TEMP_DIR + os.path.sep + 'mime_parsing'
-            
-            with HC.o( path, 'wb' ) as temp_f:
-                
-                block = f.read( 65536 )
-                
-                while block != '':
-                    
-                    temp_f.write( block )
-                    
-                    block = f.read( 65536 )
-                    
-                
-            
-            mutagen_object = mutagen.File( path )
-            
-            if type( mutagen_object ) == mutagen.oggvorbis.OggVorbis: return HC.AUDIO_OGG
-            elif type( mutagen_object ) == mutagen.flac.FLAC: return HC.AUDIO_FLAC
-            elif type( mutagen_object ) == mutagen.mp3.MP3: return HC.AUDIO_MP3
-            elif type( mutagen_object ) == mutagen.mp4.MP4 or mutagen_object is None:
-                
-                # mutagen sometimes does not auto-detect mp3s properly, so try it explicitly
-                mutagen_object = mutagen.mp3.MP3( path )
-                
-                if type( mutagen_object ) == mutagen.mp3.MP3: return HC.AUDIO_MP3
-                
-            
-            return HC.mime_enum_lookup[ 'unknown mime' ]
-            
+        bit_to_check = f.read( 256 )
         
-    except: return HC.APPLICATION_UNKNOWN
     
-def GetMimeFromString( file ):
+    for ( offset, header, mime ) in header_and_mime:
+        
+        offset_bit_to_check = bit_to_check[ offset: ]
+        
+        if offset_bit_to_check.startswith( header ): return mime
+        
     
-    f = cStringIO.StringIO( file )
+    hsaudio_object = hsaudiotag.auto.File( path )
     
-    return GetMimeFromFilePointer( f )
+    if hsaudio_object.valid:
+        
+        if type( hsaudio_object.original ) == hsaudiotag.mpeg.Mpeg: return HC.AUDIO_MP3
+        elif type( hsaudio_object.original ) == hsaudiotag.flac.FLAC: return HC.AUDIO_FLAC
+        elif type( hsaudio_object.original ) == hsaudiotag.ogg.Vorbis: return HC.AUDIO_OGG
+        
+    
+    return HC.APPLICATION_UNKNOWN
     

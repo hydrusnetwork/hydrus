@@ -23,7 +23,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_select_booru( self ):
         
-        HC.app.SetRead( 'boorus', CC.DEFAULT_BOORUS )
+        HC.app.SetRead( 'boorus', CC.DEFAULT_BOORUS.values() )
         
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             

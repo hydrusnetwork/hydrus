@@ -237,12 +237,15 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     for ( name, type, value ) in fields:
         
-        if type in ( FIELD_TEXT, FIELD_COMMENT, FIELD_PASSWORD, FIELD_VERIFICATION_RECAPTCHA, FIELD_THREAD_ID ): m.field( name, HC.u( value ) )
+        if type in ( FIELD_TEXT, FIELD_COMMENT, FIELD_PASSWORD, FIELD_VERIFICATION_RECAPTCHA, FIELD_THREAD_ID ): m.field( name, HC.b( value ) )
         elif type == FIELD_CHECKBOX:
             
             if value: 
                 
-                ( name, value ) = value.split( '/', 1 )
+                # spoiler/on -> name : spoiler, value : on
+                # we don't say true/false for checkboxes
+                
+                ( name, value ) = name.split( '/', 1 )
                 
                 m.field( name, value )
                 
@@ -261,7 +264,7 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
     m = multipart.Multipart()
     
-    for ( name, value ) in fields.items(): m.field( name, HC.u( value ) )
+    for ( name, value ) in fields.items(): m.field( name, HC.b( value ) )
     
     return m.get()
     
@@ -409,13 +412,29 @@ def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_ID
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
-def GetThumbnailPath( hash ):
+def GetThumbnailPath( hash, full_size = True ):
     
     hash_encoded = hash.encode( 'hex' )
     
     first_two_chars = hash_encoded[:2]
     
-    return HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    
+    if not full_size:
+        
+        path += '_resized'
+        
+        if not os.path.exists( path ):
+            
+            thumbnail_dimensions = HC.options[ 'thumbnail_dimensions' ]
+            
+            thumbnail = HydrusImageHandling.GenerateThumbnail( fullsize_path, thumbnail_dimensions )
+            
+            with HC.o( path, 'wb' ) as f: f.write( thumbnail )
+            
+        
+    
+    return path
     
 def IterateAllFilePaths():
     
@@ -485,7 +504,7 @@ def ParseImportablePaths( raw_paths, quiet = False ):
             continue
             
         
-        mime = HydrusFileHandling.GetMimeFromPath( path )
+        mime = HydrusFileHandling.GetMime( path )
         
         if mime in HC.ALLOWED_MIMES: good_paths_info.append( ( 'path', mime, size, path ) )
         elif mime in HC.ARCHIVES:
@@ -561,13 +580,17 @@ def ParseImportablePaths( raw_paths, quiet = False ):
                         
                         for name in z.namelist():
                             
-                            # I originally had zip.open and getmimefromfilepointer, but:
                             # zip is deflate, which means have to read the whole file to read any of the file, so:
                             # the file pointer returned by open doesn't support seek, lol!
                             # so, might as well open the whole damn file
-                            file = z.read( name )
                             
-                            name_mime = HydrusFileHandling.GetMimeFromString( file )
+                            zip_temp_path = HC.GetTempPath()
+                            
+                            with HC.o( zip_temp_path, 'wb' ) as f: f.write( z.read( name ) )
+                            
+                            name_mime = HydrusFileHandling.GetMime( zip_temp_path )
+                            
+                            os.remove( zip_temp_path )
                             
                             if name_mime in HC.ALLOWED_MIMES:
                                 
@@ -702,7 +725,7 @@ class Booru( HC.HydrusYAMLBase ):
     
 sqlite3.register_adapter( Booru, yaml.safe_dump )
 
-DEFAULT_BOORUS = []
+DEFAULT_BOORUS = {}
 
 name = 'gelbooru'
 search_url = 'http://gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
@@ -713,7 +736,7 @@ image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'gelbooru' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'safebooru'
 search_url = 'http://safebooru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
@@ -724,7 +747,7 @@ image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'safebooru' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'e621'
 search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
@@ -733,9 +756,9 @@ advance_by_page_num = True
 thumb_classname = 'thumb'
 image_id = None
 image_data = 'Download'
-tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+tag_classnames_to_namespaces = { 'tag-type-general categorized-tag' : '', 'tag-type-character categorized-tag' : 'character', 'tag-type-copyright categorized-tag' : 'series', 'tag-type-artist categorized-tag' : 'creator', 'tag-type-species categorized-tag' : 'species' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'e621' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'rule34@paheal'
 search_url = 'http://rule34.paheal.net/post/list/%tags%/%index%'
@@ -746,7 +769,7 @@ image_id = 'main_image'
 image_data = None
 tag_classnames_to_namespaces = { 'tag_name' : '' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'rule34@paheal' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'danbooru'
 search_url = 'http://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
@@ -757,7 +780,7 @@ image_id = 'image'
 image_data = None
 tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'danbooru' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'mishimmie'
 search_url = 'http://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'
@@ -768,7 +791,7 @@ image_id = 'main_image'
 image_data = None
 tag_classnames_to_namespaces = { 'tag_name' : '' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'mishimmie' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'rule34@booru.org'
 search_url = 'http://rule34.xxx/index.php?page=post&s=list&tags=%tags%&pid=%index%'
@@ -779,7 +802,7 @@ image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'rule34@booru.org' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'furry@booru.org'
 search_url = 'http://furry.booru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
@@ -790,7 +813,7 @@ image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'furry@booru.org' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'xbooru'
 search_url = 'http://xbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
@@ -801,7 +824,7 @@ image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'xbooru' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'konachan'
 search_url = 'http://konachan.com/post?page=%index%&tags=%tags%'
@@ -812,7 +835,7 @@ image_id = None
 image_data = 'View larger version'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'konachan' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 name = 'tbib'
 search_url = 'http://tbib.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
@@ -823,7 +846,7 @@ image_id = None
 image_data = 'Original image'
 tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
 
-DEFAULT_BOORUS.append( Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+DEFAULT_BOORUS[ 'tbib' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
 class CDPPFileServiceIdentifiers():
     
@@ -1245,50 +1268,80 @@ class DataCache():
         
         self._total_estimated_memory_footprint = 0
         
+        self._lock = threading.Lock()
+        
     
     def Clear( self ):
         
-        self._keys_to_data = {}
-        self._keys_fifo = []
-        
-        self._total_estimated_memory_footprint = 0
+        with self._lock:
+            
+            self._keys_to_data = {}
+            self._keys_fifo = []
+            
+            self._total_estimated_memory_footprint = 0
+            
         
     
     def AddData( self, key, data ):
         
-        if key not in self._keys_to_data:
+        with self._lock:
             
-            while self._total_estimated_memory_footprint > self._options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
+            if key not in self._keys_to_data:
                 
-                deletee_key = self._keys_fifo.pop( 0 )
+                while self._total_estimated_memory_footprint > self._options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
+                    
+                    deletee_key = self._keys_fifo.pop( 0 )
+                    
+                    deletee_data = self._keys_to_data[ deletee_key ]
+                    
+                    self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
+                    
+                    del self._keys_to_data[ deletee_key ]
+                    
                 
-                deletee_data = self._keys_to_data[ deletee_key ]
+                self._keys_to_data[ key ] = data
                 
-                self._total_estimated_memory_footprint -= deletee_data.GetEstimatedMemoryFootprint()
+                self._keys_fifo.append( key )
                 
-                del self._keys_to_data[ deletee_key ]
+                self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
                 
-            
-            self._keys_to_data[ key ] = data
-            
-            self._keys_fifo.append( key )
-            
-            self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
             
         
     
     def GetData( self, key ):
         
-        self._keys_fifo.remove( key )
-        
-        self._keys_fifo.append( key )
-        
-        return self._keys_to_data[ key ]
+        with self._lock:
+            
+            if key not in self._keys_fifo:
+                
+                message = 'Cache error!' + os.linesep
+                
+                message += 'Looking for ' + HC.u( key ) + ', but it was missing.'
+                
+                e = Exception( message )
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+                
+                raise e
+                
+            
+            self._keys_fifo.remove( key )
+            
+            self._keys_fifo.append( key )
+            
+            return self._keys_to_data[ key ]
+            
         
     
-    def GetKeys( self ): return self._keys_to_data.keys()
+    def GetKeys( self ):
+
+        with self._lock: return list( self._keys_to_data.keys() )
+        
     
-    def HasData( self, key ): return key in self._keys_to_data
+    def HasData( self, key ):
+        
+        with self._lock: return key in self._keys_to_data
+        
     
 class FileQueryResult():
     
@@ -2107,7 +2160,7 @@ class RenderedImageCache():
     
     def Clear( self ): self._data_cache.Clear()
     
-    def GetImage( self, hash, resolution ):
+    def GetImage( self, hash, mime, resolution ):
         
         try:
             
@@ -2117,9 +2170,9 @@ class RenderedImageCache():
             elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
             else:
                 
-                file = HC.app.Read( 'file', hash )
+                path = GetFilePath( hash, mime )
                 
-                image_container = HydrusImageHandling.RenderImageFromFile( file, hash, target_resolution = resolution, synchronous = False )
+                image_container = HydrusImageHandling.RenderImage( path, hash, target_resolution = resolution, synchronous = False )
                 
                 self._keys_being_rendered[ key ] = image_container
                 
@@ -2526,11 +2579,17 @@ class ThumbnailCache():
         
         for name in names:
             
-            with HC.o( HC.STATIC_DIR + os.path.sep + name + '.png', 'rb' ) as f: file = f.read()
+            path = HC.STATIC_DIR + os.path.sep + name + '.png'
             
-            thumbnail = HydrusImageHandling.GenerateHydrusBitmapFromFile( HydrusImageHandling.GenerateThumbnailFileFromFile( file, self._options[ 'thumbnail_dimensions' ] ) )
+            thumbnail = HydrusImageHandling.GenerateThumbnail( path, self._options[ 'thumbnail_dimensions' ] )
             
-            self._special_thumbs[ name ] = thumbnail
+            temp_path = HC.GetTempPath()
+            
+            with HC.o( temp_path, 'wb' ) as f: f.write( thumbnail )
+            
+            hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+            
+            self._special_thumbs[ name ] = hydrus_bitmap
             
         
     
@@ -2544,7 +2603,12 @@ class ThumbnailCache():
             
             if not self._data_cache.HasData( hash ):
                 
-                try: hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmapFromFile( HC.app.Read( 'thumbnail', hash ) )
+                try:
+                    
+                    path = GetThumbnailPath( hash, full_size = False )
+                    
+                    hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( path )
+                    
                 except:
                     print( traceback.format_exc() )
                     return self._not_found

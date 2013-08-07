@@ -39,9 +39,7 @@ class FileDB():
             
             thumbnail_path = CC.GetThumbnailPath( hash )
             
-            with HC.o( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
-            
-            phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail )
+            phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
             
             c.execute( 'INSERT OR IGNORE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
             
@@ -53,9 +51,9 @@ class FileDB():
         
         if len( hashes ) > 0:
             
-            export_path = HC.TEMP_DIR
+            export_dir = HC.TEMP_DIR
             
-            if not os.path.exists( export_path ): os.mkdir( export_path )
+            if not os.path.exists( export_dir ): os.mkdir( export_dir )
             
             error_messages = set()
             
@@ -71,7 +69,7 @@ class FileDB():
                     
                     path_from = CC.GetFilePath( hash, mime )
                     
-                    path_to = export_path + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                    path_to = export_dir + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                     
                     shutil.copy( path_from, path_to )
                     
@@ -262,11 +260,9 @@ class FileDB():
             
             if not os.path.exists( path ):
                 
-                with HC.o( fullsize_path, 'rb' ) as f: thumbnail_full = f.read()
-                
                 thumbnail_dimensions = self._options[ 'thumbnail_dimensions' ]
                 
-                thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail_full, thumbnail_dimensions )
+                thumbnail = HydrusImageHandling.GenerateThumbnail( fullsize_path, thumbnail_dimensions )
                 
                 with HC.o( path, 'wb' ) as f: f.write( thumbnail )
                 
@@ -336,13 +332,19 @@ class MessageDB():
                 
                 for file in files:
                     
+                    temp_path = HC.GetTempPath()
+                    
+                    with HC.o( temp_path, 'wb' ) as f: f.write( temp_path )
+                    
                     try:
                         
-                        ( result, hash ) = self._ImportFile( c, file, override_deleted = True ) # what if the file fails?
+                        ( result, hash ) = self._ImportFile( c, temp_path, override_deleted = True ) # what if the file fails?
                         
                         attachment_hashes.append( hash )
                         
                     except: pass
+                    
+                    os.remove( temp_path )
                     
                 
                 hash_ids = self._GetHashIds( c, attachment_hashes )
@@ -2407,14 +2409,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         query_hash_ids = set( self._GetHashIds( c, hashes ) )
         
-        file_service_identifier = search_context.GetFileServiceIdentifier()
-        
-        if file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER: file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER
-        
-        service_id = self._GetServiceId( c, file_service_identifier )
-        
-        query_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ';', ( service_id, ) ) }
-        
         return self._GetMediaResults( c, search_context, query_hash_ids )
         
     
@@ -3025,7 +3019,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return sessions
         
     
-    def _ImportFile( self, c, file, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
+    def _ImportFile( self, c, path, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
         
         result = 'successful'
         
@@ -3035,9 +3029,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         exclude_deleted_files = 'exclude_deleted_files' in advanced_import_options
         
-        file = HydrusImageHandling.ConvertToPngIfBmp( file )
+        HydrusImageHandling.ConvertToPngIfBmp( path )
         
-        hash = hashlib.sha256( file ).digest()
+        hash = HydrusFileHandling.GetHashFromPath( path )
         
         hash_id = self._GetHashId( c, hash )
         
@@ -3073,7 +3067,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if can_add:
             
-            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( file, hash )
+            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, hash )
             
             if width is not None and height is not None:
                 
@@ -3098,26 +3092,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if not os.path.exists( dest_path ):
                 
-                with HC.o( dest_path, 'wb' ) as f: f.write( file )
+                shutil.copy( path, dest_path )
                 
                 os.chmod( dest_path, stat.S_IREAD )
                 
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( file, HC.UNSCALED_THUMBNAIL_DIMENSIONS )
+                thumbnail = HydrusImageHandling.GenerateThumbnail( path )
                 
                 thumbnail_path = CC.GetThumbnailPath( hash )
                 
                 with HC.o( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
                 
-                thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, self._options[ 'thumbnail_dimensions' ] )
+                thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, self._options[ 'thumbnail_dimensions' ] )
                 
                 thumbnail_resized_path = thumbnail_path + '_resized'
                 
                 with HC.o( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
                 
-                phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail )
+                phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
                 
                 # replace is important here!
                 c.execute( 'INSERT OR REPLACE INTO perceptual_hashes VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
@@ -3131,9 +3125,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             self.pub_content_updates( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ content_update ] } )
             
-            md5 = hashlib.md5( file ).digest()
-            
-            sha1 = hashlib.sha1( file ).digest()
+            ( md5, sha1 ) = HydrusFileHandling.GetMD5AndSHA1FromPath( path )
             
             c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1 ) VALUES ( ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ) ) )
             
@@ -3172,11 +3164,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         else: return ( result, hash )
         
     
-    def _ImportFilePage( self, c, page_key, file, advanced_import_options = {}, service_identifiers_to_tags = {}, url = None ):
+    def _ImportFilePage( self, c, page_key, path, advanced_import_options = {}, service_identifiers_to_tags = {}, url = None ):
         
         try:
             
-            ( result, hash, media_result ) = self._ImportFile( c, file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True, url = url )
+            ( result, hash, media_result ) = self._ImportFile( c, path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True, url = url )
             
             if media_result is not None: self.pub( 'add_media_result', page_key, media_result )
             
@@ -4405,6 +4397,8 @@ class DB( ServiceDB ):
         
         ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
         
+        HC.options = self._options
+        
         self._tag_service_precedence = []
         
         self._RebuildTagServicePrecedenceCache( c )
@@ -4707,7 +4701,7 @@ class DB( ServiceDB ):
             
             c.execute( 'INSERT INTO tag_service_precedence ( service_id, precedence ) VALUES ( ?, ? );', ( local_tag_service_id, 0 ) )
             
-            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
+            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', CC.DEFAULT_BOORUS.items() )
             
             for ( site_name, imageboards ) in CC.DEFAULT_IMAGEBOARDS:
                 
@@ -5308,6 +5302,31 @@ class DB( ServiceDB ):
                     c.execute( 'DELETE FROM import_folders;' )
                     
                 
+                if version < 80:
+                    
+                    boorus = []
+                    
+                    name = 'e621'
+                    search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+                    search_separator = '%20'
+                    advance_by_page_num = True
+                    thumb_classname = 'thumb'
+                    image_id = None
+                    image_data = 'Download'
+                    tag_classnames_to_namespaces = { 'tag-type-general categorized-tag' : '', 'tag-type-character categorized-tag' : 'character', 'tag-type-copyright categorized-tag' : 'series', 'tag-type-artist categorized-tag' : 'creator', 'tag-type-species categorized-tag' : 'species' }
+                    
+                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+                    
+                    for booru in boorus:
+                        
+                        name = booru.GetName()
+                        
+                        c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
+                        
+                        c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
+                        
+                    
+                
                 unknown_account = HC.GetUnknownAccount()
                 
                 unknown_account.MakeStale()
@@ -5669,7 +5688,7 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE boorus ( name TEXT PRIMARY KEY, booru TEXT_YAML );', )
             
-            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
+            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', CC.DEFAULT_BOORUS.items() )
             
         
         if version < 33:
@@ -5679,7 +5698,7 @@ class DB( ServiceDB ):
                 
                 c.execute( 'CREATE TABLE boorus ( name TEXT PRIMARY KEY, booru TEXT_YAML );', )
                 
-                c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
+                c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', CC.DEFAULT_BOORUS.items() )
                 
             
             c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES );' )
@@ -6344,7 +6363,7 @@ class DB( ServiceDB ):
                         
                         old_path = HC.CLIENT_FILES_DIR + os.path.sep + filename
                         
-                        mime = HydrusFileHandling.GetMimeFromPath( old_path )
+                        mime = HydrusFileHandling.GetMime( old_path )
                         
                         new_path = old_path + HC.mime_ext_lookup[ mime ]
                         
@@ -6367,7 +6386,7 @@ class DB( ServiceDB ):
             
             c.execute( 'DELETE FROM boorus;' )
             
-            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', [ ( booru.GetName(), booru ) for booru in CC.DEFAULT_BOORUS ] )
+            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', CC.DEFAULT_BOORUS.items() )
             
             ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
@@ -6612,21 +6631,33 @@ class DB( ServiceDB ):
                 
                 hash = request_args[ 'hash' ]
                 
-                file = HC.app.ReadDaemon( 'file', hash )
-                
-                with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
-                
-                response = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
+                try:
+                    
+                    with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+                    
+                    path = CC.GetFilePath( hash, mime )
+                    
+                    with HC.o( path, 'rb' ) as f: file = f.read()
+                    
+                    response = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
+                    
+                except: response = HC.ResponseContext( 404, body = '404 - Not Found' )
                 
             elif request == 'thumbnail':
                 
                 hash = request_args[ 'hash' ]
                 
-                thumbnail = HC.app.ReadDaemon( 'thumbnail', hash )
+                path = CC.GetThumbnailPath( hash )
                 
-                mime = HydrusFileHandling.GetMimeFromString( thumbnail )
-                
-                response = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
+                if os.path.exists( path ):
+                    
+                    mime = HydrusFileHandling.GetMime( path )
+                    
+                    with HC.o( path, 'rb' ) as f: thumbnail = f.read()
+                    
+                    response = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
+                    
+                else: response = HC.ResponseContext( 404, body = '404 - Not Found' )
                 
             
         elif request_type == HC.POST: pass # nothing here yet!
@@ -6954,7 +6985,7 @@ def DAEMONCheckImportFolders():
                     
                     HC.pubsub.pub( 'service_status', 'Importing ' + HC.u( i ) + ' of ' + HC.u( len( all_paths ) ) )
                     
-                    temp_path = HC.TEMP_DIR + os.path.sep + 'import_folder_file'
+                    temp_path = HC.GetTempPath()
                     
                     try:
                         
@@ -6967,8 +6998,6 @@ def DAEMONCheckImportFolders():
                         shutil.copy( path, temp_path )
                         
                         os.chmod( temp_path, stat.S_IWRITE )
-                        
-                        with HC.o( temp_path, 'rb' ) as f: file = f.read()
                         
                     except:
                         
@@ -6985,7 +7014,7 @@ def DAEMONCheckImportFolders():
                             if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
                             else: service_identifiers_to_tags = {}
                             
-                            ( result, hash ) = HC.app.WriteDaemon( 'import_file', file, service_identifiers_to_tags = service_identifiers_to_tags )
+                            ( result, hash ) = HC.app.WriteDaemon( 'import_file', temp_path, service_identifiers_to_tags = service_identifiers_to_tags )
                             
                             if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
                             elif result == 'deleted':
@@ -7003,6 +7032,8 @@ def DAEMONCheckImportFolders():
                             
                             should_action = False
                             
+                        
+                        os.remove( temp_path )
                         
                     
                     if should_action:
@@ -7067,13 +7098,19 @@ def DAEMONDownloadFiles():
                     
                     file = connection.Get( 'file', hash = hash.encode( 'hex' ) )
                     
+                    temp_path = HC.GetTempPath()
+                    
+                    with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                    
                     num_downloads -= 1
                     
                     HC.app.WaitUntilGoodTimeToUseGUIThread()
                     
                     HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
                     
-                    HC.app.WriteDaemon( 'import_file', file )
+                    HC.app.WriteDaemon( 'import_file', temp_path )
+                    
+                    os.remove( temp_path )
                     
                     break
                     
@@ -7167,11 +7204,11 @@ def DAEMONResizeThumbnails():
         
         try:
             
-            with HC.o( thumbnail_path, 'rb' ) as f: thumbnail = f.read()
+            thumbnail_path
             
             options = HC.app.Read( 'options' )
             
-            thumbnail_resized = HydrusImageHandling.GenerateThumbnailFileFromFile( thumbnail, options[ 'thumbnail_dimensions' ] )
+            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, options[ 'thumbnail_dimensions' ] )
             
             thumbnail_resized_path = thumbnail_path + '_resized'
             
@@ -7769,7 +7806,13 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                                 
                                 HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
                                 
-                                ( status, hash ) = HC.app.WriteDaemon( 'import_file', file, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                temp_path = HC.GetTempPath()
+                                
+                                with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                                
+                                ( status, hash ) = HC.app.WriteDaemon( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                
+                                os.remove( temp_path )
                                 
                                 if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
                                 

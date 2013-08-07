@@ -1764,9 +1764,12 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def WaterfallThumbnail( self, page_key, thumbnail, thumbnail_bmp ):
         
-        thumbnail.SetBmp( thumbnail_bmp )
-        
-        self._BlitThumbnail( thumbnail )
+        if self._page_key == page_key:
+            
+            thumbnail.SetBmp( thumbnail_bmp )
+            
+            self._BlitThumbnail( thumbnail )
+            
         
     
 class Selectable():

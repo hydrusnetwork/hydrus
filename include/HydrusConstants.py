@@ -1,5 +1,4 @@
 import collections
-import cStringIO
 import httplib
 import HydrusExceptions
 import HydrusPubSub
@@ -21,6 +20,8 @@ import yaml
 
 o = open
 
+options = {}
+
 # dirs
 
 BASE_DIR = sys.path[0]
@@ -39,7 +40,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 79
+SOFTWARE_VERSION = 80
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -516,6 +517,11 @@ def default_dict_list(): return collections.defaultdict( list )
 
 def default_dict_set(): return collections.defaultdict( set )
 
+def b( text_producing_object ):
+    
+    if type( text_producing_object ) == unicode: return text_producing_object.encode( 'utf-8' )
+    else: return str( text_producing_object )
+    
 def BuildKeyToListDict( pairs ):
     
     d = collections.defaultdict( list )
@@ -963,6 +969,8 @@ def GetShortcutFromEvent( event ):
     
     return ( modifier, key )
     
+def GetTempPath(): return TEMP_DIR + os.path.sep + os.urandom( 32 ).encode( 'hex' )
+
 def IntelligentMassIntersect( sets_to_reduce ):
     
     answer = None

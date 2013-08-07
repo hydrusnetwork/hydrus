@@ -237,20 +237,20 @@ def ParseAccessKey( authorisation_text ):
     
     return access_key
     
-def ParseFileArguments( file ):
+def ParseFileArguments( path ):
     
-    file = HydrusImageHandling.ConvertToPngIfBmp( file )
+    HydrusImageHandling.ConvertToPngIfBmp( path )
     
-    hash = hashlib.sha256( file ).digest()
+    hash = HydrusFileHandling.GetHashFromPath( path )
     
-    try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( file, hash )
+    try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, hash )
     except HydrusExceptions.SizeException: raise HydrusExceptions.ForbiddenException( 'File is of zero length!' )
     except HydrusExceptions.MimeException: raise HydrusExceptions.ForbiddenException( 'Filetype is not permitted!' )
     except Exception as e: raise HydrusExceptions.ForbiddenException( HC.u( e ) )
     
     args = {}
     
-    args[ 'file' ] = file
+    args[ 'path' ] = path
     args[ 'hash' ] = hash
     args[ 'size' ] = size
     args[ 'mime' ] = mime
@@ -263,7 +263,7 @@ def ParseFileArguments( file ):
     
     if mime in HC.IMAGES:
         
-        try: thumbnail = HydrusImageHandling.GenerateThumbnailFileFromFile( file, HC.UNSCALED_THUMBNAIL_DIMENSIONS )
+        try: thumbnail = HydrusImageHandling.GenerateThumbnail( path )
         except: raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file.' )
         
         args[ 'thumbnail' ] = thumbnail
@@ -440,7 +440,44 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                     
                 elif request_type == HC.POST:
                     
-                    body = self.rfile.read( int( self.headers.getheader( 'Content-Length', default = 0 ) ) )
+                    content_length = int( self.headers.getheader( 'Content-Length', default = 0 ) )
+                    
+                    # can do customised test here for max file allowed or whatever
+                    if ( request == 'file' and content_length > 100 * 1024 * 1024 ) or content_length > 10 * 1024 * 1024: raise HydrusExceptions.ForbiddenException( 'That request is too large!' )
+                    
+                    if request == 'file':
+                        
+                        path = HC.GetTempPath()
+                        
+                        num_bytes_still_to_write = content_length
+                        
+                        block_size = 65536
+                        
+                        next_block_size = min( block_size, num_bytes_still_to_write )
+                        
+                        next_block = self.rfile.read( next_block_size )
+                        
+                        num_bytes_still_to_write -= next_block_size
+                        
+                        with HC.o( path, 'wb' ) as f:
+                            
+                            while True:
+                                
+                                f.write( next_block )
+                                
+                                if num_bytes_still_to_write == 0: break
+                                
+                                next_block_size = min( block_size, num_bytes_still_to_write )
+                                
+                                next_block = self.rfile.read( next_block_size )
+                                
+                                num_bytes_still_to_write -= next_block_size
+                                
+                            
+                        
+                        body = path
+                        
+                    else: body = self.rfile.read( content_length )
                     
                     request_args = ParseHTTPPOSTArguments( request, body )
                     request_length = len( body )

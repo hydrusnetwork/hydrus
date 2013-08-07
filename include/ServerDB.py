@@ -94,14 +94,11 @@ class FileDB():
                 if current_storage + size > max_storage: raise HydrusExceptions.ForbiddenException( 'The service is full! It cannot take any more files!' )
                 
             
+            source_path = file_dict[ 'path' ]
+            
             dest_path = GetPath( 'file', hash )
             
-            if not os.path.exists( dest_path ):
-                
-                file = file_dict[ 'file' ]
-                
-                with HC.o( dest_path, 'wb' ) as f: f.write( file )
-                
+            if not os.path.exists( dest_path ): shutil.move( source_path, dest_path )
             
             if 'thumbnail' in file_dict:
                 
@@ -2608,13 +2605,19 @@ class DB( ServiceDB ):
             
         elif request == 'file':
             
-            hash = request_args[ 'hash' ]
-            
-            file = self._GetFile( hash )
-            
-            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
-            
-            response_context = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
+            try:
+                
+                hash = request_args[ 'hash' ]
+                
+                path = GetPath( 'file', hash )
+                
+                with HC.o( path, 'rb' ) as f: file = f.read()
+                
+                with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+                
+                response_context = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
+                
+            except: response_context = HC.ResponseContext( 404, body = '404 - Not Found' )
             
         elif request == 'init':
             
@@ -2694,13 +2697,19 @@ class DB( ServiceDB ):
             
         elif request == 'thumbnail':
             
-            hash = request_args[ 'hash' ]
-            
-            thumbnail = self._GetThumbnail( hash )
-            
-            mime = HydrusFileHandling.GetMimeFromString( thumbnail )
-            
-            response_context = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
+            try:
+                
+                hash = request_args[ 'hash' ]
+                
+                path = GetPath( 'thumbnail', hash )
+                
+                mime = HydrusFileHandling.GetMime( thumbnail )
+                
+                with HC.o( path, 'rb' ) as f: thumbnail = f.read()
+                
+                response_context = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
+                
+            except: response_context = HC.ResponseContext( 404, body = '404 - Not Found' )
             
         elif request == 'update':
             

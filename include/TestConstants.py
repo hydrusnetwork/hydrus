@@ -21,9 +21,12 @@ def GenerateClientServiceIdentifier( service_type ):
     
 class FakeFile():
     
-    def __init__( self, data ):
+    def __init__( self, path, mode ):
         
-        self._data = data
+        self._path = path
+        self._mode = mode
+        
+        self._data = ''
         
     
     def __enter__( self ): return self

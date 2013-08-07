@@ -519,6 +519,24 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
         
+        min_width = 920
+        min_height = 600
+        
+        display_index = wx.Display.GetFromWindow( self )
+        
+        if display_index != wx.NOT_FOUND:
+            
+            display = wx.Display( display_index )
+            
+            ( display_width, display_height ) = display.GetGeometry().GetSize()
+            
+            initial_width = max( int( display_width * 0.75 ), min_width )
+            initial_height = max( int( display_height * 0.75 ), min_height )
+            
+            self.SetInitialSize( ( initial_width, initial_height ) )
+            self.SetMinSize( ( 480, 360 ) )
+            
+        
         if self._options[ 'fullscreen_borderless' ]:
             
             self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
@@ -702,6 +720,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
             hash = media.GetHash()
             
+            mime = media.GetMime()
+            
             if media.GetMime() in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                 
                 ( media_width, media_height ) = media.GetResolution()
@@ -718,7 +738,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 resolution_to_request = ( int( round( zoom * media_width ) ), int( round( zoom * media_height ) ) )
                 
-                if not self._image_cache.HasImage( hash, resolution_to_request ): wx.CallLater( delay, self._image_cache.GetImage, hash, resolution_to_request )
+                if not self._image_cache.HasImage( hash, resolution_to_request ): wx.CallLater( delay, self._image_cache.GetImage, hash, mime, resolution_to_request )
                 
             
         
@@ -1379,6 +1399,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                     if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                         
+                        tag = action
+                        
                         tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
                         
                         current = tags_manager.GetCurrent()
@@ -1387,16 +1409,24 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                         
                         if service_type == HC.LOCAL_TAG:
                             
-                            if action in current: content_update_action = HC.CONTENT_UPDATE_DELETE
+                            if tag in current: content_update_action = HC.CONTENT_UPDATE_DELETE
                             else: content_update_action = HC.CONTENT_UPDATE_ADD
                             
-                            row = ( action, hashes )
+                            tag_parents_manager = HC.app.GetTagParentsManager()
+                            
+                            parents = tag_parents_manager.GetParents( service_identifier, tag )
+                            
+                            tags = [ tag ]
+                            
+                            tags.extend( parents )
+                            
+                            rows = [ ( tag, hashes ) for tag in tags ]
                             
                         else:
                             
-                            if action in current:
+                            if tag in current:
                                 
-                                if action in petitioned: edit_log = [ ( HC.CONTENT_UPDATE_RESCIND_PETITION, action ) ]
+                                if tag in petitioned: edit_log = [ ( HC.CONTENT_UPDATE_RESCIND_PETITION, tag ) ]
                                 else:
                                     
                                     message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
@@ -1407,7 +1437,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                             
                                             content_update_action = HC.CONTENT_UPDATE_PETITION
                                             
-                                            row = ( dlg.GetValue(), action, hashes )
+                                            rows = [ ( dlg.GetValue(), tag, hashes ) ]
                                             
                                         else: return
                                         
@@ -1415,26 +1445,36 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                 
                             else:
                                 
-                                if action in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PENDING
+                                if tag in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PENDING
                                 else: content_update_action = HC.CONTENT_UPDATE_PENDING
                                 
-                                row = ( action, hashes )
+                                tag_parents_manager = HC.app.GetTagParentsManager()
+                                
+                                parents = tag_parents_manager.GetParents( service_identifier, tag )
+                                
+                                tags = [ tag ]
+                                
+                                tags.extend( parents )
+                                
+                                rows = [ ( tag, hashes ) for tag in tags ]
                                 
                             
                         
-                        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, content_update_action, row )
+                        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, content_update_action, row ) for row in rows ]
                         
                     elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                         
                         # maybe this needs to be more complicated, if action is, say, remove the rating?
                         # ratings needs a good look at anyway
                         
-                        row = ( action, hashes )
+                        rating = action
                         
-                        content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row )
+                        row = ( rating, hashes )
+                        
+                        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
                         
                     
-                    HC.app.Write( 'content_updates', { service_identifier : [ content_update ] } )
+                    HC.app.Write( 'content_updates', { service_identifier : content_updates } )
                     
                 
             else:
@@ -3770,7 +3810,7 @@ class Image( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._image_container is None: self._image_container = self._image_cache.GetImage( self._media.GetHash(), ( my_width, my_height ) )
+                if self._image_container is None: self._image_container = self._image_cache.GetImage( self._media.GetHash(), self._media.GetMime(), ( my_width, my_height ) )
                 else:
                     
                     ( image_width, image_height ) = self._image_container.GetSize()
@@ -3781,7 +3821,7 @@ class Image( wx.Window ):
                         
                         full_resolution = self._image_container.GetResolution()
                         
-                        self._image_container = self._image_cache.GetImage( self._media.GetHash(), full_resolution )
+                        self._image_container = self._image_cache.GetImage( self._media.GetHash(), self._media.GetMime(), full_resolution )
                         
                     
                 
