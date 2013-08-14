@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 81</h3></li>
+				<ul>
+					<li>mp4 added</li>
+					<li>mp4 mime search added</li>
+					<li>wma added</li>
+					<li>wma mime search added</li>
+					<li>wmv added</li>
+					<li>wmv mime search added</li>
+					<li>changed to video and audio icons, rather than one for each mime</li>
+					<li>popup messages now dismiss on RIGHT_UP rather than RIGHT_DOWN</li>
+					<li>moved many more messagebox errors to the new popup error system</li>
+					<li>cleaned up clientgui's superfluous error handling</li>
+					<li>rewrote error redirection to new popup system</li>
+					<li>more error overhaul</li>
+					<li>print statements overhaul</li>
+					<li>better db updated statement, through popup system</li>
+					<li>traceback show/hide button added to new popup error box</li>
+					<li>copy button added to new popup error box</li>
+					<li>added a 'x more messages/dismiss all' popup when there are more than ten messages to display</li>
+					<li>review services refresh account button will disable until the server replies</li>
+					<li>file system predicate dialogs have better initial focus</li>
+					<li>streamlined server file import and improved respective data usage calc</li>
+					<li>made internal options storage a lot more efficient</li>
+					<li>cleaned up a little cache code</li>
+					<li>export to zip improved to new file handling system</li>
+					<li>upload to repo improved to new file handling system</li>
+					<li>some db write priority stuff switched around and renamed</li>
+					<li>streamlined a little client db workflow</li>
+					<li>neatened client db exception handling</li>
+					<li>db updated message is now a popup</li>
+					<li>removed some orphaned methods in client db</li>
+					<li>client file and thumbnail server requests made a bit faster and neater</li>
+					<li>removed db loop from export and dump file fetch</li>
+					<li>neatened some client and server file 404 exception paths</li>
+					<li>further cleaned up the way file paths are calculated and fetched</li>
+					<li>further cleaned db in relation to files, and removed the old mime cache, for both server and client</li>
+					<li>removed orphaned db export infrastructure</li>
+					<li>add_thumbnails in client made simpler</li>
+					<li>improved http response parsing</li>
+					<li>refactored a bunch of http response processing</li>
+					<li>new exception display system added for caught exceptions</li>
+					<li>fixed a shutdown hang on certain delete orphans failure</li>
+				</ul>
 				<li><h3>version 80</h3></li>
 				<ul>
 					<li>manage tags and ratings dialogs have their initial focus corrected</li>
@@ -29,7 +72,7 @@
 					<li>error reporting in dumper is a little better</li>
 					<li>streamlined how mime is calced</li>
 					<li>massively improved how mp3, flac and ogg are parsed and validated</li>
-					<li>massively improved the internal import files workflow to use less memory and hdd reads and writes, particularly for video (lot of work)</li>
+					<li>massively improved the internal import files workflow to use less memory and hdd reads and writes, particularly for video</li>
 					<li>similarly improved server-side import workflow</li>
 					<li>the way temp dir works is improved</li>
 					<li>sped up server file/thumbnail fetch</li>
