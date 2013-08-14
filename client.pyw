@@ -11,17 +11,17 @@ string.whitespace
 # what a mess!
 
 import locale
-print( locale.setlocale( locale.LC_ALL, '' ) )
+locale.setlocale( locale.LC_ALL, '' )
 
-import sys
 import os
+import sys
 from include import HydrusConstants as HC
 from include import ClientController
 
 initial_sys_stdout = sys.stdout
 initial_sys_stderr = sys.stderr
 
-with HC.o( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
+with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
     
     sys.stdout = f
     sys.stderr = f
@@ -38,7 +38,6 @@ with HC.o( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
         print( traceback.format_exc() )
         
     
-
 sys.stdout = initial_sys_stdout
 sys.stderr = initial_sys_stderr
 

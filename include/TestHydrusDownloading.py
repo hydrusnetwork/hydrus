@@ -10,8 +10,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_newgrounds( self ):
         
-        with HC.o( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
-        with HC.o( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_movies.html' ) as f: newgrounds_gallery_movies = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_movies.html' ) as f: newgrounds_gallery_movies = f.read()
         
         fake_connection = TestConstants.FakeHTTPConnection( host = 'warlord-of-noodles.newgrounds.com' )
         
@@ -36,7 +36,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        with HC.o( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_page.html' ) as f: newgrounds_page = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_page.html' ) as f: newgrounds_page = f.read()
         
         fake_connection = TestConstants.FakeHTTPConnection( host = 'www.newgrounds.com' )
         
@@ -63,8 +63,8 @@ class TestDownloaders( unittest.TestCase ):
     
     def test_booru_e621( self ):
         
-        with HC.o( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()
-        with HC.o( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_page.html' ) as f: e621_page = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_page.html' ) as f: e621_page = f.read()
         
         fake_connection = TestConstants.FakeHTTPConnection( host = 'e621.net' )
         

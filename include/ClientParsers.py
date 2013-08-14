@@ -16,7 +16,7 @@ def Parse4chanPostScreen( html ):
         
         message = 'You are banned from this board! html written to log.'
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( error ) ) )
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
         
         return ( 'big error', message )
         
@@ -31,9 +31,9 @@ def Parse4chanPostScreen( html ):
                 try: print( soup )
                 except: pass
                 
-                message = 'Unknown problem; writing 4chan html to log.'
+                message = 'Unknown problem; html written to log.'
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
                 return ( 'error', message )
                 

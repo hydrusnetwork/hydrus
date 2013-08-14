@@ -150,43 +150,37 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
     
     def EventReauthenticate( self, event ):
         
-        try:
+        token = self._token.GetValue()
+        pin = self._pin.GetValue()
+        
+        if token == '' and pin == '':
             
-            token = self._token.GetValue()
-            pin = self._pin.GetValue()
+            self._timeout = 0
             
-            if token == '' and pin == '':
-                
-                self._timeout = 0
-                
-            else:
-                
-                form_fields = {}
-                
-                form_fields[ 'act' ] = 'do_login'
-                form_fields[ 'id' ] = token
-                form_fields[ 'pin' ] = pin
-                form_fields[ 'long_login' ] = 'yes'
-                
-                ( ct, body ) = CC.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
-                
-                headers = {}
-                headers[ 'Content-Type' ] = ct
-                
-                connection = HC.get_connection( url = 'https://sys.4chan.org/', accept_cookies = True )
-                
-                response = connection.request( 'POST', '/auth', headers = headers, body = body )
-                
-                self._timeout = HC.GetNow() + 365 * 24 * 3600
-                
+        else:
             
-            HC.app.Write( '4chan_pass', token, pin, self._timeout )
+            form_fields = {}
             
-            self._SetStatus()
+            form_fields[ 'act' ] = 'do_login'
+            form_fields[ 'id' ] = token
+            form_fields[ 'pin' ] = pin
+            form_fields[ 'long_login' ] = 'yes'
             
-        except Exception as e:
-            wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( HC.u( e ) )
+            ( ct, body ) = CC.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
+            
+            headers = {}
+            headers[ 'Content-Type' ] = ct
+            
+            connection = HC.get_connection( url = 'https://sys.4chan.org/', accept_cookies = True )
+            
+            response = connection.request( 'POST', '/auth', headers = headers, body = body )
+            
+            self._timeout = HC.GetNow() + 365 * 24 * 3600
+            
+        
+        HC.app.Write( '4chan_pass', token, pin, self._timeout )
+        
+        self._SetStatus()
         
     
 class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
@@ -288,35 +282,31 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        try:
+        with ClientGUIDialogs.DialogInputNewAccountType( self ) as dlg:
             
-            with ClientGUIDialogs.DialogInputNewAccountType( self ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
                 
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    account_type = dlg.GetAccountType()
-                    
-                    title = account_type.GetTitle()
-                    
-                    permissions = account_type.GetPermissions()
-                    
-                    permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-                    
-                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                    
-                    ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
-                    
-                    if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
-                    
-                    self._titles_to_account_types[ title ] = account_type
-                    
-                    self._edit_log.append( ( 'add', account_type ) )
-                    
-                    self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
-                    
+                account_type = dlg.GetAccountType()
+                
+                title = account_type.GetTitle()
+                
+                permissions = account_type.GetPermissions()
+                
+                permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
+                
+                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                
+                ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
+                
+                if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
+                
+                self._titles_to_account_types[ title ] = account_type
+                
+                self._edit_log.append( ( 'add', account_type ) )
+                
+                self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
                 
             
-        except Exception as e: wx.MessageBox( HC.u( e ) )
         
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
@@ -362,56 +352,48 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
             account_type = self._titles_to_account_types[ title ]
             
-            try:
+            with ClientGUIDialogs.DialogInputNewAccountType( self, account_type ) as dlg:
                 
-                with ClientGUIDialogs.DialogInputNewAccountType( self, account_type ) as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    old_title = title
+                    
+                    account_type = dlg.GetAccountType()
+                    
+                    title = account_type.GetTitle()
+                    
+                    permissions = account_type.GetPermissions()
+                    
+                    permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
+                    
+                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                    
+                    ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
+                    
+                    if old_title != title:
                         
-                        old_title = title
+                        if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
                         
-                        account_type = dlg.GetAccountType()
-                        
-                        title = account_type.GetTitle()
-                        
-                        permissions = account_type.GetPermissions()
-                        
-                        permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-                        
-                        ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                        
-                        ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
-                        
-                        if old_title != title:
-                            
-                            if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
-                            
-                            del self._titles_to_account_types[ old_title ]
-                            
-                        
-                        self._titles_to_account_types[ title ] = account_type
-                        
-                        self._edit_log.append( ( 'edit', ( old_title, account_type ) ) )
-                        
-                        self._ctrl_account_types.UpdateRow( index, ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
+                        del self._titles_to_account_types[ old_title ]
                         
                     
+                    self._titles_to_account_types[ title ] = account_type
+                    
+                    self._edit_log.append( ( 'edit', ( old_title, account_type ) ) )
+                    
+                    self._ctrl_account_types.UpdateRow( index, ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
+                    
                 
-            except Exception as e: wx.MessageBox( HC.u( e ) )
             
         
     
     def EventOK( self, event ):
         
-        try:
-            
-            service = HC.app.Read( 'service', self._service_identifier )
-            
-            connection = service.GetConnection()
-            
-            connection.Post( 'account_types_modification', edit_log = self._edit_log )
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        service = HC.app.Read( 'service', self._service_identifier )
+        
+        connection = service.GetConnection()
+        
+        connection.Post( 'account_types_modification', edit_log = self._edit_log )
         
         self.EndModal( wx.ID_OK )
         
@@ -544,7 +526,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( booru ) )
+                    with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( booru ) )
                     
                 
             
@@ -586,7 +568,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             try:
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
+                with open( path, 'rb' ) as f: file = f.read()
                 
                 thing = yaml.safe_load( file )
                 
@@ -1033,50 +1015,41 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
+                contact_address = dlg.GetValue()
+                
                 try:
                     
-                    contact_address = dlg.GetValue()
+                    ( contact_key_encoded, address ) = contact_address.split( '@' )
                     
-                    try:
-                        
-                        ( contact_key_encoded, address ) = contact_address.split( '@' )
-                        
-                        contact_key = contact_key_encoded.decode( 'hex' )
-                        
-                        ( host, port ) = address.split( ':' )
-                        
-                        port = int( port )
-                        
-                    except: raise Exception( 'Could not parse the address!' )
+                    contact_key = contact_key_encoded.decode( 'hex' )
                     
-                    name = contact_key_encoded
+                    ( host, port ) = address.split( ':' )
                     
-                    contact = ClientConstantsMessages.Contact( None, name, host, port )
+                    port = int( port )
                     
-                    try:
-                        
-                        connection = contact.GetConnection()
-                        
-                        public_key = connection.Get( 'public_key', contact_key = contact_key.encode( 'hex' ) )
-                        
-                    except: raise Exception( 'Could not fetch the contact\'s public key from the address:' + os.linesep + traceback.format_exc() )
+                except: raise Exception( 'Could not parse the address!' )
+                
+                name = contact_key_encoded
+                
+                contact = ClientConstantsMessages.Contact( None, name, host, port )
+                
+                try:
                     
-                    contact = ClientConstantsMessages.Contact( public_key, name, host, port )
+                    connection = contact.GetConnection()
                     
-                    self._edit_log.append( ( 'add', contact ) )
+                    public_key = connection.Get( 'public_key', contact_key = contact_key.encode( 'hex' ) )
                     
-                    page = self._Panel( self._contacts, contact, is_identity = False )
-                    
-                    self._deletable_names.add( name )
-                    
-                    self._contacts.AddPage( page, name, select = True )
-                    
-                except Exception as e:
-                    
-                    wx.MessageBox( HC.u( e ) )
-                    
-                    self.EventAddByContactAddress( event )
-                    
+                except: raise Exception( 'Could not fetch the contact\'s public key from the address:' + os.linesep + traceback.format_exc() )
+                
+                contact = ClientConstantsMessages.Contact( public_key, name, host, port )
+                
+                self._edit_log.append( ( 'add', contact ) )
+                
+                page = self._Panel( self._contacts, contact, is_identity = False )
+                
+                self._deletable_names.add( name )
+                
+                self._contacts.AddPage( page, name, select = True )
                 
             
         
@@ -1095,34 +1068,25 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                try:
-                    
-                    name = dlg.GetValue()
-                    
-                    if self._contacts.NameExists( name ) or self._contacts.NameExists( ' identity - ' + name ) or name == 'Anonymous': raise Exception( 'That name is already in use!' )
-                    
-                    if name == '': raise Exception( 'Please enter a nickname for the service.' )
-                    
-                    public_key = None
-                    host = 'hostname'
-                    port = 45871
-                    
-                    contact = ClientConstantsMessages.Contact( public_key, name, host, port )
-                    
-                    self._edit_log.append( ( 'add', contact ) )
-                    
-                    page = self._Panel( self._contacts, contact, is_identity = False )
-                    
-                    self._deletable_names.add( name )
-                    
-                    self._contacts.AddPage( page, name, select = True )
-                    
-                except Exception as e:
-                    
-                    wx.MessageBox( HC.u( e ) )
-                    
-                    self.EventAddManually( event )
-                    
+                name = dlg.GetValue()
+                
+                if self._contacts.NameExists( name ) or self._contacts.NameExists( ' identity - ' + name ) or name == 'Anonymous': raise Exception( 'That name is already in use!' )
+                
+                if name == '': raise Exception( 'Please enter a nickname for the service.' )
+                
+                public_key = None
+                host = 'hostname'
+                port = 45871
+                
+                contact = ClientConstantsMessages.Contact( public_key, name, host, port )
+                
+                self._edit_log.append( ( 'add', contact ) )
+                
+                page = self._Panel( self._contacts, contact, is_identity = False )
+                
+                self._deletable_names.add( name )
+                
+                self._contacts.AddPage( page, name, select = True )
                 
             
         
@@ -1169,7 +1133,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
                         
                     
                 
@@ -1179,7 +1143,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( contact ) )
                         
                     
                 
@@ -1241,7 +1205,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             try:
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
+                with open( path, 'rb' ) as f: file = f.read()
                 
                 obj = yaml.safe_load( file )
                 
@@ -1583,7 +1547,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( dict ) )
+                    with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( dict ) )
                     
                 
             
@@ -1625,7 +1589,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             try:
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
+                with open( path, 'rb' ) as f: file = f.read()
                 
                 thing = yaml.safe_load( file )
                 
@@ -1775,7 +1739,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( imageboard ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( imageboard ) )
                         
                     
                 
@@ -2027,28 +1991,24 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             def EventAdd( self, event ):
                 
-                try:
+                with ClientGUIDialogs.DialogInputNewFormField( self ) as dlg:
                     
-                    with ClientGUIDialogs.DialogInputNewFormField( self ) as dlg:
+                    if dlg.ShowModal() == wx.ID_OK:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
+                        ( name, type, default, editable ) = dlg.GetFormField()
+                        
+                        if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]:
                             
-                            ( name, type, default, editable ) = dlg.GetFormField()
+                            wx.MessageBox( 'There is already a field named ' + name )
                             
-                            if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]:
-                                
-                                wx.MessageBox( 'There is already a field named ' + name )
-                                
-                                self.EventAdd( event )
-                                
-                                return
-                                
+                            self.EventAdd( event )
                             
-                            self._form_fields.Append( ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                            return
                             
                         
+                        self._form_fields.Append( ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                        
                     
-                except Exception as e: wx.MessageBox( HC.u( e ) )
                 
             
             def EventAddMime( self, event ):
@@ -2084,26 +2044,22 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     form_field = ( name, type, default, editable )
                     
-                    try:
+                    with ClientGUIDialogs.DialogInputNewFormField( self, form_field ) as dlg:
                         
-                        with ClientGUIDialogs.DialogInputNewFormField( self, form_field ) as dlg:
+                        if dlg.ShowModal() == wx.ID_OK:
                             
-                            if dlg.ShowModal() == wx.ID_OK:
+                            old_name = name
+                            
+                            ( name, type, default, editable ) = dlg.GetFormField()
+                            
+                            if old_name != name:
                                 
-                                old_name = name
-                                
-                                ( name, type, default, editable ) = dlg.GetFormField()
-                                
-                                if old_name != name:
-                                    
-                                    if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]: raise Exception( 'You already have a form field called ' + name + '; delete or edit that one first' )
-                                    
-                                
-                                self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                                if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]: raise Exception( 'You already have a form field called ' + name + '; delete or edit that one first' )
                                 
                             
+                            self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                            
                         
-                    except Exception as e: wx.MessageBox( HC.u( e ) )
                     
                 
             
@@ -2719,7 +2675,7 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             self._colour_page = wx.Panel( self._listbook )
             self._colour_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._namespace_colours = ClientGUICommon.TagsBoxOptions( self._colour_page, self._options[ 'namespace_colours' ] )
+            self._namespace_colours = ClientGUICommon.TagsBoxOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
             
             self._edit_namespace_colour = wx.Button( self._colour_page, label = 'edit selected' )
             self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
@@ -2734,7 +2690,7 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             self._sort_by_page = wx.Panel( self._listbook )
             self._sort_by_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._default_sort = ClientGUICommon.ChoiceSort( self._sort_by_page, sort_by = self._options[ 'sort_by' ] )
+            self._default_sort = ClientGUICommon.ChoiceSort( self._sort_by_page, sort_by = HC.options[ 'sort_by' ] )
             
             self._default_collect = ClientGUICommon.CheckboxCollect( self._sort_by_page )
             
@@ -2777,52 +2733,52 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            if self._options[ 'export_path' ] is not None: self._export_location.SetPath( HC.ConvertPortablePathToAbsPath( self._options[ 'export_path' ] ) )
+            if HC.options[ 'export_path' ] is not None: self._export_location.SetPath( HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] ) )
             
-            self._exclude_deleted_files.SetValue( self._options[ 'exclude_deleted_files' ] )
+            self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
             
-            self._thumbnail_cache_size.SetValue( int( self._options[ 'thumbnail_cache_size' ] / 1048576 ) )
+            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
             
-            self._preview_cache_size.SetValue( int( self._options[ 'preview_cache_size' ] / 1048576 ) )
+            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
             
-            self._fullscreen_cache_size.SetValue( int( self._options[ 'fullscreen_cache_size' ] / 1048576 ) )
+            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
             
-            ( thumbnail_width, thumbnail_height ) = self._options[ 'thumbnail_dimensions' ]
+            ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
             self._thumbnail_width.SetValue( thumbnail_width )
             
             self._thumbnail_height.SetValue( thumbnail_height )
             
-            self._num_autocomplete_chars.SetValue( self._options[ 'num_autocomplete_chars' ] )
+            self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
             
             #
             
-            self._confirm_client_exit.SetValue( self._options[ 'confirm_client_exit' ] )
+            self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
             
-            self._gui_capitalisation.SetValue( self._options[ 'gui_capitalisation' ] )
+            self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
             
-            self._gui_show_all_tags_in_autocomplete.SetValue( self._options[ 'show_all_tags_in_autocomplete' ] )
+            self._gui_show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
             
-            if self._options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
-            elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
-            elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
-            elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
+            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
             service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
             for service_identifier in service_identifiers: self._default_tag_repository.Append( service_identifier.GetName(), service_identifier )
             
-            self._default_tag_repository.SetStringSelection( self._options[ 'default_tag_repository' ].GetName() )
+            self._default_tag_repository.SetStringSelection( HC.options[ 'default_tag_repository' ].GetName() )
             
-            self._fullscreen_borderless.SetValue( self._options[ 'fullscreen_borderless' ] )
-            
-            #
-            
-            self._play_dumper_noises.SetValue( self._options[ 'play_dumper_noises' ] )
+            self._fullscreen_borderless.SetValue( HC.options[ 'fullscreen_borderless' ] )
             
             #
             
-            system_predicates = self._options[ 'file_system_predicates' ]
+            self._play_dumper_noises.SetValue( HC.options[ 'play_dumper_noises' ] )
+            
+            #
+            
+            system_predicates = HC.options[ 'file_system_predicates' ]
             
             ( sign, years, months, days ) = system_predicates[ 'age' ]
             
@@ -2894,11 +2850,11 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             
             #
             
-            for ( sort_by_type, sort_by ) in self._options[ 'sort_by' ]: self._sort_by.Append( '-'.join( sort_by ), sort_by )
+            for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]: self._sort_by.Append( '-'.join( sort_by ), sort_by )
             
             #
             
-            for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items():
+            for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
                 
                 for ( key, action ) in key_dict.items():
                     
@@ -3241,6 +3197,8 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             
         elif media == 'video':
             
+            self._file_system_predicate_mime_type.Append( 'any', HC.VIDEO )
+            self._file_system_predicate_mime_type.Append( 'mp4', HC.VIDEO_MP4 )
             self._file_system_predicate_mime_type.Append( 'x-flv', HC.VIDEO_FLV )
             
         
@@ -3298,34 +3256,34 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        self._options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
+        HC.options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
         
-        self._options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
-        self._options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
-        self._options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
-        self._options[ 'fullscreen_borderless' ] = self._fullscreen_borderless.GetValue()
+        HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
+        HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
+        HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
+        HC.options[ 'fullscreen_borderless' ] = self._fullscreen_borderless.GetValue()
         
-        self._options[ 'export_path' ] = HC.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
-        self._options[ 'default_sort' ] = self._default_sort.GetSelection() 
-        self._options[ 'default_collect' ] = self._default_collect.GetChoice()
+        HC.options[ 'export_path' ] = HC.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
+        HC.options[ 'default_sort' ] = self._default_sort.GetSelection() 
+        HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
         
-        self._options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
+        HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
         
-        self._options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
-        self._options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
-        self._options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+        HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
+        HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
+        HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
         
-        self._options[ 'thumbnail_dimensions' ] = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
+        HC.options[ 'thumbnail_dimensions' ] = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
         
-        self._options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
+        HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
         
-        self._options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
+        HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
         
         sort_by_choices = []
         
         for sort_by in [ self._sort_by.GetClientData( i ) for i in range( self._sort_by.GetCount() ) ]: sort_by_choices.append( ( 'namespaces', sort_by ) )
         
-        self._options[ 'sort_by' ] = sort_by_choices
+        HC.options[ 'sort_by' ] = sort_by_choices
         
         system_predicates = {}
         
@@ -3342,7 +3300,7 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
         system_predicates[ 'width' ] = ( self._file_system_predicate_width_sign.GetSelection(), self._file_system_predicate_width.GetValue() )
         system_predicates[ 'num_words' ] = ( self._file_system_predicate_num_words_sign.GetSelection(), self._file_system_predicate_num_words.GetValue() )
         
-        self._options[ 'file_system_predicates' ] = system_predicates
+        HC.options[ 'file_system_predicates' ] = system_predicates
         
         shortcuts = {}
         
@@ -3353,10 +3311,10 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
         
         for ( modifier, key, action ) in self._shortcuts.GetClientData(): shortcuts[ modifier ][ key ] = action
         
-        self._options[ 'shortcuts' ] = shortcuts
+        HC.options[ 'shortcuts' ] = shortcuts
         
-        self._options[ 'default_tag_repository' ] = self._default_tag_repository.GetClientData( self._default_tag_repository.GetSelection() )
-        self._options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
+        HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetClientData( self._default_tag_repository.GetSelection() )
+        HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
         
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
@@ -3405,23 +3363,19 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             
             ( modifier, key, action ) = self._shortcuts.GetClientData( index )
             
-            try:
+            with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
                 
-                with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        ( modifier, key, action ) = dlg.GetInfo()
-                        
-                        ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
-                        
-                        self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                        
-                        self._SortListCtrl()
-                        
+                    ( modifier, key, action ) = dlg.GetInfo()
+                    
+                    ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
+                    
+                    self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
+                    
+                    self._SortListCtrl()
                     
                 
-            except Exception as e: wx.MessageBox( HC.u( e ) )
             
         
     
@@ -3719,37 +3673,31 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
     
     def EventTest( self, event ):
         
-        try:
-            
-            id = self._id.GetValue()
-            password = self._password.GetValue()
-            
-            form_fields = {}
-            
-            form_fields[ 'mode' ] = 'login'
-            form_fields[ 'pixiv_id' ] = id
-            form_fields[ 'pass' ] = password
-            
-            body = urllib.urlencode( form_fields )
-            
-            headers = {}
-            headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-            
-            connection = HC.get_connection( url = 'http://www.pixiv.net/', accept_cookies = True )
-            
-            response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
-            
-            cookies = connection.GetCookies()
-            
-            # _ only given to logged in php sessions
-            if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
-            else: self._status.SetLabel( 'Did not work!' )
-            
-            wx.CallLater( 2000, self._status.SetLabel, '' )
-            
-        except Exception as e:
-            wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( HC.u( e ) )
+        id = self._id.GetValue()
+        password = self._password.GetValue()
+        
+        form_fields = {}
+        
+        form_fields[ 'mode' ] = 'login'
+        form_fields[ 'pixiv_id' ] = id
+        form_fields[ 'pass' ] = password
+        
+        body = urllib.urlencode( form_fields )
+        
+        headers = {}
+        headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+        
+        connection = HC.get_connection( url = 'http://www.pixiv.net/', accept_cookies = True )
+        
+        response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
+        
+        cookies = connection.GetCookies()
+        
+        # _ only given to logged in php sessions
+        if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
+        else: self._status.SetLabel( 'Did not work!' )
+        
+        wx.CallLater( 2000, self._status.SetLabel, '' )
         
     
 class DialogManageRatings( ClientGUIDialogs.Dialog ):
@@ -3863,7 +3811,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -4253,29 +4201,25 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        try:
-            
-            self._CheckCurrentServiceIsValid()
-            
-            service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
-            
-            existing_ports = [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]
-            
-            port = HC.DEFAULT_SERVICE_PORT
-            
-            while port in existing_ports: port += 1
-            
-            service_identifier = HC.ServerServiceIdentifier( service_type, port )
-            
-            self._edit_log.append( ( HC.ADD, service_identifier ) )
-            
-            page = self._Panel( self._services_listbook, service_identifier )
-            
-            name = HC.service_string_lookup[ service_type ]
-            
-            self._services_listbook.AddPage( page, name, select = True )
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        self._CheckCurrentServiceIsValid()
+        
+        service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
+        
+        existing_ports = [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]
+        
+        port = HC.DEFAULT_SERVICE_PORT
+        
+        while port in existing_ports: port += 1
+        
+        service_identifier = HC.ServerServiceIdentifier( service_type, port )
+        
+        self._edit_log.append( ( HC.ADD, service_identifier ) )
+        
+        page = self._Panel( self._services_listbook, service_identifier )
+        
+        name = HC.service_string_lookup[ service_type ]
+        
+        self._services_listbook.AddPage( page, name, select = True )
         
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
@@ -4670,7 +4614,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, credentials, extra_info ) ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, credentials, extra_info ) ) )
                         
                     
                 
@@ -4680,7 +4624,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, credentials, extra_info ) ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, credentials, extra_info ) ) )
                         
                     
                 
@@ -4772,7 +4716,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             try:
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
+                with open( path, 'rb' ) as f: file = f.read()
                 
                 ( service_identifier, credentials, extra_info ) = yaml.safe_load( file )
                 
@@ -5300,7 +5244,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
                             
                         
                     
@@ -5310,7 +5254,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
                             
                         
                     
@@ -5391,7 +5335,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             try:
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
+                with open( path, 'rb' ) as f: file = f.read()
                 
                 ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = yaml.safe_load( file )
                 
@@ -5706,7 +5650,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            default_tag_repository = self._options[ 'default_tag_repository' ]
+            default_tag_repository = HC.options[ 'default_tag_repository' ]
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -5740,7 +5684,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -5762,18 +5706,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         if action is not None:
             
-            try:
-                
-                ( command, data ) = action
-                
-                if command == 'set_search_focus': self._SetSearchFocus()
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
-                
+            ( command, data ) = action
+            
+            if command == 'set_search_focus': self._SetSearchFocus()
+            else: event.Skip()
             
         
     
@@ -6176,7 +6112,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 
             
-            default_tag_repository = self._options[ 'default_tag_repository' ]
+            default_tag_repository = HC.options[ 'default_tag_repository' ]
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -6210,7 +6146,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -6232,18 +6168,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         if action is not None:
             
-            try:
-                
-                ( command, data ) = action
-                
-                if command == 'set_search_focus': self._SetSearchFocus()
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
-                
+            ( command, data ) = action
+            
+            if command == 'set_search_focus': self._SetSearchFocus()
+            else: event.Skip()
             
         
     
@@ -6831,7 +6759,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 self._tag_repositories.AddPage( page_info, name )
                 
             
-            default_tag_repository = self._options[ 'default_tag_repository' ]
+            default_tag_repository = HC.options[ 'default_tag_repository' ]
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -6931,7 +6859,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -7153,11 +7081,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 subject_identifiers = [ HC.AccountIdentifier( hash = hash, tag = tag ) for hash in self._hashes ]
                 
-                try:
-                    
-                    with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_identifier, subject_identifiers ) as dlg: dlg.ShowModal()
-                    
-                except Exception as e: wx.MessageBox( HC.u( e ) )
+                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_identifier, subject_identifiers ) as dlg: dlg.ShowModal()
                 
             
         

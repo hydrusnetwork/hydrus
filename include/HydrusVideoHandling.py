@@ -7,7 +7,7 @@ import traceback
 
 def GetFLVProperties( path ):
     
-    with HC.o( path, 'rb' ) as f:
+    with open( path, 'rb' ) as f:
         
         flv = flv_tags.FLV( f )
         
@@ -44,11 +44,11 @@ def GetFLVProperties( path ):
         return ( ( width, height ), duration, num_frames )
         
 
-def GetMP4Properties( path ):
+def GetCVVideoProperties( path ):
     
     cvcapture = cv.CaptureFromFile( path )
     
-    num_frames = cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_COUNT )
+    num_frames = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_COUNT ) )
     
     fps = cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FPS )
     
@@ -56,9 +56,11 @@ def GetMP4Properties( path ):
     
     length_in_ms = int( length_in_seconds * 1000 )
     
-    width = cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_WIDTH )
+    duration = length_in_ms
     
-    height = cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_HEIGHT )
+    width = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_WIDTH ) )
+    
+    height = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_HEIGHT ) )
     
     return ( ( width, height ), duration, num_frames )
     

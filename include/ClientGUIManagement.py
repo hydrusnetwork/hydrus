@@ -261,7 +261,7 @@ class CaptchaControl( wx.Panel ):
             
             temp_path = HC.GetTempPath()
             
-            with HC.o( temp_path, 'wb' ) as f: f.write( jpeg )
+            with open( temp_path, 'wb' ) as f: f.write( jpeg )
             
             self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
             
@@ -357,8 +357,6 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     def __init__( self, parent, page, page_key, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
-        
-        self._options = HC.app.Read( 'options' )
         
         self.SetupScrolling()
         
@@ -754,7 +752,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._actually_dumping = False
         
-        if self._options[ 'play_dumper_noises' ]:
+        if HC.options[ 'play_dumper_noises' ]:
             
             if status == 'success': HydrusAudioHandling.PlayNoise( 'success' )
             else: HydrusAudioHandling.PlayNoise( 'error' )
@@ -813,7 +811,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = ''
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( phrase ) ) )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, phrase ) )
             
             self._progress_info.SetLabel( 'error: ' + phrase )
             
@@ -879,17 +877,10 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if action is not None:
             
-            try:
-                
-                ( command, data ) = action
-                
-                if command == 'advanced_tag_options_changed': self._UpdatePendingInitialComments()
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                
+            ( command, data ) = action
+            
+            if command == 'advanced_tag_options_changed': self._UpdatePendingInitialComments()
+            else: event.Skip()
             
         
     
@@ -1021,9 +1012,12 @@ class ManagementPanelDumper( ManagementPanel ):
                             else: post_fields.append( ( name, type, value ) )
                             
                         
-                        ( hash, ) = media_to_dump.GetDisplayMedia().GetHashes()
+                        hash = media_to_dump.GetHash()
+                        mime = media_to_dump.GetMime()
                         
-                        ( file, mime ) = HC.app.Read( 'file_and_mime', hash )
+                        path = CC.GetFilePath( hash, mime )
+                        
+                        with open( path, 'rb' ) as f: file = f.read()
                         
                         post_fields.append( ( self._file_post_name, CC.FIELD_FILE, ( hash, mime, file ) ) )
                         
@@ -1321,9 +1315,7 @@ class ManagementPanelImport( ManagementPanel ):
                 
                 message = os.linesep + 'Had trouble importing ' + HC.u( self._import_queue[ self._import_queue_position - 1 ] ) + ':' + os.linesep + HC.u( exception )
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
                 self._import_current_info.SetLabel( HC.u( exception ) )
                 
@@ -1394,7 +1386,7 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
                 
                 path = HC.GetTempPath()
                 
-                with HC.o( path, 'wb' ) as f:
+                with open( path, 'wb' ) as f:
                     
                     with zipfile.ZipFile( zip_path, 'r' ) as z: f.write( z.read( name ) )
                     
@@ -1406,9 +1398,11 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
             wx.CallAfter( self.CALLBACKImportArgs, path, self._advanced_import_options, service_identifiers_to_tags )
             
         except Exception as e:
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-            print( traceback.format_exc() )
+            
             wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
+            
+            raise
+            
         
     
     def _GetPreprocessStatus( self ):
@@ -1735,7 +1729,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
                     
-                    HC.app.WriteDaemon( 'content_updates', service_identifiers_to_content_updates )
+                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
                     
                 
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
@@ -1754,7 +1748,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
                 temp_path = HC.GetTempPath()
                 
-                with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                with open( temp_path, 'wb' ) as f: f.write( file )
                 
                 service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                 
@@ -1764,9 +1758,11 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
             
         except Exception as e:
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-            print( traceback.format_exc() )
+            
             wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
+            
+            raise
+            
         
     
     def _THREADDownloadImportItems( self, raw_query ):
@@ -1815,13 +1811,7 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             
             HC.pubsub.pub( 'set_outer_queue_info', self._page_key, '' )
             
-        except HydrusExceptions.NotFoundException: pass
-        except Exception as e:
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-            print( traceback.format_exc() )
-            HC.pubsub.pub( 'set_outer_queue_info', self._page_key, HC.u( e ) )
-        
-        HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
+        finally: HC.pubsub.pub( 'done_adding_to_import_queue', self._page_key )
         
     
     def EventCancelOuterQueue( self, event ):
@@ -2057,51 +2047,44 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
     
     def _THREADGetImportArgs( self, queue_object ):
         
-        try:
+        url = queue_object
+        
+        ( status, hash ) = HC.app.Read( 'url_status', url )
+        
+        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+        
+        if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
+        elif status == 'redundant':
             
-            url = queue_object
+            ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
             
-            ( status, hash ) = HC.app.Read( 'url_status', url )
+            HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+            HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
             
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+        else:
             
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                file = connection.geturl( url )
-                
-                temp_path = HC.GetTempPath()
-                
-                with HC.o( temp_path, 'wb' ) as f: f.write( file )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                service_identifiers_to_tags = {}
-                
-                wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
-                
+            HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
             
-        except Exception as e:
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
+            parse_result = urlparse.urlparse( url )
+            
+            ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+            
+            if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
+            
+            connection = self._connections[ ( scheme, host, port ) ]
+            
+            file = connection.geturl( url )
+            
+            temp_path = HC.GetTempPath()
+            
+            with open( temp_path, 'wb' ) as f: f.write( file )
+            
+            advanced_import_options = self._advanced_import_options.GetInfo()
+            
+            service_identifiers_to_tags = {}
+            
+            wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
+            
         
     
     def _THREADDownloadImportItems( self, url ):
@@ -2258,11 +2241,25 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
     def _THREADGetImportArgs( self, queue_object ):
         
-        try:
+        ( md5, image_name, ext, filename ) = queue_object
+        
+        ( status, hash ) = HC.app.Read( 'md5_status', md5 )
+        
+        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+        
+        if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
+        elif status == 'redundant':
             
-            ( md5, image_name, ext, filename ) = queue_object
+            ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
             
-            ( status, hash ) = HC.app.Read( 'md5_status', md5 )
+            HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+            HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
+            
+        else:
+            
+            url = 'http://images.4chan.org/' + self._4chan_board + '/src/' + image_name + ext
+            
+            ( status, hash ) = HC.app.Read( 'url_status', url )
             
             if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
             
@@ -2276,54 +2273,33 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
             else:
                 
-                url = 'http://images.4chan.org/' + self._4chan_board + '/src/' + image_name + ext
+                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
                 
-                ( status, hash ) = HC.app.Read( 'url_status', url )
+                parse_result = urlparse.urlparse( url )
                 
-                if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
                 
-                if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-                elif status == 'redundant':
-                    
-                    ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
-                    
-                    HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
-                    HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                    
-                else:
-                    
-                    HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
-                    
-                    parse_result = urlparse.urlparse( url )
-                    
-                    ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                    
-                    if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
-                    
-                    connection = self._connections[ ( scheme, host, port ) ]
-                    
-                    file = connection.geturl( url )
-                    
-                    temp_path = HC.GetTempPath()
-                    
-                    with HC.o( temp_path, 'wb' ) as f: f.write( file )
-                    
-                    advanced_import_options = self._advanced_import_options.GetInfo()
-                    
-                    advanced_tag_options = self._advanced_tag_options.GetInfo()
-                    
-                    tags = [ 'filename:' + filename + ext ]
-                    
-                    service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                    
-                    wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
-                    
+                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
+                
+                connection = self._connections[ ( scheme, host, port ) ]
+                
+                file = connection.geturl( url )
+                
+                temp_path = HC.GetTempPath()
+                
+                with open( temp_path, 'wb' ) as f: f.write( file )
+                
+                advanced_import_options = self._advanced_import_options.GetInfo()
+                
+                advanced_tag_options = self._advanced_tag_options.GetInfo()
+                
+                tags = [ 'filename:' + filename + ext ]
+                
+                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
+                
+                wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
                 
             
-        except Exception as e:
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-            print( traceback.format_exc() )
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
         
     
     def _GetPreprocessStatus( self ):
@@ -2558,7 +2534,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         connection.Post( 'update', update = update )
         
-        HC.app.WriteDaemon( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
+        HC.app.Write( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
         
         self._current_petition = None
         

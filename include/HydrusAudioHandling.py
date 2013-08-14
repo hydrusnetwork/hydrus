@@ -49,6 +49,18 @@ def GetOGGVorbisDuration( path ):
     
     return length_in_ms
     
+def GetWMADuration( path ):
+    
+    hsaudio_object = hsaudiotag.wma.WMADecoder( path )
+    
+    if not hsaudio_object.valid: raise Exception( 'WMA file was not valid!' )
+    
+    length_in_seconds = hsaudio_object.duration
+    
+    length_in_ms = int( length_in_seconds * 1000 )
+    
+    return length_in_ms
+    
 def PlayNoise( name ):
     
     if name not in parsed_noises:

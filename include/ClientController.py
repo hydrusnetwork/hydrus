@@ -22,13 +22,7 @@ ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
 
 class Controller( wx.App ):
     
-    def _Read( self, action, *args, **kwargs ):
-        
-        if action == 'options': return self._options
-        elif action == 'file': return self._db.ReadFile( *args, **kwargs )
-        elif action == 'thumbnail': return self._db.ReadThumbnail( *args, **kwargs )
-        else: return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-        
+    def _Read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
     
     def _Write( self, action, priority, synchronous, *args, **kwargs ): return self._db.Write( action, priority, synchronous, *args, **kwargs )
     
@@ -113,15 +107,7 @@ class Controller( wx.App ):
         try: callable( *args, **kwargs )
         except wx._core.PyDeadObjectError: pass
         except TypeError: pass
-        except Exception as e:
-            
-            message = type( e ).__name__ + os.linesep + traceback.format_exc()
-            
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            print( message )
-            
-        
-        pubsubs_queue.task_done()
+        finally: pubsubs_queue.task_done()
         
     
     def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
@@ -165,8 +151,6 @@ class Controller( wx.App ):
         
         try:
             
-            self._options = {} # this is for the db locked dialog
-            
             self._splash = ClientGUI.FrameSplash()
             
             self.SetSplashText( 'log' )
@@ -201,8 +185,6 @@ class Controller( wx.App ):
                     
                 
             
-            self._options = self._db.Read( 'options', HC.HIGH_PRIORITY )
-            
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()
             self._tag_parents_manager = HydrusTags.TagParentsManager()
@@ -211,10 +193,10 @@ class Controller( wx.App ):
             
             self.SetSplashText( 'caches' )
             
-            self._fullscreen_image_cache = CC.RenderedImageCache( self._db, self._options, 'fullscreen' )
-            self._preview_image_cache = CC.RenderedImageCache( self._db, self._options, 'preview' )
+            self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
+            self._preview_image_cache = CC.RenderedImageCache( 'preview' )
             
-            self._thumbnail_cache = CC.ThumbnailCache( self._db, self._options )
+            self._thumbnail_cache = CC.ThumbnailCache()
             
             CC.GlobalBMPs.STATICInitialise()
             
@@ -238,6 +220,7 @@ class Controller( wx.App ):
             self.SetSplashText( 'starting daemons' )
             
             if HC.is_first_start: self._gui.DoFirstStart()
+            if HC.is_db_updated: wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
             
             self._db._InitPostGUI()
             
@@ -276,11 +259,9 @@ class Controller( wx.App ):
     
     def PrepStringForDisplay( self, text ):
         
-        if self._options[ 'gui_capitalisation' ]: return text
+        if HC.options[ 'gui_capitalisation' ]: return text
         else: return text.lower()
         
-    
-    def ProcessServerRequest( self, *args, **kwargs ): return self._db.ProcessRequest( *args, **kwargs )
     
     def Read( self, action, *args, **kwargs ):
         
@@ -325,7 +306,7 @@ class Controller( wx.App ):
         return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
         
     
-    def WriteDaemon( self, action, *args, **kwargs ):
+    def WriteSynchronous( self, action, *args, **kwargs ):
         
         result = self._Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
         
@@ -333,6 +314,4 @@ class Controller( wx.App ):
         
         return result
         
-    
-    def WriteLowPriority( self, action, *args, **kwargs ): return self._Write( action, HC.LOW_PRIORITY, False, *args, **kwargs )
     

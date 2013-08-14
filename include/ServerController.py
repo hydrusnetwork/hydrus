@@ -67,11 +67,7 @@ class Controller( wx.App ):
         
         try: callable( *args, **kwargs )
         except TypeError: pass
-        except Exception as e:
-            
-            print( type( e ) )
-            print( traceback.format_exc() )
-            
+        except Exception as e: HC.ShowException( e )
         
         pubsubs_queue.task_done()
         
@@ -85,7 +81,7 @@ class Controller( wx.App ):
         try: self._db = ServerDB.DB()
         except Exception as e:
             
-            print( traceback.format_exc() )
+            HC.ShowException( e )
             
             return False
             

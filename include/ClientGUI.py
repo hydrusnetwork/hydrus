@@ -89,13 +89,6 @@ class FrameGUI( ClientGUICommon.Frame ):
         
         self._message_manager = ClientGUICommon.PopupMessageManager( self )
         
-        #HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'hello, this is a test message' ) )
-        #HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'this is an error' ) ) )
-        
-        #hashes = { hash.decode( 'hex' ) for hash in [ 'abcd', 'db802063183492dcbcecc8546c258802c8aa65c6201b4eba000541b467574896', '9df53f70560d38d752712afc2ff2f3fc0d2077ce2e522512aa3ce1349c1af813', '06b7e099fde058f96e5575f2ecbcf53feeb036aeb0f86a99a6daf8f4ba70b799' ] }
-        
-        #HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( 'some files got done downloaded', hashes ) ) )
-        
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_CLOSE, self.EventExit )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
@@ -147,7 +140,9 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 ( upload_hashes, update ) = result
                 
-                num_uploads = len( upload_hashes )
+                media_results = HC.app.Read( 'media_results', CC.FileSearchContext( file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER ), upload_hashes )
+                
+                num_uploads = len( media_results )
                 
                 HC.pubsub.pub( 'progress_update', job_key, 1, num_uploads + 3, u'connecting to repository' )
                 
@@ -157,7 +152,11 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 error_messages = set()
                 
-                for ( index, hash ) in enumerate( upload_hashes ):
+                for ( index, media_result ) in enumerate( media_results ):
+                    
+                    hash = media_result.GetHash()
+                    
+                    mime = media_result.GetMime()
                     
                     HC.pubsub.pub( 'progress_update', job_key, index + 2, num_uploads + 3, u'Uploading file ' + HC.ConvertIntToPrettyString( index + 1 ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
                     
@@ -165,7 +164,9 @@ class FrameGUI( ClientGUICommon.Frame ):
                     
                     try:
                         
-                        file = HC.app.Read( 'file', hash )
+                        path = CC.GetFilePath( hash, mime )
+                        
+                        with open( path, 'rb' ) as f: file = f.read()
                         
                         connection.Post( 'file', file = file )
                         
@@ -177,9 +178,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                         
                         HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, 'Error' )
                         
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                        
-                        print( message )
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                         
                         time.sleep( 1 )
                         
@@ -187,22 +186,9 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 if not update.IsEmpty():
                     
-                    try:
-                        
-                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, u'uploading petitions' )
-                        
-                        connection.Post( 'update', update = update )
-                        
-                    except Exception as e:
-                        
-                        message = 'Problem while trying to uploads petitions to '+ service_identifier.GetName() + ':' + os.linesep + traceback.format_exc()
-                        
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                        
-                        print message
-                        
-                        raise
-                        
+                    HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, u'uploading petitions' )
+                    
+                    connection.Post( 'update', update = update )
                     
                 
                 HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 3, u'saving changes to local database' )
@@ -236,24 +222,14 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 HC.pubsub.pub( 'progress_update', job_key, 2, 3, u'posting update' )
                 
-                try: connection.Post( 'update', update = update )
-                except Exception as e:
-                    
-                    message = 'Problem while uploading tags:' + os.linesep + traceback.format_exc()
-                    
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                    
-                    print message
-                    
-                    raise
-                    
+                connection.Post( 'update', update = update )
                 
                 service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
                 
             
             HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
             
-        except Exception as e: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
+        except Exception as e: HC.ShowException( e )
         
         HC.pubsub.pub( 'progress_update', job_key, 3, 3, u'done!' )
         
@@ -269,7 +245,7 @@ class FrameGUI( ClientGUICommon.Frame ):
         aboutinfo.SetVersion( HC.u( HC.SOFTWARE_VERSION ) )
         aboutinfo.SetDescription( CC.CLIENT_DESCRIPTION )
         
-        with HC.o( HC.BASE_DIR + os.path.sep + 'license.txt', 'rb' ) as f: license = f.read()
+        with open( HC.BASE_DIR + os.path.sep + 'license.txt', 'rb' ) as f: license = f.read()
         
         aboutinfo.SetLicense( license )
         
@@ -285,19 +261,15 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                try:
-                    
-                    subject_access_key = dlg.GetValue().decode( 'hex' )
-                    
-                    service = HC.app.Read( 'service', service_identifier )
-                    
-                    connection = service.GetConnection()
-                    
-                    account_info = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
-                    
-                    wx.MessageBox( HC.u( account_info ) )
-                    
-                except Exception as e: wx.MessageBox( HC.u( e ) )
+                subject_access_key = dlg.GetValue().decode( 'hex' )
+                
+                service = HC.app.Read( 'service', service_identifier )
+                
+                connection = service.GetConnection()
+                
+                account_info = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
+                
+                wx.MessageBox( HC.u( account_info ) )
                 
             
         
@@ -310,25 +282,21 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                try:
-                    
-                    edit_log = []
-                    
-                    tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
-                    tag_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45871, '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' ) )
-                    
-                    edit_log.append( ( 'add', ( tag_repo_identifier, tag_repo_credentials, None ) ) )
-                    
-                    file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
-                    file_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45872, '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' ) )
-                    
-                    edit_log.append( ( 'add', ( file_repo_identifier, file_repo_credentials, None ) ) )
-                    
-                    HC.app.Write( 'update_services', edit_log )
-                    
-                    wx.MessageBox( 'Done!' )
-                    
-                except: wx.MessageBox( traceback.format_exc() )
+                edit_log = []
+                
+                tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
+                tag_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45871, '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' ) )
+                
+                edit_log.append( ( 'add', ( tag_repo_identifier, tag_repo_credentials, None ) ) )
+                
+                file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
+                file_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45872, '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' ) )
+                
+                edit_log.append( ( 'add', ( file_repo_identifier, file_repo_credentials, None ) ) )
+                
+                HC.app.Write( 'update_services', edit_log )
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'Auto repo setup done!' ) )
                 
             
         
@@ -387,6 +355,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                             
                             wx.MessageBox( 'I tried to start the server, but something failed!' )
                             wx.MessageBox( traceback.format_exc() )
+                            
                             return
                             
                         
@@ -483,38 +452,26 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _DeletePending( self, service_identifier ):
         
-        try:
+        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service_identifier.GetName() + '?' ) as dlg:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service_identifier.GetName() + '?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_identifier )
-                
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_identifier )
             
-        except: wx.MessageBox( traceback.format_exc() )
         
     
     def _News( self, service_identifier ):
         
-        try: 
-            
-            with ClientGUIDialogs.DialogNews( self, service_identifier ) as dlg: dlg.ShowModal()
-            
-        except: wx.MessageBox( traceback.format_exc() )
+        with ClientGUIDialogs.DialogNews( self, service_identifier ) as dlg: dlg.ShowModal()
         
     
     def _Stats( self, service_identifier ):
         
-        try:
-            
-            service = HC.app.Read( 'service', service_identifier )
-            
-            connection = service.GetConnection()
-            
-            stats = connection.Get( 'stats' )
-            
-            wx.MessageBox( HC.u( stats ) )
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        service = HC.app.Read( 'service', service_identifier )
+        
+        connection = service.GetConnection()
+        
+        stats = connection.Get( 'stats' )
+        
+        wx.MessageBox( HC.u( stats ) )
         
     
     def _FetchIP( self, service_identifier ):
@@ -523,199 +480,134 @@ class FrameGUI( ClientGUICommon.Frame ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                try:
-                    
-                    hash = dlg.GetValue().decode( 'hex' )
-                    
-                    service = HC.app.Read( 'service', service_identifier )
-                    
-                    connection = service.GetConnection()
-                    
-                    with wx.BusyCursor(): ( ip, timestamp ) = connection.Get( 'ip', hash = hash.encode( 'hex' ) )
-                    
-                    message = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
-                    
-                    print( message )
-                    
-                    wx.MessageBox( message + os.linesep + 'This has been written to the log.' )
-                    
-                except Exception as e:
-                    wx.MessageBox( traceback.format_exc() )
-                    wx.MessageBox( HC.u( e ) )
+                hash = dlg.GetValue().decode( 'hex' )
+                
+                service = HC.app.Read( 'service', service_identifier )
+                
+                connection = service.GetConnection()
+                
+                with wx.BusyCursor(): ( ip, timestamp ) = connection.Get( 'ip', hash = hash.encode( 'hex' ) )
+                
+                message = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
+                
+                print( message )
+                
+                wx.MessageBox( message + os.linesep + 'This has been written to the log.' )
                 
             
         
     
     def _ImportFiles( self, paths = [] ):
         
-        try:
-            
-            with ClientGUIDialogs.DialogSelectLocalFiles( self, paths ) as dlg: dlg.ShowModal()
-            
-        except Exception as e:
-            
-            wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( HC.u( e ) )
+        with ClientGUIDialogs.DialogSelectLocalFiles( self, paths ) as dlg: dlg.ShowModal()
         
     
     def _Manage4chanPass( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        with ClientGUIDialogsManage.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageAccountTypes( self, service_identifier ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_identifier ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_identifier ) as dlg: dlg.ShowModal()
         
     
     def _ManageBoorus( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageContacts( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageContacts( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageContacts( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageImageboards( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageImportFolders( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageOptions( self, service_identifier ):
         
-        try:
+        if service_identifier.GetType() == HC.LOCAL_FILE:
             
-            if service_identifier.GetType() == HC.LOCAL_FILE:
+            with ClientGUIDialogsManage.DialogManageOptionsLocal( self ) as dlg: dlg.ShowModal()
+            
+        else:
+            
+            if service_identifier.GetType() == HC.FILE_REPOSITORY:
                 
-                with ClientGUIDialogsManage.DialogManageOptionsLocal( self ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogsManage.DialogManageOptionsFileRepository( self, service_identifier ) as dlg: dlg.ShowModal()
                 
-            else:
+            elif service_identifier.GetType() == HC.TAG_REPOSITORY:
                 
-                if service_identifier.GetType() == HC.FILE_REPOSITORY:
-                    
-                    with ClientGUIDialogsManage.DialogManageOptionsFileRepository( self, service_identifier ) as dlg: dlg.ShowModal()
-                    
-                elif service_identifier.GetType() == HC.TAG_REPOSITORY:
-                    
-                    with ClientGUIDialogsManage.DialogManageOptionsTagRepository( self, service_identifier ) as dlg: dlg.ShowModal()
-                    
-                elif service_identifier.GetType() == HC.MESSAGE_DEPOT:
-                    
-                    with ClientGUIDialogsManage.DialogManageOptionsMessageDepot( self, service_identifier ) as dlg: dlg.ShowModal()
-                    
-                elif service_identifier.GetType() == HC.SERVER_ADMIN:
-                    
-                    with ClientGUIDialogsManage.DialogManageOptionsServerAdmin( self, service_identifier ) as dlg: dlg.ShowModal()
-                    
+                with ClientGUIDialogsManage.DialogManageOptionsTagRepository( self, service_identifier ) as dlg: dlg.ShowModal()
+                
+            elif service_identifier.GetType() == HC.MESSAGE_DEPOT:
+                
+                with ClientGUIDialogsManage.DialogManageOptionsMessageDepot( self, service_identifier ) as dlg: dlg.ShowModal()
+                
+            elif service_identifier.GetType() == HC.SERVER_ADMIN:
+                
+                with ClientGUIDialogsManage.DialogManageOptionsServerAdmin( self, service_identifier ) as dlg: dlg.ShowModal()
                 
             
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
         
     
     def _ManagePixivAccount( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        with ClientGUIDialogsManage.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageServer( self, service_identifier ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
         
     
     def _ManageServices( self ):
         
-        original_pause_status = self._options[ 'pause_repo_sync' ]
+        original_pause_status = HC.options[ 'pause_repo_sync' ]
         
-        self._options[ 'pause_repo_sync' ] = True
+        HC.options[ 'pause_repo_sync' ] = True
         
         try:
             
             with ClientGUIDialogsManage.DialogManageServices( self ) as dlg: dlg.ShowModal()
             
-        except: wx.MessageBox( traceback.format_exc() )
-        
-        self._options[ 'pause_repo_sync' ] = original_pause_status
+        finally: HC.options[ 'pause_repo_sync' ] = original_pause_status
         
     
     def _ManageSubscriptions( self ):
         
-        original_pause_status = self._options[ 'pause_subs_sync' ]
+        original_pause_status = HC.options[ 'pause_subs_sync' ]
         
-        self._options[ 'pause_subs_sync' ] = True
+        HC.options[ 'pause_subs_sync' ] = True
         
         try:
             
             with ClientGUIDialogsManage.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
             
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
-        
-        self._options[ 'pause_subs_sync' ] = original_pause_status
+        finally: HC.options[ 'pause_subs_sync' ] = original_pause_status
         
     
     def _ManageTagParents( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageTagServicePrecedence( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageTagServicePrecedence( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageTagServicePrecedence( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageTagSiblings( self ):
         
-        try:
-            
-            with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) + traceback.format_exc() )
+        with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
         
     
     def _ModifyAccount( self, service_identifier ):
@@ -736,88 +628,62 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 subject_identifiers = ( HC.AccountIdentifier( access_key = access_key ), )
                 
-                try:
-                    
-                    with ClientGUIDialogs.DialogModifyAccounts( self, service_identifier, subject_identifiers ) as dlg2: dlg2.ShowModal()
-                    
-                except Exception as e: wx.MessageBox( HC.u( e ) )
+                with ClientGUIDialogs.DialogModifyAccounts( self, service_identifier, subject_identifiers ) as dlg2: dlg2.ShowModal()
                 
             
         
     
     def _NewAccounts( self, service_identifier ):
         
-        try:
-            
-            with ClientGUIDialogs.DialogInputNewAccounts( self, service_identifier ) as dlg: dlg.ShowModal()
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
+        with ClientGUIDialogs.DialogInputNewAccounts( self, service_identifier ) as dlg: dlg.ShowModal()
         
     
     def _NewPageImportBooru( self ):
         
-        try:
+        with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
             
-            with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
                 
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    booru = dlg.GetBooru()
-                    
-                    new_page = ClientGUIPages.PageImportBooru( self._notebook, booru )
-                    
-                    self._notebook.AddPage( new_page, booru.GetName(), select = True )
-                    
-                    self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-                    
-                    new_page.SetSearchFocus()
-                    
+                booru = dlg.GetBooru()
+                
+                new_page = ClientGUIPages.PageImportBooru( self._notebook, booru )
+                
+                self._notebook.AddPage( new_page, booru.GetName(), select = True )
+                
+                self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
+                
+                new_page.SetSearchFocus()
                 
             
-        except Exception as e:
-            wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( HC.u( e ) )
         
     
     def _NewPageImportGallery( self, name ):
         
-        try:
-            
-            if name == 'deviant art by artist': new_page = ClientGUIPages.PageImportDeviantArt( self._notebook )
-            elif name == 'hentai foundry by artist': new_page = ClientGUIPages.PageImportHentaiFoundryArtist( self._notebook )
-            elif name == 'hentai foundry by tags': new_page = ClientGUIPages.PageImportHentaiFoundryTags( self._notebook )
-            elif name == 'giphy': new_page = ClientGUIPages.PageImportGiphy( self._notebook )
-            elif name == 'newgrounds': new_page = ClientGUIPages.PageImportNewgrounds( self._notebook )
-            elif name == 'pixiv by artist': new_page = ClientGUIPages.PageImportPixivArtist( self._notebook )
-            elif name == 'pixiv by tag': new_page = ClientGUIPages.PageImportPixivTag( self._notebook )
-            elif name == 'tumblr': new_page = ClientGUIPages.PageImportTumblr( self._notebook )
-            
-            self._notebook.AddPage( new_page, name, select = True )
-            
-            self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-            
-            new_page.SetSearchFocus()
-            
-        except Exception as e:
-            wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( HC.u( e ) )
+        if name == 'deviant art by artist': new_page = ClientGUIPages.PageImportDeviantArt( self._notebook )
+        elif name == 'hentai foundry by artist': new_page = ClientGUIPages.PageImportHentaiFoundryArtist( self._notebook )
+        elif name == 'hentai foundry by tags': new_page = ClientGUIPages.PageImportHentaiFoundryTags( self._notebook )
+        elif name == 'giphy': new_page = ClientGUIPages.PageImportGiphy( self._notebook )
+        elif name == 'newgrounds': new_page = ClientGUIPages.PageImportNewgrounds( self._notebook )
+        elif name == 'pixiv by artist': new_page = ClientGUIPages.PageImportPixivArtist( self._notebook )
+        elif name == 'pixiv by tag': new_page = ClientGUIPages.PageImportPixivTag( self._notebook )
+        elif name == 'tumblr': new_page = ClientGUIPages.PageImportTumblr( self._notebook )
+        
+        self._notebook.AddPage( new_page, name, select = True )
+        
+        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
+        
+        new_page.SetSearchFocus()
         
     
     def _NewPageImportThreadWatcher( self ):
         
-        try:
-            
-            new_page = ClientGUIPages.PageImportThreadWatcher( self._notebook )
-            
-            self._notebook.AddPage( new_page, 'thread watcher', select = True )
-            
-            self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-            
-            new_page.SetSearchFocus()
-            
-        except Exception as e:
-            wx.MessageBox( traceback.format_exc() )
-            wx.MessageBox( HC.u( e ) )
+        new_page = ClientGUIPages.PageImportThreadWatcher( self._notebook )
+        
+        self._notebook.AddPage( new_page, 'thread watcher', select = True )
+        
+        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
+        
+        new_page.SetSearchFocus()
         
     
     def _NewPageImportURL( self ):
@@ -883,7 +749,7 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _OpenExportFolder( self ):
         
-        export_path = HC.ConvertPortablePathToAbsPath( self._options[ 'export_path' ] )
+        export_path = HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
         
         if export_path is None: wx.MessageBox( 'Export folder is missing or not set.' )
         else:
@@ -897,8 +763,8 @@ class FrameGUI( ClientGUICommon.Frame ):
     
     def _PauseSync( self, sync_type ):
         
-        if sync_type == 'repo': self._options[ 'pause_repo_sync' ] = not self._options[ 'pause_repo_sync' ]
-        elif sync_type == 'subs': self._options[ 'pause_subs_sync' ] = not self._options[ 'pause_subs_sync' ]
+        if sync_type == 'repo': HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
+        elif sync_type == 'subs': HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
         
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
@@ -916,15 +782,11 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 news = dlg.GetValue()
                 
-                try:
-                    
-                    service = HC.app.Read( 'service', service_identifier )
-                    
-                    connection = service.GetConnection()
-                    
-                    with wx.BusyCursor(): connection.Post( 'news', news = news )
-                    
-                except Exception as e: wx.MessageBox( HC.u( e ) )
+                service = HC.app.Read( 'service', service_identifier )
+                
+                connection = service.GetConnection()
+                
+                with wx.BusyCursor(): connection.Post( 'news', news = news )
                 
             
         
@@ -1027,7 +889,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventExit( self, event ):
         
-        if self._options[ 'confirm_client_exit' ]:
+        if HC.options[ 'confirm_client_exit' ]:
             
             message = 'Are you sure you want to exit the client?'
             
@@ -1041,7 +903,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if page is not None and self.IsMaximized():
             
-            ( self._options[ 'hpos' ], self._options[ 'vpos' ] ) = page.GetSashPositions()
+            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
             
             with wx.BusyCursor(): HC.app.Write( 'save_options' )
             
@@ -1051,6 +913,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             try: page.TryToClose()
             except: return
             
+        
+        self._message_manager.CleanUp()
+        self._message_manager.Destroy()
         
         self.Hide()
         
@@ -1075,119 +940,110 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            if command == 'account_info': self._AccountInfo( data )
+            elif command == 'auto_repo_setup': self._AutoRepoSetup()
+            elif command == 'auto_server_setup': self._AutoServerSetup()
+            elif command == 'backup_service': self._BackupService( data )
+            elif command == 'clear_caches': HC.app.ClearCaches()
+            elif command == 'close_page': self._CloseCurrentPage()
+            elif command == 'debug_garbage':
                 
-                ( command, data ) = action
+                import gc
+                import collections
+                import types
                 
-                if command == 'account_info': self._AccountInfo( data )
-                elif command == 'auto_repo_setup': self._AutoRepoSetup()
-                elif command == 'auto_server_setup': self._AutoServerSetup()
-                elif command == 'backup_service': self._BackupService( data )
-                elif command == 'clear_caches': HC.app.ClearCaches()
-                elif command == 'close_page': self._CloseCurrentPage()
-                elif command == 'debug_garbage':
-                    
-                    import gc
-                    import collections
-                    import types
-                    
-                    gc.collect()
-                    
-                    count = collections.Counter()
-                    
-                    class_count = collections.Counter()
-                    
-                    for o in gc.get_objects():
-                        
-                        count[ type( o ) ] += 1
-                        
-                        if type( o ) == types.InstanceType: class_count[ o.__class__.__name__ ] += 1
-                        elif type( o ) == types.BuiltinFunctionType: class_count[ o.__name__ ] += 1
-                        elif type( o ) == types.BuiltinMethodType: class_count[ o.__name__ ] += 1
-                        
-                    
-                    print( 'gc:' )
-                    
-                    for ( k, v ) in count.items():
-                        
-                        if v > 100: print ( k, v )
-                        
-                    
-                    for ( k, v ) in class_count.items():
-                        
-                        if v > 100: print ( k, v )
-                        
-                    
-                    print( 'garbage: ' + HC.u( gc.garbage ) )
-                    
-                elif command == 'debug_options': wx.MessageBox( HC.u( HC.app.Read( 'options' ) ) )
-                elif command == 'delete_pending': self._DeletePending( data )
-                elif command == 'exit': self.EventExit( event )
-                elif command == 'fetch_ip': self._FetchIP( data )
-                elif command == 'forum': webbrowser.open( 'http://hydrus.x10.mx/forum' )
-                elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
-                elif command == 'help_about': self._AboutWindow()
-                elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
-                elif command == 'import': self._ImportFiles()
-                elif command == 'manage_4chan_pass': self._Manage4chanPass()
-                elif command == 'manage_account_types': self._ManageAccountTypes( data )
-                elif command == 'manage_boorus': self._ManageBoorus()
-                elif command == 'manage_contacts': self._ManageContacts()
-                elif command == 'manage_imageboards': self._ManageImageboards()
-                elif command == 'manage_import_folders': self._ManageImportFolders()
-                elif command == 'manage_pixiv_account': self._ManagePixivAccount()
-                elif command == 'manage_server_services': self._ManageServer( data )
-                elif command == 'manage_services': self._ManageServices()
-                elif command == 'manage_subscriptions': self._ManageSubscriptions()
-                elif command == 'manage_tag_parents': self._ManageTagParents()
-                elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
-                elif command == 'manage_tag_siblings': self._ManageTagSiblings()
-                elif command == 'modify_account': self._ModifyAccount( data )
-                elif command == 'new_accounts': self._NewAccounts( data )
-                elif command == 'new_import_booru': self._NewPageImportBooru()
-                elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
-                elif command == 'new_import_url': self._NewPageImportURL()
-                elif command == 'new_log_page': self._NewPageLog()
-                elif command == 'new_messages_page': self._NewPageMessages( data )
-                elif command == 'new_page': FramePageChooser()
-                elif command == 'new_page_query': self._NewPageQuery( data )
-                elif command == 'news': self._News( data )
-                elif command == 'open_export_folder': self._OpenExportFolder()
-                elif command == 'options': self._ManageOptions( data )
-                elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
-                elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
-                elif command == 'petitions': self._NewPagePetitions( data )
-                elif command == 'post_news': self._PostNews( data )
-                elif command == 'refresh':
-                    
-                    page = self._notebook.GetCurrentPage()
-                    
-                    if page is not None: page.RefreshQuery()
-                    
-                elif command == 'review_services': self._ReviewServices()
-                elif command == 'show_hide_splitters':
-                    
-                    page = self._notebook.GetCurrentPage()
-                    
-                    if page is not None: page.ShowHideSplit()
-                    
-                elif command == 'set_password': self._SetPassword()
-                elif command == 'set_media_focus': self._SetMediaFocus()
-                elif command == 'set_search_focus': self._SetSearchFocus()
-                elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
-                elif command == 'stats': self._Stats( data )
-                elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
-                elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
-                elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
-                elif command == 'upload_pending': self._UploadPending( data )
-                elif command == 'vacuum_db': self._VacuumDatabase()
-                else: event.Skip()
+                gc.collect()
                 
-            except Exception as e:
+                count = collections.Counter()
                 
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
+                class_count = collections.Counter()
                 
+                for o in gc.get_objects():
+                    
+                    count[ type( o ) ] += 1
+                    
+                    if type( o ) == types.InstanceType: class_count[ o.__class__.__name__ ] += 1
+                    elif type( o ) == types.BuiltinFunctionType: class_count[ o.__name__ ] += 1
+                    elif type( o ) == types.BuiltinMethodType: class_count[ o.__name__ ] += 1
+                    
+                
+                print( 'gc:' )
+                
+                for ( k, v ) in count.items():
+                    
+                    if v > 100: print ( k, v )
+                    
+                
+                for ( k, v ) in class_count.items():
+                    
+                    if v > 100: print ( k, v )
+                    
+                
+                print( 'garbage: ' + HC.u( gc.garbage ) )
+                
+            elif command == 'delete_pending': self._DeletePending( data )
+            elif command == 'exit': self.EventExit( event )
+            elif command == 'fetch_ip': self._FetchIP( data )
+            elif command == 'forum': webbrowser.open( 'http://hydrus.x10.mx/forum' )
+            elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
+            elif command == 'help_about': self._AboutWindow()
+            elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
+            elif command == 'import': self._ImportFiles()
+            elif command == 'manage_4chan_pass': self._Manage4chanPass()
+            elif command == 'manage_account_types': self._ManageAccountTypes( data )
+            elif command == 'manage_boorus': self._ManageBoorus()
+            elif command == 'manage_contacts': self._ManageContacts()
+            elif command == 'manage_imageboards': self._ManageImageboards()
+            elif command == 'manage_import_folders': self._ManageImportFolders()
+            elif command == 'manage_pixiv_account': self._ManagePixivAccount()
+            elif command == 'manage_server_services': self._ManageServer( data )
+            elif command == 'manage_services': self._ManageServices()
+            elif command == 'manage_subscriptions': self._ManageSubscriptions()
+            elif command == 'manage_tag_parents': self._ManageTagParents()
+            elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
+            elif command == 'manage_tag_siblings': self._ManageTagSiblings()
+            elif command == 'modify_account': self._ModifyAccount( data )
+            elif command == 'new_accounts': self._NewAccounts( data )
+            elif command == 'new_import_booru': self._NewPageImportBooru()
+            elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
+            elif command == 'new_import_url': self._NewPageImportURL()
+            elif command == 'new_log_page': self._NewPageLog()
+            elif command == 'new_messages_page': self._NewPageMessages( data )
+            elif command == 'new_page': FramePageChooser()
+            elif command == 'new_page_query': self._NewPageQuery( data )
+            elif command == 'news': self._News( data )
+            elif command == 'open_export_folder': self._OpenExportFolder()
+            elif command == 'options': self._ManageOptions( data )
+            elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
+            elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
+            elif command == 'petitions': self._NewPagePetitions( data )
+            elif command == 'post_news': self._PostNews( data )
+            elif command == 'refresh':
+                
+                page = self._notebook.GetCurrentPage()
+                
+                if page is not None: page.RefreshQuery()
+                
+            elif command == 'review_services': self._ReviewServices()
+            elif command == 'show_hide_splitters':
+                
+                page = self._notebook.GetCurrentPage()
+                
+                if page is not None: page.ShowHideSplit()
+                
+            elif command == 'set_password': self._SetPassword()
+            elif command == 'set_media_focus': self._SetMediaFocus()
+            elif command == 'set_search_focus': self._SetSearchFocus()
+            elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
+            elif command == 'stats': self._Stats( data )
+            elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
+            elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
+            elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
+            elif command == 'upload_pending': self._UploadPending( data )
+            elif command == 'vacuum_db': self._VacuumDatabase()
+            else: event.Skip()
             
         
     
@@ -1232,8 +1088,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         empty_draft_message = ClientConstantsMessages.DraftMessage( draft_key, conversation_key, subject, contact_from, contacts_to, recipients_visible, body, attachments, is_new = True )
         
-        try: FrameComposeMessage( empty_draft_message )
-        except: wx.MessageBox( traceback.format_exc() )
+        FrameComposeMessage( empty_draft_message )
+        
     
     def NewPageImportBooru( self ): self._NewPageImportBooru()
     
@@ -1283,7 +1139,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -1416,8 +1272,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
         submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
         
-        submenu.Check( pause_repo_sync_id, self._options[ 'pause_repo_sync' ] )
-        submenu.Check( pause_subs_sync_id, self._options[ 'pause_subs_sync' ] )
+        submenu.Check( pause_repo_sync_id, HC.options[ 'pause_repo_sync' ] )
+        submenu.Check( pause_subs_sync_id, HC.options[ 'pause_subs_sync' ] )
         
         services.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
         
@@ -1533,7 +1389,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         links.AppendItem( forum )
         help.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
         debug = wx.Menu()
-        debug.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_options' ), p( 'Options' ) )
         debug.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
         help.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
         help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
@@ -1954,9 +1809,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     def EventEdit( self, event ):
         
-        original_pause_status = self._options[ 'pause_repo_sync' ]
+        original_pause_status = HC.options[ 'pause_repo_sync' ]
         
-        self._options[ 'pause_repo_sync' ] = True
+        HC.options[ 'pause_repo_sync' ] = True
         
         try:
             
@@ -1964,7 +1819,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
         except: wx.MessageBox( traceback.format_exc() )
         
-        self._options[ 'pause_repo_sync' ] = original_pause_status
+        HC.options[ 'pause_repo_sync' ] = original_pause_status
         
     
     def EventOk( self, event ): self.Destroy()
@@ -2263,6 +2118,8 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     
                 
+                self._refresh.Enable()
+                
             
         
         def _DisplayNumThumbs( self ):
@@ -2352,33 +2209,20 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventServerInitialise( self, event ):
             
-            try:
-                
-                service = HC.app.Read( 'service', self._service_identifier )
-                
-                connection = service.GetConnection()
-                
-                connection.Get( 'init' )
-                
-            except Exception as e: wx.MessageBox( HC.u( e ) )
+            service = HC.app.Read( 'service', self._service_identifier )
+            
+            connection = service.GetConnection()
+            
+            connection.Get( 'init' )
             
         
         def EventServiceRefreshAccount( self, event ):
             
-            try:
-                
-                connection = self._service.GetConnection()
-                
-                connection.Get( 'account' )
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                
-                print( traceback.format_exc() )
-                
+            self._refresh.Disable()
+            
+            connection = self._service.GetConnection()
+            
+            connection.Get( 'account' )
             
         
         def EventServiceReset( self, event ):

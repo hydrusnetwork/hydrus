@@ -1,4 +1,5 @@
 import BaseHTTPServer
+import ClientConstants as CC
 import Cookie
 import hashlib
 import httplib
@@ -290,12 +291,12 @@ def ParseHTTPGETArguments( path ):
                 if name in ( 'begin', 'num', 'expiration', 'subject_account_id', 'service_type', 'service_port', 'since' ):
                     
                     try: arguments[ name ] = int( value )
-                    except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse ' + name + ' as an integer, but it failed.' )
+                    except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
                     
                 elif name in ( 'access_key', 'title', 'subject_access_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key' ):
                     
                     try: arguments[ name ] = value.decode( 'hex' )
-                    except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse ' + name + ' as a hex-encoded string, but it failed.' )
+                    except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
                     
                 
             
@@ -308,14 +309,10 @@ def ParseHTTPGETArguments( path ):
     
     return arguments
     
-def ParseHTTPPOSTArguments( request, body ):
+def ParseHTTPPOSTArguments( body ):
     
-    if request == 'file': args = ParseFileArguments( body )
-    else:
-        
-        if body == '': args = ()
-        else: args = yaml.safe_load( body )
-        
+    if body == '': args = ()
+    else: args = yaml.safe_load( body )
     
     return args
     
@@ -373,7 +370,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
     server_version = 'hydrus/' + HC.u( HC.NETWORK_VERSION )
     protocol_version = 'HTTP/1.1'
     
-    with HC.o( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', 'rb' ) as f: _favicon = f.read()
+    with open( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', 'rb' ) as f: _favicon = f.read()
     
     def __init__( self, request, client_address, server ):
         
@@ -442,8 +439,10 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                     
                     content_length = int( self.headers.getheader( 'Content-Length', default = 0 ) )
                     
+                    request_length = content_length
+                    
                     # can do customised test here for max file allowed or whatever
-                    if ( request == 'file' and content_length > 100 * 1024 * 1024 ) or content_length > 10 * 1024 * 1024: raise HydrusExceptions.ForbiddenException( 'That request is too large!' )
+                    if ( request == 'file' and content_length > 100 * 1024 * 1024 ) or ( request != 'file' and content_length > 10 * 1024 * 1024 ): raise HydrusExceptions.ForbiddenException( 'That request is too large!' )
                     
                     if request == 'file':
                         
@@ -459,7 +458,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                         
                         num_bytes_still_to_write -= next_block_size
                         
-                        with HC.o( path, 'wb' ) as f:
+                        with open( path, 'wb' ) as f:
                             
                             while True:
                                 
@@ -475,12 +474,14 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                                 
                             
                         
-                        body = path
+                        request_args = ParseFileArguments( path )
                         
-                    else: body = self.rfile.read( content_length )
-                    
-                    request_args = ParseHTTPPOSTArguments( request, body )
-                    request_length = len( body )
+                    else:
+                        
+                        body = self.rfile.read( content_length )
+                        
+                        request_args = ParseHTTPPOSTArguments( body )
+                        
                     
                 
                 if request == '':
@@ -498,7 +499,37 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
                 elif request == 'favicon.ico': response_context = HC.ResponseContext( 200, mime = HC.IMAGE_ICON, body = self._favicon, filename = 'favicon.ico' )
                 else:
                     
-                    if service_type == HC.LOCAL_FILE: response_context = HC.app.ProcessServerRequest( request_type, request, request_args )
+                    if service_type == HC.LOCAL_FILE:
+                        
+                        if request_type == HC.GET:
+                            
+                            if request == 'file':
+                                
+                                hash = request_args[ 'hash' ]
+                                
+                                path = CC.GetFilePath( hash )
+                                
+                                mime = HydrusFileHandling.GetMime( path )
+                                
+                                with open( path, 'rb' ) as f: file = f.read()
+                                
+                                response_context = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
+                                
+                            elif request == 'thumbnail':
+                                
+                                hash = request_args[ 'hash' ]
+                                
+                                path = CC.GetThumbnailPath( hash, True )
+                                
+                                mime = HydrusFileHandling.GetMime( path )
+                                
+                                with open( path, 'rb' ) as f: thumbnail = f.read()
+                            
+                                response_context = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
+                                
+                            
+                        elif request_type == HC.POST: pass # nothing here yet!
+                        
                     else:
                         
                         session_key = ParseSessionKey( self.headers.getheader( 'Cookie' ) )
@@ -518,7 +549,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         except KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing.' ) )
         except HydrusExceptions.PermissionException as e: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( e ) )
         except HydrusExceptions.ForbiddenException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( e ) )
-        except HydrusExceptions.NotFoundException as e:response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
+        except HydrusExceptions.NotFoundException as e: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( e ) )
         except HydrusExceptions.NetworkVersionException as e: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( e ) )
         except HydrusExceptions.SessionException as e: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
         except Exception as e:

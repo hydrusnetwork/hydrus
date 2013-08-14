@@ -64,10 +64,15 @@ def GetFileInfo( path, hash ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetMP4Properties( path )
         
+    elif mime == HC.VIDEO_WMV:
+        
+        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
+        
     elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( path )
     elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( path )
     elif mime == HC.AUDIO_OGG: duration = HydrusAudioHandling.GetOGGVorbisDuration( path )
     elif mime == HC.AUDIO_FLAC: duration = HydrusAudioHandling.GetFLACDuration( path )
+    elif mime == HC.AUDIO_WMA: duration = HydrusAudioHandling.GetWMADuration( path )
     
     return ( size, mime, width, height, duration, num_frames, num_words )
     
@@ -77,7 +82,7 @@ def GetHashFromPath( path ):
     
     block_size = 65536
     
-    with HC.o( path, 'rb' ) as f:
+    with open( path, 'rb' ) as f:
         
         next_block = f.read( 65536 )
         
@@ -98,7 +103,7 @@ def GetMD5AndSHA1FromPath( path ):
     
     block_size = 65536
     
-    with HC.o( path, 'rb' ) as f:
+    with open( path, 'rb' ) as f:
         
         next_block = f.read( 65536 )
         
@@ -129,12 +134,13 @@ header_and_mime = [
     ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),
     ( 0, 'hydrus encrypted zip', HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
     ( 4, 'ftypmp4', HC.VIDEO_MP4 ),
-    ( 0, 'fLaC', HC.AUDIO_FLAC )
+    ( 0, 'fLaC', HC.AUDIO_FLAC ),
+    ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]
 
 def GetMime( path ):
     
-    with HC.o( path, 'rb' ) as f:
+    with open( path, 'rb' ) as f:
         
         f.seek( 0 )
         
@@ -145,7 +151,20 @@ def GetMime( path ):
         
         offset_bit_to_check = bit_to_check[ offset: ]
         
-        if offset_bit_to_check.startswith( header ): return mime
+        if offset_bit_to_check.startswith( header ):
+            
+            if mime == HC.UNDETERMINED_WM:
+                
+                try:
+                    
+                    ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
+                    
+                    return HC.VIDEO_WMV
+                    
+                except: pass # we'll catch wma later
+                
+            else: return mime
+            
         
     
     hsaudio_object = hsaudiotag.auto.File( path )
@@ -155,6 +174,7 @@ def GetMime( path ):
         if type( hsaudio_object.original ) == hsaudiotag.mpeg.Mpeg: return HC.AUDIO_MP3
         elif type( hsaudio_object.original ) == hsaudiotag.flac.FLAC: return HC.AUDIO_FLAC
         elif type( hsaudio_object.original ) == hsaudiotag.ogg.Vorbis: return HC.AUDIO_OGG
+        elif type( hsaudio_object.original ) == hsaudiotag.wma.WMADecoder: return HC.AUDIO_WMA
         
     
     return HC.APPLICATION_UNKNOWN

@@ -15,6 +15,7 @@ import multipart
 import os
 import random
 import sqlite3
+import sys
 import threading
 import time
 import threading
@@ -175,6 +176,14 @@ def AddPaddingToDimensions( dimensions, padding ):
     ( x, y ) = dimensions
     
     return ( x + padding, y + padding )
+    
+def CatchExceptionClient( etype, value, tb ):
+    
+    trace_list = traceback.format_tb( tb )
+    
+    trace = ''.join( trace_list )
+    
+    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
     
 def GenerateCollectByChoices( sort_by_choices ):
     
@@ -343,15 +352,12 @@ def GetAllPaths( raw_paths, quiet = False ):
         
     except:
         
-        message = 'While parsing files, encountered this error:' + os.linesep + traceback.format_exc()
-        
         if not quiet:
             
-            wx.MessageBox( message )
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            
+            message = 'While parsing files, encountered this error:' + os.linesep + traceback.format_exc()
         
-        print( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+            
         
     
     if not quiet: progress.Destroy()
@@ -377,13 +383,37 @@ def GetAllThumbnailHashes():
     
     return thumbnail_hashes
     
-def GetFilePath( hash, mime ):
+def GetExpectedFilePath( hash, mime ):
     
     hash_encoded = hash.encode( 'hex' )
     
     first_two_chars = hash_encoded[:2]
     
     return HC.CLIENT_FILES_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded + HC.mime_ext_lookup[ mime ]
+    
+def GetFilePath( hash, mime = None ):
+    
+    if mime is None:
+        
+        path = None
+        
+        for potential_mime in HC.ALLOWED_MIMES:
+            
+            potential_path = GetExpectedFilePath( hash, potential_mime )
+            
+            if os.path.exists( potential_path ):
+                
+                path = potential_path
+                
+                break
+                
+            
+        
+    else: path = GetExpectedFilePath( hash, mime )
+    
+    if path is None or not os.path.exists( path ): raise HydrusExceptions.NotFoundException( 'File not found!' )
+    
+    return path
     
 def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
     
@@ -412,7 +442,7 @@ def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_ID
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
     
-def GetThumbnailPath( hash, full_size = True ):
+def GetExpectedThumbnailPath( hash, full_size = True ):
     
     hash_encoded = hash.encode( 'hex' )
     
@@ -420,17 +450,26 @@ def GetThumbnailPath( hash, full_size = True ):
     
     path = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + first_two_chars + os.path.sep + hash_encoded
     
-    if not full_size:
+    if not full_size: path += '_resized'
+    
+    return path
+    
+def GetThumbnailPath( hash, full_size = True ):
+    
+    path = GetExpectedThumbnailPath( hash, full_size )
+    
+    if not os.path.exists( path ):
         
-        path += '_resized'
-        
-        if not os.path.exists( path ):
+        if full_size: raise HydrusExceptions.NotFoundException( 'Thumbnail not found!' )
+        else:
+            
+            full_size_path = GetThumbnailPath( hash, True )
             
             thumbnail_dimensions = HC.options[ 'thumbnail_dimensions' ]
             
-            thumbnail = HydrusImageHandling.GenerateThumbnail( fullsize_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( fullsize_path, thumbnail_dimensions )
             
-            with HC.o( path, 'wb' ) as f: f.write( thumbnail )
+            with open( path, 'wb' ) as f: f.write( thumbnail_resized )
             
         
     
@@ -471,27 +510,24 @@ def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_I
     
     return ( current, deleted, pending, petitioned )
     
-def ParseImportablePaths( raw_paths, quiet = False ):
+def ParseImportablePaths( raw_paths ):
     
-    file_paths = GetAllPaths( raw_paths, quiet )
+    file_paths = GetAllPaths( raw_paths )
     
     good_paths_info = []
-    odd_paths = []
     
     num_file_paths = len( file_paths )
+    num_odd_files = 0
     
-    if not quiet: progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
     
     for ( i, path ) in enumerate( file_paths ):
         
         if i % 500 == 0: gc.collect()
         
-        if not quiet:
-            
-            ( should_continue, skip ) = progress.Update( i, 'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
-            
-            if not should_continue: break
-            
+        ( should_continue, skip ) = progress.Update( i, 'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
+        
+        if not should_continue: break
         
         info = os.lstat( path )
         
@@ -499,7 +535,9 @@ def ParseImportablePaths( raw_paths, quiet = False ):
         
         if size == 0:
             
-            odd_paths.append( ( path, HydrusExceptions.SizeException() ) )
+            num_odd_files += 1
+            
+            HC.ShowException( HydrusExceptions.SizeException( path + ' could not be imported because it is empty!' ) )
             
             continue
             
@@ -509,7 +547,7 @@ def ParseImportablePaths( raw_paths, quiet = False ):
         if mime in HC.ALLOWED_MIMES: good_paths_info.append( ( 'path', mime, size, path ) )
         elif mime in HC.ARCHIVES:
             
-            if not quiet: ( should_continue, skip ) = progress.Update( i, u'Found an archive; parsing\u2026' )
+            ( should_continue, skip ) = progress.Update( i, u'Found an archive; parsing\u2026' )
             
             if mime == HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP:
                 
@@ -524,7 +562,7 @@ def ParseImportablePaths( raw_paths, quiet = False ):
                         
                         if os.path.exists( potential_key_path ):
                             
-                            with HC.o( potential_key_path, 'rb' ) as f: key_text = f.read()
+                            with open( potential_key_path, 'rb' ) as f: key_text = f.read()
                             
                             ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
                             
@@ -533,11 +571,7 @@ def ParseImportablePaths( raw_paths, quiet = False ):
                         
                         message = 'Tried to read a key, but did not understand it.'
                         
-                        if not quiet:
-                            wx.MessageBox( message )
-                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                        
-                        print( message )
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                         
                     
                 
@@ -586,7 +620,7 @@ def ParseImportablePaths( raw_paths, quiet = False ):
                             
                             zip_temp_path = HC.GetTempPath()
                             
-                            with HC.o( zip_temp_path, 'wb' ) as f: f.write( z.read( name ) )
+                            with open( zip_temp_path, 'wb' ) as f: f.write( z.read( name ) )
                             
                             name_mime = HydrusFileHandling.GetMime( zip_temp_path )
                             
@@ -603,41 +637,47 @@ def ParseImportablePaths( raw_paths, quiet = False ):
                     
                 except Exception as e:
                     
-                    odd_paths.append( ( path, e ) )
+                    num_odd_files += 1
+                    
+                    HC.ShowException( e )
                     
                     continue
                     
                 
             
-        else: odd_paths.append( ( path, HydrusExceptions.MimeException() ) )
+        else:
+            
+            num_odd_files += 1
+            
+            HC.ShowException( HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' ) )
+            
+            continue
+            
         
     
-    if not quiet: progress.Destroy()
+    progress.Destroy()
     
-    if len( odd_paths ) > 0:
+    if num_odd_files > 0:
         
-        for ( odd_path, e ) in odd_paths:
-            
-            if type( e ) == HydrusExceptions.MimeException: print( odd_path + ' could not be imported because its mime is not supported.' )
-            elif type( e ) == HydrusExceptions.SizeException: print( odd_path + ' could not be imported because it is empty!' )
-            else:
-                
-                print( odd_path + ' could not be imported because of this error:' )
-                print( HC.u( e ) )
-                
-            
+        message = HC.u( num_odd_files ) + ' files could not be added.'
         
-        if not quiet:
-            
-            message = HC.u( len( odd_paths ) ) + ' files could not be added. Their paths and exact errors have been written to the log.'
-            
-            wx.MessageBox( message )
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
         
     
     return good_paths_info
     
+def ShowExceptionClient( e ):
+    
+    etype = type( e )
+    
+    value = u( e )
+    
+    trace_list = traceback.format_stack()
+    
+    trace = ''.join( trace_list )
+    
+    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+
 class AutocompleteMatches():
     
     def __init__( self, matches ):
@@ -973,7 +1013,7 @@ class ConnectionToService():
             
         except:
             
-            error_message = 'Could not connect.'
+            error_message = 'Could not connect to ' + self._service_identifier.GetName() + '.'
             
             if self._service_identifier is not None: HC.pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, error_message ) ] })
             
@@ -1126,7 +1166,7 @@ class ConnectionToService():
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    with HC.o( dlg.GetPath(), 'wb' ) as f: f.write( body )
+                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
                     
                 
             
@@ -1258,9 +1298,8 @@ class Credentials( HC.HydrusYAMLBase ):
     
 class DataCache():
     
-    def __init__( self, options, cache_size_key ):
+    def __init__( self, cache_size_key ):
         
-        self._options = options
         self._cache_size_key = cache_size_key
         
         self._keys_to_data = {}
@@ -1288,7 +1327,7 @@ class DataCache():
             
             if key not in self._keys_to_data:
                 
-                while self._total_estimated_memory_footprint > self._options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
+                while self._total_estimated_memory_footprint > HC.options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
                     
                     deletee_key = self._keys_fifo.pop( 0 )
                     
@@ -1314,15 +1353,9 @@ class DataCache():
             
             if key not in self._keys_fifo:
                 
-                message = 'Cache error!' + os.linesep
+                message = 'Cache error! Looking for ' + HC.u( key ) + ', but it was missing.'
                 
-                message += 'Looking for ' + HC.u( key ) + ', but it was missing.'
-                
-                e = Exception( message )
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                
-                raise e
+                raise Exception( message )
                 
             
             self._keys_fifo.remove( key )
@@ -2143,13 +2176,12 @@ MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
 
 class RenderedImageCache():
     
-    def __init__( self, db, options, type ):
+    def __init__( self, type ):
         
-        self._options = options
         self._type = type
         
-        if self._type == 'fullscreen': self._data_cache = DataCache( options, 'fullscreen_cache_size' )
-        elif self._type == 'preview': self._data_cache = DataCache( options, 'preview_cache_size' )
+        if self._type == 'fullscreen': self._data_cache = DataCache( 'fullscreen_cache_size' )
+        elif self._type == 'preview': self._data_cache = DataCache( 'preview_cache_size' )
         
         self._total_estimated_memory_footprint = 0
         
@@ -2162,30 +2194,19 @@ class RenderedImageCache():
     
     def GetImage( self, hash, mime, resolution ):
         
-        try:
+        key = ( hash, resolution )
+        
+        if self._data_cache.HasData( key ): return self._data_cache.GetData( key )
+        elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
+        else:
             
-            key = ( hash, resolution )
+            path = GetFilePath( hash, mime )
             
-            if self._data_cache.HasData( key ): return self._data_cache.GetData( key )
-            elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
-            else:
-                
-                path = GetFilePath( hash, mime )
-                
-                image_container = HydrusImageHandling.RenderImage( path, hash, target_resolution = resolution, synchronous = False )
-                
-                self._keys_being_rendered[ key ] = image_container
-                
-                return image_container
-                
+            image_container = HydrusImageHandling.RenderImage( path, hash, target_resolution = resolution, synchronous = False )
             
-        except:
+            self._keys_being_rendered[ key ] = image_container
             
-            print( traceback.format_exc() )
-            
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( traceback.format_exc() ) ) )
-            
-            raise
+            return image_container
             
         
     
@@ -2556,13 +2577,9 @@ class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
     
 class ThumbnailCache():
     
-    def __init__( self, db, options ):
+    def __init__( self ):
         
-        self._db = db
-        
-        self._options = options
-        
-        self._data_cache = DataCache( options, 'thumbnail_cache_size' )
+        self._data_cache = DataCache( 'thumbnail_cache_size' )
         
         self.Clear()
         
@@ -2575,17 +2592,17 @@ class ThumbnailCache():
         
         self._special_thumbs = {}
         
-        names = [ 'hydrus', 'flash', 'flv', 'mp3', 'pdf', 'flac', 'ogg' ]
+        names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video' ]
         
         for name in names:
             
             path = HC.STATIC_DIR + os.path.sep + name + '.png'
             
-            thumbnail = HydrusImageHandling.GenerateThumbnail( path, self._options[ 'thumbnail_dimensions' ] )
+            thumbnail = HydrusImageHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
             
             temp_path = HC.GetTempPath()
             
-            with HC.o( temp_path, 'wb' ) as f: f.write( thumbnail )
+            with open( temp_path, 'wb' ) as f: f.write( thumbnail )
             
             hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
             
@@ -2605,12 +2622,12 @@ class ThumbnailCache():
                 
                 try:
                     
-                    path = GetThumbnailPath( hash, full_size = False )
+                    path = GetThumbnailPath( hash, False )
                     
                     hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( path )
                     
-                except:
-                    print( traceback.format_exc() )
+                except Exception as e:
+                    HC.ShowException( e )
                     return self._not_found
                 
                 self._data_cache.AddData( hash, hydrus_bitmap )
@@ -2618,20 +2635,11 @@ class ThumbnailCache():
             
             return self._data_cache.GetData( hash )
             
+        elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
+        elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
         elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
         elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
-        elif mime == HC.AUDIO_MP3: return self._special_thumbs[ 'mp3' ]
-        elif mime == HC.VIDEO_FLV: return self._special_thumbs[ 'flv' ]
-        elif mime == HC.AUDIO_OGG: return self._special_thumbs[ 'ogg' ]
-        elif mime == HC.AUDIO_FLAC: return self._special_thumbs[ 'flac' ]
         else: return self._special_thumbs[ 'hydrus' ]
-        
-    
-    def Prefetch( self, hashes ):
-        
-        hashes_to_get = hashes.difference( self._data_cache.GetKeys() )
-        
-        if len( hashes_to_get ) > 0: threading.Thread( target = self.THREADPrefetch, args = ( hashes_to_get, ) ).start()
         
     
     def Waterfall( self, page_key, medias ): threading.Thread( target = self.THREADWaterfall, args = ( page_key, medias ) ).start()
@@ -2655,11 +2663,6 @@ class ThumbnailCache():
                 last_paused = time.clock()
                 
             
-        
-    
-    def THREADPrefetch( self, hashes ):
-        
-        for hash in hashes: HC.app.ReadDaemon( 'thumbnail', hash )
         
     
 class UndoManager():
@@ -2766,7 +2769,7 @@ class UndoManager():
             
             ( action, args, kwargs ) = self._inverted_commands[ self._current_index ]
             
-            HC.app.WriteDaemon( action, *args, **kwargs )
+            HC.app.WriteSynchronous( action, *args, **kwargs )
             
         
     
@@ -2779,7 +2782,7 @@ class UndoManager():
             
             self._current_index += 1
             
-            HC.app.WriteDaemon( action, *args, **kwargs )
+            HC.app.WriteSynchronous( action, *args, **kwargs )
             
         
     

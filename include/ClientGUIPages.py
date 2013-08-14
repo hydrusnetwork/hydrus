@@ -36,8 +36,6 @@ class PageBase():
         
         self._pretty_status = ''
         
-        self._options = HC.app.Read( 'options' )
-        
         HC.pubsub.sub( self, 'SetPrettyStatus', 'new_page_status' )
         
     
@@ -45,9 +43,9 @@ class PageBase():
     
     def GetSashPositions( self ):
         
-        x = self._options[ 'hpos' ]
+        x = HC.options[ 'hpos' ]
         
-        y = self._options[ 'vpos' ]
+        y = HC.options[ 'vpos' ]
         
         return ( x, y )
         
@@ -156,8 +154,8 @@ class PageMessages( PageBase, wx.SplitterWindow ):
         self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         self._InitMessagesPanel()
         
-        self.SplitVertically( self._search_preview_split, self._messages_panel, self._options[ 'hpos' ] )
-        wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, self._options[ 'vpos' ] )
+        self.SplitVertically( self._search_preview_split, self._messages_panel, HC.options[ 'hpos' ] )
+        wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelMessages( self._search_preview_split, self._page_key, self._identity )
@@ -169,10 +167,10 @@ class PageMessages( PageBase, wx.SplitterWindow ):
     def GetSashPositions( self ):
         
         if self.IsSplit(): x = self.GetSashPosition()
-        else: x = self._options[ 'hpos' ]
+        else: x = HC.options[ 'hpos' ]
         
         if self._search_preview_split.IsSplit(): y = -1 * self._preview_panel.GetSize()[1]
-        else: y = self._options[ 'vpos' ]
+        else: y = HC.options[ 'vpos' ]
         
         return ( x, y )
         
@@ -180,7 +178,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
     def ShowHideSplit( self ):
         
         if self._search_preview_split.IsSplit(): self._search_preview_split.Unsplit( self._preview_panel )
-        else: self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, self._options[ 'vpos' ] )
+        else: self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
     
     def TryToClose( self ): self._management_panel.TryToClose()
@@ -210,8 +208,8 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
         self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, self._file_service_identifier )
         self._InitMediaPanel()
         
-        self.SplitVertically( self._search_preview_split, self._media_panel, self._options[ 'hpos' ] )
-        wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, self._options[ 'vpos' ] )
+        self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
+        wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
         HC.pubsub.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
         
@@ -226,10 +224,10 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
     def GetSashPositions( self ):
         
         if self.IsSplit(): x = self.GetSashPosition()
-        else: x = self._options[ 'hpos' ]
+        else: x = HC.options[ 'hpos' ]
         
         if self._search_preview_split.IsSplit(): y = -1 * self._preview_panel.GetSize()[1]
-        else: y = self._options[ 'vpos' ]
+        else: y = HC.options[ 'vpos' ]
         
         return ( x, y )
         
@@ -242,9 +240,9 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
             
         else:
             
-            self.SplitVertically( self._search_preview_split, self._media_panel, self._options[ 'hpos' ] )
+            self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
             
-            self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, self._options[ 'vpos' ] )
+            self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
             
         
     

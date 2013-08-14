@@ -35,16 +35,26 @@ class FileDB():
         
         for ( hash, thumbnail ) in thumbnails:
             
-            hash_id = self._GetHashId( c, hash )
+            thumbnail_path = CC.GetExpectedThumbnailPath( hash, True )
             
-            thumbnail_path = CC.GetThumbnailPath( hash )
+            with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
+            
+            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+            
+            thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
+            
+            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
             
             phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
             
-            c.execute( 'INSERT OR IGNORE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+            hash_id = self._GetHashId( c, hash )
+            
+            c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
             
         
-        self.pub( 'new_thumbnails', [ hash for ( hash, thumbnail ) in thumbnails ] )
+        hashes = { hash for ( hash, thumbnail ) in thumbnails }
+        
+        self.pub( 'new_thumbnails', hashes )
         
     
     def _CopyFiles( self, c, hashes ):
@@ -65,11 +75,11 @@ class FileDB():
                     
                     hash_id = self._GetHashId( c, hash )
                     
-                    mime = self._GetMime( c, self._local_file_service_id, hash_id )
+                    path_from = CC.GetFilePath( hash )
                     
-                    path_from = CC.GetFilePath( hash, mime )
+                    filename = os.path.basename( path_from )
                     
-                    path_to = export_dir + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
+                    path_to = export_dir + os.path.sep + filename
                     
                     shutil.copy( path_from, path_to )
                     
@@ -86,62 +96,6 @@ class FileDB():
             
         
     
-    def _ExportFiles( self, job_key, hashes, cancel_event ):
-        
-        num_hashes = len( hashes )
-        
-        if num_hashes > 0:
-            
-            export_path = HC.ConvertPortablePathToAbsPath( self._options[ 'export_path' ] )
-            
-            if export_path is None:
-                
-                with wx.DirDialog( None, message='Pick where to extract the files' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK: export_path = dlg.GetPath()
-                    else: return
-                    
-                
-            
-            HC.pubsub.pub( 'progress_update', job_key, 0, num_hashes, 'The client is now exporting the files to ' + export_path + ' (0/' + HC.ConvertIntToPrettyString( num_hashes ) + ')' )
-            
-            error_messages = set()
-            
-            for ( index, hash ) in enumerate( hashes ):
-                
-                try:
-                    
-                    HC.pubsub.pub( 'progress_update', job_key, index, num_hashes, 'The client is now exporting the files to ' + export_path + ' (' + HC.ConvertIntToPrettyString( index + 1 ) + '/' + HC.ConvertIntToPrettyString( num_hashes ) + ')' )
-                    
-                    hash_id = self._GetHashId( c, hash )
-                    
-                    mime = self._GetMime( c, self._local_file_service_id, hash_id )
-                    
-                    path_from = CC.GetFilePath( hash, mime )
-                    
-                    path_to = export_path + os.path.sep + hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
-                    
-                    shutil.copy( path_from, path_to )
-                    
-                    os.chmod( path_to, stat.S_IWRITE )
-                    
-                    if cancel_event.isSet(): break
-                    
-                except Exception as e: error_messages.add( HC.u( e ) )
-                
-            
-            if len( error_messages ) > 0:
-                
-                HC.pubsub.pub( 'progress_update', job_key, 1, 1, '' )
-                
-                raise Exception( 'Some of the file exports failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
-                
-            
-            HC.pubsub.pub( 'progress_update', job_key, num_hashes, num_hashes, 'done!' )
-            
-        else: HC.pubsub.pub( 'progress_update', job_key, 1, 1, '' )
-        
-    
     def _GenerateHashIdsEfficiently( self, c, hashes ):
         
         hashes_not_in_db = set( hashes )
@@ -154,40 +108,6 @@ class FileDB():
             
         
         if len( hashes_not_in_db ) > 0: c.executemany( 'INSERT INTO hashes ( hash ) VALUES( ? );', [ ( sqlite3.Binary( hash ), ) for hash in hashes_not_in_db ] )
-        
-    
-    def _GetFile( self, hash ):
-        
-        try:
-            
-            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
-            
-            with HC.o( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
-            
-        except MemoryError:
-            print( 'Memory error!' )
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'Memory error! Restart client ASAP!' ) ) )
-            raise
-        except: raise Exception( 'Could not find that file!' )
-        
-        return file
-        
-    
-    def _GetFileAndMime( self, hash ):
-        
-        try:
-            
-            with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
-            
-            with HC.o( CC.GetFilePath( hash, mime ), 'rb' ) as f: file = f.read()
-            
-        except MemoryError:
-            print( 'Memory error!' )
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'Memory error! Restart client ASAP!' ) ) )
-            raise
-        except: raise Exception( 'Could not find that file!' )
-        
-        return ( file, mime )
         
     
     def _GetHash( self, c, hash_id ):
@@ -250,27 +170,9 @@ class FileDB():
     
     def _GetThumbnail( self, hash, full_size = False ):
         
-        path = CC.GetThumbnailPath( hash )
+        path = CC.GetThumbnailPath( hash, full_size )
         
-        if not full_size:
-            
-            fullsize_path = path
-            
-            path = fullsize_path + '_resized'
-            
-            if not os.path.exists( path ):
-                
-                thumbnail_dimensions = self._options[ 'thumbnail_dimensions' ]
-                
-                thumbnail = HydrusImageHandling.GenerateThumbnail( fullsize_path, thumbnail_dimensions )
-                
-                with HC.o( path, 'wb' ) as f: f.write( thumbnail )
-                
-                return thumbnail
-                
-            
-        
-        with HC.o( path, 'rb' ) as f: thumbnail = f.read()
+        with open( path, 'rb' ) as f: thumbnail = f.read()
         
         return thumbnail
         
@@ -334,7 +236,7 @@ class MessageDB():
                     
                     temp_path = HC.GetTempPath()
                     
-                    with HC.o( temp_path, 'wb' ) as f: f.write( temp_path )
+                    with open( temp_path, 'wb' ) as f: f.write( temp_path )
                     
                     try:
                         
@@ -1023,7 +925,16 @@ class MessageDB():
         
         attachment_hashes.sort()
         
-        files = [ self._GetFile( c, hash ) for hash in attachment_hashes ]
+        files = []
+        
+        for hash in attachment_hashes:
+            
+            path = CC.GetFilePath( hash )
+            
+            with open( path, 'rb' ) as f: file = f.read()
+            
+            files.append( file )
+            
         
         conversation_key = self._GetMessageKey( c, conversation_id )
         
@@ -1058,7 +969,16 @@ class MessageDB():
         
         body = html
         
-        files = [ self._GetFile( c, hash ) for hash in attachment_hashes ]
+        files = []
+        
+        for hash in attachment_hashes:
+            
+            path = CC.GetFilePath( hash )
+            
+            with open( path, 'rb' ) as f: file = f.read()
+            
+            files.append( file )
+            
         
         contact_id_from = self._GetContactId( c, contact_from )
         
@@ -1346,13 +1266,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         # service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words
         
-        for ( hash_id, mime ) in [ ( row[ 1 ], row[ 3 ] ) for row in files_info_rows ]:
-            
-            hash = self._GetHash( c, hash_id )
-            
-            with self._hashes_to_mimes_lock: self._hashes_to_mimes[ hash ] = mime
-            
-        
         c.executemany( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', files_info_rows )
         
         service_ids_to_rows = HC.BuildKeyToListDict( [ ( row[ 0 ], row[ 1: ] ) for row in files_info_rows ] )
@@ -1603,38 +1516,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for hash in local_files_hashes & deletee_hashes:
             
-            with self._hashes_to_mimes_lock:
+            try:
                 
-                # not sure why I'm ever getting a key error here, but let's recover from it anyway!
-                
-                if hash in self._hashes_to_mimes: mime = self._hashes_to_mimes[ hash ]
-                else: mime = None
-                
-            
-            if mime is None:
-                
-                for mime in HC.ALLOWED_MIMES:
-                    
-                    path = CC.GetFilePath( hash, mime )
-                    
-                    if os.path.exists( path ):
-                        
-                        os.chmod( path, stat.S_IWRITE )
-                        
-                        os.remove( path )
-                        
-                        break
-                        
-                    
-                
-            else:
-                
-                path = CC.GetFilePath( hash, mime )
+                path = CC.GetFilePath( hash )
                 
                 os.chmod( path, stat.S_IWRITE )
                 
                 os.remove( path )
                 
+            except: continue
             
         
         # perceptual_hashes and thumbs
@@ -1655,11 +1545,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for hash in thumbnail_deletees:
             
-            path = CC.GetThumbnailPath( hash )
-            resized_path = path + '_resized'
+            path = CC.GetExpectedThumbnailPath( hash, True )
+            resized_path = CC.GetExpectedThumbnailPath( hash, False )
             
-            os.remove( path )
-            
+            if os.path.exists( path ): os.remove( path )
             if os.path.exists( resized_path ): os.remove( resized_path )
             
         
@@ -1815,7 +1704,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) )
         
-        if file_service_type == HC.FILE_REPOSITORY and self._options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
+        if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
@@ -1868,6 +1757,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         media_results = self._GetMediaResults( c, search_context, query_hash_ids )
         
         self.pub( 'file_query_done', query_key, media_results )
+        
+        return media_results
         
     
     def _FattenAutocompleteCache( self, c ):
@@ -2064,7 +1955,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                if self._options[ 'exclude_deleted_files' ]:
+                if HC.options[ 'exclude_deleted_files' ]:
                     
                     ( num_everything_deleted, ) = c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
                     
@@ -2202,7 +2093,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             ( hash_id, ) = result
             
-            if self._options[ 'exclude_deleted_files' ]:
+            if HC.options[ 'exclude_deleted_files' ]:
                 
                 result = c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
@@ -2463,7 +2354,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         result = c.execute( 'SELECT mime FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that file\'s mime!' )
+        if result is None: raise HydrusExceptions.NotFoundException()
         
         ( mime, ) = result
         
@@ -2986,7 +2877,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             ( hash_id, ) = result
             
-            if self._options[ 'exclude_deleted_files' ]:
+            if HC.options[ 'exclude_deleted_files' ]:
                 
                 result = c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
@@ -3088,7 +2979,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             timestamp = HC.GetNow()
             
-            dest_path = CC.GetFilePath( hash, mime )
+            dest_path = CC.GetExpectedFilePath( hash, mime )
             
             if not os.path.exists( dest_path ):
                 
@@ -3101,20 +2992,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 thumbnail = HydrusImageHandling.GenerateThumbnail( path )
                 
-                thumbnail_path = CC.GetThumbnailPath( hash )
-                
-                with HC.o( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
-                
-                thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, self._options[ 'thumbnail_dimensions' ] )
-                
-                thumbnail_resized_path = thumbnail_path + '_resized'
-                
-                with HC.o( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
-                
-                phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
-                
-                # replace is important here!
-                c.execute( 'INSERT OR REPLACE INTO perceptual_hashes VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                self._AddThumbnails( c, [ ( hash, thumbnail ) ] )
                 
             
             files_info_rows = [ ( self._local_file_service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) ]
@@ -3534,55 +3412,44 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( action, row ) = service_update.ToTuple()
                 
-                try:
+                if action == HC.SERVICE_UPDATE_ACCOUNT:
                     
-                    if action == HC.SERVICE_UPDATE_ACCOUNT:
+                    account = row
+                    
+                    c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
+                    c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( 0, service_id ) )
+                    
+                    do_new_permissions = True
+                    
+                elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( HC.GetNow(), service_id ) )
+                elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
+                    
+                    num_bytes = row
+                    
+                    requests_made.append( ( service_id, num_bytes ) )
+                    
+                elif action == HC.SERVICE_UPDATE_NEWS:
+                    
+                    news_rows = row
+                    
+                    c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in news_rows ] )
+                    
+                    now = HC.GetNow()
+                    
+                    for ( post, timestamp ) in news_rows:
                         
-                        account = row
-                        
-                        c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
-                        c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( 0, service_id ) )
-                        
-                        do_new_permissions = True
-                        
-                    elif action == HC.SERVICE_UPDATE_ERROR: c.execute( 'UPDATE addresses SET last_error = ? WHERE service_id = ?;', ( HC.GetNow(), service_id ) )
-                    elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
-                        
-                        num_bytes = row
-                        
-                        requests_made.append( ( service_id, num_bytes ) )
-                        
-                    elif action == HC.SERVICE_UPDATE_NEWS:
-                        
-                        news_rows = row
-                        
-                        c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in news_rows ] )
-                        
-                        now = HC.GetNow()
-                        
-                        for ( post, timestamp ) in news_rows:
-                            
-                            if now - timestamp < 86400 * 7: self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post ) )
-                            
-                        
-                    elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
-                        
-                        ( begin, end ) = row
-                        
-                        next_begin = end + 1
-                        
-                        c.execute( 'UPDATE repositories SET first_begin = ? WHERE service_id = ? AND first_begin = ?;', ( next_begin, service_id, 0 ) )
-                        
-                        c.execute( 'UPDATE repositories SET next_begin = ? WHERE service_id = ?;', ( next_begin, service_id ) )
+                        if now - timestamp < 86400 * 7: self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post ) )
                         
                     
-                except Exception as e:
+                elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
                     
-                    message = 'Had a service update error:' + os.linesep + traceback.format_exc()
+                    ( begin, end ) = row
                     
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                    next_begin = end + 1
                     
-                    print( message )
+                    c.execute( 'UPDATE repositories SET first_begin = ? WHERE service_id = ? AND first_begin = ?;', ( next_begin, service_id, 0 ) )
+                    
+                    c.execute( 'UPDATE repositories SET next_begin = ? WHERE service_id = ?;', ( next_begin, service_id ) )
                     
                 
             
@@ -4379,9 +4246,7 @@ class DB( ServiceDB ):
             
             message = 'Database commit error:' + os.linesep + traceback.format_exc()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            
-            print( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
             
             c.execute( 'ROLLBACK' )
             
@@ -4393,11 +4258,9 @@ class DB( ServiceDB ):
         self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
         self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
         
-        self._InitHashToMimeCache( c )
+        ( options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
         
-        ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-        
-        HC.options = self._options
+        HC.options = options
         
         self._tag_service_precedence = []
         
@@ -4410,7 +4273,7 @@ class DB( ServiceDB ):
     
     def _CheckPassword( self ):
         
-        if self._options[ 'password' ] is not None:
+        if HC.options[ 'password' ] is not None:
             
             while True:
                 
@@ -4418,7 +4281,7 @@ class DB( ServiceDB ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        if hashlib.sha256( dlg.GetValue() ).digest() == self._options[ 'password' ]: return True
+                        if hashlib.sha256( dlg.GetValue() ).digest() == HC.options[ 'password' ]: return True
                         else: continue
                         
                     else: return False
@@ -4827,7 +4690,7 @@ class DB( ServiceDB ):
             
             c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
             
-            with HC.o( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
+            with open( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
             
             ( public_key, name, host, port ) = hydrus_admin.GetInfo()
             
@@ -4839,13 +4702,6 @@ class DB( ServiceDB ):
             
             c.execute( 'COMMIT' )
             
-        
-    
-    def _InitHashToMimeCache( self, c ):
-        
-        self._hashes_to_mimes_lock = threading.Lock()
-        
-        self._hashes_to_mimes = { hash : mime for ( hash, mime ) in c.execute( 'SELECT hash, mime FROM hashes, files_info USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
         
     
     def _InitPostGUI( self ):
@@ -4870,9 +4726,7 @@ class DB( ServiceDB ):
             
             message = 'Could not bind the client to port ' + HC.u( port )
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            
-            print( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
             
         
         HC.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_new_import_folders', ), period = 180 )
@@ -4891,9 +4745,9 @@ class DB( ServiceDB ):
         
         ( old_width, old_height ) = old_options[ 'thumbnail_dimensions' ]
         
-        ( new_width, new_height ) = self._options[ 'thumbnail_dimensions' ]
+        ( new_width, new_height ) = HC.options[ 'thumbnail_dimensions' ]
         
-        c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+        c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
         
         resize_thumbs = new_width != old_width or new_height != old_height
         
@@ -4912,8 +4766,9 @@ class DB( ServiceDB ):
     
     def _SetPassword( self, c, password ):
         
-        if password is not None: self._options[ 'password' ] = hashlib.sha256( password ).digest()
-        else: self._options[ 'password' ] = None
+        if password is not None: password = hashlib.sha256( password ).digest()
+        
+        HC.options[ 'password' ] = password
         
         self._SaveOptions( c )
         
@@ -5014,11 +4869,11 @@ class DB( ServiceDB ):
                 
                 if version < 68:
                     
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
                     
-                    self._options[ 'confirm_client_exit' ] = False
+                    HC.options[ 'confirm_client_exit' ] = False
                     
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
                     
                     #
                     
@@ -5166,11 +5021,11 @@ class DB( ServiceDB ):
                     
                     #
                     
-                    ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
                     
-                    self._options[ 'play_dumper_noises' ] = True
+                    HC.options[ 'play_dumper_noises' ] = True
                     
-                    c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+                    c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
                     
                 
                 if version < 72:
@@ -5337,13 +5192,11 @@ class DB( ServiceDB ):
                 
                 c.execute( 'COMMIT' )
                 
-                wx.MessageBox( 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
+                HC.is_db_updated = True
                 
             except:
                 
                 c.execute( 'ROLLBACK' )
-                
-                print( traceback.format_exc() )
                 
                 raise Exception( 'Tried to update the client db, but something went wrong:' + os.linesep + traceback.format_exc() )
                 
@@ -5556,11 +5409,11 @@ class DB( ServiceDB ):
         
         if version < 26:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'num_autocomplete_chars' ] = 1
+            HC.options[ 'num_autocomplete_chars' ] = 1
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 27:
@@ -5598,7 +5451,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with HC.o( path_to, 'wb' ) as f: f.write( file )
+                    with open( path_to, 'wb' ) as f: f.write( file )
                     
                 
                 c.execute( 'DELETE FROM files WHERE hash_id IN ' + HC.SplayListForDB( [ hash_id for ( hash_id, hash ) in local_files_subset ] ) + ';' )
@@ -5648,7 +5501,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with HC.o( path_to, 'wb' ) as f: f.write( thumbnail )
+                    with open( path_to, 'wb' ) as f: f.write( thumbnail )
                     
                 
             
@@ -5668,7 +5521,7 @@ class DB( ServiceDB ):
             
             c.executemany( 'INSERT OR IGNORE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', [ ( hash_id, sqlite3.Binary( phash ) ) for ( hash_id, phash ) in all_p_hashes ] )
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
             default_namespace_colours = {}
             
@@ -5679,9 +5532,9 @@ class DB( ServiceDB ):
             default_namespace_colours[ None ] = ( 114, 160, 193 )
             default_namespace_colours[ '' ] = ( 0, 111, 250 )
             
-            self._options[ 'namespace_colours' ] = default_namespace_colours
+            HC.options[ 'namespace_colours' ] = default_namespace_colours
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 31:
@@ -5721,7 +5574,7 @@ class DB( ServiceDB ):
                     
                     path = HC.CLIENT_FILES_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with HC.o( path, 'rb' ) as f: file = f.read()
+                    with open( path, 'rb' ) as f: file = f.read()
                     
                     md5 = hashlib.md5( file ).digest()
                     
@@ -5755,28 +5608,28 @@ class DB( ServiceDB ):
                 first_round = False
                 
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
             default_sort_by_choices = []
             
             default_sort_by_choices.append( ( 'namespaces', [ 'series', 'creator', 'title', 'volume', 'chapter', 'page' ] ) )
             default_sort_by_choices.append( ( 'namespaces', [ 'creator', 'series', 'title', 'volume', 'chapter', 'page' ] ) )
             
-            self._options[ 'sort_by' ] = default_sort_by_choices
+            HC.options[ 'sort_by' ] = default_sort_by_choices
             
-            self._options[ 'default_sort' ] = 0
-            self._options[ 'default_collect' ] = 0
+            HC.options[ 'default_sort' ] = 0
+            HC.options[ 'default_collect' ] = 0
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 36:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'gui_capitalisation' ] = False
+            HC.options[ 'gui_capitalisation' ] = False
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 37:
@@ -5866,7 +5719,7 @@ class DB( ServiceDB ):
             
             c.executemany( 'UPDATE contacts SET public_key = ? WHERE contact_id = ?;', updates )
             
-            with HC.o( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
+            with open( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
             
             ( public_key, name, host, port ) = hydrus_admin.GetInfo()
             
@@ -5898,7 +5751,7 @@ class DB( ServiceDB ):
             c.execute( 'ALTER TABLE message_depots ADD COLUMN receive_anon INTEGER_BOOLEAN' )
             c.execute( 'UPDATE message_depots SET receive_anon = ?;', ( True, ) )
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
             system_predicates = {}
             
@@ -5912,9 +5765,9 @@ class DB( ServiceDB ):
             system_predicates[ 'size' ] = ( 0, 200, 3 )
             system_predicates[ 'width' ] = ( 1, 1920 )
             
-            self._options[ 'file_system_predicates' ] = system_predicates
+            HC.options[ 'file_system_predicates' ] = system_predicates
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 42:
@@ -6133,12 +5986,12 @@ class DB( ServiceDB ):
             
             c.executemany( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', all_tag_ids )
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'show_all_tags_in_autocomplete' ] = True
+            HC.options[ 'show_all_tags_in_autocomplete' ] = True
             
-            self._options[ 'file_system_predicates' ][ 'local_rating_numerical' ] = ( 0, 3 )
-            self._options[ 'file_system_predicates' ][ 'local_rating_like' ] = 0
+            HC.options[ 'file_system_predicates' ][ 'local_rating_numerical' ] = ( 0, 3 )
+            HC.options[ 'file_system_predicates' ][ 'local_rating_like' ] = 0
             
             shortcuts = {}
             
@@ -6159,9 +6012,9 @@ class DB( ServiceDB ):
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'S' ) ] = 'set_search_focus'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'I' ) ] = 'synchronised_wait_switch'
             
-            self._options[ 'shortcuts' ] = shortcuts
+            HC.options[ 'shortcuts' ] = shortcuts
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 50:
@@ -6171,15 +6024,15 @@ class DB( ServiceDB ):
         
         if version < 51:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            shortcuts = self._options[ 'shortcuts' ]
+            shortcuts = HC.options[ 'shortcuts' ]
             
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'B' ) ] = 'frame_back'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'N' ) ] = 'frame_next'
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F11 ] = 'ratings_filter'
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
             c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
             
@@ -6232,27 +6085,27 @@ class DB( ServiceDB ):
         
         if version < 55:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
+            HC.options[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 56:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
+            HC.options[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 57:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            shortcuts = self._options[ 'shortcuts' ]
+            shortcuts = HC.options[ 'shortcuts' ]
             
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_UP ] = 'previous'
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_LEFT ] = 'previous'
@@ -6271,33 +6124,33 @@ class DB( ServiceDB ):
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_END ] = 'last'
             shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_END ] = 'last'
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 58:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            shortcuts = self._options[ 'shortcuts' ]
+            shortcuts = HC.options[ 'shortcuts' ]
             
             shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_F7 ] = 'inbox'
             shortcuts[ wx.ACCEL_CTRL ][ ord( 'M' ) ] = 'set_media_focus'
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 59:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            shortcuts = self._options[ 'shortcuts' ]
+            shortcuts = HC.options[ 'shortcuts' ]
             
             shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
             
-            self._options[ 'fullscreen_borderless' ] = True
-            self._options[ 'default_collect' ] = None
+            HC.options[ 'fullscreen_borderless' ] = True
+            HC.options[ 'default_collect' ] = None
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 60:
@@ -6314,9 +6167,9 @@ class DB( ServiceDB ):
         
         if version < 63:
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            system_predicates = self._options[ 'file_system_predicates' ]
+            system_predicates = HC.options[ 'file_system_predicates' ]
             
             ( sign, size, unit ) = system_predicates[ 'size' ]
             
@@ -6324,7 +6177,7 @@ class DB( ServiceDB ):
             
             system_predicates[ 'num_words' ] = ( 0, 30000 )
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 64:
@@ -6335,16 +6188,16 @@ class DB( ServiceDB ):
             
             c.execute( 'DELETE FROM service_info WHERE info_type IN ( 6, 7 );' ) # resetting thumb count, to see if it breaks again
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            shortcuts = self._options[ 'shortcuts' ]
+            shortcuts = HC.options[ 'shortcuts' ]
             
             shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
             shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'
             shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
             shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 65:
@@ -6388,12 +6241,12 @@ class DB( ServiceDB ):
             
             c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', CC.DEFAULT_BOORUS.items() )
             
-            ( self._options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
             
-            self._options[ 'pause_repo_sync' ] = False
-            self._options[ 'pause_subs_sync' ] = False
+            HC.options[ 'pause_repo_sync' ] = False
+            HC.options[ 'pause_subs_sync' ] = False
             
-            c.execute( 'UPDATE options SET options = ?;', ( self._options, ) )
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version < 67:
@@ -6584,10 +6437,7 @@ class DB( ServiceDB ):
                 
             except:
                 
-                print( traceback.format_exc() )
-                
-                try: c.execute( 'ROLLBACK' )
-                except: pass
+                c.execute( 'ROLLBACK' )
                 
                 raise Exception( 'Tried to update the client db, but something went wrong:' + os.linesep + traceback.format_exc() )
                 
@@ -6621,252 +6471,157 @@ class DB( ServiceDB ):
         self.pub( 'service_updates_gui', service_identifiers_to_service_updates )
         
     
-    def ProcessRequest( self, request_type, request, request_args ):
-        
-        response = HC.ResponseContext( 200 )
-        
-        if request_type == HC.GET:
-            
-            if request == 'file':
-                
-                hash = request_args[ 'hash' ]
-                
-                try:
-                    
-                    with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
-                    
-                    path = CC.GetFilePath( hash, mime )
-                    
-                    with HC.o( path, 'rb' ) as f: file = f.read()
-                    
-                    response = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
-                    
-                except: response = HC.ResponseContext( 404, body = '404 - Not Found' )
-                
-            elif request == 'thumbnail':
-                
-                hash = request_args[ 'hash' ]
-                
-                path = CC.GetThumbnailPath( hash )
-                
-                if os.path.exists( path ):
-                    
-                    mime = HydrusFileHandling.GetMime( path )
-                    
-                    with HC.o( path, 'rb' ) as f: thumbnail = f.read()
-                    
-                    response = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
-                    
-                else: response = HC.ResponseContext( 404, body = '404 - Not Found' )
-                
-            
-        elif request_type == HC.POST: pass # nothing here yet!
-        
-        return response
-        
-    
-    def _MainLoop_JobInternal( self, c, job ):
-        
-        HC.pubsub.pub( 'db_locked_status', 'db locked' )
-        
-        action = job.GetAction()
-        
-        job_type = job.GetType()
-        
-        args = job.GetArgs()
-        
-        kwargs = job.GetKWArgs()
-        
-        if job_type in ( 'read', 'read_write' ):
-            
-            if job_type == 'read': c.execute( 'BEGIN DEFERRED' )
-            else: c.execute( 'BEGIN IMMEDIATE' )
-            
-            try:
-                
-                result = self._MainLoop_Read( c, action, args, kwargs )
-                
-                c.execute( 'COMMIT' )
-                
-                for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
-                
-                if action != 'do_file_query': job.PutResult( result )
-                
-            except MemoryError:
-                
-                c.execute( 'ROLLBACK' )
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( 'The client is running out of memory! Restart it asap!' ) ) )
-                
-                ( exception_type, value, tb ) = sys.exc_info()
-                
-                new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                
-                job.PutResult( new_e )
-                
-            except Exception as e:
-                
-                c.execute( 'ROLLBACK' )
-                
-                message = 'Problem attempting a read on the database:' + os.linesep + traceback.format_exc()
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
-                
-                ( exception_type, value, tb ) = sys.exc_info()
-                
-                new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                
-                job.PutResult( new_e )
-                
-            
-        elif job_type in ( 'write', 'write_special' ):
-            
-            if job_type == 'write': c.execute( 'BEGIN IMMEDIATE' )
-            
-            try:
-                
-                result = self._MainLoop_Write( c, action, args, kwargs )
-                
-                if job_type == 'write': c.execute( 'COMMIT' )
-                
-                for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
-                
-                job.PutResult( result )
-                
-            except Exception as e:
-                
-                if job_type == 'write': c.execute( 'ROLLBACK' )
-                
-                message = 'Problem attempting a write on the database:' + os.linesep + traceback.format_exc()
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
-                
-                action = job.GetAction()
-                
-                ( exception_type, value, tb ) = sys.exc_info()
-                
-                new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                
-                job.PutResult( new_e )
-                
-                if action not in ( 'import_file', 'import_file_from_page' ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, new_e ) )
-                
-            
-        
-        HC.pubsub.pub( 'db_locked_status', '' )
-        
-    
-    def _MainLoop_Read( self, c, action, args, kwargs ):
-        
-        if action == '4chan_pass': result = self._Get4chanPass( c, *args, **kwargs )
-        elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
-        elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
-        elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
-        elif action == 'boorus': result = self._GetBoorus( c, *args, **kwargs )
-        elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
-        elif action == 'do_file_query': result = self._DoFileQuery( c, *args, **kwargs )
-        elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
-        elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
-        elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
-        elif action == 'file': result = self._GetFile( *args, **kwargs )
-        elif action == 'file_and_mime': result = self._GetFileAndMime( *args, **kwargs )
-        elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
-        elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
-        elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
-        elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
-        elif action == 'imageboards': result = self._GetImageboards( c, *args, **kwargs )
-        elif action == 'import_folders': result = self._GetImportFolders( c, *args, **kwargs )
-        elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
-        elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
-        elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
-        elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( c, *args, **kwargs )
-        elif action == 'messages_to_send': result = self._GetMessagesToSend( c, *args, **kwargs )
-        elif action == 'news': result = self._GetNews( c, *args, **kwargs )
-        elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
-        elif action == 'options': result = self._options
-        elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
-        elif action == 'pixiv_account': result = self._GetPixivAccount( c, *args, **kwargs )
-        elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
-        elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
-        elif action == 'resolution': result = self._GetResolution( c, *args, **kwargs )
-        elif action == 'service': result = self._GetService( c, *args, **kwargs )
-        elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
-        elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
-        elif action == 'services': result = self._GetServices( c, *args, **kwargs )
-        elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
-        elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
-        elif action == 'subscriptions': result = self._GetSubscriptions( c, *args, **kwargs )
-        elif action == 'tag_service_precedence': result = self._tag_service_precedence
-        elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
-        elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
-        elif action == 'thumbnail': result = self._GetThumbnail( *args, **kwargs )
-        elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( c, *args, **kwargs )
-        elif action == 'transport_message': result = self._GetTransportMessage( c, *args, **kwargs )
-        elif action == 'transport_messages_from_draft': result = self._GetTransportMessagesFromDraft( c, *args, **kwargs )
-        elif action == 'url_status': result = self._GetURLStatus( c, *args, **kwargs )
-        elif action == 'web_sessions': result = self._GetWebSessions( c, *args, **kwargs )
-        else: raise Exception( 'db received an unknown read command: ' + action )
-        
-        return result
-        
-    
-    def _MainLoop_Write( self, c, action, args, kwargs ):
-        
-        if action == '4chan_pass': self._Set4chanPass( c, *args, **kwargs )
-        elif action == 'add_downloads': self._AddDownloads( c, *args, **kwargs )
-        elif action == 'add_uploads': self._AddUploads( c, *args, **kwargs )
-        elif action == 'archive_conversation': self._ArchiveConversation( c, *args, **kwargs )
-        elif action == 'contact_associated': self._AssociateContact( c, *args, **kwargs )
-        elif action == 'content_updates': self._ProcessContentUpdates( c, *args, **kwargs )
-        elif action == 'copy_files': self._CopyFiles( c, *args, **kwargs )
-        elif action == 'delete_conversation': self._DeleteConversation( c, *args, **kwargs )
-        elif action == 'delete_draft': self._DeleteDraft( c, *args, **kwargs )
-        elif action == 'delete_orphans': self._DeleteOrphans( c, *args, **kwargs )
-        elif action == 'delete_pending': self._DeletePending( c, *args, **kwargs )
-        elif action == 'delete_hydrus_session_key': self._DeleteHydrusSessionKey( c, *args, **kwargs )
-        elif action == 'draft_message': self._DraftMessage( c, *args, **kwargs )
-        elif action == 'export_files': self._ExportFiles( *args, **kwargs )
-        elif action == 'fatten_autocomplete_cache': self._FattenAutocompleteCache( c, *args, **kwargs )
-        elif action == 'favourite_custom_filter_actions': self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
-        elif action == 'flush_message_statuses': self._FlushMessageStatuses( c, *args, **kwargs )
-        elif action == 'generate_tag_ids': self._GenerateTagIdsEfficiently( c, *args, **kwargs )
-        elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
-        elif action == 'import_file': return self._ImportFile( c, *args, **kwargs )
-        elif action == 'import_file_from_page': self._ImportFilePage( c, *args, **kwargs )
-        elif action == 'import_folder': self._UpdateImportFolder( c, *args, **kwargs )
-        elif action == 'import_folders': self._SetImportFolders( c, *args, **kwargs )
-        elif action == 'inbox_conversation': self._InboxConversation( c, *args, **kwargs )
-        elif action == 'message': self._AddMessage( c, *args, **kwargs )
-        elif action == 'message_info_since': self._AddMessageInfoSince( c, *args, **kwargs )
-        elif action == 'message_statuses': self._UpdateMessageStatuses( c, *args, **kwargs )
-        elif action == 'pixiv_account': self._SetPixivAccount( c, *args, **kwargs )
-        elif action == 'reset_service': self._ResetService( c, *args, **kwargs )
-        elif action == 'save_options': self._SaveOptions( c, *args, **kwargs )
-        elif action == 'service_updates': self._ProcessServiceUpdates( c, *args, **kwargs )
-        elif action == 'session': self._AddSession( c, *args, **kwargs )
-        elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
-        elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
-        elif action == 'subscription': self._SetSubscription( c, *args, **kwargs )
-        elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
-        elif action == 'tag_parents': self._UpdateTagParents( c, *args, **kwargs )
-        elif action == 'tag_siblings': self._UpdateTagSiblings( c, *args, **kwargs )
-        elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
-        elif action == 'update': self._AddUpdate( c, *args, **kwargs )
-        elif action == 'update_boorus': self._UpdateBoorus( c, *args, **kwargs )
-        elif action == 'update_contacts': self._UpdateContacts( c, *args, **kwargs )
-        elif action == 'update_imageboards': self._UpdateImageboards( c, *args, **kwargs )
-        elif action == 'update_server_services': self._UpdateServerServices( c, *args, **kwargs )
-        elif action == 'update_services': self._UpdateServices( c, *args, **kwargs )
-        elif action == 'vacuum': self._Vacuum()
-        elif action == 'web_session': result = self._AddWebSession( c, *args, **kwargs )
-        else: raise Exception( 'db received an unknown write command: ' + action )
-        
-    
     def MainLoop( self ):
+        
+        def ProcessJob( c, job ):
+            
+            def ProcessRead( action, args, kwargs ):
+                
+                if action == '4chan_pass': result = self._Get4chanPass( c, *args, **kwargs )
+                elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
+                elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
+                elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
+                elif action == 'boorus': result = self._GetBoorus( c, *args, **kwargs )
+                elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
+                elif action == 'do_file_query': result = self._DoFileQuery( c, *args, **kwargs )
+                elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
+                elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
+                elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
+                elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
+                elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
+                elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
+                elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
+                elif action == 'imageboards': result = self._GetImageboards( c, *args, **kwargs )
+                elif action == 'import_folders': result = self._GetImportFolders( c, *args, **kwargs )
+                elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
+                elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
+                elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
+                elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( c, *args, **kwargs )
+                elif action == 'messages_to_send': result = self._GetMessagesToSend( c, *args, **kwargs )
+                elif action == 'news': result = self._GetNews( c, *args, **kwargs )
+                elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
+                elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
+                elif action == 'pixiv_account': result = self._GetPixivAccount( c, *args, **kwargs )
+                elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
+                elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
+                elif action == 'resolution': result = self._GetResolution( c, *args, **kwargs )
+                elif action == 'service': result = self._GetService( c, *args, **kwargs )
+                elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
+                elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
+                elif action == 'services': result = self._GetServices( c, *args, **kwargs )
+                elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
+                elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
+                elif action == 'subscriptions': result = self._GetSubscriptions( c, *args, **kwargs )
+                elif action == 'tag_service_precedence': result = self._tag_service_precedence
+                elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
+                elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
+                elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( c, *args, **kwargs )
+                elif action == 'transport_message': result = self._GetTransportMessage( c, *args, **kwargs )
+                elif action == 'transport_messages_from_draft': result = self._GetTransportMessagesFromDraft( c, *args, **kwargs )
+                elif action == 'url_status': result = self._GetURLStatus( c, *args, **kwargs )
+                elif action == 'web_sessions': result = self._GetWebSessions( c, *args, **kwargs )
+                else: raise Exception( 'db received an unknown read command: ' + action )
+                
+                return result
+                
+            
+            def ProcessWrite( action, args, kwargs ):
+                
+                if action == '4chan_pass': self._Set4chanPass( c, *args, **kwargs )
+                elif action == 'add_downloads': self._AddDownloads( c, *args, **kwargs )
+                elif action == 'add_uploads': self._AddUploads( c, *args, **kwargs )
+                elif action == 'archive_conversation': self._ArchiveConversation( c, *args, **kwargs )
+                elif action == 'contact_associated': self._AssociateContact( c, *args, **kwargs )
+                elif action == 'content_updates': self._ProcessContentUpdates( c, *args, **kwargs )
+                elif action == 'copy_files': self._CopyFiles( c, *args, **kwargs )
+                elif action == 'delete_conversation': self._DeleteConversation( c, *args, **kwargs )
+                elif action == 'delete_draft': self._DeleteDraft( c, *args, **kwargs )
+                elif action == 'delete_orphans': self._DeleteOrphans( c, *args, **kwargs )
+                elif action == 'delete_pending': self._DeletePending( c, *args, **kwargs )
+                elif action == 'delete_hydrus_session_key': self._DeleteHydrusSessionKey( c, *args, **kwargs )
+                elif action == 'draft_message': self._DraftMessage( c, *args, **kwargs )
+                elif action == 'fatten_autocomplete_cache': self._FattenAutocompleteCache( c, *args, **kwargs )
+                elif action == 'favourite_custom_filter_actions': self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
+                elif action == 'flush_message_statuses': self._FlushMessageStatuses( c, *args, **kwargs )
+                elif action == 'generate_tag_ids': self._GenerateTagIdsEfficiently( c, *args, **kwargs )
+                elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
+                elif action == 'import_file': return self._ImportFile( c, *args, **kwargs )
+                elif action == 'import_file_from_page': self._ImportFilePage( c, *args, **kwargs )
+                elif action == 'import_folder': self._UpdateImportFolder( c, *args, **kwargs )
+                elif action == 'import_folders': self._SetImportFolders( c, *args, **kwargs )
+                elif action == 'inbox_conversation': self._InboxConversation( c, *args, **kwargs )
+                elif action == 'message': self._AddMessage( c, *args, **kwargs )
+                elif action == 'message_info_since': self._AddMessageInfoSince( c, *args, **kwargs )
+                elif action == 'message_statuses': self._UpdateMessageStatuses( c, *args, **kwargs )
+                elif action == 'pixiv_account': self._SetPixivAccount( c, *args, **kwargs )
+                elif action == 'reset_service': self._ResetService( c, *args, **kwargs )
+                elif action == 'save_options': self._SaveOptions( c, *args, **kwargs )
+                elif action == 'service_updates': self._ProcessServiceUpdates( c, *args, **kwargs )
+                elif action == 'session': self._AddSession( c, *args, **kwargs )
+                elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
+                elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
+                elif action == 'subscription': self._SetSubscription( c, *args, **kwargs )
+                elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
+                elif action == 'tag_parents': self._UpdateTagParents( c, *args, **kwargs )
+                elif action == 'tag_siblings': self._UpdateTagSiblings( c, *args, **kwargs )
+                elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
+                elif action == 'update': self._AddUpdate( c, *args, **kwargs )
+                elif action == 'update_boorus': self._UpdateBoorus( c, *args, **kwargs )
+                elif action == 'update_contacts': self._UpdateContacts( c, *args, **kwargs )
+                elif action == 'update_imageboards': self._UpdateImageboards( c, *args, **kwargs )
+                elif action == 'update_server_services': self._UpdateServerServices( c, *args, **kwargs )
+                elif action == 'update_services': self._UpdateServices( c, *args, **kwargs )
+                elif action == 'vacuum': self._Vacuum()
+                elif action == 'web_session': result = self._AddWebSession( c, *args, **kwargs )
+                else: raise Exception( 'db received an unknown write command: ' + action )
+                
+            
+            HC.pubsub.pub( 'db_locked_status', 'db locked' )
+            
+            action = job.GetAction()
+            
+            job_type = job.GetType()
+            
+            args = job.GetArgs()
+            
+            kwargs = job.GetKWArgs()
+            
+            try:
+                
+                if job_type == 'read': c.execute( 'BEGIN DEFERRED' )
+                elif job_type != 'write_special': c.execute( 'BEGIN IMMEDIATE' )
+                
+                if job_type in ( 'read', 'read_write' ): result = ProcessRead( action, args, kwargs )
+                elif job_type in ( 'write', 'write_special' ): result = ProcessWrite( action, args, kwargs )
+                
+                if job_type != 'write_special': c.execute( 'COMMIT' )
+                
+                for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
+                
+                if job.IsSynchronous(): job.PutResult( result )
+                
+            except Exception as e:
+                
+                if job_type != 'write_special': c.execute( 'ROLLBACK' )
+                
+                if type( e ) == MemoryError: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client is running out of memory! Restart it asap!' ) )
+                
+                ( etype, value, tb ) = sys.exc_info()
+                
+                new_e = type( e )( os.linesep.join( traceback.format_exception( etype, value, tb ) ) )
+                
+                if job.IsSynchronous():
+                    
+                    job.PutResult( new_e )
+                    
+                else:
+                    
+                    if action != 'import_file_from_page': HC.ShowException( new_e )
+                    
+                
+            
+            HC.pubsub.pub( 'db_locked_status', '' )
+            
         
         ( db, c ) = self._GetDBCursor()
         
@@ -6880,20 +6635,7 @@ class DB( ServiceDB ):
                 
                 self._pubsubs = []
                 
-                try:
-                    
-                    if isinstance( job, HC.JobServer ):
-                        
-                        ( service_identifier, account_identifier, ip, request_type, request, request_args, request_length ) = job.GetInfo()
-                        
-                        # for now, we don't care about most of this here
-                        # the server has already verified the ip and so on
-                        
-                        # do the server first before you do it here!
-                        # just leave process request for now
-                        
-                    else: self._MainLoop_JobInternal( c, job )
-                    
+                try: ProcessJob( c, job )
                 except:
                     
                     self._jobs.put( ( priority, job ) ) # couldn't lock db; put job back on queue
@@ -6912,7 +6654,7 @@ class DB( ServiceDB ):
         if action in ( 'service_info', 'system_predicates' ): job_type = 'read_write'
         else: job_type = 'read'
         
-        job = HC.JobInternal( action, job_type, *args, **kwargs )
+        job = HC.JobInternal( action, job_type, True, *args, **kwargs )
         
         if HC.shutdown: raise Exception( 'Application has shutdown!' )
         
@@ -6920,10 +6662,6 @@ class DB( ServiceDB ):
         
         if action != 'do_file_query': return job.GetResult()
         
-    
-    def ReadFile( self, hash ): return self._GetFile( hash )
-    
-    def ReadThumbnail( self, hash, full_size = False ): return self._GetThumbnail( hash, full_size )
     
     def WaitUntilGoodTimeToUseDBThread( self ):
         
@@ -6940,7 +6678,7 @@ class DB( ServiceDB ):
         if action == 'vacuum': job_type = 'write_special'
         else: job_type = 'write'
         
-        job = HC.JobInternal( action, job_type, *args, **kwargs )
+        job = HC.JobInternal( action, job_type, synchronous, *args, **kwargs )
         
         if HC.shutdown: raise Exception( 'Application has shutdown!' )
         
@@ -7014,7 +6752,7 @@ def DAEMONCheckImportFolders():
                             if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
                             else: service_identifiers_to_tags = {}
                             
-                            ( result, hash ) = HC.app.WriteDaemon( 'import_file', temp_path, service_identifiers_to_tags = service_identifiers_to_tags )
+                            ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, service_identifiers_to_tags = service_identifiers_to_tags )
                             
                             if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
                             elif result == 'deleted':
@@ -7058,7 +6796,7 @@ def DAEMONCheckImportFolders():
                 
                 HC.pubsub.pub( 'service_status', '' )
                 
-                HC.app.WriteDaemon( 'import_folder', folder_path, details )
+                HC.app.WriteSynchronous( 'import_folder', folder_path, details )
                 
             
         
@@ -7100,7 +6838,7 @@ def DAEMONDownloadFiles():
                     
                     temp_path = HC.GetTempPath()
                     
-                    with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                    with open( temp_path, 'wb' ) as f: f.write( file )
                     
                     num_downloads -= 1
                     
@@ -7108,7 +6846,7 @@ def DAEMONDownloadFiles():
                     
                     HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
                     
-                    HC.app.WriteDaemon( 'import_file', temp_path )
+                    HC.app.WriteSynchronous( 'import_file', temp_path )
                     
                     os.remove( temp_path )
                     
@@ -7118,9 +6856,7 @@ def DAEMONDownloadFiles():
                     
                     message = 'Error downloading file:' + os.linesep + traceback.format_exc()
                     
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                    
-                    print( message )
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                     
                 
             
@@ -7166,7 +6902,7 @@ def DAEMONDownloadThumbnails():
                         
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
-                        HC.app.WriteDaemon( 'thumbnails', thumbnails )
+                        HC.app.WriteSynchronous( 'thumbnails', thumbnails )
                         
                         HC.pubsub.pub( 'add_thumbnail_count', service_identifier, len( thumbnails ) )
                         
@@ -7184,7 +6920,7 @@ def DAEMONFlushServiceUpdates( list_of_service_identifiers_to_service_updates ):
     
     service_identifiers_to_service_updates = HC.MergeKeyToListDicts( list_of_service_identifiers_to_service_updates )
     
-    HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+    HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
     
 def DAEMONResizeThumbnails():
     
@@ -7204,31 +6940,23 @@ def DAEMONResizeThumbnails():
         
         try:
             
-            thumbnail_path
-            
-            options = HC.app.Read( 'options' )
-            
-            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, options[ 'thumbnail_dimensions' ] )
+            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
             
             thumbnail_resized_path = thumbnail_path + '_resized'
             
-            with HC.o( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
             
         except IOError as e:
             
             message = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            
-            print( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
             
         except Exception as e:
             
             message = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-            
-            print( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
             
         
         if i % 10 == 0: time.sleep( 2 )
@@ -7272,11 +7000,9 @@ def DAEMONSynchroniseAccounts():
                 
                 name = service_identifier.GetName()
                 
-                message = 'Failed to refresh account for ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
+                message = 'Failed to refresh account for ' + name + ':' + os.linesep + os.linesep + HC.u( e )
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
             
         
@@ -7316,7 +7042,7 @@ def DAEMONSynchroniseMessages():
                         
                         connection.Post( 'contact', public_key = public_key )
                         
-                        HC.app.WriteDaemon( 'contact_associated', service_identifier )
+                        HC.app.WriteSynchronous( 'contact_associated', service_identifier )
                         
                         service = HC.app.ReadDaemon( 'service', service_identifier )
                         
@@ -7346,7 +7072,7 @@ def DAEMONSynchroniseMessages():
                 
                 new_last_check = HC.GetNow() - 5
                 
-                HC.app.WriteDaemon( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
+                HC.app.WriteSynchronous( 'message_info_since', service_identifier, message_keys, decrypted_statuses, new_last_check )
                 
                 if len( message_keys ) > 0: HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'checked ' + service_identifier.GetName() + ' up to ' + HC.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + HC.u( len( message_keys ) ) + ' new messages' ) )
                 
@@ -7373,7 +7099,7 @@ def DAEMONSynchroniseMessages():
                             
                             message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
                             
-                            HC.app.WriteDaemon( 'message', message, serverside_message_key = serverside_message_key )
+                            HC.app.WriteSynchronous( 'message', message, serverside_message_key = serverside_message_key )
                             
                             num_processed += 1
                             
@@ -7394,13 +7120,11 @@ def DAEMONSynchroniseMessages():
             
             message = 'Failed to check ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-            
-            print( message )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
             
         
     
-    HC.app.WriteDaemon( 'flush_message_statuses' )
+    HC.app.WriteSynchronous( 'flush_message_statuses' )
     
     # send messages to recipients and update my status to sent/failed
     
@@ -7446,9 +7170,7 @@ def DAEMONSynchroniseMessages():
                 
                 message = 'Sending a message failed: ' + os.linesep + traceback.format_exc()
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
                 status = 'failed'
                 
@@ -7462,7 +7184,7 @@ def DAEMONSynchroniseMessages():
         
         if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
         
-        HC.app.WriteDaemon( 'message_statuses', message_key, local_status_updates )
+        HC.app.WriteSynchronous( 'message_statuses', message_key, local_status_updates )
         
     
     HC.app.ReadDaemon( 'status_num_inbox' )
@@ -7471,9 +7193,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
     
     HC.repos_or_subs_changed = False
     
-    options = HC.app.Read( 'options' )
-    
-    if not options[ 'pause_repo_sync' ]:
+    if not HC.options[ 'pause_repo_sync' ]:
         
         service_identifiers = HC.app.ReadDaemon( 'service_identifiers', HC.REPOSITORIES )
         
@@ -7496,7 +7216,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                     
                     while service.CanUpdate():
                         
-                        while options[ 'pause_repo_sync' ]:
+                        while HC.options[ 'pause_repo_sync' ]:
                             
                             HC.pubsub.pub( 'service_status', 'Repository synchronisation paused' )
                             
@@ -7531,7 +7251,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                             
                             HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
                             
-                            HC.app.WriteDaemon( 'generate_tag_ids', update.GetTags() )
+                            HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
                             
                         
                         i = 0
@@ -7555,14 +7275,14 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                                 
                                 time.sleep( 0.0001 )
                                 
-                                HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                                HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
                                 
                                 content_updates = []
                                 current_weight = 0
                                 
                             
                         
-                        if len( content_updates ) > 0: HC.app.WriteDaemon( 'content_updates', { service_identifier : content_updates } )
+                        if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
                         
                         HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
                         
@@ -7570,7 +7290,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                         
                         service_identifiers_to_service_updates = { service_identifier : service_updates }
                         
-                        HC.app.WriteDaemon( 'service_updates', service_identifiers_to_service_updates )
+                        HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
                         
                         HC.pubsub.pub( 'notify_new_pending' )
                         
@@ -7587,11 +7307,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                 
                 message = 'Failed to update ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
                 
-                HC.pubsub.pub( 'service_status', message )
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
                 time.sleep( 3 )
                 
@@ -7602,7 +7318,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
     
     # subs
     
-    if not options[ 'pause_subs_sync' ]:
+    if not HC.options[ 'pause_subs_sync' ]:
         
         subscriptions = HC.app.ReadDaemon( 'subscriptions' )
         
@@ -7684,7 +7400,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                     
                     while True:
                         
-                        while options[ 'pause_subs_sync' ]:
+                        while HC.options[ 'pause_subs_sync' ]:
                             
                             HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
                             
@@ -7737,7 +7453,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                     
                     for url_args in all_url_args:
                         
-                        while options[ 'pause_subs_sync' ]:
+                        while HC.options[ 'pause_subs_sync' ]:
                             
                             HC.pubsub.pub( 'service_status', 'Subscription synchronisation paused' )
                             
@@ -7808,9 +7524,9 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                                 
                                 temp_path = HC.GetTempPath()
                                 
-                                with HC.o( temp_path, 'wb' ) as f: f.write( file )
+                                with open( temp_path, 'wb' ) as f: f.write( file )
                                 
-                                ( status, hash ) = HC.app.WriteDaemon( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+                                ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                 
                                 os.remove( temp_path )
                                 
@@ -7821,7 +7537,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                             
                             message = 'While trying to execute a subscription, the url ' + url + ' caused this problem:' + os.linesep + traceback.format_exc()
                             
-                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                             
                         
                         i += 1
@@ -7856,7 +7572,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                 
                 message = 'Problem with ' + name + ' ' + traceback.format_exc()
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
                 time.sleep( 3 )
                 

@@ -47,7 +47,7 @@ class HydrusPubSub():
                                     wx.PostEvent( HC.app, PubSubEvent() )
                                     
                                 except wx.PyDeadObjectError: pass
-                                except: print( topic + ' for ' + HC.u( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )
+                                except Exception as e: raise e
                                 
                             
                         
@@ -77,7 +77,7 @@ class HydrusPubSub():
                                 
                                 try: getattr( object, method_name )( *args, **kwargs )
                                 except wx.PyDeadObjectError: pass
-                                except: print( topic + ' for ' + HC.u( object ) + ' bound to ' + method_name + os.linesep + traceback.format_exc() )
+                                except Exception as e: raise e
                                 
                             
                         
@@ -85,7 +85,7 @@ class HydrusPubSub():
                 except RuntimeError: pass # sometimes the set changes size during iteration, which is a bug I haven't tracked down
                 except wx.PyDeadObjectError: pass
                 except TypeError: pass
-                except: print( traceback.format_exc() )
+                except Exception as e: raise e
                 
             
         

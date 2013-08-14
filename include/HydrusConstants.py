@@ -16,10 +16,6 @@ import urlparse
 import wx
 import yaml
 
-# open
-
-o = open
-
 options = {}
 
 # dirs
@@ -40,7 +36,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 80
+SOFTWARE_VERSION = 81
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -53,6 +49,7 @@ expirations = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ),
 app = None
 shutdown = False
 is_first_start = False
+is_db_updated = False
 repos_or_subs_changed = False
 
 # Enums
@@ -216,20 +213,23 @@ AUDIO_MP3 = 13
 VIDEO_MP4 = 14
 AUDIO_OGG = 15
 AUDIO_FLAC = 16
+AUDIO_WMA = 17
+VIDEO_WMV = 18
+UNDETERMINED_WM = 19
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, VIDEO_MP4, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
 
-AUDIO = ( AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC )
+AUDIO = ( AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA )
 
-VIDEO = ( VIDEO_FLV, )
+VIDEO = ( VIDEO_FLV, VIDEO_MP4, VIDEO_WMV )
 
 APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF, APPLICATION_ZIP )
 
-NOISY_MIMES = ( APPLICATION_FLASH, VIDEO_FLV, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC )
+NOISY_MIMES = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) + list( VIDEO ) )
 
 ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
@@ -260,8 +260,12 @@ mime_enum_lookup[ 'application' ] = APPLICATIONS
 mime_enum_lookup[ 'audio/mp3' ] = AUDIO_MP3
 mime_enum_lookup[ 'audio/ogg' ] = AUDIO_OGG
 mime_enum_lookup[ 'audio/flac' ] = AUDIO_FLAC
+mime_enum_lookup[ 'audio/x-ms-wma' ] = AUDIO_WMA
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
+mime_enum_lookup[ 'video/mp4' ] = VIDEO_MP4
+mime_enum_lookup[ 'video/x-ms-wmv' ] = VIDEO_WMV
+mime_enum_lookup[ 'video' ] = VIDEO
 mime_enum_lookup[ 'unknown mime' ] = APPLICATION_UNKNOWN
 
 mime_string_lookup = {}
@@ -283,9 +287,14 @@ mime_string_lookup[ APPLICATIONS ] = 'application'
 mime_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
 mime_string_lookup[ AUDIO_OGG ] = 'audio/ogg'
 mime_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
+mime_string_lookup[ AUDIO_WMA ] = 'audio/x-ms-wma'
 mime_string_lookup[ AUDIO ] = 'audio'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
+mime_string_lookup[ VIDEO_MP4 ] = 'video/mp4'
+mime_string_lookup[ VIDEO_WMV ] = 'video/x-ms-wmv'
+mime_string_lookup[ VIDEO ] = 'video'
+mime_string_lookup[ UNDETERMINED_WM ] = 'audio/x-ms-wma or video/x-ms-wmv'
 mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
 
 mime_ext_lookup = {}
@@ -305,8 +314,11 @@ mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
 mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
 mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
 mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
+mime_ext_lookup[ AUDIO_WMA ] = '.wma'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
+mime_ext_lookup[ VIDEO_MP4 ] = '.mp4'
+mime_ext_lookup[ VIDEO_WMV ] = '.wmv'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
 #mime_ext_lookup[ 'application/x-rar-compressed' ] = '.rar'
 
@@ -949,6 +961,22 @@ def ConvertZoomToPercentage( zoom ):
     
     return pretty_zoom
     
+def ShowExceptionDefault( e ):
+    
+    etype = type( e )
+    
+    value = u( e )
+    
+    trace_list = traceback.format_stack()
+    
+    trace = ''.join( trace_list )
+    
+    message = u( etype.__name__ ) + ': ' + value + os.linesep + trace
+    
+    print( message )
+    
+ShowException = ShowExceptionDefault
+
 def GetEmptyDataDict():
     
     data = collections.defaultdict( default_dict_list )
@@ -999,15 +1027,6 @@ def IsCollection( mime ): return mime in ( APPLICATION_HYDRUS_CLIENT_COLLECTION,
 
 def IsImage( mime ): return mime in ( IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG, IMAGE_BMP )
 
-def Logger( file ):
-    
-    def write( self, data ):
-        
-        print( data )
-        
-        print( os.linesep )
-        
-    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )
@@ -1112,11 +1131,122 @@ class AdvancedHTTPConnection():
         
         self._cookies = {}
         
-        if service_identifier is None: timeout = 30
+        self._RefreshConnection()
+        
+    
+    def _AcceptCookies( self, response ):
+    
+        for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
+            
+            try:
+                
+                cookie = cookie.replace( 'Set-Cookie: ', '' )
+                
+                if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
+                
+                ( k, v ) = cookie.split( '=' )
+                
+                self._cookies[ k ] = v
+                
+            except: pass
+            
+        
+    
+    def _DoHydrusBusiness( self, request, response, size_of_request, size_of_response ):
+        
+        service_type = self._service_identifier.GetType()
+        
+        server_header = response.getheader( 'Server' )
+        
+        service_string = service_string_lookup[ service_type ]
+        
+        if server_header is None or service_string not in server_header:
+            
+            app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
+            
+            raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
+            
+        
+        if '?' in request: request_command = request.split( '?' )[0]
+        else: request_command = request
+        
+        if '/' in request_command: request_command = request_command.split( '/' )[1]
+        
+        if request_type == 'GET':
+            
+            if ( service_type, GET, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, size_of_response ) ] } )
+            
+        elif ( service_type, POST, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, size_of_request ) ] } )
+        
+    
+    def _DoRequest( self, request_type, request, headers, body, response_to_path ):
+        
+        self._connection.request( request_type, request, headers = headers, body = body )
+        
+        response = self._connection.getresponse()
+        
+        if response.status == 200 and response_to_path:
+            
+            temp_path = GetTempPath()
+            
+            with open( temp_path, 'wb' ) as f: size_of_response = StreamToStream( response, f )
+            
+            parsed_response = temp_path
+            
+        else:
+            
+            data = response.read()
+            
+            size_of_response = len( data )
+            
+            parsed_response = self._TryToParseResponse( response, data )
+            
+        
+        return ( response, parsed_response, size_of_response )
+        
+    
+    def _RefreshConnection( self ):
+        
+        if self._service_identifier is None: timeout = 30
         else: timeout = 300
         
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
-        else: self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
+        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
+        else: self._connection = httplib.HTTPSConnection( self._host, self._port )
+        
+    
+    def _TryToParseResponse( self, response, data ):
+    
+        content_type = response.getheader( 'Content-Type' )
+        
+        if content_type is None: parsed_response = data
+        else:
+            
+            if '; ' in content_type: ( mime_string, additional_info ) = content_type.split( '; ', 1 )
+            else: ( mime_string, additional_info ) = ( content_type, '' )
+            
+            if 'charset=' in additional_info:
+        
+                # this does utf-8, ISO-8859-4, whatever
+                
+                ( gumpf, charset ) = additional_info.split( '=' )
+                
+                try: parsed_response = data.decode( charset )
+                except: parsed_response = data
+                
+            elif content_type in mime_enum_lookup and mime_enum_lookup[ content_type ] == APPLICATION_YAML:
+                
+                try: parsed_response = yaml.safe_load( data )
+                except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + u( e ) )
+                
+            elif content_type == 'text/html':
+                
+                try: parsed_response = data.decode( 'utf-8' )
+                except: parsed_response = data
+                
+            else: parsed_response = data
+            
+        
+        return parsed_response
         
     
     def close( self ): self._connection.close()
@@ -1138,128 +1268,29 @@ class AdvancedHTTPConnection():
         return self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects )
         
     
-    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True ):
+    def request( self, request_type, request, headers = {}, body = None, response_to_path = False, is_redirect = False, follow_redirects = True ):
+        
+        if body is None: size_of_request = 0
+        else: size_of_request = len( body )
         
         if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + u( NETWORK_VERSION )
         
         if len( self._cookies ) > 0: headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in self._cookies.items() ] )
         
-        try:
-            
-            self._connection.request( request_type, request, headers = headers, body = body )
-            
-            response = self._connection.getresponse()
-            
-            raw_response = response.read()
-            
+        try: ( response, parsed_response, size_of_response ) = self._DoRequest( request_type, request, headers, body, response_to_path )
         except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
             
-            # for some reason, we can't send a request on the current connection, so let's make a new one!
-            try:
+            # for some reason, we can't send a request on the current connection, so let's make a new one and try again!
             
-                if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
-                else: self._connection = httplib.HTTPSConnection( self._host, self._port )
-                
-                self._connection.request( request_type, request, headers = headers, body = body )
-                
-                response = self._connection.getresponse()
-                
-                raw_response = response.read()
-                
-            except:
-                print( traceback.format_exc() )
-                raise
+            self._RefreshConnection()
             
-        except:
-            print( traceback.format_exc() )
-            raise Exception( 'Could not connect to server' )
+            ( response, parsed_response, size_of_response ) = self._DoRequest( request_type, request, headers, body, response_to_path )
+            
+        except: raise Exception( 'Could not connect to ' + self._scheme + '://' + self._host + '.' )
         
-        if self._accept_cookies:
-            
-            for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
-                
-                try:
-                    
-                    cookie = cookie.replace( 'Set-Cookie: ', '' )
-                    
-                    if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
-                    
-                    ( k, v ) = cookie.split( '=' )
-                    
-                    self._cookies[ k ] = v
-                    
-                except: pass
-                
-            
+        if self._accept_cookies: self._AcceptCookies( response )
         
-        if len( raw_response ) > 0:
-            
-            content_type = response.getheader( 'Content-Type' )
-            
-            if content_type is not None:
-                
-                # additional info can be a filename or charset=utf-8 or whatever
-                
-                if content_type == 'text/html':
-                    
-                    mime_string = content_type
-                    
-                    try: raw_response = raw_response.decode( 'utf-8' )
-                    except: pass
-                    
-                elif '; ' in content_type:
-                    
-                    ( mime_string, additional_info ) = content_type.split( '; ' )
-                    
-                    if 'charset=' in additional_info:
-                        
-                        # this does utf-8, ISO-8859-4, whatever
-                        
-                        ( gumpf, charset ) = additional_info.split( '=' )
-                        
-                        try: raw_response = raw_response.decode( charset )
-                        except: pass
-                        
-                    
-                else: mime_string = content_type
-                
-                if mime_string in mime_enum_lookup and mime_enum_lookup[ mime_string ] == APPLICATION_YAML:
-                    
-                    try: parsed_response = yaml.safe_load( raw_response )
-                    except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + u( e ) )
-                    
-                else: parsed_response = raw_response
-                
-            else: parsed_response = raw_response
-            
-        else: parsed_response = raw_response
-        
-        if self._service_identifier is not None:
-            
-            service_type = self._service_identifier.GetType()
-            
-            server_header = response.getheader( 'Server' )
-            
-            service_string = service_string_lookup[ service_type ]
-            
-            if server_header is None or service_string not in server_header:
-                
-                app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
-                
-                raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
-                
-            
-            if '?' in request: request_command = request.split( '?' )[0]
-            else: request_command = request
-            
-            if '/' in request_command: request_command = request_command.split( '/' )[1]
-            
-            if request_type == 'GET':
-                
-                if ( service_type, GET, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, len( raw_response ) ) ] } )
-                
-            elif ( service_type, POST, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, len( body ) ) ] } )
-            
+        if self._service_identifier is not None: self._DoHydrusBusiness( request, response, size_of_request, size_of_response )
         
         if response.status == 200: return parsed_response
         elif response.status == 205: return
@@ -1289,22 +1320,22 @@ class AdvancedHTTPConnection():
                 if ( scheme is None or scheme == self._scheme ) and ( request == redirected_request or request in redirected_request or redirected_request in request ): raise Exception( 'Redirection problem' )
                 else:
                     
-                    if host is None or ( host == self._host and port == self._port ): connection = self
-                    else: connection = AdvancedHTTPConnection( url )
+                    if host is None or ( host == self._host and port == self._port ): new_connection = self
+                    else: new_connection = AdvancedHTTPConnection( url )
                     
                     if response.status in ( 301, 307 ):
                         
                         # 301: moved permanently, repeat request
                         # 307: moved temporarily, repeat request
                         
-                        return connection.request( request_type, redirected_request, headers = headers, body = body, is_redirect = True )
+                        return new_connection.request( request_type, redirected_request, headers = headers, body = body, response_to_path = response_to_path, is_redirect = True )
                         
                     elif response.status in ( 302, 303 ):
                         
                         # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
                         # 303: thanks, now go here with GET
                         
-                        return connection.request( 'GET', redirected_request, is_redirect = True )
+                        return new_connection.request( 'GET', redirected_request, response_to_path = response_to_path, is_redirect = True )
                         
                     
                 
@@ -1323,13 +1354,7 @@ class AdvancedHTTPConnection():
             elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
             elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
             elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
-            elif response.status in ( 500, 501, 502, 503 ):
-                
-                try: print( parsed_response )
-                except: pass
-                
-                raise Exception( parsed_response )
-                
+            elif response.status in ( 500, 501, 502, 503 ): raise Exception( parsed_response )
             else: raise Exception( parsed_response )
            
         
@@ -1810,14 +1835,7 @@ class DAEMONQueue( DAEMON ):
             while self._queue.qsize() > 0: items.append( self._queue.get() )
             
             try: self._callable( items )
-            except Exception as e:
-                
-                message = self._name + os.linesep + type( e ).__name__ + os.linesep + traceback.format_exc()
-                
-                pubsub.pub( 'message', Message( MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
-                
+            except Exception as e: ShowException( e )
             
         
     
@@ -1844,14 +1862,7 @@ class DAEMONWorker( DAEMON ):
             if shutdown: return
             
             try: self._callable()
-            except Exception as e:
-                
-                message = self._name + os.linesep + type( e ).__name__ + os.linesep + traceback.format_exc()
-                
-                pubsub.pub( 'message', Message( MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                
-                print( message )
-                
+            except Exception as e: ShowException( e )
             
             if shutdown: return
             
@@ -1879,10 +1890,11 @@ class JobInternal():
     
     yaml_tag = u'!JobInternal'
     
-    def __init__( self, action, type, *args, **kwargs ):
+    def __init__( self, action, type, synchronous, *args, **kwargs ):
         
         self._action = action
         self._type = type
+        self._synchronous = synchronous
         self._args = args
         self._kwargs = kwargs
         
@@ -1909,6 +1921,8 @@ class JobInternal():
         
     
     def GetType( self ): return self._type
+    
+    def IsSynchronous( self ): return self._synchronous
     
     def PutResult( self, result ):
         

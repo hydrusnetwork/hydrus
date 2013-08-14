@@ -19,7 +19,7 @@ import traceback
 import yaml
 import wx
 
-def GetPath( file_type, hash ):
+def GetExpectedPath( file_type, hash ):
     
     if file_type == 'file': directory = HC.SERVER_FILES_DIR
     elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
@@ -30,7 +30,17 @@ def GetPath( file_type, hash ):
     
     first_two_chars = hash_encoded[:2]
     
-    return directory + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    path = directory + os.path.sep + first_two_chars + os.path.sep + hash_encoded
+    
+    return path
+    
+def GetPath( file_type, hash ):
+    
+    path = GetExpectedPath( file_type, hash )
+    
+    if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( file_type + ' not found!' )
+    
+    return path
     
 def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
 
@@ -96,25 +106,23 @@ class FileDB():
             
             source_path = file_dict[ 'path' ]
             
-            dest_path = GetPath( 'file', hash )
+            dest_path = GetExpectedPath( 'file', hash )
             
             if not os.path.exists( dest_path ): shutil.move( source_path, dest_path )
             
             if 'thumbnail' in file_dict:
                 
-                thumbnail_dest_path = GetPath( 'thumbnail', hash )
+                thumbnail_dest_path = GetExpectedPath( 'thumbnail', hash )
                 
                 if not os.path.exists( thumbnail_dest_path ):
                     
                     thumbnail = file_dict[ 'thumbnail' ]
                     
-                    with HC.o( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
+                    with open( thumbnail_dest_path, 'wb' ) as f: f.write( thumbnail )
                     
                 
             
             if c.execute( 'SELECT 1 FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone() is None:
-                
-                with self._hashes_to_mimes_lock: self._hashes_to_mimes[ hash ] = mime
                 
                 c.execute( 'INSERT OR IGNORE INTO files_info ( hash_id, size, mime, width, height, duration, num_frames, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( hash_id, size, mime, width, height, duration, num_frames, num_words ) )
                 
@@ -240,13 +248,9 @@ class FileDB():
     
     def _GetFile( self, hash ):
         
-        try:
-            
-            path = GetPath( 'file', hash )
-            
-            with HC.o( path, 'rb' ) as f: file = f.read()
-            
-        except: raise HydrusExceptions.NotFoundException( 'Could not find that file!' )
+        path = GetPath( 'file', hash )
+        
+        with open( path, 'rb' ) as f: file = f.read()
         
         return file
         
@@ -348,15 +352,11 @@ class FileDB():
     
     def _GetThumbnail( self, hash ):
         
-        try:
-            
-            path = GetPath( 'thumbnail', hash )
-            
-            with HC.o( path, 'rb' ) as f: thumbnail = f.read()
-            
-            return thumbnail
-            
-        except: raise HydrusExceptions.NotFoundException( 'Could not find that thumbnail!' )
+        path = GetPath( 'thumbnail', hash )
+        
+        with open( path, 'rb' ) as f: thumbnail = f.read()
+        
+        return thumbnail
         
     
     def _RewardFilePetitioners( self, c, service_id, hash_ids, multiplier ):
@@ -377,9 +377,9 @@ class MessageDB():
         
         c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HC.GetNow() ) )
         
-        dest_path = GetPath( 'message', message_key )
+        dest_path = GetExpectedPath( 'message', message_key )
         
-        with HC.o( dest_path, 'wb' ) as f: f.write( message )
+        with open( dest_path, 'wb' ) as f: f.write( message )
         
     
     def _AddStatuses( self, c, contact_key, statuses ):
@@ -415,13 +415,9 @@ class MessageDB():
         
         if result is None: raise HydrusExceptions.ForbiddenException( 'Could not find that message key on message depot!' )
         
-        try:
-            
-            path = GetPath( 'message', message_key )
-            
-            with HC.o( path, 'rb' ) as f: message = f.read()
-            
-        except: raise HydrusExceptions.NotFoundException( 'Could not find that message!' )
+        path = GetPath( 'message', message_key )
+        
+        with open( path, 'rb' ) as f: message = f.read()
         
         return message
         
@@ -1072,9 +1068,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         update_key_bytes = update_key.decode( 'hex' )
         
-        path = GetPath( 'update', update_key_bytes )
+        path = GetExpectedPath( 'update', update_key_bytes )
         
-        with HC.o( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
+        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
         c.execute( 'UPDATE update_cache SET dirty = ? WHERE service_id = ? AND begin = ?;', ( False, service_id, begin ) )
         
@@ -1097,9 +1093,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         update_key = update_key_bytes.encode( 'hex' )
         
-        path = GetPath( 'update', update_key_bytes )
+        path = GetExpectedPath( 'update', update_key_bytes )
         
-        with HC.o( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
+        with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
         c.execute( 'INSERT OR REPLACE INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, False ) )
         
@@ -1346,7 +1342,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         if result is None: result = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND ? BETWEEN begin AND end;', ( service_id, begin ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that update!' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that update in db!' )
         
         ( update_key, ) = result
         
@@ -1354,7 +1350,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         path = GetPath( 'update', update_key_bytes )
         
-        with HC.o( path, 'rb' ) as f: update = f.read()
+        with open( path, 'rb' ) as f: update = f.read()
         
         return update
         
@@ -1685,8 +1681,6 @@ class DB( ServiceDB ):
         
         self._UpdateDB( c )
         
-        self._InitHashToMimeCache( c )
-        
         service_identifiers = self._GetServiceIdentifiers( c )
         
         ( self._server_admin_id, ) = c.execute( 'SELECT service_id FROM services WHERE type = ?;', ( HC.SERVER_ADMIN, ) ).fetchone()
@@ -1893,13 +1887,6 @@ class DB( ServiceDB ):
             
         
     
-    def _InitHashToMimeCache( self, c ):
-        
-        self._hashes_to_mimes_lock = threading.Lock()
-        
-        self._hashes_to_mimes = { hash : mime for ( hash, mime ) in c.execute( 'SELECT hash, mime FROM hashes, files_info USING ( hash_id );' ) }
-        
-    
     def _MakeBackup( self, c ):
         
         c.execute( 'COMMIT' )
@@ -2084,8 +2071,6 @@ class DB( ServiceDB ):
                 
                 c.execute( 'ROLLBACK' )
                 
-                print( traceback.format_exc() )
-                
                 raise Exception( 'Tried to update the server db, but something went wrong:' + os.linesep + traceback.format_exc() )
                 
             
@@ -2122,7 +2107,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.SERVER_FILES_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with HC.o( path_to, 'wb' ) as f: f.write( file )
+                    with open( path_to, 'wb' ) as f: f.write( file )
                     
                 
                 c.execute( 'DELETE FROM files WHERE hash_id IN ' + HC.SplayListForDB( local_files_subset ) + ';' )
@@ -2167,7 +2152,7 @@ class DB( ServiceDB ):
                     
                     path_to = HC.SERVER_THUMBNAILS_DIR + os.path.sep + hash.encode( 'hex' )
                     
-                    with HC.o( path_to, 'wb' ) as f: f.write( thumbnail )
+                    with open( path_to, 'wb' ) as f: f.write( thumbnail )
                     
                 
             
@@ -2253,7 +2238,7 @@ class DB( ServiceDB ):
                 
                 update_key = update_key_bytes.encode( 'hex' )
                 
-                with HC.o( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( update )
+                with open( HC.SERVER_UPDATES_DIR + os.path.sep + update_key, 'wb' ) as f: f.write( update )
                 
                 c.execute( 'INSERT INTO update_cache ( service_id, begin, end, update_key, dirty ) VALUES ( ?, ?, ?, ?, ? );', ( service_id, begin, end, update_key, dirty ) )
                 
@@ -2340,9 +2325,9 @@ class DB( ServiceDB ):
                     os.remove( updates_db_path )
                     
                 
-            except:
+            except Exception as e:
                 
-                print( traceback.format_exc() )
+                HC.ShowException( e )
                 
                 try: c.execute( 'ROLLBACK' )
                 except: pass
@@ -2429,9 +2414,6 @@ class DB( ServiceDB ):
                 
                 c.execute( 'ROLLBACK' )
                 
-                print( 'while attempting a read on the database, the hydrus client encountered the following problem:' )
-                print( traceback.format_exc() )
-                
                 ( exception_type, value, tb ) = sys.exc_info()
                 
                 new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
@@ -2459,9 +2441,8 @@ class DB( ServiceDB ):
                 
                 if job_type == 'write': c.execute( 'ROLLBACK' )
                 
-                print( 'while attempting a write on the database, the hydrus client encountered the following problem:' )
-                print( traceback.format_exc() )
-                
+                HC.ShowException( Exception( traceback.format_exc() ) )
+                HC.ShowException( e )
             
         
     
@@ -2611,9 +2592,9 @@ class DB( ServiceDB ):
                 
                 path = GetPath( 'file', hash )
                 
-                with HC.o( path, 'rb' ) as f: file = f.read()
+                mime = HydrusFileHandling.GetMime( path )
                 
-                with self._hashes_to_mimes_lock: mime = self._hashes_to_mimes[ hash ]
+                with open( path, 'rb' ) as f: file = f.read()
                 
                 response_context = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
                 
@@ -2705,7 +2686,7 @@ class DB( ServiceDB ):
                 
                 mime = HydrusFileHandling.GetMime( thumbnail )
                 
-                with HC.o( path, 'rb' ) as f: thumbnail = f.read()
+                with open( path, 'rb' ) as f: thumbnail = f.read()
                 
                 response_context = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
                 
@@ -3071,7 +3052,7 @@ class DB( ServiceDB ):
         
         job_type = 'read'
         
-        job = HC.JobInternal( action, job_type, *args, **kwargs )
+        job = HC.JobInternal( action, job_type, True, *args, **kwargs )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -3082,7 +3063,7 @@ class DB( ServiceDB ):
         
         job_type = 'write'
         
-        job = HC.JobInternal( action, job_type, *args, **kwargs )
+        job = HC.JobInternal( action, job_type, False, *args, **kwargs )
         
         self._jobs.put( ( priority, job ) )
         

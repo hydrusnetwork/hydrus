@@ -71,8 +71,6 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self.SetDoubleBuffered( True )
         
-        self._options = HC.app.Read( 'options' )
-        
         self.SetScrollRate( 0, 50 )
         
         self._page_key = page_key
@@ -542,8 +540,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
-            except Exception as e: wx.MessageBox( HC.u( e ) )
+            HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
             
         
     
@@ -553,8 +550,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, hashes ) ] } )
-            except Exception as e: wx.MessageBox( HC.u( e ) )
+            HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, hashes ) ] } )
             
         
     
@@ -619,8 +615,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, hashes ) ] } )
-            except Exception as e: wx.MessageBox( HC.u( e ) )
+            HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, hashes ) ] } )
             
         
     
@@ -795,7 +790,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._drawn_up_to = 0
         
-        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -860,20 +855,6 @@ class MediaPanelThumbnails( MediaPanel ):
         
     
     def _ExportFiles( self ):
-        
-        job_key = os.urandom( 32 )
-        
-        cancel_event = threading.Event()
-        
-        with ClientGUIDialogs.DialogProgress( self, job_key, cancel_event ) as dlg:
-            
-            HC.app.Write( 'export_files', job_key, self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ), cancel_event )
-            
-            dlg.ShowModal()
-            
-        
-    
-    def _ExportFilesSpecial( self ):
         
         if len( self._selected_media ) > 0:
             
@@ -1140,60 +1121,52 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            if command == 'archive': self._Archive()
+            elif command == 'copy_files':
+                with wx.BusyCursor(): HC.app.Write( 'copy_files', self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ) )
+            elif command == 'copy_hash': self._CopyHashToClipboard()
+            elif command == 'copy_hashes': self._CopyHashesToClipboard()
+            elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
+            elif command == 'copy_path': self._CopyPathToClipboard()
+            elif command == 'ctrl-space':
                 
-                ( command, data ) = action
+                if self._focussed_media is not None: self._HitMedia( self._focussed_media, True, False )
                 
-                if command == 'archive': self._Archive()
-                elif command == 'copy_files':
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ) )
-                elif command == 'copy_hash': self._CopyHashToClipboard()
-                elif command == 'copy_hashes': self._CopyHashesToClipboard()
-                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
-                elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == 'ctrl-space':
-                    
-                    if self._focussed_media is not None: self._HitMedia( self._focussed_media, True, False )
-                    
-                elif command == 'custom_filter': self._CustomFilter()
-                elif command == 'delete': self._Delete( data )
-                elif command == 'deselect': self._DeselectAll()
-                elif command == 'download': HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
-                elif command == 'export': self._ExportFiles()
-                elif command == 'export special': self._ExportFilesSpecial()
-                elif command == 'filter': self._Filter()
-                elif command == 'fullscreen': self._FullScreen()
-                elif command == 'get_similar_to': self._GetSimilarTo()
-                elif command == 'inbox': self._Inbox()
-                elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': self._ManageTags()
-                elif command == 'modify_account': self._ModifyUploaders( data )
-                elif command == 'new_thread_dumper': self._NewThreadDumper()
-                elif command == 'petition': self._PetitionFiles( data )
-                elif command == 'ratings_filter': self._RatingsFilter( data )
-                elif command == 'remove': self._Remove()
-                elif command == 'rescind_petition': self._RescindPetitionFiles( data )
-                elif command == 'rescind_upload': self._RescindUploadFiles( data )
-                elif command == 'scroll_end': self._ScrollEnd()
-                elif command == 'scroll_home': self._ScrollHome()
-                elif command == 'select_all': self._SelectAll()
-                elif command == 'select_none': self._SelectNone()
-                elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
-                elif command == 'upload': self._UploadFiles( data )
-                elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
-                elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
-                elif command == 'key_left': self._MoveFocussedThumbnail( 0, -1, False )
-                elif command == 'key_right': self._MoveFocussedThumbnail( 0, 1, False )
-                elif command == 'key_shift_up': self._MoveFocussedThumbnail( -1, 0, True )
-                elif command == 'key_shift_down': self._MoveFocussedThumbnail( 1, 0, True )
-                elif command == 'key_shift_left': self._MoveFocussedThumbnail( 0, -1, True )
-                elif command == 'key_shift_right': self._MoveFocussedThumbnail( 0, 1, True )
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                
+            elif command == 'custom_filter': self._CustomFilter()
+            elif command == 'delete': self._Delete( data )
+            elif command == 'deselect': self._DeselectAll()
+            elif command == 'download': HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
+            elif command == 'export': self._ExportFiles()
+            elif command == 'filter': self._Filter()
+            elif command == 'fullscreen': self._FullScreen()
+            elif command == 'get_similar_to': self._GetSimilarTo()
+            elif command == 'inbox': self._Inbox()
+            elif command == 'manage_ratings': self._ManageRatings()
+            elif command == 'manage_tags': self._ManageTags()
+            elif command == 'modify_account': self._ModifyUploaders( data )
+            elif command == 'new_thread_dumper': self._NewThreadDumper()
+            elif command == 'petition': self._PetitionFiles( data )
+            elif command == 'ratings_filter': self._RatingsFilter( data )
+            elif command == 'remove': self._Remove()
+            elif command == 'rescind_petition': self._RescindPetitionFiles( data )
+            elif command == 'rescind_upload': self._RescindUploadFiles( data )
+            elif command == 'scroll_end': self._ScrollEnd()
+            elif command == 'scroll_home': self._ScrollHome()
+            elif command == 'select_all': self._SelectAll()
+            elif command == 'select_none': self._SelectNone()
+            elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
+            elif command == 'upload': self._UploadFiles( data )
+            elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
+            elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
+            elif command == 'key_left': self._MoveFocussedThumbnail( 0, -1, False )
+            elif command == 'key_right': self._MoveFocussedThumbnail( 0, 1, False )
+            elif command == 'key_shift_up': self._MoveFocussedThumbnail( -1, 0, True )
+            elif command == 'key_shift_down': self._MoveFocussedThumbnail( 1, 0, True )
+            elif command == 'key_shift_left': self._MoveFocussedThumbnail( 0, -1, True )
+            elif command == 'key_shift_right': self._MoveFocussedThumbnail( 0, 1, True )
+            else: event.Skip()
             
         
     
@@ -1550,7 +1523,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
                     
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export special' ), export_phrase )
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export' ), export_phrase )
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 #
@@ -1724,7 +1697,7 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_CTRL, wx.WXK_SPACE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ctrl-space' )  )
         ]
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -1743,7 +1716,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def ThumbnailsResized( self ):
         
-        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -1795,10 +1768,8 @@ class ThumbGridSizer( wx.PySizer ):
         
         self._thumbnails = []
         
-        self._options = HC.app.Read( 'options' )
-        
     
-    def _GetThumbnailDimensions( self ): return CC.AddPaddingToDimensions( self._options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_MARGIN + CC.THUMBNAIL_BORDER ) * 2 )
+    def _GetThumbnailDimensions( self ): return CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_MARGIN + CC.THUMBNAIL_BORDER ) * 2 )
     
     def AddThumbnail( self, thumbnail ): self._thumbnails.append( thumbnail )
     
@@ -1854,7 +1825,7 @@ class Thumbnail( Selectable ):
         self._hydrus_bmp = None
         self._file_service_identifier = file_service_identifier
         
-        self._my_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
     
     def _LoadFromDB( self ): self._hydrus_bmp = HC.app.GetThumbnailCache().GetThumbnail( self )
@@ -2076,14 +2047,14 @@ class Thumbnail( Selectable ):
     
     def ReloadFromDB( self ):
         
-        self._my_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
         if self._hydrus_bmp is not None: self._LoadFromDB()
         
     
     def ReloadFromDBLater( self ):
         
-        self._my_dimensions = CC.AddPaddingToDimensions( HC.app.Read( 'options' )[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
         self._hydrus_bmp = None
         

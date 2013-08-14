@@ -5,6 +5,7 @@ import ClientGUIMixins
 import itertools
 import os
 import random
+import sys
 import time
 import traceback
 import wx
@@ -373,8 +374,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         AutoCompleteDropdown.__init__( self, parent )
         
-        self._options = HC.app.Read( 'options' )
-        
         self._current_namespace = ''
         self._current_matches = []
         
@@ -429,51 +428,43 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            if command == 'change_file_repository':
                 
-                ( command, data ) = action
+                service_identifier = data
                 
-                if command == 'change_file_repository':
-                    
-                    service_identifier = data
-                    
-                    self._file_service_identifier = service_identifier
-                    
-                    name = service_identifier.GetName()
-                    
-                    self._file_repo_button.SetLabel( name )
-                    
-                    HC.pubsub.pub( 'change_file_repository', self._page_key, service_identifier )
-                    
-                elif command == 'change_tag_repository':
-                    
-                    service_identifier = data
-                    
-                    self._tag_service_identifier = service_identifier
-                    
-                    name = service_identifier.GetName()
-                    
-                    self._tag_repo_button.SetLabel( name )
-                    
-                    HC.pubsub.pub( 'change_tag_repository', self._page_key, service_identifier )
-                    
-                else:
-                    
-                    event.Skip()
-                    
-                    return # this is about select_up and select_down
-                    
+                self._file_service_identifier = service_identifier
                 
-                self._first_letters = ''
-                self._current_namespace = ''
+                name = service_identifier.GetName()
                 
-                self._UpdateList()
+                self._file_repo_button.SetLabel( name )
                 
-            except Exception as e:
+                HC.pubsub.pub( 'change_file_repository', self._page_key, service_identifier )
                 
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
+            elif command == 'change_tag_repository':
                 
+                service_identifier = data
+                
+                self._tag_service_identifier = service_identifier
+                
+                name = service_identifier.GetName()
+                
+                self._tag_repo_button.SetLabel( name )
+                
+                HC.pubsub.pub( 'change_tag_repository', self._page_key, service_identifier )
+                
+            else:
+                
+                event.Skip()
+                
+                return # this is about select_up and select_down
+                
+            
+            self._first_letters = ''
+            self._current_namespace = ''
+            
+            self._UpdateList()
             
         
     
@@ -542,7 +533,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
-        num_first_letters = self._options[ 'num_autocomplete_chars' ]
+        num_first_letters = HC.options[ 'num_autocomplete_chars' ]
         
         raw_entry = self.GetValue()
         
@@ -688,9 +679,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         self._page_key = None # this makes the parent's eventmenu pubsubs with page_key simpler!
         
-        self._options = HC.app.Read( 'options' )
-        
-        if self._options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
+        if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
         
@@ -724,7 +713,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
-        num_first_letters = self._options[ 'num_autocomplete_chars' ]
+        num_first_letters = HC.options[ 'num_autocomplete_chars' ]
         
         raw_entry = self.GetValue()
         
@@ -883,9 +872,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         self._page_key = page_key
         
-        options = HC.app.Read( 'options' )
-        
-        sort_by = options[ 'sort_by' ]
+        sort_by = HC.options[ 'sort_by' ]
         
         collect_types = set()
         
@@ -962,9 +949,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 
                 self._special_parent = special_parent
                 
-                options = HC.app.Read( 'options' )
-                
-                default = options[ 'default_collect' ]
+                default = HC.options[ 'default_collect' ]
                 
                 if default is not None: self.SetCheckedStrings( default )
                 
@@ -1013,15 +998,13 @@ class ChoiceCollect( BetterChoice ):
         
         self._page_key = page_key
         
-        options = HC.app.Read( 'options' )
-        
-        if sort_by is None: sort_by = options[ 'sort_by' ]
+        if sort_by is None: sort_by = HC.options[ 'sort_by' ]
         
         collect_choices = CC.GenerateCollectByChoices( sort_by )
         
         for ( string, data ) in collect_choices: self.Append( string, data )
         
-        self.SetSelection( options[ 'default_collect' ] )
+        self.SetSelection( HC.options[ 'default_collect' ] )
         
         self.Bind( wx.EVT_CHOICE, self.EventChoice )
         
@@ -1049,9 +1032,7 @@ class ChoiceSort( BetterChoice ):
         
         self._page_key = page_key
         
-        options = HC.app.Read( 'options' )
-        
-        if sort_by is None: sort_by = options[ 'sort_by' ]
+        if sort_by is None: sort_by = HC.options[ 'sort_by' ]
         
         sort_choices = CC.SORT_CHOICES + sort_by
         
@@ -1073,7 +1054,7 @@ class ChoiceSort( BetterChoice ):
             self.Append( 'sort by ' + string, ( sort_by_type, sort_by_data ) )
             
         
-        try: self.SetSelection( options[ 'default_sort' ] )
+        try: self.SetSelection( HC.options[ 'default_sort' ] )
         except: pass
         
         self.Bind( wx.EVT_CHOICE, self.EventChoice )
@@ -1119,8 +1100,6 @@ class Frame( wx.Frame ):
     def __init__( self, *args, **kwargs ):
         
         wx.Frame.__init__( self, *args, **kwargs )
-        
-        self._options = HC.app.Read( 'options' )
         
         #self.SetDoubleBuffered( True )
         
@@ -1271,19 +1250,11 @@ class ListBook( wx.Panel ):
         
         if action is not None:
             
-            try:
-                
-                ( command, data ) = action
-                
-                if command == 'select_down': self.SelectDown()
-                elif command == 'select_up': self.SelectUp()
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
-                
+            ( command, data ) = action
+            
+            if command == 'select_down': self.SelectDown()
+            elif command == 'select_up': self.SelectUp()
+            else: event.Skip()
             
         
     
@@ -1444,8 +1415,6 @@ class ListBox( wx.ScrolledWindow ):
         
         self._ordered_strings = []
         self._strings_to_terms = {}
-        
-        self._options = HC.app.Read( 'options' )
         
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
@@ -1644,22 +1613,14 @@ class ListBox( wx.ScrolledWindow ):
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+            else:
                 
-                ( command, data ) = action
+                event.Skip()
                 
-                if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
-                else:
-                    
-                    event.Skip()
-                    
-                    return # this is about select_up and select_down
-                    
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
+                return # this is about select_up and select_down
                 
             
         
@@ -1993,7 +1954,7 @@ class PopupMessage( wx.Window ):
         
         wx.Window.__init__( self, parent, style = wx.BORDER_SIMPLE )
         
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self.Bind( wx.EVT_RIGHT_UP, self.EventDismiss )
         
     
     def EventDismiss( self, event ):
@@ -2001,25 +1962,91 @@ class PopupMessage( wx.Window ):
         self.GetParent().Dismiss( self )
         
     
-class PopupMessageError( PopupMessage ):
+class PopupMessageDismissAll( PopupMessage ):
     
-    def __init__( self, parent, exception ):
+    def __init__( self, parent ):
         
         PopupMessage.__init__( self, parent )
         
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._text = wx.StaticText( self )
+        self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        button = wx.Button( self, label = 'dismiss all' )
+        button.Bind( wx.EVT_BUTTON, self.EventButton )
+        button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        hbox.AddF( self._text, FLAGS_MIXED )
+        hbox.AddF( button, FLAGS_MIXED )
+        
+        self.SetSizer( hbox )
+        
+    
+    def EventButton( self, event ): self.GetParent().DismissAll()
+    
+    def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HC.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
+    
+class PopupMessageError( PopupMessage ):
+    
+    def __init__( self, parent, etype, value, trace ):
+        
+        PopupMessage.__init__( self, parent )
+        
+        self._copy_text = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + trace
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        error = wx.StaticText( self, label = type( exception ).__name__, style = wx.ALIGN_CENTER )
+        error = wx.StaticText( self, label = HC.u( etype.__name__ ), style = wx.ALIGN_CENTER )
         error.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        text = wx.StaticText( self, label = HC.u( exception ) )
+        text = wx.StaticText( self, label = HC.u( value ) )
         text.Wrap( 380 )
         text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
+        self._show_tb_button = wx.Button( self, label = 'show traceback' )
+        self._show_tb_button.Bind( wx.EVT_BUTTON, self.EventShowButton )
+        self._show_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._tb_text = wx.StaticText( self, label = trace )
+        self._tb_text.Wrap( 380 )
+        self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._tb_text.Hide()
+        
+        self._copy_tb_button = wx.Button( self, label = 'copy info' )
+        self._copy_tb_button.Bind( wx.EVT_BUTTON, self.EventCopyButton )
+        self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._copy_tb_button.Hide()
+        
         vbox.AddF( error, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._copy_tb_button, FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+    
+    def EventCopyButton( self, event ): HC.pubsub.pub( 'clipboard', 'text', self._copy_text )
+    
+    def EventShowButton( self, event ):
+        
+        if self._tb_text.IsShown():
+            
+            self._show_tb_button.SetLabel( 'show traceback' )
+            
+            self._tb_text.Hide()
+            self._copy_tb_button.Hide()
+            
+        else:
+            
+            self._show_tb_button.SetLabel( 'hide traceback' )
+            
+            self._tb_text.Show()
+            self._copy_tb_button.Show()
+            
+        
+        self.GetParent().EventMove( event )
         
     
 class PopupMessageFiles( PopupMessage ):
@@ -2081,10 +2108,17 @@ class PopupMessageManager( wx.Frame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        self._message_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._dismiss_all = PopupMessageDismissAll( self )
+        self._dismiss_all.Hide()
+        
+        vbox.AddF( self._message_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._dismiss_all, FLAGS_EXPAND_PERPENDICULAR )
+        
         self.SetSizer( vbox )
         
         self._pending_messages = []
-        self._message_windows = []
         
         top_level_parent.Bind( wx.EVT_SIZE, self.EventMove )
         top_level_parent.Bind( wx.EVT_MOVE, self.EventMove )
@@ -2094,23 +2128,37 @@ class PopupMessageManager( wx.Frame ):
         HC.pubsub.sub( self, 'AddMessage', 'message' )
         # maybe make a ding noise when a new message arrives
         
+        self._old_excepthook = sys.excepthook
+        self._old_show_exception = HC.ShowException
+        
+        sys.excepthook = CC.CatchExceptionClient
+        #HC.ShowException = CC.ShowExceptionClient
+        
     
     def _CheckPending( self ):
         
-        if len( self._pending_messages ) > 0 and len( self._message_windows ) < self._max_messages_to_display:
+        num_messages_displayed = self._message_vbox.GetItemCount()
+        
+        if len( self._pending_messages ) > 0 and num_messages_displayed < self._max_messages_to_display:
             
             message = self._pending_messages.pop( 0 )
             
             window = self._CreateMessageWindow( message )
             
-            self._message_windows.append( window )
+            self._message_vbox.AddF( window, FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox = self.GetSizer()
+        
+        num_messages_pending = len( self._pending_messages )
+        
+        if num_messages_pending > 0:
             
-            vbox.AddF( window, FLAGS_EXPAND_PERPENDICULAR )
+            self._dismiss_all.SetNumMessages( num_messages_pending )
             
-            self._SizeAndPositionAndShow()
+            self._dismiss_all.Show()
             
+        else: self._dismiss_all.Hide()
+        
+        self._SizeAndPositionAndShow()
         
     
     def _CreateMessageWindow( self, message ):
@@ -2122,19 +2170,13 @@ class PopupMessageManager( wx.Frame ):
             
             message_string = info
             
-            print( 'message: ' + message_string )
-            
             window = PopupMessageText( self, message_string )
             
         elif message_type == HC.MESSAGE_TYPE_ERROR:
             
-            exception = info
+            ( etype, value, trace ) = info
             
-            message_string = HC.u( exception )
-            
-            print( 'error: ' + message_string )
-            
-            window = PopupMessageError( self, exception )
+            window = PopupMessageError( self, etype, value, trace )
             
         elif message_type == HC.MESSAGE_TYPE_FILES:
             
@@ -2144,6 +2186,29 @@ class PopupMessageManager( wx.Frame ):
             
         
         return window
+        
+    
+    def _PrintMessage( self, message ):
+        
+        message_type = message.GetType()
+        info = message.GetInfo()
+        
+        if message_type == HC.MESSAGE_TYPE_TEXT:
+            
+            message_string = info
+            
+        elif message_type == HC.MESSAGE_TYPE_ERROR:
+            
+            ( etype, value, trace ) = info
+            
+            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + trace
+            
+        elif message_type == HC.MESSAGE_TYPE_FILES:
+            
+            ( message_string, hashes ) = info
+            
+        
+        print( message_string )
         
     
     def _SizeAndPositionAndShow( self ):
@@ -2161,30 +2226,51 @@ class PopupMessageManager( wx.Frame ):
         
         self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
         
-        if len( self._message_windows ) > 0: self.Show()
+        num_messages_displayed = self._message_vbox.GetItemCount()
+        
+        if num_messages_displayed > 0: self.Show()
         else: self.Hide()
         
     
     def AddMessage( self, message ):
+        
+        self._PrintMessage( message )
         
         self._pending_messages.append( message )
         
         self._CheckPending()
         
     
+    def CleanUp( self ):
+        
+        sys.excepthook = self._old_excepthook
+        
+        HC.ShowException = self._old_show_exception
+        
+    
     def Dismiss( self, window ):
         
-        self._message_windows.remove( window )
-        
-        vbox = self.GetSizer()
-        
-        vbox.Detach( window )
+        self._message_vbox.Detach( window )
         
         window.Destroy()
         
         self._SizeAndPositionAndShow()
         
         self._CheckPending()
+        
+    
+    def DismissAll( self ):
+        
+        self._pending_messages = []
+        
+        sizer_items = self._message_vbox.GetChildren()
+        
+        for sizer_item in sizer_items:
+            
+            message_window = sizer_item.GetWindow()
+            
+            self.Dismiss( message_window )
+            
         
     
     def EventMove( self, event ):
@@ -2751,8 +2837,6 @@ class AdvancedImportOptions( AdvancedOptions ):
     
     def _InitPanel( self, panel ):
         
-        options = HC.app.Read( 'options' )
-        
         self._auto_archive = wx.CheckBox( panel )
         
         self._exclude_deleted = wx.CheckBox( panel )
@@ -2787,13 +2871,11 @@ class AdvancedImportOptions( AdvancedOptions ):
     
     def _SetControls( self, info ):
         
-        options = HC.app.Read( 'options' )
-        
         if 'auto_archive' in info: self._auto_archive.SetValue( info[ 'auto_archive' ] )
         else: self._auto_archive.SetValue( False )
         
         if 'exclude_deleted_files' in info: self._exclude_deleted.SetValue( info[ 'exclude_deleted_files' ] )
-        else: self._exclude_deleted.SetValue( options[ 'exclude_deleted_files' ] )
+        else: self._exclude_deleted.SetValue( HC.options[ 'exclude_deleted_files' ] )
         
         if 'min_size' in info: self._min_size.SetValue( info[ 'min_size' ] )
         else: self._min_size.SetValue( None )
@@ -3007,7 +3089,7 @@ class RadioBox( StaticBox ):
     
 class TagsBox( ListBox ):
     
-    def _GetNamespaceColours( self ): return self._options[ 'namespace_colours' ]
+    def _GetNamespaceColours( self ): return HC.options[ 'namespace_colours' ]
     
     def _GetTextColour( self, tag_string ):
         
@@ -3037,37 +3119,29 @@ class TagsBox( ListBox ):
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+            elif command in ( 'parent', 'sibling' ):
                 
-                ( command, data ) = action
+                tag = data
                 
-                if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
-                elif command in ( 'parent', 'sibling' ):
+                import ClientGUIDialogsManage
+                
+                if command == 'parent':
                     
-                    tag = data
+                    with ClientGUIDialogsManage.DialogManageTagParents( self, tag ) as dlg: dlg.ShowModal()
                     
-                    import ClientGUIDialogsManage
+                elif command == 'sibling':
                     
-                    if command == 'parent':
-                        
-                        with ClientGUIDialogsManage.DialogManageTagParents( self, tag ) as dlg: dlg.ShowModal()
-                        
-                    elif command == 'sibling':
-                        
-                        with ClientGUIDialogsManage.DialogManageTagSiblings( self, tag ) as dlg: dlg.ShowModal()
-                        
-                    
-                else:
-                    
-                    event.Skip()
-                    
-                    return # this is about select_up and select_down
+                    with ClientGUIDialogsManage.DialogManageTagSiblings( self, tag ) as dlg: dlg.ShowModal()
                     
                 
-            except Exception as e:
+            else:
                 
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
+                event.Skip()
+                
+                return # this is about select_up and select_down
                 
             
         
@@ -3206,7 +3280,7 @@ class TagsBoxCPP( TagsBox ):
         
         TagsBox.__init__( self, parent, min_height = 200 )
         
-        self._sort = self._options[ 'default_tag_sort' ]
+        self._sort = HC.options[ 'default_tag_sort' ]
         
         self._page_key = page_key
         
@@ -3320,8 +3394,6 @@ class TagsBoxCPPWithSorter( StaticBox ):
         
         StaticBox.__init__( self, parent, 'selection tags' )
         
-        self._options = HC.app.Read( 'options' )
-        
         self._sorter = wx.Choice( self )
         
         self._sorter.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
@@ -3329,10 +3401,10 @@ class TagsBoxCPPWithSorter( StaticBox ):
         self._sorter.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
         self._sorter.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
         
-        if self._options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._sorter.Select( 0 )
-        elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._sorter.Select( 1 )
-        elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 2 )
-        elif self._options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 3 )
+        if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._sorter.Select( 0 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._sorter.Select( 1 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 2 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 3 )
         
         self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
         

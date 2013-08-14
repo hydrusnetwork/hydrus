@@ -19,37 +19,6 @@ def GenerateClientServiceIdentifier( service_type ):
         return HC.ClientServiceIdentifier( service_key, service_type, service_name )
         
     
-class FakeFile():
-    
-    def __init__( self, path, mode ):
-        
-        self._path = path
-        self._mode = mode
-        
-        self._data = ''
-        
-    
-    def __enter__( self ): return self
-    
-    def __exit__( self, exc_type, exc_value, traceback ): return True
-    
-    def read( self ): return self._data
-    
-    def write( self, data ): self._data = data
-    
-class FakeFileManager():
-    
-    def __init__( self ):
-        
-        self._fake_files = {}
-        
-    
-    def GetFile( self, path, access_type ): return self._fake_files[ path ]
-    
-    def SetFile( self, path, fake_file ): self._fake_files[ path ] = fake_file
-    
-fake_file_manager = FakeFileManager()
-
 class FakeHTTPConnection():
     
     def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):

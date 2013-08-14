@@ -45,8 +45,6 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         ListCtrlAutoWidthMixin.__init__( self )
         ColumnSorterMixin.__init__( self, 8 )
         
-        self._options = HC.app.Read( 'options' )
-        
         self._page_key = page_key
         self._identity = identity
         
@@ -92,7 +90,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) )
         ]
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -228,45 +226,38 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            selection = self.GetFirstSelected()
+            
+            conversation = self._data_indices_to_conversations[ self.GetItemData( selection ) ]
+            
+            conversation_key = conversation.GetConversationKey()
+            
+            identity_contact_key = self._identity.GetContactKey()
+            
+            if command == 'archive': HC.app.Write( 'archive_conversation', conversation_key )
+            elif command == 'inbox': HC.app.Write( 'inbox_conversation', conversation_key )
+            elif command == 'read':
                 
-                ( command, data ) = action
+                message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'sent' ) )
                 
-                selection = self.GetFirstSelected()
+                for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
                 
-                conversation = self._data_indices_to_conversations[ self.GetItemData( selection ) ]
+            elif command == 'unread':
                 
-                conversation_key = conversation.GetConversationKey()
+                message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'read' ) )
                 
-                identity_contact_key = self._identity.GetContactKey()
+                for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
                 
-                if command == 'archive': HC.app.Write( 'archive_conversation', conversation_key )
-                elif command == 'inbox': HC.app.Write( 'inbox_conversation', conversation_key )
-                elif command == 'read':
-                    
-                    message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'sent' ) )
-                    
-                    for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'read' ) ] )
-                    
-                elif command == 'unread':
-                    
-                    message_keys = conversation.GetMessageKeysWithDestination( ( self._identity, 'read' ) )
-                    
-                    for message_key in message_keys: HC.app.Write( 'message_statuses', message_key, [ ( identity_contact_key, 'sent' ) ] )
-                    
-                elif command == 'delete':
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete this conversation?' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_conversation', conversation_key )
-                        
-                    
-                else: event.Skip()
+            elif command == 'delete':
                 
-            except Exception as e:
+                with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete this conversation?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_conversation', conversation_key )
+                    
                 
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
+            else: event.Skip()
             
         
     
@@ -625,46 +616,36 @@ class DestinationPanel( wx.Panel ):
         
         if action is not None:
             
-            try:
+            ( command, data ) = action
+            
+            if command in ( 'retry', 'read', 'unread' ):
                 
-                ( command, data ) = action
+                if command == 'retry': status = 'pending'
+                elif command == 'read': status = 'read'
+                elif command == 'unread': status = 'sent'
                 
-                if command in ( 'retry', 'read', 'unread' ):
-                    
-                    if command == 'retry': status = 'pending'
-                    elif command == 'read': status = 'read'
-                    elif command == 'unread': status = 'sent'
-                    
-                    my_message_depot = HC.app.Read( 'service', self._identity )
-                    
-                    connection = my_message_depot.GetConnection()
-                    
-                    my_public_key = self._identity.GetPublicKey()
-                    my_contact_key = self._identity.GetContactKey()
-                    
-                    contacts_contact_key = self._contact.GetContactKey()
-                    
-                    status_updates = []
-                    
-                    status_key = hashlib.sha256( contacts_contact_key + self._message_key ).digest()
-                    
-                    packaged_status = HydrusMessageHandling.PackageStatusForDelivery( ( self._message_key, contacts_contact_key, status ), my_public_key )
-                    
-                    status_updates = ( ( status_key, packaged_status ), )
-                    
-                    connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = status_updates )
-                    
-                    HC.app.Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
-                    
-                else: event.Skip()
+                my_message_depot = HC.app.Read( 'service', self._identity )
                 
-            except Exception as e:
+                connection = my_message_depot.GetConnection()
                 
-                wx.MessageBox( 'Could not contact your message depot, so could not update status!' )
+                my_public_key = self._identity.GetPublicKey()
+                my_contact_key = self._identity.GetContactKey()
                 
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
+                contacts_contact_key = self._contact.GetContactKey()
                 
+                status_updates = []
+                
+                status_key = hashlib.sha256( contacts_contact_key + self._message_key ).digest()
+                
+                packaged_status = HydrusMessageHandling.PackageStatusForDelivery( ( self._message_key, contacts_contact_key, status ), my_public_key )
+                
+                status_updates = ( ( status_key, packaged_status ), )
+                
+                connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = status_updates )
+                
+                HC.app.Write( 'message_statuses', self._message_key, [ ( self._contact_key, status ) ] )
+                
+            else: event.Skip()
             
         
     
@@ -1302,9 +1283,7 @@ class DraftPanel( wx.Panel ):
                 
                 message = 'The hydrus client could not connect to your message depot, so the message could not be sent!'
                 
-                wx.MessageBox( message )
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) ) )
-                print( traceback.format_exc() )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 
                 return
                 

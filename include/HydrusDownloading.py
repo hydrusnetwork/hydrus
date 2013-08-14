@@ -356,16 +356,18 @@ class DownloaderDeviantArt( Downloader ):
             
             title = title_reversed[::-1] # sweet dolls
             
-            try: ( date_gumpf, raw_category_tags ) = date_and_tags.split( ' in ', 1 )
-            except:
+            try:
                 
-                print( raw_title )
-                print( date_and_tags )
+                ( date_gumpf, raw_category_tags ) = date_and_tags.split( ' in ', 1 )
                 
-                raise
+                category_tags = raw_category_tags.split( ' > ' )
                 
-            
-            category_tags = raw_category_tags.split( ' > ' )
+            except Exception as e:
+                
+                HC.ShowException( e )
+                
+                category_tags = []
+                
             
             tags = []
             
@@ -458,9 +460,9 @@ class DownloaderGiphy( Downloader ):
             
             tags = [ tag_data[ 'name' ] for tag_data in tags_data ]
             
-        except:
+        except Exception as e:
             
-            print( traceback.format_exc() )
+            HC.ShowException( e )
             
             tags = []
             
@@ -794,9 +796,7 @@ class DownloaderNewgrounds( Downloader ):
             
             flash_url = 'http://uploads.ungrounded.net/' + flash_url
             
-        except:
-            print( traceback.format_exc())
-            raise Exception( 'Could not find the swf file! It was probably an mp4!' )
+        except: raise Exception( 'Could not find the swf file! It was probably an mp4!' )
         
         return ( flash_url, tags )
         

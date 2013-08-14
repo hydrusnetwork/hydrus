@@ -31,10 +31,9 @@ ANIMATED_SCANBAR_CARET_WIDTH = 10
 ZOOMINS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
 ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01 ]
 
-NON_ZOOMABLE_MIMES = [ HC.APPLICATION_PDF ]
-NON_ZOOMABLE_MIMES.extend( HC.AUDIO )
+NON_ZOOMABLE_MIMES = list( HC.AUDIO) + [ HC.APPLICATION_PDF ]
 
-NON_LARGABLY_ZOOMABLE_MIMES = [ HC.VIDEO_FLV, HC.APPLICATION_FLASH ]
+NON_LARGABLY_ZOOMABLE_MIMES = list( HC.VIDEO ) + [ HC.APPLICATION_FLASH ]
 
 # Sizer Flags
 
@@ -82,8 +81,6 @@ class Canvas():
         self._focus_holder = wx.Window( self )
         self._focus_holder.Hide()
         self._focus_holder.SetEventHandler( self )
-        
-        self._options = HC.app.Read( 'options' )
         
         self._current_media = None
         self._current_display_media = None
@@ -133,7 +130,7 @@ class Canvas():
             
             current_y = 3
             
-            namespace_colours = self._options[ 'namespace_colours' ]
+            namespace_colours = HC.options[ 'namespace_colours' ]
             
             for tag in tags_i_want_to_display:
                 
@@ -342,10 +339,7 @@ class Canvas():
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
-            if self._current_display_media.GetMime() in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ):
-                
-                my_width -= 1
-                
+            if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: my_width -= 1
             
             if media_width > my_width or media_height > my_height:
                 
@@ -361,7 +355,7 @@ class Canvas():
     
     def _ShouldSkipInputDueToFlash( self ):
         
-        if self._current_display_media.GetMime() in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ):
+        if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
             
             ( x, y ) = self._media_container.GetPosition()
             ( width, height ) = self._media_container.GetSize()
@@ -537,7 +531,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             self.SetMinSize( ( 480, 360 ) )
             
         
-        if self._options[ 'fullscreen_borderless' ]:
+        if HC.options[ 'fullscreen_borderless' ]:
             
             self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
             
@@ -763,7 +757,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 if self._current_zoom < zoom:
                     
-                    if self._current_media.GetMime() in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ):
+                    if self._current_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
                         
                         # because of the event passing under mouse, we want to preserve whitespace around flash
                         
@@ -1107,7 +1101,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                 
                 ( modifier, key ) = HC.GetShortcutFromEvent( event )
                 
-                key_dict = self._options[ 'shortcuts' ][ modifier ]
+                key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
                 if key in key_dict:
                     
@@ -1130,48 +1124,39 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
             
             if action is not None:
                 
-                try:
+                ( command, data ) = action
+                
+                if command == 'archive': self._Archive()
+                elif command == 'copy_files':
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
+                elif command == 'copy_path': self._CopyPathToClipboard()
+                elif command == 'delete': self._Delete()
+                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'first': self._ShowFirst()
+                elif command == 'last': self._ShowLast()
+                elif command == 'previous': self._ShowPrevious()
+                elif command == 'next': self._ShowNext()
+                elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
+                elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
+                elif command == 'inbox': self._Inbox()
+                elif command == 'manage_ratings': self._ManageRatings()
+                elif command == 'manage_tags': self._ManageTags()
+                elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
-                    ( command, data ) = action
+                    distance = 20
                     
-                    if command == 'archive': self._Archive()
-                    elif command == 'copy_files':
-                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
-                    elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
-                    elif command == 'copy_path': self._CopyPathToClipboard()
-                    elif command == 'delete': self._Delete()
-                    elif command == 'fullscreen_switch': self._FullscreenSwitch()
-                    elif command == 'first': self._ShowFirst()
-                    elif command == 'last': self._ShowLast()
-                    elif command == 'previous': self._ShowPrevious()
-                    elif command == 'next': self._ShowNext()
-                    elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
-                    elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                    elif command == 'inbox': self._Inbox()
-                    elif command == 'manage_ratings': self._ManageRatings()
-                    elif command == 'manage_tags': self._ManageTags()
-                    elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
-                        
-                        distance = 20
-                        
-                        if command == 'pan_up': self._DoManualPan( 0, -distance )
-                        elif command == 'pan_down': self._DoManualPan( 0, distance )
-                        elif command == 'pan_left': self._DoManualPan( -distance, 0 )
-                        elif command == 'pan_right': self._DoManualPan( distance, 0 )
-                        
-                    elif command == 'slideshow': self._StartSlideshow( data )
-                    elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
-                    elif command == 'zoom_in': self._ZoomIn()
-                    elif command == 'zoom_out': self._ZoomOut()
-                    elif command == 'zoom_switch': self._ZoomSwitch()
-                    else: event.Skip()
+                    if command == 'pan_up': self._DoManualPan( 0, -distance )
+                    elif command == 'pan_down': self._DoManualPan( 0, distance )
+                    elif command == 'pan_left': self._DoManualPan( -distance, 0 )
+                    elif command == 'pan_right': self._DoManualPan( distance, 0 )
                     
-                except Exception as e:
-                    
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                    wx.MessageBox( HC.u( e ) )
-                    print( HC.u( e ) )
-                    
+                elif command == 'slideshow': self._StartSlideshow( data )
+                elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
+                elif command == 'zoom_in': self._ZoomIn()
+                elif command == 'zoom_out': self._ZoomOut()
+                elif command == 'zoom_switch': self._ZoomSwitch()
+                else: event.Skip()
                 
             
         
@@ -1500,39 +1485,30 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
             
             if action is not None:
                 
-                try:
-                    
-                    ( command, data ) = action
-                    
-                    if command == 'archive': self._Archive()
-                    elif command == 'copy_files':
-                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
-                    elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
-                    elif command == 'copy_path': self._CopyPathToClipboard()
-                    elif command == 'delete': self._Delete()
-                    elif command == 'fullscreen_switch': self._FullscreenSwitch()
-                    elif command == 'first': self._ShowFirst()
-                    elif command == 'last': self._ShowLast()
-                    elif command == 'previous': self._ShowPrevious()
-                    elif command == 'next': self._ShowNext()
-                    elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
-                    elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                    elif command == 'inbox': self._Inbox()
-                    elif command == 'manage_ratings': self._ManageRatings()
-                    elif command == 'manage_tags': self._ManageTags()
-                    elif command == 'slideshow': self._StartSlideshow( data )
-                    elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
-                    elif command == 'zoom_in': self._ZoomIn()
-                    elif command == 'zoom_out': self._ZoomOut()
-                    elif command == 'zoom_switch': self._ZoomSwitch()
-                    else: event.Skip()
-                    
-                except Exception as e:
-                    
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                    wx.MessageBox( HC.u( e ) )
-                    print( HC.u( e ) )
-                    
+                ( command, data ) = action
+                
+                if command == 'archive': self._Archive()
+                elif command == 'copy_files':
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
+                elif command == 'copy_path': self._CopyPathToClipboard()
+                elif command == 'delete': self._Delete()
+                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'first': self._ShowFirst()
+                elif command == 'last': self._ShowLast()
+                elif command == 'previous': self._ShowPrevious()
+                elif command == 'next': self._ShowNext()
+                elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
+                elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
+                elif command == 'inbox': self._Inbox()
+                elif command == 'manage_ratings': self._ManageRatings()
+                elif command == 'manage_tags': self._ManageTags()
+                elif command == 'slideshow': self._StartSlideshow( data )
+                elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
+                elif command == 'zoom_in': self._ZoomIn()
+                elif command == 'zoom_out': self._ZoomOut()
+                elif command == 'zoom_switch': self._ZoomSwitch()
+                else: event.Skip()
                 
             
         
@@ -1703,27 +1679,18 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                         
                         if modal == wx.ID_YES:
                             
-                            try:
-                                
-                                self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
-                                self._kept_hashes = [ media.GetHash() for media in self._kept ]
-                                
-                                content_updates = []
-                                
-                                content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
-                                content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
-                                
-                                HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : content_updates } )
-                                
-                                self._kept = set()
-                                self._deleted = set()
-                                
-                            except Exception as e:
-                                
-                                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                                wx.MessageBox( traceback.format_exc() )
-                                print( traceback.format_exc() )
-                                
+                            self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
+                            self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                            
+                            content_updates = []
+                            
+                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
+                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
+                            
+                            HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : content_updates } )
+                            
+                            self._kept = set()
+                            self._deleted = set()
                             
                             self._current_media = self._GetFirst() # so the pubsub on close is better
                             
@@ -1761,7 +1728,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                 
                 ( modifier, key ) = HC.GetShortcutFromEvent( event )
                 
-                key_dict = self._options[ 'shortcuts' ][ modifier ]
+                key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
                 if key in key_dict:
                     
@@ -1793,39 +1760,30 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             
             if action is not None:
                 
-                try:
+                ( command, data ) = action
+                
+                if command == 'archive': self._Keep()
+                elif command == 'back': self.EventBack( event )
+                elif command == 'close': self.EventClose( event )
+                elif command == 'delete': self.EventDelete( event )
+                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'filter': self.EventClose( event )
+                elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
+                elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
+                elif command == 'manage_ratings': self._ManageRatings()
+                elif command == 'manage_tags': self._ManageTags()
+                elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
-                    ( command, data ) = action
+                    distance = 20
                     
-                    if command == 'archive': self._Keep()
-                    elif command == 'back': self.EventBack( event )
-                    elif command == 'close': self.EventClose( event )
-                    elif command == 'delete': self.EventDelete( event )
-                    elif command == 'fullscreen_switch': self._FullscreenSwitch()
-                    elif command == 'filter': self.EventClose( event )
-                    elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
-                    elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                    elif command == 'manage_ratings': self._ManageRatings()
-                    elif command == 'manage_tags': self._ManageTags()
-                    elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
-                        
-                        distance = 20
-                        
-                        if command == 'pan_up': self._DoManualPan( 0, -distance )
-                        elif command == 'pan_down': self._DoManualPan( 0, distance )
-                        elif command == 'pan_left': self._DoManualPan( -distance, 0 )
-                        elif command == 'pan_right': self._DoManualPan( distance, 0 )
-                        
-                    elif command == 'zoom_in': self._ZoomIn()
-                    elif command == 'zoom_out': self._ZoomOut()
-                    else: event.Skip()
+                    if command == 'pan_up': self._DoManualPan( 0, -distance )
+                    elif command == 'pan_down': self._DoManualPan( 0, distance )
+                    elif command == 'pan_left': self._DoManualPan( -distance, 0 )
+                    elif command == 'pan_right': self._DoManualPan( distance, 0 )
                     
-                except Exception as e:
-                    
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                    wx.MessageBox( HC.u( e ) )
-                    print( HC.u( e ) )
-                    
+                elif command == 'zoom_in': self._ZoomIn()
+                elif command == 'zoom_out': self._ZoomOut()
+                else: event.Skip()
                 
             
         
@@ -2117,18 +2075,16 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         
         #
         
-        options = HC.app.Read( 'options' )
-        
         accuracy_slider_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        if 'ratings_filter_accuracy' not in options:
+        if 'ratings_filter_accuracy' not in HC.options:
             
-            options[ 'ratings_filter_accuracy' ] = 1
+            HC.options[ 'ratings_filter_accuracy' ] = 1
             
             HC.app.Write( 'save_options' )
             
         
-        value = options[ 'ratings_filter_accuracy' ]
+        value = HC.options[ 'ratings_filter_accuracy' ]
         
         self._accuracy_slider = wx.Slider( window, size = ( 50, -1 ), value = value, minValue = 0, maxValue = 4 )
         self._accuracy_slider.Bind( wx.EVT_SLIDER, self.EventAccuracySlider )
@@ -2141,14 +2097,14 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         
         #
         
-        if 'ratings_filter_compare_same' not in options:
+        if 'ratings_filter_compare_same' not in HC.options:
             
-            options[ 'ratings_filter_compare_same' ] = False
+            HC.options[ 'ratings_filter_compare_same' ] = False
             
             HC.app.Write( 'save_options' )
             
         
-        compare_same = options[ 'ratings_filter_compare_same' ]
+        compare_same = HC.options[ 'ratings_filter_compare_same' ]
         
         self._compare_same = wx.CheckBox( window, label = 'compare same image until rating is done' )
         self._compare_same.SetValue( compare_same )
@@ -2160,14 +2116,14 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         
         self._left_right_slider_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        if 'ratings_filter_left_right' not in options:
+        if 'ratings_filter_left_right' not in HC.options:
             
-            options[ 'ratings_filter_left_right' ] = 'left'
+            HC.options[ 'ratings_filter_left_right' ] = 'left'
             
             HC.app.Write( 'save_options' )
             
         
-        left_right = options[ 'ratings_filter_left_right' ]
+        left_right = HC.options[ 'ratings_filter_left_right' ]
         
         if left_right == 'left': left_right_value = 0
         elif left_right == 'random': left_right_value = 1
@@ -2283,27 +2239,18 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                         
                         if modal == wx.ID_YES:
                             
-                            try:
-                                
-                                self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
-                                self._kept_hashes = [ media.GetHash() for media in self._kept ]
-                                
-                                content_updates = []
-                                
-                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
-                                content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
-                                
-                                HC.app.Write( 'content_updates', { self._rating_service_identifier : content_updates } )
-                                
-                                self._kept = set()
-                                self._deleted = set()
-                                
-                            except Exception as e:
-                                
-                                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                                wx.MessageBox( traceback.format_exc() )
-                                print( traceback.format_exc() )
-                                
+                            self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
+                            self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                            
+                            content_updates = []
+                            
+                            content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
+                            content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
+                            
+                            HC.app.Write( 'content_updates', { self._rating_service_identifier : content_updates } )
+                            
+                            self._kept = set()
+                            self._deleted = set()
                             
                         
                         CanvasFullscreenMediaList.EventClose( self, event )
@@ -2887,21 +2834,12 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                     
                 elif modal == wx.ID_YES:
                     
-                    try:
-                        
-                        content_updates = []
-                        
-                        content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
-                        content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
-                        
-                        HC.app.Write( 'content_updates', { self._service_identifier : content_updates } )
-                        
-                    except Exception as e:
-                        
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                        wx.MessageBox( traceback.format_exc() )
-                        print( traceback.format_exc() )
-                        
+                    content_updates = []
+                    
+                    content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
+                    content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
+                    
+                    HC.app.Write( 'content_updates', { self._service_identifier : content_updates } )
                     
                 
             
@@ -2930,19 +2868,10 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         
         if action is not None:
             
-            try:
-                
-                ( command, data ) = action
-                
-                if command == 'fullscreen_switch': self._FullscreenSwitch()
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                wx.MessageBox( HC.u( e ) )
-                print( HC.u( e ) )
-                
+            ( command, data ) = action
+            
+            if command == 'fullscreen_switch': self._FullscreenSwitch()
+            else: event.Skip()
             
         
     
@@ -2997,14 +2926,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         elif accuracy <= 3: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_HALF
         else: self._inequal_accuracy = self.RATINGS_FILTER_INEQUALITY_QUARTER
         
-        self._options[ 'ratings_filter_accuracy' ] = accuracy
+        HC.options[ 'ratings_filter_accuracy' ] = accuracy
         
         HC.app.Write( 'save_options' )
         
     
     def SetCompareSame( self, compare_same ):
         
-        self._options[ 'ratings_filter_compare_same' ] = compare_same
+        HC.options[ 'ratings_filter_compare_same' ] = compare_same
         
         HC.app.Write( 'save_options' )
         
@@ -3013,7 +2942,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     
     def SetLeftRight( self, left_right ):
         
-        self._options[ 'ratings_filter_left_right' ] = left_right
+        HC.options[ 'ratings_filter_left_right' ] = left_right
         
         HC.app.Write( 'save_options' )
         
@@ -3054,7 +2983,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                     
                     if self._current_zoom < zoom:
                         
-                        if self._current_media.GetMime() in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ):
+                        if self._current_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
                             
                             # because of the event passing under mouse, we want to preserve whitespace around flash
                             
@@ -3128,7 +3057,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             
             if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
             
-            if self._current_media.GetMime() not in ( HC.APPLICATION_FLASH, HC.VIDEO_FLV ) or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
+            if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
                 
                 new_zoom = self._current_zoom
                 
@@ -3239,7 +3168,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                 
                 ( modifier, key ) = HC.GetShortcutFromEvent( event )
                 
-                key_dict = self._options[ 'shortcuts' ][ modifier ]
+                key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
                 if event.KeyCode not in keys_i_want_to_bump_up_regardless and key in key_dict:
                     
@@ -3267,24 +3196,15 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
                 
                 if action is not None:
                     
-                    try:
-                        
-                        ( command, data ) = action
-                        
-                        if command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
-                        elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                        elif command == 'manage_ratings': self._ManageRatings()
-                        elif command == 'manage_tags': self._ManageTags()
-                        elif command == 'zoom_in': self._ZoomIn()
-                        elif command == 'zoom_out': self._ZoomOut()
-                        else: event.Skip()
-                        
-                    except Exception as e:
-                        
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, e ) )
-                        wx.MessageBox( HC.u( e ) )
-                        print( HC.u( e ) )
-                        
+                    ( command, data ) = action
+                    
+                    if command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
+                    elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
+                    elif command == 'manage_ratings': self._ManageRatings()
+                    elif command == 'manage_tags': self._ManageTags()
+                    elif command == 'zoom_in': self._ZoomIn()
+                    elif command == 'zoom_out': self._ZoomOut()
+                    else: event.Skip()
                     
                 
             
@@ -3373,6 +3293,7 @@ class MediaContainer( wx.Window ):
             
         elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash(), media_initial_size )
         elif self._media.GetMime() in HC.AUDIO: self._media_window = EmbedWindowAudio( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
+        elif self._media.GetMime() in ( HC.VIDEO_MP4, HC.VIDEO_WMV ): self._media_window = EmbedWindowVideo( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
         
         if ShouldHaveAnimationBar( self._media ):
             
@@ -3660,6 +3581,54 @@ class EmbedButton( wx.Window ):
         
     
 class EmbedWindowAudio( wx.Window ):
+    
+    def __init__( self, parent, hash, mime, size ):
+        
+        wx.Window.__init__( self, parent, size = size )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        self._hash = hash
+        self._mime = mime
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        ( width, height ) = size
+        
+        media_height = height - 45
+        
+        self._media_ctrl = wx.media.MediaCtrl( self, size = ( width, media_height ) )
+        self._media_ctrl.Hide()
+        
+        self._embed_button = EmbedButton( self, size = ( width, media_height ) )
+        self._embed_button.Bind( wx.EVT_LEFT_DOWN, self.EventEmbedButton )
+        
+        launch_button = wx.Button( self, label = 'launch ' + HC.mime_string_lookup[ mime ] + ' externally', size = ( width, 45 ), pos = ( 0, media_height ) )
+        launch_button.Bind( wx.EVT_BUTTON, self.EventLaunchButton )
+        
+    
+    def EventEmbedButton( self, event ):
+        
+        self._embed_button.Hide()
+        
+        self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
+        
+        path = CC.GetFilePath( self._hash, self._mime )
+        
+        self._media_ctrl.Load( path )
+        
+        self._media_ctrl.Show()
+        
+    
+    def EventLaunchButton( self, event ):
+        
+        path = CC.GetFilePath( self._hash, self._mime )
+        
+        # os.system( 'start ' + path )
+        subprocess.call( 'start "" "' + path + '"', shell = True )
+        
+    
+class EmbedWindowVideo( wx.Window ):
     
     def __init__( self, parent, hash, mime, size ):
         

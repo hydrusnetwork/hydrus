@@ -73,7 +73,7 @@ class App( wx.App ):
         self._writes[ name ].append( ( args, kwargs ) )
         
     
-    def WriteDaemon( self, name, *args, **kwargs ):
+    def WriteSynchronous( self, name, *args, **kwargs ):
         
         self._writes[ name ].append( ( args, kwargs ) )
         

@@ -9,6 +9,7 @@ import itertools
 import os
 import random
 import re
+import shutil
 import string
 import subprocess
 import time
@@ -98,8 +99,6 @@ class Dialog( wx.Dialog ):
         else: pos = ( -1, -1 )
         
         wx.Dialog.__init__( self, parent, title = title, style = style, pos = pos )
-        
-        self._options = HC.app.Read( 'options' )
         
         self.SetDoubleBuffered( True )
         
@@ -752,7 +751,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._days.SetFocus )
             
         
         def Duration():
@@ -807,7 +806,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._duration_s.SetFocus )
             
         
         def FileService():
@@ -866,7 +865,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._sign.SetFocus )
             
         
         def Hash():
@@ -909,7 +908,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._hash.SetFocus )
             
         
         def Height():
@@ -959,7 +958,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._height.SetFocus )
             
         
         def Limit():
@@ -1004,7 +1003,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._limit.SetFocus )
             
         
         def Mime():
@@ -1058,7 +1057,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._mime_media.SetFocus )
             
         
         def NumTags():
@@ -1108,7 +1107,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._num_tags.SetFocus )
             
         
         def NumWords():
@@ -1158,7 +1157,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._num_words.SetFocus )
             
         
         def Rating():
@@ -1250,7 +1249,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._first_ok.SetFocus )
+            wx.CallAfter( self._self._value_numerical.SetFocus )
             
         
         def Ratio():
@@ -1306,7 +1305,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._sign.SetFocus )
             
         
         def Size():
@@ -1361,7 +1360,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._size.SetFocus )
             
         
         def Width():
@@ -1411,7 +1410,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._width.SetFocus )
             
         
         def SimilarTo():
@@ -1460,12 +1459,10 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self._hash.SetFocus )
             
         
-        options = HC.app.Read( 'options' ) # have to do this, since dialog.__init__ hasn't fired yet
-        
-        system_predicates = options[ 'file_system_predicates' ]
+        system_predicates = HC.options[ 'file_system_predicates' ]
         
         self._type = type
         
@@ -1509,10 +1506,14 @@ class DialogInputFileSystemPredicate( Dialog ):
             self._mime_type.Append( 'any', HC.AUDIO )
             self._mime_type.Append( 'mp3', HC.AUDIO_MP3 )
             self._mime_type.Append( 'ogg', HC.AUDIO_OGG )
+            self._mime_type.Append( 'x-ms-wma', HC.AUDIO_WMA )
             self._mime_type.Append( 'flac', HC.AUDIO_FLAC )
             
         elif media == 'video':
             
+            self._mime_type.Append( 'any', HC.VIDEO )
+            self._mime_type.Append( 'mp4', HC.VIDEO_MP4 )
+            self._mime_type.Append( 'x-ms-wmv', HC.VIDEO_WMV )
             self._mime_type.Append( 'x-flv', HC.VIDEO_FLV )
             
         
@@ -2057,9 +2058,7 @@ class DialogInputNewAccounts( Dialog ):
             if expiration is None: access_keys = connection.Get( 'registration_keys', num = num, title = title )
             else: access_keys = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
             
-        except Exception as e: wx.MessageBox( HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
 class DialogInputNewAccountType( Dialog ):
@@ -2582,23 +2581,19 @@ class DialogModifyAccounts( Dialog ):
     
     def _DoModification( self, action, **kwargs ):
         
-        try:
+        connection = self._service.GetConnection()
+        
+        kwargs[ 'subject_identifiers' ] = list( self._subject_identifiers )
+        kwargs[ 'action' ] = action
+        
+        connection.Post( 'account_modification', **kwargs )
+        
+        if len( self._subject_identifiers ) == 1:
             
-            connection = self._service.GetConnection()
+            ( subject_identifier, ) = self._subject_identifiers
             
-            kwargs[ 'subject_identifiers' ] = list( self._subject_identifiers )
-            kwargs[ 'action' ] = action
+            self._subject_text.SetLabel( HC.u( connection.Get( 'account_info', subject_identifier = subject_identifier ) ) )
             
-            connection.Post( 'account_modification', **kwargs )
-            
-            if len( self._subject_identifiers ) == 1:
-                
-                ( subject_identifier, ) = self._subject_identifiers
-                
-                self._subject_text.SetLabel( HC.u( connection.Get( 'account_info', subject_identifier = subject_identifier ) ) )
-                
-            
-        except Exception as e: wx.MessageBox( HC.u( e ) )
         
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
         
@@ -2775,7 +2770,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            default_tag_repository = self._options[ 'default_tag_repository' ]
+            default_tag_repository = HC.options[ 'default_tag_repository' ]
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -2811,7 +2806,7 @@ class DialogPathsToTagsRegex( Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -2835,18 +2830,10 @@ class DialogPathsToTagsRegex( Dialog ):
         
         if action is not None:
             
-            try:
-                
-                ( command, data ) = action
-                
-                if command == 'set_search_focus': self._SetSearchFocus()
-                else: event.Skip()
-                
-            except Exception as e:
-                
-                wx.MessageBox( HC.u( e ) )
-                wx.MessageBox( traceback.format_exc() )
-                
+            ( command, data ) = action
+            
+            if command == 'set_search_focus': self._SetSearchFocus()
+            else: event.Skip()
             
         
     
@@ -3469,13 +3456,7 @@ class DialogRegisterService( Dialog ):
         
         headers[ 'Authorization' ] = 'hydrus_network ' + registration_key.encode( 'hex' )
         
-        try: access_key = connection.request( 'GET', '/access_key', headers = headers )
-        except Exception as e:
-            
-            wx.MessageBox( HC.u( e ) )
-            
-            return
-            
+        access_key = connection.request( 'GET', '/access_key', headers = headers )
         
         self._credentials = CC.Credentials( host, port, access_key )
         
@@ -4001,7 +3982,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         default_actions = []
         
-        for ( modifier, key_dict ) in self._options[ 'shortcuts' ].items():
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
             
             for ( key, action ) in key_dict.items():
                 
@@ -4250,7 +4231,7 @@ class DialogSetupExport( Dialog ):
                 self._paths.Append( pretty_tuple, data_tuple )
                 
             
-            if self._options[ 'export_path' ] is not None: self._directory_picker.SetPath( HC.ConvertPortablePathToAbsPath( self._options[ 'export_path' ] ) )
+            if HC.options[ 'export_path' ] is not None: self._directory_picker.SetPath( HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] ) )
             
             self._zip_name.SetValue( 'archive name.zip' )
             
@@ -4479,13 +4460,7 @@ class DialogSetupExport( Dialog ):
     
     def EventExport( self, event ):
         
-        try: self._RecalcPaths()
-        except Exception as e:
-            
-            wx.MessageBox( HC.u( e ) )
-            
-            return
-            
+        self._RecalcPaths()
         
         if self._export_to_zip.GetValue() == True:
             
@@ -4501,11 +4476,11 @@ class DialogSetupExport( Dialog ):
                         
                         hash = media.GetHash()
                         
-                        file = HC.app.Read( 'file', hash )
+                        source_path = CC.GetFilePath( hash, mime )
                         
                         ( gumpf, filename ) = os.path.split( path )
                         
-                        z.writestr( filename, file )
+                        z.write( source_path, filename )
                         
                     except:
                         
@@ -4526,9 +4501,9 @@ class DialogSetupExport( Dialog ):
                     
                     hash = media.GetHash()
                     
-                    file = HC.app.Read( 'file', hash )
+                    source_path = CC.GetFilePath( hash, mime )
                     
-                    with HC.o( path, 'wb' ) as f: f.write( file )
+                    shutil.copy( source_path, path )
                     
                 except:
                     
@@ -4606,11 +4581,7 @@ class DialogSetupExport( Dialog ):
             except: wx.MessageBox( 'Could not open that location!' )
         
     
-    def EventRecalcPaths( self, event ):
-        
-        try: self._RecalcPaths()
-        except Exception as e: wx.MessageBox( HC.u( e ) )
-        
+    def EventRecalcPaths( self, event ): self._RecalcPaths()
     
     def EventSelectPath( self, event ):
         

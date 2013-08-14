@@ -17,7 +17,7 @@ def GetPDFNumWords( path ):
     
     try:
         
-        with HC.o( path, 'rb' ) as f:
+        with open( path, 'rb' ) as f:
             
             pdf_object = PyPDF2.PdfFileReader( f, strict = False )
             

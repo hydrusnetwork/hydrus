@@ -21,7 +21,7 @@ from include import ServerController
 initial_sys_stdout = sys.stdout
 initial_sys_stderr = sys.stderr
 
-with HC.o( HC.LOGS_DIR + os.path.sep + 'server.log', 'a' ) as f:
+with open( HC.LOGS_DIR + os.path.sep + 'server.log', 'a' ) as f:
     
     sys.stdout = f
     sys.stderr = f

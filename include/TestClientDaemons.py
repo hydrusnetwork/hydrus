@@ -13,11 +13,11 @@ class TestDaemons( unittest.TestCase ):
         
         if not os.path.exists( test_dir ): os.mkdir( test_dir )
         
-        with HC.o( test_dir + os.path.sep + '1', 'wb' ) as f: f.write( TestConstants.tinest_gif )
-        with HC.o( test_dir + os.path.sep + '2', 'wb' ) as f: f.write( TestConstants.tinest_gif )
-        with HC.o( test_dir + os.path.sep + '3', 'wb' ) as f: f.write( TestConstants.tinest_gif )
-        with HC.o( test_dir + os.path.sep + '4', 'wb' ) as f: f.write( 'blarg' ) # broken
-        with HC.o( test_dir + os.path.sep + '5', 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously failed for whatever reason
+        with open( test_dir + os.path.sep + '1', 'wb' ) as f: f.write( TestConstants.tinest_gif )
+        with open( test_dir + os.path.sep + '2', 'wb' ) as f: f.write( TestConstants.tinest_gif )
+        with open( test_dir + os.path.sep + '3', 'wb' ) as f: f.write( TestConstants.tinest_gif )
+        with open( test_dir + os.path.sep + '4', 'wb' ) as f: f.write( 'blarg' ) # broken
+        with open( test_dir + os.path.sep + '5', 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously failed for whatever reason
         
         #
         
