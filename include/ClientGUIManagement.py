@@ -1717,9 +1717,9 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
             if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
             elif status == 'redundant':
                 
-                ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
                 
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+                HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
                 
                 if do_tags:
                     
@@ -2056,9 +2056,9 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
         if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
         elif status == 'redundant':
             
-            ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
             
-            HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+            HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
             HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
             
         else:
@@ -2250,9 +2250,9 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
         elif status == 'redundant':
             
-            ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
             
-            HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+            HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
             HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
             
         else:
@@ -2266,9 +2266,9 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
             elif status == 'redundant':
                 
-                ( media_result, ) = HC.app.Read( 'media_results', CC.FileSearchContext(), ( hash, ) )
+                ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
                 
-                HC.pubsub.pub( 'add_media_result', self._page_key, media_result )
+                HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
                 HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
                 
             else:
@@ -2504,11 +2504,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Enable()
             
-            search_context = CC.FileSearchContext( self._file_service_identifier )
+            with wx.BusyCursor(): media_results = HC.app.Read( 'media_results', self._file_service_identifier, self._current_petition.GetHashes() )
             
-            with wx.BusyCursor(): file_query_result = HC.app.Read( 'media_results', search_context, self._current_petition.GetHashes() )
-            
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, [], file_query_result )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, [], media_results )
             
             panel.Collect( self._page_key, self._collect_by.GetChoice() )
             
@@ -2611,7 +2609,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
         
-        self._query_key = os.urandom( 32 )
+        self._query_key = HC.QueryKey()
         self._synchronised = True
         self._include_current_tags = True
         self._include_pending_tags = True
@@ -2638,6 +2636,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if len( initial_predicates ) > 0: wx.CallAfter( self._DoQuery )
         
+        HC.pubsub.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         HC.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
         HC.pubsub.sub( self, 'ChangeFileRepository', 'change_file_repository' )
         HC.pubsub.sub( self, 'ChangeTagRepository', 'change_tag_repository' )
@@ -2651,6 +2650,10 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def _DoQuery( self ):
         
+        self._query_key.Cancel()
+        
+        self._query_key = HC.QueryKey()
+        
         if self._synchronised:
             
             try:
@@ -2659,14 +2662,12 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 if len( current_predicates ) > 0:
                     
-                    self._query_key = os.urandom( 32 )
-                    
                     include_current = self._include_current_tags
                     include_pending = self._include_pending_tags
                     
                     search_context = CC.FileSearchContext( self._file_service_identifier, self._tag_service_identifier, include_current, include_pending, current_predicates )
                     
-                    HC.app.Read( 'do_file_query', self._query_key, search_context )
+                    HC.app.StartFileQuery( self._query_key, search_context )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, self._file_service_identifier )
                     
@@ -2676,6 +2677,11 @@ class ManagementPanelQuery( ManagementPanel ):
                 
             except: wx.MessageBox( traceback.format_exc() )
             
+        
+    
+    def AddMediaResultsFromQuery( self, query_key, media_results ):
+        
+        if query_key == self._query_key: HC.pubsub.pub( 'add_media_results', self._page_key, media_results, append = False )
         
     
     def AddPredicate( self, page_key, predicate ): 
@@ -2782,7 +2788,7 @@ class ManagementPanelQuery( ManagementPanel ):
         if page_key == self._page_key: self._searchbox.SetFocus()
         
     
-    def ShowQuery( self, query_key, file_query_result ):
+    def ShowQuery( self, query_key, media_results ):
         
         try:
             
@@ -2790,7 +2796,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, current_predicates, file_query_result )
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, current_predicates, media_results )
                 
                 panel.Collect( self._page_key, self._collect_by.GetChoice() )
                 
@@ -2813,7 +2819,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         self._page_key = page_key
         self._identity = identity
         
-        self._query_key = os.urandom( 32 )
+        self._query_key = HC.QueryKey()
         
         # sort out push-refresh later
         #self._refresh_inbox = wx.Button( self, label = 'refresh inbox' )
@@ -2868,9 +2874,11 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
                 
                 HC.pubsub.pub( 'set_conversations', self._page_key, [] )
                 
+                self._query_key.Cancel()
+                
+                self._query_key = HC.QueryKey()
+                
                 if len( current_predicates ) > 0:
-                    
-                    self._query_key = os.urandom( 32 )
                     
                     search_context = ClientConstantsMessages.MessageSearchContext( self._identity, current_predicates )
                     

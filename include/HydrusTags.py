@@ -94,6 +94,38 @@ class TagsManagerSimple():
         return result
         
     
+    def GetComparableNamespaceSlice( self, namespaces, collapse = True ):
+        
+        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        
+        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        
+        combined = combined_current.union( combined_pending )
+        
+        siblings_manager = HC.app.GetTagSiblingsManager()
+        
+        slice = []
+        
+        for namespace in namespaces:
+            
+            tags = [ tag for tag in combined if tag.startswith( namespace + ':' ) ]
+            
+            if collapse:
+            
+                tags = list( siblings_manager.CollapseTags( tags ) )
+                
+            
+            tags.sort()
+            
+            tags = tuple( tags )
+            
+            slice.append( tags )
+            
+        
+        return tuple( slice )
+        
+    
     def GetNamespaceSlice( self, namespaces, collapse = True ):
         
         combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]

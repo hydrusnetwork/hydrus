@@ -1,3 +1,4 @@
+import bisect
 import collections
 import httplib
 import HydrusExceptions
@@ -36,7 +37,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 81
+SOFTWARE_VERSION = 82
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -51,6 +52,8 @@ shutdown = False
 is_first_start = False
 is_db_updated = False
 repos_or_subs_changed = False
+
+busy_doing_pubsub = False
 
 # Enums
 
@@ -741,7 +744,7 @@ def ConvertTimestampToPrettyAge( timestamp ):
     
 def ConvertTimestampToPrettyAgo( timestamp ):
     
-    if timestamp == 0: return 'unknown time'
+    if timestamp is None or timestamp == 0: return 'unknown time'
     
     age = GetNow() - timestamp
     
@@ -885,7 +888,7 @@ def ConvertTimestampToPrettyPending( timestamp ):
     
 def ConvertTimestampToPrettySync( timestamp ):
     
-    if timestamp == 0: return 'not updated'
+    if timestamp is None or timestamp == 0: return 'not updated'
     
     age = GetNow() - timestamp
     
@@ -1874,18 +1877,6 @@ class DAEMONWorker( DAEMON ):
     
     def set( self, *args, **kwargs ): self._event.set()
     
-class Message():
-    
-    def __init__( self, message_type, info ):
-        
-        self._message_type = message_type
-        self._info = info
-        
-    
-    def GetInfo( self ): return self._info
-    
-    def GetType( self ): return self._message_type
-    
 class JobInternal():
     
     yaml_tag = u'!JobInternal'
@@ -1916,7 +1907,19 @@ class JobInternal():
             elif shutdown: raise Exception( 'Application quit before db could serve result!' )
             
         
-        if issubclass( type( self._result ), Exception ): raise self._result
+        if issubclass( type( self._result ), Exception ):
+            
+            etype = type( self._result )
+            
+            db_traceback = unicode( self._result )
+            
+            
+            trace_list = traceback.format_stack()
+            
+            my_trace = ''.join( trace_list )
+            
+            raise etype( my_trace + os.linesep + db_traceback )
+            
         else: return self._result
         
     
@@ -1964,6 +1967,39 @@ class JobServer():
         self._result_ready.set()
         
     
+class Message():
+    
+    def __init__( self, message_type, info ):
+        
+        self._message_type = message_type
+        self._info = info
+        
+    
+    def GetInfo( self ): return self._info
+    
+    def GetType( self ): return self._message_type
+    
+class QueryKey():
+    
+    def __init__( self ):
+        
+        self._key = os.urandom( 32 )
+        
+        self._cancelled = threading.Event()
+        
+    
+    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return self._key.__hash__()
+    
+    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def Cancel( self ): self._cancelled.set()
+    
+    def GetKey( self ): return self._key
+    
+    def IsCancelled( self ): return self._cancelled.is_set()
+    
 class Predicate():
     
     def __init__( self, predicate_type, value, count ):
@@ -2005,12 +2041,11 @@ class Predicate():
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_UNTAGGED: base = u'system:untagged'
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_LOCAL: base = u'system:local'
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NOT_LOCAL: base = u'system:not local'
-            elif system_predicate_type in ( SYSTEM_PREDICATE_TYPE_NUM_TAGS, SYSTEM_PREDICATE_TYPE_WIDTH, SYSTEM_PREDICATE_TYPE_HEIGHT, SYSTEM_PREDICATE_TYPE_RATIO, SYSTEM_PREDICATE_TYPE_DURATION, SYSTEM_PREDICATE_TYPE_NUM_WORDS ):
+            elif system_predicate_type in ( SYSTEM_PREDICATE_TYPE_NUM_TAGS, SYSTEM_PREDICATE_TYPE_WIDTH, SYSTEM_PREDICATE_TYPE_HEIGHT, SYSTEM_PREDICATE_TYPE_DURATION, SYSTEM_PREDICATE_TYPE_NUM_WORDS ):
                 
                 if system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_TAGS: base = u'system:number of tags'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_WIDTH: base = u'system:width'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_HEIGHT: base = u'system:height'
-                elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATIO: base = u'system:ratio'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_DURATION: base = u'system:duration'
                 elif system_predicate_type == SYSTEM_PREDICATE_TYPE_NUM_WORDS: base = u'system:number of words'
                 
@@ -2019,6 +2054,17 @@ class Predicate():
                     ( operator, value ) = info
                     
                     base += u' ' + operator + u' ' + u( value )
+                    
+                
+            elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATIO:
+                
+                base = u'system:ratio'
+                
+                if info is not None:
+                    
+                    ( operator, ratio_width, ratio_height ) = info
+                    
+                    base += u' ' + operator + u' ' + u( ratio_width ) + u':' + u( ratio_height )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIZE:
@@ -2462,6 +2508,93 @@ class ServerToClientUpdate( HydrusYAMLBase ):
         
     
     def GetServiceData( self, service_type ): return self._service_data[ service_type ]
+    
+class SortedList():
+    
+    def __init__( self, initial_items = [], sort_function = None ):
+        
+        do_sort = sort_function is not None
+        
+        if sort_function is None: sort_function = lambda x: x
+        
+        self._sorted_list = [ ( sort_function( item ), item ) for item in initial_items ]
+        
+        self._items_to_indices = None
+        
+        self._sort_function = sort_function
+        
+        if do_sort: self.sort()
+        
+    
+    def __contains__( self, item ): return self._items_to_indices.__contains__( item )
+    
+    def __getitem__( self, value ):
+        
+        if type( value ) == int: return self._sorted_list.__getitem__( value )[1]
+        elif type( value ) == slice: return [ item for ( sort_item, item ) in self._sorted_list.__getitem__( value ) ]
+        
+    
+    def __iter__( self ):
+        
+        for ( sorting_value, item ) in self._sorted_list: yield item
+        
+    
+    def __len__( self ): return self._sorted_list.__len__()
+    
+    def _DirtyIndices( self ): self._items_to_indices = None
+    
+    def _RecalcIndices( self ): self._items_to_indices = { item : index for ( index, ( sort_item, item ) ) in enumerate( self._sorted_list ) }
+    
+    def append_items( self, items ):
+        
+        self._sorted_list.extend( [ ( self._sort_function( item ), item ) for item in items ] )
+        
+        self._DirtyIndices()
+        
+    
+    def index( self, item ):
+        
+        if self._items_to_indices is None: self._RecalcIndices()
+        
+        return self._items_to_indices[ item ]
+        
+    
+    def insert_items( self, items ):
+        
+        for item in items: bisect.insort( self._sorted_list, ( self._sort_function( item ), item ) )
+        
+        self._DirtyIndices()
+        
+    
+    def remove_items( self, items ):
+        
+        try: deletee_indices = [ self.index( item ) for item in items ]
+        except:
+            
+            print( self._items_to_indices )
+            
+            raise
+            
+        
+        deletee_indices.sort()
+        
+        deletee_indices.reverse()
+        
+        for index in deletee_indices: self._sorted_list.pop( index )
+        
+        self._DirtyIndices()
+        
+    
+    def sort( self, f = None ):
+        
+        if f is not None: self._sort_function = f
+        
+        self._sorted_list = [ ( self._sort_function( item ), item ) for ( old_value, item ) in self._sorted_list ]
+        
+        self._sorted_list.sort()
+        
+        self._DirtyIndices()
+        
     
 # sqlite mod
 

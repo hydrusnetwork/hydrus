@@ -266,7 +266,7 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
     
 class PageImport( PageWithMedia ):
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, [], CC.FileQueryResult( self._file_service_identifier, [], [] ) )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, [], [] )
     
 class PageImportBooru( PageImport ):
     
@@ -399,12 +399,7 @@ class PageQuery( PageWithMedia ):
     def _InitMediaPanel( self ):
         
         if len( self._initial_media_results ) == 0: self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
-        else:
-            
-            file_query_result = CC.FileQueryResult( self._file_service_identifier, self._initial_predicates, self._initial_media_results )
-            
-            self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_predicates, file_query_result )
-            
+        else: self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_predicates, self._initial_media_results )
         
     
 class PageThreadDumper( PageWithMedia ):
@@ -413,22 +408,18 @@ class PageThreadDumper( PageWithMedia ):
         
         self._imageboard = imageboard
         
-        search_context = CC.FileSearchContext()
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
         
-        self._unsorted_file_query_result = HC.app.Read( 'media_results', search_context, hashes )
-        
-        hashes_to_media_results = { media_result.GetHash() : media_result for media_result in self._unsorted_file_query_result }
+        hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
         
         self._media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
         
         self._media_results = filter( self._imageboard.IsOkToPost, self._media_results )
-        
-        self._file_query_result = CC.FileQueryResult( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
         
         PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._file_query_result )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
     

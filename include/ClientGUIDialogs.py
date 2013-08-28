@@ -1249,7 +1249,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             self.SetInitialSize( ( x, y ) )
             
-            wx.CallAfter( self._self._value_numerical.SetFocus )
+            wx.CallAfter( self._value_numerical.SetFocus )
             
         
         def Ratio():
@@ -1585,7 +1585,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 info = ( service_identifier, operator, value )
                 
             
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: info = ( self._sign.GetStringSelection(), float( ( self._width.GetValue() ) / float( self._height.GetValue() ) ) )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: info = ( self._sign.GetStringSelection(), self._width.GetValue(), self._height.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIZE: info = ( self._sign.GetStringSelection(), self._size.GetValue(), HC.ConvertUnitToInteger( self._unit.GetStringSelection() ) )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_WIDTH: info = ( self._sign.GetStringSelection(), self._width.GetValue() )
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO:

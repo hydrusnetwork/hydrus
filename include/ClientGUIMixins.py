@@ -1,7 +1,9 @@
+import bisect
 import collections
 import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusTags
+import os
 import random
 import time
 import traceback
@@ -9,26 +11,69 @@ import wx
 
 class Media():
     
-    def __init__( self ): pass
+    def __init__( self ):
+        
+        self._id = os.urandom( 32 )
+        
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return self._id.__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
 class MediaList():
     
-    def __init__( self, file_service_identifier, predicates, file_query_result ):
+    def __init__( self, file_service_identifier, predicates, media_results ):
         
         self._file_service_identifier = file_service_identifier
         self._predicates = predicates
         
-        self._file_query_result = file_query_result
+        self._sort_by = CC.SORT_BY_SMALLEST
+        self._collect_by = None
         
-        self._sorted_media = [ self._GenerateMediaSingleton( media_result ) for media_result in file_query_result ]
-        self._sorted_media_to_indices = { media : index for ( index, media ) in enumerate( self._sorted_media ) }
+        self._collect_map_singletons = {}
+        self._collect_map_collected = {}
+        
+        self._sorted_media = HC.SortedList( [ self._GenerateMediaSingleton( media_result ) for media_result in media_results ] )
         
         self._singleton_media = set( self._sorted_media )
         self._collected_media = set()
+        
+    
+    def _CalculateCollectionKeysToMedias( self, collect_by, medias ):
+    
+        namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
+        ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
+        
+        local_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+        remote_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
+        
+        keys_to_medias = collections.defaultdict( list )
+        
+        for media in medias:
+            
+            if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by )
+            else: namespace_key = None
+            
+            if len( ratings_to_collect_by ) > 0:
+                
+                ( local_ratings, remote_ratings ) = media.GetRatings()
+                
+                if len( local_ratings_to_collect_by ) > 0: local_rating_key = local_ratings.GetRatingSlice( local_ratings_to_collect_by )
+                else: local_rating_key = None
+                
+                if len( remote_ratings_to_collect_by ) > 0: remote_rating_key = remote_ratings.GetRatingSlice( remote_ratings_to_collect_by )
+                else: remote_rating_key = None
+                
+                rating_key = ( local_rating_key, remote_rating_key )
+                
+            else: rating_key = None
+            
+            keys_to_medias[ ( namespace_key, rating_key ) ].append( media )
+            
+        
+        return keys_to_medias
         
     
     def _GenerateMediaCollection( self, media_results ): return MediaCollection( self._file_service_identifier, self._predicates, media_results )
@@ -61,7 +106,7 @@ class MediaList():
         
         if media is None: return None
         
-        next_index = self._sorted_media_to_indices[ media ] + 1
+        next_index = self._sorted_media.index( media ) + 1
         
         if next_index == len( self._sorted_media ): return self._GetFirst()
         else: return self._sorted_media[ next_index ]
@@ -71,7 +116,7 @@ class MediaList():
         
         if media is None: return None
         
-        previous_index = self._sorted_media_to_indices[ media ] - 1
+        previous_index = self._sorted_media.index( media ) - 1
         
         if previous_index == -1: return self._GetLast()
         else: return self._sorted_media[ previous_index ]
@@ -79,81 +124,46 @@ class MediaList():
     
     def _RemoveMedia( self, singleton_media, collected_media ):
         
+        if type( singleton_media ) != set: singleton_media = set( singleton_media )
+        if type( collected_media ) != set: collected_media = set( collected_media )
+        
         self._singleton_media.difference_update( singleton_media )
         self._collected_media.difference_update( collected_media )
         
-        self._sorted_media = [ media for media in self._sorted_media if media in self._singleton_media or media in self._collected_media ]
-        self._sorted_media_to_indices = { media : index for ( index, media ) in enumerate( self._sorted_media ) }
+        keys_to_remove = [ key for ( key, media ) in self._collect_map_singletons if media in singleton_media ]
+        for key in keys_to_remove: del self._collect_map_singletons[ key ]
+        
+        keys_to_remove = [ key for ( key, media ) in self._collect_map_collected if media in collected_media ]
+        for key in keys_to_remove: del self._collect_map_collected[ key ]
+        
+        self._sorted_media.remove_items( singleton_media.union( collected_media ) )
         
     
-    def AddMediaResult( self, media_result ):
+    def Collect( self, collect_by = -1 ):
         
-        self._file_query_result.AddMediaResult( media_result )
+        if collect_by == -1: collect_by = self._collect_by
         
-        hash = media_result.GetHash()
+        self._collect_by = collect_by
         
-        if hash in self._GetHashes(): return
+        for media in self._collected_media: self._singleton_media.update( [ self._GenerateMediaSingleton( media_result ) for media_result in media.GenerateMediaResults() ] )
         
-        media = self._GenerateMediaSingleton( media_result )
+        self._collected_media = set()
         
-        # turn this little bit into a medialist call, yo
-        # but be careful of media vs media_result
-        self._singleton_media.add( media )
-        self._sorted_media.append( media )
-        self._sorted_media_to_indices[ media ] = len( self._sorted_media ) - 1
+        self._collect_map_singletons = {}
+        self._collect_map_collected = {}
         
-        return media
-        
-    
-    def Collect( self, collect_by ):
-        
-        try:
+        if collect_by is not None:
             
-            for media in self._collected_media: self._singleton_media.update( [ self._GenerateMediaSingleton( media_result ) for media_result in media.GenerateMediaResults() ] )
+            keys_to_medias = self._CalculateCollectionKeysToMedias( collect_by, self._singleton_media )
             
-            self._collected_media = set()
+            self._collect_map_singletons = { key : medias[0] for ( key, medias ) in keys_to_medias.items() if len( medias ) == 1 }
+            self._collect_map_collected = { key : self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for ( key, medias ) in keys_to_medias.items() if len( medias ) > 1 }
             
-            if collect_by is not None:
-                
-                namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
-                ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
-                
-                local_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
-                remote_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
-                
-                singletons = set()
-                
-                keys_to_medias = collections.defaultdict( list )
-                
-                for media in self._singleton_media:
-                    
-                    if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by )
-                    else: namespace_key = None
-                    
-                    if len( ratings_to_collect_by ) > 0:
-                        
-                        ( local_ratings, remote_ratings ) = media.GetRatings()
-                        
-                        if len( local_ratings_to_collect_by ) > 0: local_rating_key = local_ratings.GetRatingSlice( local_ratings_to_collect_by )
-                        else: local_rating_key = None
-                        
-                        if len( remote_ratings_to_collect_by ) > 0: remote_rating_key = remote_ratings.GetRatingSlice( remote_ratings_to_collect_by )
-                        else: remote_rating_key = None
-                        
-                        rating_key = ( local_rating_key, remote_rating_key )
-                        
-                    else: rating_key = None
-                    
-                    keys_to_medias[ ( namespace_key, rating_key ) ].append( media )
-                    
-                
-                self._singleton_media = set( [ medias[0] for medias in keys_to_medias.values() if len( medias ) == 1 ] )
-                self._collected_media = set( [ self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] ) for medias in keys_to_medias.values() if len( medias ) > 1 ] )
-                
+            self._singleton_media = set( self._collect_map_singletons.values() )
+            self._collected_media = set( self._collect_map_collected.values() )
             
-            self._sorted_media = list( self._singleton_media ) + list( self._collected_media )
-            
-        except: wx.MessageBox( traceback.format_exc() )
+        
+        self._sorted_media = HC.SortedList( list( self._singleton_media ) + list( self._collected_media ) )
         
     
     def DeletePending( self, service_identifier ):
@@ -202,7 +212,7 @@ class MediaList():
         return flat_media
         
     
-    def GetMediaIndex( self, media ): return self._sorted_media_to_indices[ media ]
+    def GetMediaIndex( self, media ): return self._sorted_media.index( media )
     
     def GetSortedMedia( self ): return self._sorted_media
     
@@ -235,27 +245,7 @@ class MediaList():
         
         if data_type == HC.CONTENT_DATA_TYPE_FILES:
             
-            if action == HC.CONTENT_UPDATE_ARCHIVE:
-                
-                if HC.SYSTEM_PREDICATE_INBOX in self._predicates:
-                    
-                    affected_singleton_media = self._GetMedia( hashes, 'singletons' )
-                    affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
-                    
-                    self._RemoveMedia( affected_singleton_media, affected_collected_media )
-                    
-                
-            elif action == HC.CONTENT_UPDATE_INBOX:
-                
-                if HC.SYSTEM_PREDICATE_ARCHIVE in self._predicates:
-                    
-                    affected_singleton_media = self._GetMedia( hashes, 'singletons' )
-                    affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
-                    
-                    self._RemoveMedia( affected_singleton_media, affected_collected_media )
-                    
-                
-            elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
+            if action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
                 
                 affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                 affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -296,33 +286,35 @@ class MediaList():
             
         
     
-    def Sort( self, sort_by ):
+    def Sort( self, sort_by = None ):
+        
+        for media in self._collected_media: media.Sort( sort_by )
+        
+        if sort_by is None: sort_by = self._sort_by
+        
+        self._sort_by = sort_by
         
         ( sort_by_type, sort_by_data ) = sort_by
         
         if sort_by_type == 'system':
             
-            if sort_by_data == CC.SORT_BY_RANDOM: random.shuffle( self._sorted_media )
-            else:
-                
-                if sort_by_data == CC.SORT_BY_SMALLEST: compare_function = lambda x, y: cmp( x.GetSize(), y.GetSize() )
-                elif sort_by_data == CC.SORT_BY_LARGEST: compare_function = lambda x, y: cmp( y.GetSize(), x.GetSize() )
-                elif sort_by_data == CC.SORT_BY_SHORTEST: compare_function = lambda x, y: cmp( x.GetDuration(), y.GetDuration() )
-                elif sort_by_data == CC.SORT_BY_LONGEST: compare_function = lambda x, y: cmp( y.GetDuration(), x.GetDuration() )
-                elif sort_by_data == CC.SORT_BY_OLDEST: compare_function = lambda x, y: cmp( x.GetTimestamp(), y.GetTimestamp() )
-                elif sort_by_data == CC.SORT_BY_NEWEST: compare_function = lambda x, y: cmp( y.GetTimestamp(), x.GetTimestamp() )
-                elif sort_by_data == CC.SORT_BY_MIME: compare_function = lambda x, y: cmp( x.GetMime(), y.GetMime() )
-                
-                self._sorted_media.sort( compare_function )
-                
+            if sort_by_data == CC.SORT_BY_RANDOM: sort_function = lambda x: random.random()
+            elif sort_by_data == CC.SORT_BY_SMALLEST: sort_function = lambda x: x.GetSize()
+            elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -x.GetSize()
+            elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: x.GetDuration()
+            elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -x.GetDuration()
+            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: x.GetTimestamp()
+            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -x.GetTimestamp()
+            elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
             
         elif sort_by_type == 'namespaces':
             
-            def namespace_compare( x, y ):
+            def namespace_sort_function( namespaces, x ):
                 
                 x_tags_manager = x.GetTagsManager()
-                y_tags_manager = y.GetTagsManager()
                 
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ) ) for namespace in namespaces ]
+                '''
                 for namespace in sort_by_data:
                     
                     x_namespace_slice = x_tags_manager.GetNamespaceSlice( ( namespace, ) )
@@ -366,52 +358,143 @@ class MediaList():
                     
                 
                 return cmp( x.GetSize(), y.GetSize() )
-                
+                '''
             
-            self._sorted_media.sort( namespace_compare )
+            sort_function = lambda x: namespace_sort_function( sort_by_data, x )
             
         elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
             
             service_identifier = sort_by_data
             
-            service_type = service_identifier.GetType()
-            
-            def ratings_compare( x, y ):
+            def ratings_sort_function( service_identifier, reverse, x ):
                 
                 ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
-                ( y_local_ratings, y_remote_ratings ) = y.GetRatings()
                 
-                # btw None is always considered less than an int in cmp( int, None )
+                if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = x_local_ratings.GetRating( service_identifier )
+                else: rating = x_remote_ratings.GetScore( service_identifier )
                 
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): return cmp( x_local_ratings.GetRating( service_identifier ), y_local_ratings.GetRating( service_identifier ) )
-                else: return cmp( x_remote_ratings.GetScore( service_identifier ), y_remote_ratings.GetScore( service_identifier ) )
+                if reverse: rating *= -1
+                
+                return rating
                 
             
             reverse = sort_by_type == 'rating_descend'
-            self._sorted_media.sort( ratings_compare, reverse = reverse )
+            
+            sort_function = lambda x: ratings_sort_function( service_identifier, reverse, x )
             
         
-        for media in self._collected_media: media.Sort( sort_by )
-        
-        self._sorted_media_to_indices = { media : index for ( index, media ) in enumerate( self._sorted_media ) }
+        self._sorted_media.sort( sort_function )
         
     
 class ListeningMediaList( MediaList ):
     
-    def __init__( self, *args ):
+    def __init__( self, file_service_identifier, predicates, media_results ):
         
-        MediaList.__init__( self, *args )
+        MediaList.__init__( self, file_service_identifier, predicates, media_results )
+        
+        self._file_query_result = CC.FileQueryResult( media_results )
         
         HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
+    def AddMediaResults( self, media_results, append = True ):
+        
+        self._file_query_result.AddMediaResults( media_results )
+        
+        existing_hashes = self._GetHashes()
+        
+        new_media = []
+        
+        for media_result in media_results:
+            
+            hash = media_result.GetHash()
+            
+            if hash in existing_hashes: continue
+            
+            new_media.append( self._GenerateMediaSingleton( media_result ) )
+            
+        
+        if append:
+            
+            self._singleton_media.update( new_media )
+            self._sorted_media.append_items( new_media )
+            
+        else:
+            
+            if self._collect_by is not None:
+                
+                keys_to_medias = self._CalculateCollectionKeysToMedias( collect_by, new_media )
+                
+                new_media = []
+                
+                for ( key, medias ) in keys_to_medias.items():
+                    
+                    if key in self._collect_map_singletons:
+                        
+                        singleton_media = self._collect_map_singletons[ key ]
+                        
+                        self._sorted_media.remove_items( singleton_media )
+                        self._singleton_media.discard( singleton_media )
+                        del self._collect_map_singletons[ key ]
+                        
+                        medias.append( singleton_media )
+                        
+                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
+                        
+                        collected_media.Sort( self._sort_by )
+                        
+                        self._collected_media.add( collected_media )
+                        self._collect_map_collected[ key ] = collected_media
+                        
+                        new_media.append( collected_media )
+                        
+                    elif key in self._collect_map_collected:
+                        
+                        collected_media = self._collect_map_collected[ key ]
+                        
+                        self._sorted_media.remove_items( collected_media )
+                        
+                        # mediacollection needs addmediaresult with efficient recalcinternals
+                        collected_media.MagicalAddMediasOrMediaResultsWhatever( medias )
+                        
+                        collected_media.Sort( self._sort_by )
+                        
+                        new_media.append( collected_media )
+                        
+                    elif len( medias ) == 1:
+                        
+                        ( singleton_media, ) = medias
+                        
+                        self._singleton_media.add( singleton_media )
+                        self._collect_map_singletons[ key ] = singleton_media
+                        
+                    else:
+                        
+                        collected_media = self._GenerateMediaCollection( [ media.GetMediaResult() for media in medias ] )
+                        
+                        collected_media.Sort( self._sort_by )
+                        
+                        self._collected_media.add( collected_media )
+                        self._collect_map_collected[ key ] = collected_media
+                        
+                        new_media.append( collected_media )
+                        
+                    
+                
+            
+            self._sorted_media.insert_items( new_media )
+            
+        
+        return new_media
+        
+    
 class MediaCollection( MediaList, Media ):
     
-    def __init__( self, file_service_identifier, predicates, file_query_result ):
+    def __init__( self, file_service_identifier, predicates, media_results ):
         
         Media.__init__( self )
-        MediaList.__init__( self, file_service_identifier, predicates, file_query_result )
+        MediaList.__init__( self, file_service_identifier, predicates, media_results )
         
         self._hashes = set()
         
@@ -434,7 +517,7 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    def __hash__( self ): return frozenset( self._hashes ).__hash__()
+    #def __hash__( self ): return frozenset( self._hashes ).__hash__()
     
     def _RecalcInternals( self ):
         
@@ -596,7 +679,7 @@ class MediaSingleton( Media ):
         self._media_result = media_result
         
     
-    def __hash__( self ): return self.GetHash().__hash__()
+    #def __hash__( self ): return self.GetHash().__hash__()
     
     def GetDisplayMedia( self ): return self
     
@@ -606,16 +689,23 @@ class MediaSingleton( Media ):
     
     def GetHashes( self, discriminant = None, not_uploaded_to = None ):
         
-        inbox = self._media_result.GetInbox()
-        file_service_identifiers = self._media_result.GetFileServiceIdentifiersCDPP()
-        
         if discriminant is not None:
+            
+            inbox = self._media_result.GetInbox()
+            
+            file_service_identifiers = self._media_result.GetFileServiceIdentifiersCDPP()
+            
             if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not file_service_identifiers.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and file_service_identifiers.HasLocal() ): return set()
+            
         
         if not_uploaded_to is not None:
+            
+            file_service_identifiers = self._media_result.GetFileServiceIdentifiersCDPP()
+            
             if not_uploaded_to in file_service_identifiers.GetCurrentRemote(): return set()
+            
         
-        return set( [ self._media_result.GetHash() ] )
+        return { self._media_result.GetHash() }
         
     
     def GetFileServiceIdentifiersCDPP( self ): return self._media_result.GetFileServiceIdentifiersCDPP()

@@ -679,7 +679,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
     def _GetIndexString( self ):
         
-        index_string = HC.ConvertIntToPrettyString( self._sorted_media_to_indices[ self._current_media ] + 1 ) + os.path.sep + HC.ConvertIntToPrettyString( len( self._sorted_media ) )
+        index_string = HC.ConvertIntToPrettyString( self._sorted_media.index( self._current_media ) + 1 ) + os.path.sep + HC.ConvertIntToPrettyString( len( self._sorted_media ) )
         
         return index_string
         
@@ -870,11 +870,11 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
         
     
-    def AddMediaResult( self, page_key, media_result ):
+    def AddMediaResults( self, page_key, media_results ):
         
         if page_key == self._page_key:
             
-            ClientGUIMixins.ListeningMediaList.AddMediaResult( self, media_result )
+            ClientGUIMixins.ListeningMediaList.AddMediaResults( self, media_results )
             
             self._DrawBackgroundBitmap()
             
@@ -1016,7 +1016,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         if first_hash is None: self.SetMedia( self._GetFirst() )
         else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
         
-        HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
+        HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
     def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
@@ -1289,7 +1289,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         FullscreenPopoutFilterCustom( self )
         
-        HC.pubsub.sub( self, 'AddMediaResult', 'add_media_result' )
+        HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
     def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
@@ -2280,7 +2280,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         self._media_still_to_rate = { ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results }
         self._current_media_to_rate = None
         
-        self._file_query_result = CC.FileQueryResult( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+        self._file_query_result = CC.FileQueryResult( media_results )
         
         if service_identifier.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
@@ -2526,7 +2526,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
             hash = media_result_to_rate_against.GetHash()
             
             if hash in self._file_query_result.GetHashes(): media_result_to_rate_against = self._file_query_result.GetMediaResult( hash )
-            else: self._file_query_result.AddMediaResult( media_result_to_rate_against )
+            else: self._file_query_result.AddMediaResults( ( media_result_to_rate_against, ) )
             
             media_to_rate_against = ClientGUIMixins.MediaSingleton( media_result_to_rate_against )
             

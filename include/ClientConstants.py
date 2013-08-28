@@ -670,7 +670,7 @@ def ShowExceptionClient( e ):
     
     etype = type( e )
     
-    value = u( e )
+    value = HC.u( e )
     
     trace_list = traceback.format_stack()
     
@@ -1378,10 +1378,8 @@ class DataCache():
     
 class FileQueryResult():
     
-    def __init__( self, file_service_identifier, predicates, media_results ):
+    def __init__( self, media_results ):
         
-        self._file_service_identifier = file_service_identifier
-        self._predicates = predicates
         self._hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
         self._hashes_ordered = [ media_result.GetHash() for media_result in media_results ]
         self._hashes = set( self._hashes_ordered )
@@ -1413,17 +1411,20 @@ class FileQueryResult():
         self._hashes.difference_update( hashes )
         
     
-    def AddMediaResult( self, media_result ):
+    def AddMediaResults( self, media_results ):
         
-        hash = media_result.GetHash()
-        
-        if hash in self._hashes: return # this is actually important, as sometimes we don't want the media result overwritten
-        
-        self._hashes_to_media_results[ hash ] = media_result
-        
-        self._hashes_ordered.append( hash )
-        
-        self._hashes.add( hash )
+        for media_result in media_results:
+            
+            hash = media_result.GetHash()
+            
+            if hash in self._hashes: continue # this is actually important, as sometimes we don't want the media result overwritten
+            
+            self._hashes_to_media_results[ hash ] = media_result
+            
+            self._hashes_ordered.append( hash )
+            
+            self._hashes.add( hash )
+            
         
     
     def GetHashes( self ): return self._hashes
@@ -1441,20 +1442,6 @@ class FileQueryResult():
                 hashes = content_update.GetHashes()
                 
                 if len( hashes ) > 0:
-                    
-                    ( data_type, action, row ) = content_update.ToTuple()
-                    
-                    service_type = service_identifier.GetType()
-                    
-                    if action == HC.CONTENT_UPDATE_ARCHIVE:
-                        
-                        if 'system:inbox' in self._predicates: self._Remove( hashes )
-                        
-                    elif action == HC.CONTENT_UPDATE_INBOX:
-                        
-                        if 'system:archive' in self._predicates: self._Remove( hashes )
-                        
-                    elif action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier: self._Remove( hashes )
                     
                     for hash in self._hashes.intersection( hashes ):
                         
@@ -1543,43 +1530,16 @@ class FileSearchContext():
 
 class FileSystemPredicates():
     
-    INBOX = 0
-    LOCAL = 1
-    HASH = 2
-    TIMESTAMP = 3
-    DURATION = 4
-    SIZE = 5
-    NUM_TAGS = 6
-    WIDTH = 7
-    HEIGHT = 8
-    RATIO = 9
-    REPOSITORIES = 10
-    MIME = 11
-    
     def __init__( self, system_predicates ):
-        
-        self._predicates = {}
-        
-        self._predicates[ self.INBOX ] = []
-        self._predicates[ self.LOCAL ] = [] # not using this!
-        self._predicates[ self.HASH ] = []
-        self._predicates[ self.MIME ] = []
-        self._predicates[ self.TIMESTAMP ] = []
-        self._predicates[ self.DURATION ] = []
-        self._predicates[ self.SIZE ] = []
-        self._predicates[ self.NUM_TAGS ] = []
-        self._predicates[ self.WIDTH ] = []
-        self._predicates[ self.HEIGHT ] = []
-        self._predicates[ self.RATIO ] = []
-        self._predicates[ self.REPOSITORIES ] = []
         
         self._inbox = False
         self._archive = False
         self._local = False
         self._not_local = False
         
-        self._num_tags_zero = False
-        self._num_tags_nonzero = False
+        self._min_num_tags = None
+        self._num_tags = None
+        self._max_num_tags = None
         
         self._hash = None
         self._min_size = None
@@ -1594,12 +1554,16 @@ class FileSystemPredicates():
         self._min_height = None
         self._height = None
         self._max_height = None
+        self._min_ratio = None
+        self._ratio = None
+        self._max_ratio = None
         self._min_num_words = None
         self._num_words = None
         self._max_num_words = None
         self._min_duration = None
         self._duration = None
         self._max_duration = None
+        
         
         self._limit = None
         self._similar_to = None
@@ -1683,10 +1647,14 @@ class FileSystemPredicates():
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATIO:
                 
-                ( operator, ratio ) = info
+                ( operator, ratio_width, ratio_height ) = info
                 
-                if operator == '=': self._predicates[ self.RATIO ].append( ( equals, ratio ) )
-                elif operator == u'\u2248': self._predicates[ self.RATIO ].append( ( about_equals, ratio ) )
+                if operator == '=': self._ratio = ( ratio_width, ratio_height )
+                elif operator == u'\u2248':
+                    
+                    self._min_ratio = ( ratio_width * 0.85, ratio_height )
+                    self._max_ratio = ( ratio_width * 1.15, ratio_height )
+                    
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_SIZE:
@@ -1709,19 +1677,9 @@ class FileSystemPredicates():
                 
                 ( operator, num_tags ) = info
                 
-                if operator == '<': self._predicates[ self.NUM_TAGS ].append( ( lessthan, num_tags ) )
-                elif operator == '>':
-                    
-                    self._predicates[ self.NUM_TAGS ].append( ( greaterthan, num_tags ) )
-                    
-                    if num_tags == 0: self._num_tags_nonzero = True
-                    
-                elif operator == '=':
-                    
-                    self._predicates[ self.NUM_TAGS ].append( ( equals, num_tags ) )
-                    
-                    if num_tags == 0: self._num_tags_zero = True
-                    
+                if operator == '<': self._max_num_tags = num_tags
+                elif operator == '>': self._num_tags = num_tags
+                elif operator == '=': self._min_num_tags = num_tags
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_WIDTH:
@@ -1798,31 +1756,13 @@ class FileSystemPredicates():
             
         
     
-    def CanPreFirstRoundLimit( self ):
-        
-        if self._limit is None: return False
-        
-        if len( self._predicates[ self.RATIO ] ) > 0: return False
-        
-        return self.CanPreSecondRoundLimit()
-        
-    
-    def CanPreSecondRoundLimit( self ):
-        
-        if self._limit is None: return False
-        
-        if len( self._predicates[ self.NUM_TAGS ] ) > 0: return False
-        
-        return True
-        
-    
     def GetFileServiceInfo( self ): return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
     
-    def GetInfo( self ): return ( self._hash, self._min_size, self._size, self._max_size, self._mimes, self._min_timestamp, self._max_timestamp, self._min_width, self._width, self._max_width, self._min_height, self._height, self._max_height, self._min_num_words, self._num_words, self._max_num_words, self._min_duration, self._duration, self._max_duration )
+    def GetInfo( self ): return ( self._hash, self._min_size, self._size, self._max_size, self._mimes, self._min_timestamp, self._max_timestamp, self._min_width, self._width, self._max_width, self._min_height, self._height, self._max_height, self._min_ratio, self._ratio, self._max_ratio, self._min_num_words, self._num_words, self._max_num_words, self._min_duration, self._duration, self._max_duration )
     
     def GetLimit( self ): return self._limit
     
-    def GetNumTagsInfo( self ): return ( self._num_tags_zero, self._num_tags_nonzero )
+    def GetNumTagsInfo( self ): return ( self._min_num_tags, self._num_tags, self._max_num_tags )
     
     def GetRatingsPredicates( self ): return self._ratings_predicates
     
@@ -1837,22 +1777,6 @@ class FileSystemPredicates():
     def MustBeLocal( self ): return self._local
     
     def MustNotBeLocal( self ): return self._not_local
-    
-    def OkFirstRound( self, width, height ):
-        
-        if len( self._predicates[ self.RATIO ] ) > 0 and ( width is None or height is None or width == 0 or height == 0): return False
-        
-        if False in ( function( float( width ) / float( height ), arg ) for ( function, arg ) in self._predicates[ self.RATIO ] ): return False
-        
-        return True
-        
-    
-    def OkSecondRound( self, num_tags ):
-        
-        if False in ( function( num_tags, arg ) for ( function, arg ) in self._predicates[ self.NUM_TAGS ] ): return False
-        
-        return True
-        
     
 class GlobalBMPs():
     

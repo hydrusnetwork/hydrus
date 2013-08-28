@@ -121,16 +121,19 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         tlp.Bind( wx.EVT_MOVE, self.EventMove )
         
+        wx.CallAfter( self._UpdateList )
+        
     
     def _BroadcastChoice( self, predicate ): pass
     
     def BroadcastChoice( self, predicate ):
         
+        if self.GetValue() != '':
+            
+            self.SetValue( '' )
+            
+        
         self._BroadcastChoice( predicate )
-        
-        self.Clear()
-        
-        wx.CallAfter( self._UpdateList )
         
     
     def _HideDropdown( self ): self._dropdown_window.Show( False )
@@ -242,8 +245,6 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventSetFocus( self, event ):
         
-        self._UpdateList()
-        
         self._ShowDropdownIfFocussed()
         
         event.Skip()
@@ -251,12 +252,8 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventText( self, event ):
         
-        num_chars = len( self.GetValue() )
-        
-        if num_chars == 0: lag = 0
-        else: lag = 150
-        #lag = 0
-        self._lag_timer.Start( lag, wx.TIMER_ONE_SHOT )
+        if len( self.GetValue() ) == 0: self._UpdateList()
+        else: self._lag_timer.Start( 150, wx.TIMER_ONE_SHOT )
         
     
 class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
@@ -2069,12 +2066,8 @@ class PopupMessageFiles( PopupMessage ):
         
     
     def EventButton( self, event ):
-    
-        search_context = CC.FileSearchContext()
         
-        unsorted_file_query_result = HC.app.Read( 'media_results', search_context, self._hashes )
-        
-        media_results = { media_result for media_result in unsorted_file_query_result }
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._hashes )
         
         HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
         
@@ -2132,7 +2125,7 @@ class PopupMessageManager( wx.Frame ):
         self._old_show_exception = HC.ShowException
         
         sys.excepthook = CC.CatchExceptionClient
-        #HC.ShowException = CC.ShowExceptionClient
+        HC.ShowException = CC.ShowExceptionClient
         
     
     def _CheckPending( self ):
@@ -3287,9 +3280,9 @@ class TagsBoxCPP( TagsBox ):
         self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
         self._last_media = None
         
-        self._current_tags_to_count = {}
-        self._pending_tags_to_count = {}
-        self._petitioned_tags_to_count = {}
+        self._current_tags_to_count = collections.Counter()
+        self._pending_tags_to_count = collections.Counter()
+        self._petitioned_tags_to_count = collections.Counter()
         
         HC.pubsub.sub( self, 'SetTagsByMedia', 'new_tags_selection' )
         HC.pubsub.sub( self, 'ChangeTagRepository', 'change_tag_repository' )
@@ -3300,6 +3293,38 @@ class TagsBoxCPP( TagsBox ):
         predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ), None )
         
         HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
+    
+    def _RecalcStrings( self ):
+        
+        siblings_manager = HC.app.GetTagSiblingsManager()
+        
+        all_current = ( tag for tag in self._current_tags_to_count if self._current_tags_to_count[ tag ] > 0 )
+        all_pending = ( tag for tag in self._pending_tags_to_count if self._pending_tags_to_count[ tag ] > 0 )
+        all_petitioned = ( tag for tag in self._petitioned_tags_to_count if self._petitioned_tags_to_count[ tag ] > 0 )
+        
+        all_tags = set( itertools.chain( all_current, all_pending, all_petitioned ) )
+        
+        self._ordered_strings = []
+        self._strings_to_terms = {}
+        
+        for tag in all_tags:
+            
+            tag_string = tag
+            
+            if tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+            if tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+            if tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: tag_string += ' (' + sibling + ')'
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
+        self._SortTags()
         
     
     def _SortTags( self ):
@@ -3345,46 +3370,56 @@ class TagsBoxCPP( TagsBox ):
         
         current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
         
-        if current_tags_to_count != self._current_tags_to_count or pending_tags_to_count != self._pending_tags_to_count or petitioned_tags_to_count != self._petitioned_tags_to_count:
-            
-            self._current_tags_to_count = current_tags_to_count
-            self._pending_tags_to_count = pending_tags_to_count
-            self._petitioned_tags_to_count = petitioned_tags_to_count
-            
-            all_tags = { tag for tag in self._current_tags_to_count.keys() + self._pending_tags_to_count.keys() + self._petitioned_tags_to_count.keys() }
-            
-            self._ordered_strings = []
-            self._strings_to_terms = {}
-            
-            for tag in all_tags:
-                
-                tag_string = tag
-                
-                if tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-                if tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-                if tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-                
-                sibling = siblings_manager.GetSibling( tag )
-                
-                if sibling is not None: tag_string += ' (' + sibling + ')'
-                
-                self._ordered_strings.append( tag_string )
-                self._strings_to_terms[ tag_string ] = tag
-                
-            
-            self._SortTags()
-            
+        self._current_tags_to_count = current_tags_to_count
+        self._pending_tags_to_count = pending_tags_to_count
+        self._petitioned_tags_to_count = petitioned_tags_to_count
+        
+        self._RecalcStrings()
         
     
-    def SetTagsByMedia( self, page_key, media ):
+    def SetTagsByMedia( self, page_key, media, force_reload = False ):
         
         if page_key == self._page_key:
             
+            media = set( media )
+            
+            if force_reload:
+                
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_identifier )
+                
+                self.SetTags( current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+                
+            else:
+                
+                if self._last_media is None: ( removees, adds ) = ( set(), media )
+                else:
+                    
+                    removees = self._last_media.difference( media )
+                    adds = media.difference( self._last_media )
+                    
+                
+                siblings_manager = HC.app.GetTagSiblingsManager()
+                
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_identifier )
+                
+                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+                
+                self._current_tags_to_count.subtract( current_tags_to_count )
+                self._pending_tags_to_count.subtract( pending_tags_to_count )
+                self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
+                
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_identifier )
+                
+                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+                
+                self._current_tags_to_count.update( current_tags_to_count )
+                self._pending_tags_to_count.update( pending_tags_to_count )
+                self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+                
+            
             self._last_media = media
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_identifier )
-            
-            self.SetTags( current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+            self._RecalcStrings()
             
         
     

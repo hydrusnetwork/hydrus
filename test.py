@@ -93,3 +93,6 @@ if __name__ == '__main__':
     
     raw_input()
     
+    HC.shutdown = True
+    
+    HC.pubsub.pubimmediate( 'shutdown' )

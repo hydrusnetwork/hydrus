@@ -9,6 +9,8 @@ import ClientDB
 import ClientGUI
 import ClientGUIDialogs
 import os
+import random
+import shutil
 import sqlite3
 import sys
 import threading
@@ -104,10 +106,16 @@ class Controller( wx.App ):
         
         ( callable, args, kwargs ) = pubsubs_queue.get()
         
+        HC.busy_doing_pubsub = True
+        
         try: callable( *args, **kwargs )
         except wx._core.PyDeadObjectError: pass
-        except TypeError: pass
-        finally: pubsubs_queue.task_done()
+        finally:
+            
+            pubsubs_queue.task_done()
+            
+            HC.busy_doing_pubsub = False
+            
         
     
     def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
@@ -151,6 +159,25 @@ class Controller( wx.App ):
         
         try:
             
+            try:
+                
+                def make_temp_files_deletable( function_called, path, traceback_gumpf ):
+                    
+                    os.chmod( path, stat.S_IWRITE )
+                    
+                    function_called( path ) # try again
+                    
+                
+                if os.path.exists( HC.TEMP_DIR ): shutil.rmtree( HC.TEMP_DIR, onerror = make_temp_files_deletable )
+                
+            except: pass
+            
+            try:
+                
+                if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
+                
+            except: pass
+            
             self._splash = ClientGUI.FrameSplash()
             
             self.SetSplashText( 'log' )
@@ -184,6 +211,8 @@ class Controller( wx.App ):
                         
                     
                 
+            
+            threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()
@@ -222,7 +251,8 @@ class Controller( wx.App ):
             if HC.is_first_start: self._gui.DoFirstStart()
             if HC.is_db_updated: wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
             
-            self._db._InitPostGUI()
+            self._db.StartServer()
+            self._db.StartDaemons()
             
             self._last_idle_time = 0.0
             
@@ -285,6 +315,60 @@ class Controller( wx.App ):
         self.Yield() # this processes the event queue immediately, so the paint event can occur
         
     
+    def StartFileQuery( self, query_key, search_context ):
+        
+        threading.Thread( target = self.THREADDoFileQuery, name = 'file query', args = ( query_key, search_context ) ).start()
+        
+    
+    def THREADDoFileQuery( self, query_key, search_context ):
+        
+        try:
+            
+            query_hash_ids = HC.app.Read( 'file_query_ids', search_context )
+            
+            query_hash_ids = list( query_hash_ids )
+            
+            random.shuffle( query_hash_ids )
+            
+            limit = search_context.GetSystemPredicates().GetLimit()
+            
+            if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
+            
+            file_service_identifier = search_context.GetFileServiceIdentifier()
+            
+            include_current_tags = search_context.IncludeCurrentTags()
+            
+            media_results = []
+            
+            include_pending_tags = search_context.IncludePendingTags()
+            
+            i = 0
+            
+            base = 256
+            
+            while i < len( query_hash_ids ):
+                
+                if query_key.IsCancelled(): return
+                
+                if i == 0: ( last_i, i ) = ( 0, base )
+                else: ( last_i, i ) = ( i, i + base )
+                
+                sub_query_hash_ids = query_hash_ids[ last_i : i ]
+                
+                more_media_results = HC.app.Read( 'media_results_from_ids', file_service_identifier, sub_query_hash_ids )
+                
+                media_results.extend( more_media_results )
+                
+                HC.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
+                
+                HC.app.WaitUntilGoodTimeToUseGUIThread()
+                
+            
+            HC.pubsub.pub( 'file_query_done', query_key, media_results )
+            
+        except Exception as e: HC.ShowException( e )
+        
+    
     def WaitUntilGoodTimeToUseGUIThread( self ):
         
         pubsubs_queue = HC.pubsub.GetQueue()
@@ -292,7 +376,7 @@ class Controller( wx.App ):
         while True:
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
-            elif pubsubs_queue.qsize() == 0: return
+            elif pubsubs_queue.qsize() == 0 and not HC.busy_doing_pubsub: return
             else: time.sleep( 0.0001 )
             
         

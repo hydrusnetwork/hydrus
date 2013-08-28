@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 82</h3></li>
+				<ul>
+					<li>a bug where slow search results would sometimes appear after search predicates were removed has been fixed</li>
+					<li>a lot of autocomplete gui- and db-blocking reorganisation</li>
+					<li>searches are now entirely asynchronous to gui thread</li>
+					<li>searches are split into two granular phases, and are cancellable during processing</li>
+					<li>simplified system predicate storage</li>
+					<li>consolidated all system predicate filtering to initial db search</li>
+					<li>huge improvements to how the thumbnail canvas is sized and extended and drawn to</li>
+					<li>numerous fixes and improvements to how thumbnails are drawn to screen</li>
+					<li>reworked how collect works</li>
+					<li>and sort</li>
+					<li>the raw cpu time behind sorting in muuuuuuuch faster</li>
+					<li>clarified my listening media class</li>
+					<li>added another optimisation to canvas resizing</li>
+					<li>big improvement to canvas redrawing and refreshing</li>
+					<li>important fix in how client figured out what to draw when clicking in whitespace</li>
+					<li>thumbnail fade is much smoother</li>
+					<li>thumbnails should now generally draw a little smoother</li>
+					<li>selectall and selectnone's thumbnail fade is less cpu intensive</li>
+					<li>cleared up a number of collect related selection and index bugs</li>
+					<li>fixed a media identifier issue</li>
+					<li>all import-related append and drawing is muuuuch faster</li>
+					<li>flicker bug on small appends fixed</li>
+					<li>fixed a page up/down drawing bug on the main thumbnail canvas view</li>
+					<li>fixed an unknown-timestamp thumbnail right click issue</li>
+					<li>made my internal media data storage system a lot simpler</li>
+					<li>new sortedlist class to make some media stuff easier to manage</li>
+					<li>reworked how new media is added to a page of thumbs (usually import-append, but the new system supports collect- and sort-sympathetic insertion):</li>
+					<li>-calculating combined tags on the left can be up to ten times faster</li>
+					<li>-integrating new files into the sort is much quicker</li>
+					<li>-integrating new files into the collect is much quicker</li>
+					<li>-improved how new thumbnails are decided to be drawn</li>
+					<li>trying to archive or inbox more than one file, you'll get a yes/no dialog to confirm</li>
+					<li>started db testing framework</li>
+					<li>db tracebacks improved</li>
+					<li>slimmed down content_update data-side processing</li>
+					<li>a couple small code fixes</li>
+					<li>archive and inbox no longer remove from the search if the opposite system predicate is set</li>
+					<li>system:rating fixed</li>
+					<li>fixed a bug where you could middle-click-download files that had no known source</li>
+					<li>couple of bugs with system:ratio fixed</li>
+					<li>system:ratio string representation is 16:9, rather than 1.777779</li>
+					<li>gui thread is more intelligent in telling non-gui threads that it is busy</li>
+				</ul>
 				<li><h3>version 81</h3></li>
 				<ul>
 					<li>mp4 added</li>

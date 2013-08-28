@@ -140,7 +140,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 ( upload_hashes, update ) = result
                 
-                media_results = HC.app.Read( 'media_results', CC.FileSearchContext( file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER ), upload_hashes )
+                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, upload_hashes )
                 
                 num_uploads = len( media_results )
                 
@@ -195,7 +195,7 @@ class FrameGUI( ClientGUICommon.Frame ):
                 
                 content_updates = []
                 
-                media_results = HC.app.Read( 'media_results', CC.FileSearchContext(), good_hashes )
+                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, good_hashes )
                 
                 for media_result in media_results:
                     

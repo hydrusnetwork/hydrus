@@ -1103,9 +1103,7 @@ class RatingDB():
             
             ( hash_id, ) = result
             
-            search_context = CC.FileSearchContext()
-            
-            ( media_result, ) = self._GetMediaResults( c, search_context, set( ( hash_id, ) ) )
+            ( media_result, ) = self._GetMediaResults( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER, { hash_id } )
             
             return media_result
             
@@ -1585,182 +1583,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
-    def _DoFileQuery( self, c, query_key, search_context ):
-        
-        time.sleep( 0.0001 )
-        
-        # setting up
-        
-        system_predicates = search_context.GetSystemPredicates()
-        
-        file_service_identifier = search_context.GetFileServiceIdentifier()
-        tag_service_identifier = search_context.GetTagServiceIdentifier()
-        
-        file_service_id = self._GetServiceId( c, file_service_identifier )
-        tag_service_id = self._GetServiceId( c, tag_service_identifier )
-        
-        file_service_type = file_service_identifier.GetType()
-        tag_service_type = tag_service_identifier.GetType()
-        
-        tags_to_include = search_context.GetTagsToInclude()
-        tags_to_exclude = search_context.GetTagsToExclude()
-        
-        namespaces_to_include = search_context.GetNamespacesToInclude()
-        namespaces_to_exclude = search_context.GetNamespacesToExclude()
-        
-        include_current_tags = search_context.IncludeCurrentTags()
-        include_pending_tags = search_context.IncludePendingTags()
-        
-        sql_predicates = [ 'service_id = ' + HC.u( file_service_id ) ]
-        
-        ( hash, min_size, size, max_size, mimes, min_timestamp, max_timestamp, min_width, width, max_width, min_height, height, max_height, min_num_words, num_words, max_num_words, min_duration, duration, max_duration ) = system_predicates.GetInfo()
-        
-        if min_size is not None: sql_predicates.append( 'size > ' + HC.u( min_size ) )
-        if size is not None: sql_predicates.append( 'size = ' + HC.u( size ) )
-        if max_size is not None: sql_predicates.append( 'size < ' + HC.u( max_size ) )
-        
-        if mimes is not None:
-            
-            if len( mimes ) == 1:
-                
-                ( mime, ) = mimes
-                
-                sql_predicates.append( 'mime = ' + HC.u( mime ) )
-                
-            else: sql_predicates.append( 'mime IN ' + HC.SplayListForDB( mimes ) )
-            
-        
-        if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HC.u( min_timestamp ) )
-        if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HC.u( max_timestamp ) )
-        
-        if min_width is not None: sql_predicates.append( 'width > ' + HC.u( min_width ) )
-        if width is not None: sql_predicates.append( 'width = ' + HC.u( width ) )
-        if max_width is not None: sql_predicates.append( 'width < ' + HC.u( max_width ) )
-        
-        if min_height is not None: sql_predicates.append( 'height > ' + HC.u( min_height ) )
-        if height is not None: sql_predicates.append( 'height = ' + HC.u( height ) )
-        if max_height is not None: sql_predicates.append( 'height < ' + HC.u( max_height ) )
-        
-        if min_num_words is not None: sql_predicates.append( 'num_words > ' + HC.u( min_num_words ) )
-        if num_words is not None: sql_predicates.append( 'num_words = ' + HC.u( num_words ) )
-        if max_num_words is not None: sql_predicates.append( 'num_words < ' + HC.u( max_num_words ) )
-        
-        if min_duration is not None: sql_predicates.append( 'duration > ' + HC.u( min_duration ) )
-        if duration is not None:
-            
-            if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
-            else: sql_predicates.append( 'duration = ' + HC.u( duration ) )
-            
-        if max_duration is not None: sql_predicates.append( 'duration < ' + HC.u( max_duration ) )
-        
-        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0:
-            
-            query_hash_ids = None
-            
-            if len( tags_to_include ) > 0: query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
-            
-            if len( namespaces_to_include ) > 0:
-                
-                namespace_query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
-                
-                if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
-                else: query_hash_ids.intersection_update( namespace_query_hash_ids )
-                
-            
-            if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
-            
-        else:
-            
-            if file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
-            elif tag_service_identifier != HC.COMBINED_TAG_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
-            else: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
-            
-        
-        ( num_tags_zero, num_tags_nonzero ) = system_predicates.GetNumTagsInfo()
-        
-        if num_tags_zero or num_tags_nonzero:
-            
-            statuses = []
-            
-            if include_current_tags: statuses.append( HC.CURRENT )
-            if include_pending_tags: statuses.append( HC.PENDING )
-            
-            nonzero_tag_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ' + HC.SplayListForDB( statuses ) + ';', ( tag_service_id, ) ) }
-            
-            if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_hash_ids )
-            elif num_tags_nonzero: query_hash_ids.intersection_update( nonzero_tag_hash_ids )
-            
-        
-        if hash is not None:
-            
-            hash_id = self._GetHashId( c, hash )
-            
-            query_hash_ids.intersection_update( { hash_id } )
-            
-        
-        exclude_query_hash_ids = set()
-        
-        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) )
-        
-        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) )
-        
-        if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
-        
-        query_hash_ids.difference_update( exclude_query_hash_ids )
-        
-        ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
-        
-        for service_identifier in file_services_to_include_current:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for service_identifier in file_services_to_include_pending:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for service_identifier in file_services_to_exclude_current:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for service_identifier in file_services_to_exclude_pending:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
-            
-        
-        for ( service_identifier, operator, value ) in system_predicates.GetRatingsPredicates():
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'uncertain': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM ratings_filter WHERE service_id = ?;', ( service_id, ) ) ] )
-            else:
-                
-                if operator == u'\u2248': predicate = HC.u( value * 0.95 ) + ' < rating AND rating < ' + HC.u( value * 1.05 )
-                else: predicate = 'rating ' + operator + ' ' + HC.u( value )
-                
-                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
-                
-            
-        
-        media_results = self._GetMediaResults( c, search_context, query_hash_ids )
-        
-        self.pub( 'file_query_done', query_key, media_results )
-        
-        return media_results
-        
-    
     def _FattenAutocompleteCache( self, c ):
         
         tag_service_identifiers = self._GetServiceIdentifiers( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
@@ -1927,6 +1749,278 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     def _GetDownloads( self, c ): return { hash for ( hash, ) in c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
     
     def _GetFavouriteCustomFilterActions( self, c ): return dict( c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' ).fetchall() )
+    
+    def _GetFileQueryIds( self, c, search_context ):
+        
+        system_predicates = search_context.GetSystemPredicates()
+        
+        file_service_identifier = search_context.GetFileServiceIdentifier()
+        tag_service_identifier = search_context.GetTagServiceIdentifier()
+        
+        file_service_id = self._GetServiceId( c, file_service_identifier )
+        tag_service_id = self._GetServiceId( c, tag_service_identifier )
+        
+        file_service_type = file_service_identifier.GetType()
+        tag_service_type = tag_service_identifier.GetType()
+        
+        tags_to_include = search_context.GetTagsToInclude()
+        tags_to_exclude = search_context.GetTagsToExclude()
+        
+        namespaces_to_include = search_context.GetNamespacesToInclude()
+        namespaces_to_exclude = search_context.GetNamespacesToExclude()
+        
+        include_current_tags = search_context.IncludeCurrentTags()
+        include_pending_tags = search_context.IncludePendingTags()
+        
+        #
+        
+        sql_predicates = [ 'service_id = ' + HC.u( file_service_id ) ]
+        
+        ( hash, min_size, size, max_size, mimes, min_timestamp, max_timestamp, min_width, width, max_width, min_height, height, max_height, min_ratio, ratio, max_ratio, min_num_words, num_words, max_num_words, min_duration, duration, max_duration ) = system_predicates.GetInfo()
+        
+        if min_size is not None: sql_predicates.append( 'size > ' + HC.u( min_size ) )
+        if size is not None: sql_predicates.append( 'size = ' + HC.u( size ) )
+        if max_size is not None: sql_predicates.append( 'size < ' + HC.u( max_size ) )
+        
+        if mimes is not None:
+            
+            if len( mimes ) == 1:
+                
+                ( mime, ) = mimes
+                
+                sql_predicates.append( 'mime = ' + HC.u( mime ) )
+                
+            else: sql_predicates.append( 'mime IN ' + HC.SplayListForDB( mimes ) )
+            
+        
+        if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HC.u( min_timestamp ) )
+        if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HC.u( max_timestamp ) )
+        
+        if min_width is not None: sql_predicates.append( 'width > ' + HC.u( min_width ) )
+        if width is not None: sql_predicates.append( 'width = ' + HC.u( width ) )
+        if max_width is not None: sql_predicates.append( 'width < ' + HC.u( max_width ) )
+        
+        if min_height is not None: sql_predicates.append( 'height > ' + HC.u( min_height ) )
+        if height is not None: sql_predicates.append( 'height = ' + HC.u( height ) )
+        if max_height is not None: sql_predicates.append( 'height < ' + HC.u( max_height ) )
+        
+        if min_ratio is not None:
+            
+            ( ratio_width, ratio_height ) = min_ratio
+            
+            sql_predicates.append( '( width * 1.0 ) / height > ' + HC.u( float( ratio_width ) ) + ' / ' + HC.u( ratio_height ) )
+            
+        if ratio is not None:
+            
+            ( ratio_width, ratio_height ) = ratio
+            
+            sql_predicates.append( '( width * 1.0 ) / height = ' + HC.u( float( ratio_width ) ) + ' / ' + HC.u( ratio_height ) )
+            
+        if max_ratio is not None:
+            
+            ( ratio_width, ratio_height ) = max_ratio
+            
+            sql_predicates.append( '( width * 1.0 ) / height < ' + HC.u( float( ratio_width ) ) + ' / ' + HC.u( ratio_height ) )
+            
+        
+        if min_num_words is not None: sql_predicates.append( 'num_words > ' + HC.u( min_num_words ) )
+        if num_words is not None: sql_predicates.append( 'num_words = ' + HC.u( num_words ) )
+        if max_num_words is not None: sql_predicates.append( 'num_words < ' + HC.u( max_num_words ) )
+        
+        if min_duration is not None: sql_predicates.append( 'duration > ' + HC.u( min_duration ) )
+        if duration is not None:
+            
+            if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
+            else: sql_predicates.append( 'duration = ' + HC.u( duration ) )
+            
+        if max_duration is not None: sql_predicates.append( 'duration < ' + HC.u( max_duration ) )
+        
+        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0:
+            
+            query_hash_ids = None
+            
+            if len( tags_to_include ) > 0: query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+            
+            if len( namespaces_to_include ) > 0:
+                
+                namespace_query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
+                
+                if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
+                else: query_hash_ids.intersection_update( namespace_query_hash_ids )
+                
+            
+            if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
+            
+        else:
+            
+            if file_service_identifier != HC.COMBINED_FILE_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
+            elif tag_service_identifier != HC.COMBINED_TAG_SERVICE_IDENTIFIER: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
+            else: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
+            
+        
+        #
+        
+        ( min_num_tags, num_tags, max_num_tags ) = system_predicates.GetNumTagsInfo()
+        
+        num_tags_zero = False
+        num_tags_nonzero = False
+        
+        tag_predicates = []
+        
+        if min_num_tags is not None:
+            
+            if min_num_tags == 1: num_tags_nonzero = True
+            else: tag_predicates.append( lambda num_tags: num_tags >= min_num_tags )
+            
+        
+        if num_tags is not None:
+            
+            if num_tags == 0: num_tags_zero = True
+            else: tag_predicates.append( lambda num_tags: num_tags == num_tags )
+            
+        
+        if max_num_tags is not None:
+            
+            if max_num_tags == 1: num_tags_nonzero = True
+            else: tag_predicates.append( lambda num_tags: num_tags <= max_num_tags )
+            
+        
+        statuses = []
+        
+        if include_current_tags: statuses.append( HC.CURRENT )
+        if include_pending_tags: statuses.append( HC.PENDING )
+        
+        if num_tags_zero or num_tags_nonzero:
+            
+            query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ';', ( tag_service_id, ) ) }
+            
+        
+        if len( tag_predicates ) > 0:
+            
+            query_hash_ids = { id for ( id, count ) in c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
+            
+        
+        #
+        
+        if hash is not None:
+            
+            hash_id = self._GetHashId( c, hash )
+            
+            query_hash_ids.intersection_update( { hash_id } )
+            
+        
+        #
+        
+        exclude_query_hash_ids = set()
+        
+        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ) )
+        
+        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ) )
+        
+        if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
+        
+        query_hash_ids.difference_update( exclude_query_hash_ids )
+        
+        #
+        
+        ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
+        
+        for service_identifier in file_services_to_include_current:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_identifier in file_services_to_include_pending:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_identifier in file_services_to_exclude_current:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for service_identifier in file_services_to_exclude_pending:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
+            
+        
+        for ( service_identifier, operator, value ) in system_predicates.GetRatingsPredicates():
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            elif value == 'uncertain': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM ratings_filter WHERE service_id = ?;', ( service_id, ) ) ] )
+            else:
+                
+                if operator == u'\u2248': predicate = HC.u( value * 0.95 ) + ' < rating AND rating < ' + HC.u( value * 1.05 )
+                else: predicate = 'rating ' + operator + ' ' + HC.u( value )
+                
+                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
+                
+            
+        
+        #
+        
+        must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
+        must_not_be_local = system_predicates.MustNotBeLocal()
+        must_be_inbox = system_predicates.MustBeInbox()
+        must_be_archive = system_predicates.MustBeArchive()
+        
+        if must_be_local or must_not_be_local:
+            
+            if file_service_id == self._local_file_service_id:
+                
+                if must_not_be_local: query_hash_ids = set()
+                
+            else:
+                
+                local_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
+                
+                if must_be_local: query_hash_ids.intersection_update( local_hash_ids )
+                else: query_hash_ids.difference_update( local_hash_ids )
+                
+            
+        
+        if must_be_inbox or must_be_archive:
+            
+            inbox_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM file_inbox;' ) }
+            
+            if must_be_inbox: query_hash_ids.intersection_update( inbox_hash_ids )
+            elif must_be_archive: query_hash_ids.difference_update( inbox_hash_ids )
+            
+        
+        #
+        
+        if system_predicates.HasSimilarTo():
+            
+            ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
+            
+            hash_id = self._GetHashId( c, similar_to_hash )
+            
+            result = c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            
+            if result is not None:
+                
+                ( phash, ) = result
+                
+                similar_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
+                
+                query_hash_ids.intersection_update( similar_hash_ids )
+                
+            
+        
+        return query_hash_ids
+        
     
     def _GetFileSystemPredicates( self, c, service_identifier ):
         
@@ -2113,70 +2207,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return ( 'new', None )
         
     
-    def _GetMediaResults( self, c, search_context, query_hash_ids ):
-        
-        file_service_identifier = search_context.GetFileServiceIdentifier()
-        tag_service_identifier = search_context.GetTagServiceIdentifier()
+    def _GetMediaResults( self, c, file_service_identifier, hash_ids ):
         
         service_id = self._GetServiceId( c, file_service_identifier )
         
-        system_predicates = search_context.GetSystemPredicates()
-        
-        limit = system_predicates.GetLimit()
-        
         inbox_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM file_inbox;' ) }
-        
-        # get basic results
-        
-        must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
-        must_not_be_local = system_predicates.MustNotBeLocal()
-        must_be_inbox = system_predicates.MustBeInbox()
-        must_be_archive = system_predicates.MustBeArchive()
-        
-        if must_be_local or must_not_be_local:
-            
-            if service_id == self._local_file_service_id:
-                
-                if must_not_be_local: query_hash_ids = set()
-                
-            else:
-                
-                local_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
-                
-                if must_be_local: query_hash_ids.intersection_update( local_hash_ids )
-                else: query_hash_ids.difference_update( local_hash_ids )
-                
-            
-        
-        if must_be_inbox: query_hash_ids.intersection_update( inbox_hash_ids )
-        elif must_be_archive: query_hash_ids.difference_update( inbox_hash_ids )
-        
-        # similar to
-        
-        if system_predicates.HasSimilarTo():
-            
-            ( hash, max_hamming ) = system_predicates.GetSimilarTo()
-            
-            hash_id = self._GetHashId( c, hash )
-            
-            result = c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-            
-            if result is not None:
-                
-                ( phash, ) = result
-                
-                similar_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
-                
-                query_hash_ids.intersection_update( similar_hash_ids )
-                
-            
         
         # get first detailed results
         
-        # since I've changed to new search model, this bit needs working over, I think?
         if file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER:
             
-            all_services_results = c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ';' ).fetchall()
+            all_services_results = c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ).fetchall()
             
             hash_ids_i_have_info_for = set()
             
@@ -2194,29 +2235,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 
             
-            results.extend( [ ( hash_id, None, HC.APPLICATION_UNKNOWN, None, None, None, None, None, None ) for hash_id in query_hash_ids - hash_ids_i_have_info_for ] )
+            results.extend( [ ( hash_id, None, HC.APPLICATION_UNKNOWN, None, None, None, None, None, None ) for hash_id in hash_ids if hash_id not in hash_ids_i_have_info_for ] )
             
-        else: results = c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ';', ( service_id, ) ).fetchall()
-        
-        # filtering basic results
-        
-        if system_predicates.CanPreFirstRoundLimit():
-            
-            if len( results ) > limit: results = random.sample( results, limit )
-            
-        else:
-            
-            results = [ ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in results if system_predicates.OkFirstRound( width, height ) ]
-            
-            if system_predicates.CanPreSecondRoundLimit():
-                
-                if len( results ) > limit: results = random.sample( results, system_predicates.GetLimit() )
-                
-            
+        else: results = c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ).fetchall()
         
         # get tagged results
-        
-        hash_ids = [ result[0] for result in results ]
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
@@ -2240,25 +2263,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         # build it
         
-        limit = system_predicates.GetLimit()
-        
-        include_current_tags = search_context.IncludeCurrentTags()
-        include_pending_tags = search_context.IncludePendingTags()
-        
         media_results = []
-        
-        random.shuffle( results ) # important for system:limit
         
         for ( hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in results:
             
-            if limit is not None and len( media_results ) >= limit: break
-            
             hash = hash_ids_to_hashes[ hash_id ]
             
-            if hash_id in hash_ids_to_tags: tags_dict = HC.BuildKeyToListDict( hash_ids_to_tags[ hash_id ] )
-            else: tags_dict = {}
+            #
             
-            # s_i : status : tags
+            inbox = hash_id in inbox_hash_ids
+            
+            #
+            
+            tags_dict = HC.BuildKeyToListDict( hash_ids_to_tags[ hash_id ] )
             
             service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
             
@@ -2266,41 +2283,38 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             tags_manager = HydrusTags.TagsManager( self._tag_service_precedence, service_identifiers_to_statuses_to_tags )
             
-            if not system_predicates.OkSecondRound( tags_manager.GetNumTags( tag_service_identifier, include_current_tags = include_current_tags, include_pending_tags = include_pending_tags ) ): continue
+            #
             
-            inbox = hash_id in inbox_hash_ids
+            current_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_current_file_service_ids[ hash_id ] }
             
-            if hash_id in hash_ids_to_current_file_service_ids: current_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_current_file_service_ids[ hash_id ] }
-            else: current_file_service_identifiers = set()
+            deleted_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_deleted_file_service_ids[ hash_id ] }
             
-            if hash_id in hash_ids_to_deleted_file_service_ids: deleted_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_deleted_file_service_ids[ hash_id ] }
-            else: deleted_file_service_identifiers = set()
+            pending_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_pending_file_service_ids[ hash_id ] }
             
-            if hash_id in hash_ids_to_pending_file_service_ids: pending_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_pending_file_service_ids[ hash_id ] }
-            else: pending_file_service_identifiers = set()
-            
-            if hash_id in hash_ids_to_petitioned_file_service_ids: petitioned_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_petitioned_file_service_ids[ hash_id ] }
-            else: petitioned_file_service_identifiers = set()
+            petitioned_file_service_identifiers = { service_ids_to_service_identifiers[ service_id ] for service_id in hash_ids_to_petitioned_file_service_ids[ hash_id ] }
             
             file_service_identifiers_cdpp = CC.CDPPFileServiceIdentifiers( current_file_service_identifiers, deleted_file_service_identifiers, pending_file_service_identifiers, petitioned_file_service_identifiers )
             
-            if hash_id in hash_ids_to_local_ratings: local_ratings = { service_ids_to_service_identifiers[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
-            else: local_ratings = {}
+            #
+            
+            local_ratings = { service_ids_to_service_identifiers[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
             
             local_ratings = CC.LocalRatings( local_ratings )
             remote_ratings = {}
             
+            #
+            
             media_results.append( CC.MediaResult( ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) ) )
             
         
-        return CC.FileQueryResult( file_service_identifier, search_context.GetPredicates(), media_results )
+        return media_results
         
     
-    def _GetMediaResultsFromHashes( self, c, search_context, hashes ):
+    def _GetMediaResultsFromHashes( self, c, file_service_identifier, hashes ):
         
         query_hash_ids = set( self._GetHashIds( c, hashes ) )
         
-        return self._GetMediaResults( c, search_context, query_hash_ids )
+        return self._GetMediaResults( c, file_service_identifier, query_hash_ids )
         
     
     def _GetMessageSystemPredicates( self, c, identity ):
@@ -3031,9 +3045,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if ( can_add or already_in_db ):
                 
-                search_context = CC.FileSearchContext()
-                
-                ( media_result, ) = self._GetMediaResults( c, search_context, set( ( hash_id, ) ) )
+                ( media_result, ) = self._GetMediaResults( c, HC.LOCAL_FILE_SERVICE_IDENTIFIER, { hash_id } )
                 
                 return ( result, hash, media_result )
                 
@@ -3048,7 +3060,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             ( result, hash, media_result ) = self._ImportFile( c, path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True, url = url )
             
-            if media_result is not None: self.pub( 'add_media_result', page_key, media_result )
+            if media_result is not None: self.pub( 'add_media_results', page_key, ( media_result, ) )
             
             self.pub( 'import_done', page_key, result )
             
@@ -4191,6 +4203,8 @@ class DB( ServiceDB ):
     
     def __init__( self ):
         
+        self._local_shutdown = False
+        
         self._db_path = HC.DB_DIR + os.path.sep + 'client.db'
         
         self._jobs = Queue.PriorityQueue()
@@ -4199,27 +4213,6 @@ class DB( ServiceDB ):
         self._currently_doing_job = False
         
         self._InitDB()
-        
-        temp_dir = HC.TEMP_DIR
-        
-        try:
-            
-            def make_temp_files_deletable( function_called, path, traceback_gumpf ):
-                
-                os.chmod( path, stat.S_IWRITE )
-                
-                function_called( path ) # try again
-                
-            
-            if os.path.exists( temp_dir ): shutil.rmtree( temp_dir, onerror = make_temp_files_deletable )
-            
-        except: pass
-        
-        try:
-            
-            if not os.path.exists( temp_dir ): os.mkdir( temp_dir )
-            
-        except: pass
         
         # clean up if last connection closed badly
         ( db, c ) = self._GetDBCursor()
@@ -4267,8 +4260,6 @@ class DB( ServiceDB ):
         self._RebuildTagServicePrecedenceCache( c )
         
         if not self._CheckPassword(): raise HydrusExceptions.PermissionException( 'No password!' )
-        
-        threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
         
     
     def _CheckPassword( self ):
@@ -4702,41 +4693,6 @@ class DB( ServiceDB ):
             
             c.execute( 'COMMIT' )
             
-        
-    
-    def _InitPostGUI( self ):
-        
-        port = HC.DEFAULT_LOCAL_FILE_PORT
-        
-        local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
-        
-        self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
-        
-        server_thread = threading.Thread( target=self._server.serve_forever )
-        server_thread.start()
-        
-        connection = httplib.HTTPConnection( '127.0.0.1:' + HC.u( port ) )
-        
-        try:
-            
-            connection.connect()
-            connection.close()
-            
-        except:
-            
-            message = 'Could not bind the client to port ' + HC.u( port )
-            
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-            
-        
-        HC.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_new_import_folders', ), period = 180 )
-        HC.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HC.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
-        HC.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
-        HC.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
-        HC.DAEMONWorker( 'SynchroniseMessages', DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
-        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
-        HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
         
     
     def _SaveOptions( self, c ):
@@ -6483,7 +6439,7 @@ class DB( ServiceDB ):
                 elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
                 elif action == 'boorus': result = self._GetBoorus( c, *args, **kwargs )
                 elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
-                elif action == 'do_file_query': result = self._DoFileQuery( c, *args, **kwargs )
+                elif action == 'file_query_ids': result = self._GetFileQueryIds( c, *args, **kwargs )
                 elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
                 elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
                 elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
@@ -6495,6 +6451,7 @@ class DB( ServiceDB ):
                 elif action == 'import_folders': result = self._GetImportFolders( c, *args, **kwargs )
                 elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
                 elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
+                elif action == 'media_results_from_ids': result = self._GetMediaResults( c, *args, **kwargs )
                 elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
                 elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( c, *args, **kwargs )
                 elif action == 'messages_to_send': result = self._GetMessagesToSend( c, *args, **kwargs )
@@ -6625,7 +6582,7 @@ class DB( ServiceDB ):
         
         ( db, c ) = self._GetDBCursor()
         
-        while not ( HC.shutdown and self._jobs.empty() ):
+        while not ( ( self._local_shutdown or HC.shutdown ) and self._jobs.empty() ):
             
             try:
                 
@@ -6654,13 +6611,55 @@ class DB( ServiceDB ):
         if action in ( 'service_info', 'system_predicates' ): job_type = 'read_write'
         else: job_type = 'read'
         
-        job = HC.JobInternal( action, job_type, True, *args, **kwargs )
+        synchronous = True
+        
+        job = HC.JobInternal( action, job_type, synchronous, *args, **kwargs )
         
         if HC.shutdown: raise Exception( 'Application has shutdown!' )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
-        if action != 'do_file_query': return job.GetResult()
+        if synchronous: return job.GetResult()
+        
+    
+    def Shutdown( self ): self._local_shutdown = True
+    
+    def StartDaemons( self ):
+        
+        HC.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_new_import_folders', ), period = 180 )
+        HC.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
+        HC.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
+        HC.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
+        HC.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
+        HC.DAEMONWorker( 'SynchroniseMessages', DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
+        HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
+        HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
+        
+    
+    def StartServer( self ):
+        
+        port = HC.DEFAULT_LOCAL_FILE_PORT
+        
+        local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
+        
+        self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
+        
+        server_thread = threading.Thread( target=self._server.serve_forever )
+        server_thread.start()
+        
+        connection = httplib.HTTPConnection( '127.0.0.1:' + HC.u( port ) )
+        
+        try:
+            
+            connection.connect()
+            connection.close()
+            
+        except:
+            
+            message = 'Could not bind the client to port ' + HC.u( port )
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+            
         
     
     def WaitUntilGoodTimeToUseDBThread( self ):
@@ -6811,7 +6810,7 @@ def DAEMONDownloadFiles():
     
     for hash in hashes:
         
-        ( media_result, ) = HC.app.ReadDaemon( 'media_results', CC.FileSearchContext(), ( hash, ) )
+        ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.COMBINED_FILE_SERVICE_IDENTIFIER, ( hash, ) )
         
         service_identifiers = list( media_result.GetFileServiceIdentifiersCDPP().GetCurrent() )
         

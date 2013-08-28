@@ -3056,7 +3056,7 @@ class DB( ServiceDB ):
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
-        if action != 'do_query': return job.GetResult()
+        return job.GetResult()
         
     
     def Write( self, action, priority, *args, **kwargs ):
