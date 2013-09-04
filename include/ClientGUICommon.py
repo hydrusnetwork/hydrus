@@ -948,7 +948,14 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 
                 default = HC.options[ 'default_collect' ]
                 
-                if default is not None: self.SetCheckedStrings( default )
+                if default is not None:
+                    
+                    strings_we_added = { text for ( text, data ) in collect_types }
+                    
+                    strings_to_check = [ s for ( namespace_gumpf, s ) in default if s in strings_we_added ]
+                    
+                    self.SetCheckedStrings( strings_to_check )
+                    
                 
                 self.Bind( wx.EVT_CHECKLISTBOX, self.EventChanged )
                 
@@ -983,40 +990,6 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 collect_type_strings = self.GetCheckedStrings()
                 
                 self._special_parent.SetCollectTypes( collect_types, collect_type_strings )
-                
-            
-        
-    
-class ChoiceCollect( BetterChoice ):
-    
-    def __init__( self, parent, page_key = None, sort_by = None ):
-        
-        BetterChoice.__init__( self, parent )
-        
-        self._page_key = page_key
-        
-        if sort_by is None: sort_by = HC.options[ 'sort_by' ]
-        
-        collect_choices = CC.GenerateCollectByChoices( sort_by )
-        
-        for ( string, data ) in collect_choices: self.Append( string, data )
-        
-        self.SetSelection( HC.options[ 'default_collect' ] )
-        
-        self.Bind( wx.EVT_CHOICE, self.EventChoice )
-        
-    
-    def EventChoice( self, event ):
-        
-        if self._page_key is not None:
-            
-            selection = self.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                collect_by = self.GetClientData( selection )
-                
-                HC.pubsub.pub( 'collect_media', self._page_key, collect_by )
                 
             
         
@@ -1101,6 +1074,96 @@ class Frame( wx.Frame ):
         #self.SetDoubleBuffered( True )
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+        
+        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
+        
+    
+class FrameThatResizes( Frame ):
+    
+    def __init__( self, *args, **kwargs ):
+        
+        self._resize_option_prefix = kwargs[ 'resize_option_prefix' ]
+        
+        del kwargs[ 'resize_option_prefix' ]
+        
+        Frame.__init__( self, *args, **kwargs )
+        
+        client_size = HC.options[ 'client_size' ]
+        
+        self.SetInitialSize( client_size[ self._resize_option_prefix + 'restored_size' ] )
+        
+        self.SetMinSize( ( 480, 360 ) )
+        
+        self._TryToSetPosition()
+        
+        if client_size[ self._resize_option_prefix + 'maximised' ]: self.Maximize()
+        
+        self.Bind( wx.EVT_SIZE, self.EventSpecialResize )
+        self.Bind( wx.EVT_MOVE_END, self.EventSpecialMoveEnd )
+        
+    
+    def _TryToSetPosition( self ):
+        
+        client_size = HC.options[ 'client_size' ]
+        
+        position = client_size[ self._resize_option_prefix + 'restored_position' ]
+        
+        display_index = wx.Display.GetFromPoint( position )
+        
+        if display_index == wx.NOT_FOUND: client_size[ self._resize_option_prefix + 'restored_position' ] = [ 20, 20 ]
+        else:
+            
+            display = wx.Display( display_index )
+            
+            geometry = display.GetGeometry()
+            
+            ( p_x, p_y ) = position
+            
+            x_bad = p_x < geometry.x or p_x > geometry.x + geometry.width
+            y_bad = p_y < geometry.y or p_y > geometry.y + geometry.height
+            
+            if x_bad or y_bad: client_size[ self._resize_option_prefix + 'restored_position' ] = [ 20, 20 ]
+            
+        
+        self.SetPosition( client_size[ self._resize_option_prefix + 'restored_position' ] )
+        
+    
+    def EventSpecialMoveEnd( self, event ):
+        
+        client_size = HC.options[ 'client_size' ]
+        
+        client_size[ self._resize_option_prefix + 'restored_position' ] = list( self.GetPosition() )
+        
+        event.Skip()
+        
+    
+    def EventSpecialResize( self, event ):
+        
+        client_size = HC.options[ 'client_size' ]
+        
+        if self.IsMaximized() or self.IsFullScreen():
+            
+            client_size[ self._resize_option_prefix + 'maximised' ] = True
+            
+        else:
+            
+            if client_size[ self._resize_option_prefix + 'maximised' ]: # we have just restored, so set size
+                
+                self.SetSize( client_size[ self._resize_option_prefix + 'restored_size' ] )
+                
+                self._TryToSetPosition()
+                
+            else: # we have resized manually, so set new size
+                
+                client_size[ self._resize_option_prefix + 'restored_size' ] = list( self.GetSize() )
+                
+                client_size[ self._resize_option_prefix + 'restored_position' ] = list( self.GetPosition() )
+                
+            
+            client_size[ self._resize_option_prefix + 'maximised' ] = False
+            
+        
+        event.Skip()
         
     
 class Gauge( wx.Gauge ):
@@ -1951,7 +2014,7 @@ class PopupMessage( wx.Window ):
         
         wx.Window.__init__( self, parent, style = wx.BORDER_SIMPLE )
         
-        self.Bind( wx.EVT_RIGHT_UP, self.EventDismiss )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
     
     def EventDismiss( self, event ):
@@ -2188,20 +2251,23 @@ class PopupMessageManager( wx.Frame ):
         
         if message_type == HC.MESSAGE_TYPE_TEXT:
             
-            message_string = info
+            message_string = HC.u( info )
             
         elif message_type == HC.MESSAGE_TYPE_ERROR:
             
             ( etype, value, trace ) = info
             
-            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + trace
+            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + HC.u( trace )
             
         elif message_type == HC.MESSAGE_TYPE_FILES:
             
             ( message_string, hashes ) = info
             
+            message_string = HC.u( message_string )
+            
         
-        print( message_string )
+        try: print( message_string )
+        except: print( repr( message_string ) )
         
     
     def _SizeAndPositionAndShow( self ):
@@ -2239,6 +2305,10 @@ class PopupMessageManager( wx.Frame ):
         sys.excepthook = self._old_excepthook
         
         HC.ShowException = self._old_show_exception
+        
+        self.DismissAll()
+        
+        self.Hide()
         
     
     def Dismiss( self, window ):

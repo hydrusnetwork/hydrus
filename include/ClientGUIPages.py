@@ -394,7 +394,12 @@ class PageQuery( PageWithMedia ):
         PageWithMedia.__init__( self, parent, file_service_identifier )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelQuery( self._search_preview_split, self, self._page_key, self._file_service_identifier, initial_predicates = self._initial_predicates )
+    def _InitManagementPanel( self ):
+        
+        show_search = self._initial_media_results == []
+        
+        self._management_panel = ClientGUIManagement.ManagementPanelQuery( self._search_preview_split, self, self._page_key, self._file_service_identifier, show_search = show_search, initial_predicates = self._initial_predicates )
+        
     
     def _InitMediaPanel( self ):
         

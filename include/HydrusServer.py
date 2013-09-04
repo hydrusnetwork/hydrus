@@ -625,7 +625,7 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
     
     def log_request( self, *args ): pass
     
-    def log_string( self, message ): print( message )
+    def log_string( self, message ): print( repr( message ) )
     
     # this overrides the base method to no longer use the class variable server_version
     def version_string( self ):

@@ -110,6 +110,10 @@ class Controller( wx.App ):
         
         try: callable( *args, **kwargs )
         except wx._core.PyDeadObjectError: pass
+        except TypeError as e:
+            
+            if '_wxPyDeadObject' not in str( e ): raise
+            
         finally:
             
             pubsubs_queue.task_done()
@@ -198,7 +202,7 @@ class Controller( wx.App ):
                     
                 except HydrusExceptions.DBAccessException as e:
                     
-                    print( HC.u( e ) )
+                    print( repr( HC.u( e ) ) )
                     
                     message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
                     message += os.linesep + os.linesep

@@ -12,7 +12,7 @@ def Parse4chanPostScreen( html ):
     if title_tag.string == 'Post successful!': return ( 'success', None )
     elif title_tag.string == '4chan - Banned':
         
-        print( soup )
+        print( repr( soup ) )
         
         message = 'You are banned from this board! html written to log.'
         
@@ -28,7 +28,7 @@ def Parse4chanPostScreen( html ):
             
             if problem_tag is None:
                 
-                try: print( soup )
+                try: print( repr( soup ) )
                 except: pass
                 
                 message = 'Unknown problem; html written to log.'

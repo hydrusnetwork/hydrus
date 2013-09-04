@@ -1870,19 +1870,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if min_num_tags is not None:
             
             if min_num_tags == 1: num_tags_nonzero = True
-            else: tag_predicates.append( lambda num_tags: num_tags >= min_num_tags )
+            else: tag_predicates.append( lambda x: x >= min_num_tags )
             
         
         if num_tags is not None:
             
             if num_tags == 0: num_tags_zero = True
-            else: tag_predicates.append( lambda num_tags: num_tags == num_tags )
+            else: tag_predicates.append( lambda x: x == num_tags )
             
         
         if max_num_tags is not None:
             
             if max_num_tags == 1: num_tags_nonzero = True
-            else: tag_predicates.append( lambda num_tags: num_tags <= max_num_tags )
+            else: tag_predicates.append( lambda x: x <= max_num_tags )
             
         
         statuses = []
@@ -4251,7 +4251,7 @@ class DB( ServiceDB ):
         self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
         self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
         
-        ( options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+        options = self._GetOptions( c )
         
         HC.options = options
         
@@ -4325,6 +4325,29 @@ class DB( ServiceDB ):
             
         
         return all_imageboards
+        
+    
+    def _GetOptions( self, c ):
+        
+        result = c.execute( 'SELECT options FROM options;' ).fetchone()
+        
+        if result is None:
+            
+            options = CC.CLIENT_DEFAULT_OPTIONS
+            
+            c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( options, ) )
+            
+        else:
+            
+            ( options, ) = result
+            
+            for key in CC.CLIENT_DEFAULT_OPTIONS:
+                
+                if key not in options: options[ key ] = CC.CLIENT_DEFAULT_OPTIONS[ key ]
+                
+            
+        
+        return options
         
     
     def _GetRowCount( self, c ):
@@ -4565,119 +4588,6 @@ class DB( ServiceDB ):
                 
             
             c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
-            
-            CLIENT_DEFAULT_OPTIONS = {}
-            
-            CLIENT_DEFAULT_OPTIONS[ 'play_dumper_noises' ] = True
-            CLIENT_DEFAULT_OPTIONS[ 'default_sort' ] = 0
-            CLIENT_DEFAULT_OPTIONS[ 'default_collect' ] = None
-            CLIENT_DEFAULT_OPTIONS[ 'export_path' ] = 'export'
-            CLIENT_DEFAULT_OPTIONS[ 'hpos' ] = 400
-            CLIENT_DEFAULT_OPTIONS[ 'vpos' ] = 700
-            CLIENT_DEFAULT_OPTIONS[ 'exclude_deleted_files' ] = False
-            CLIENT_DEFAULT_OPTIONS[ 'thumbnail_cache_size' ] = 100 * 1048576
-            CLIENT_DEFAULT_OPTIONS[ 'preview_cache_size' ] = 25 * 1048576
-            CLIENT_DEFAULT_OPTIONS[ 'fullscreen_cache_size' ] = 200 * 1048576
-            CLIENT_DEFAULT_OPTIONS[ 'thumbnail_dimensions' ] = [ 150, 125 ]
-            CLIENT_DEFAULT_OPTIONS[ 'password' ] = None
-            CLIENT_DEFAULT_OPTIONS[ 'num_autocomplete_chars' ] = 1
-            CLIENT_DEFAULT_OPTIONS[ 'gui_capitalisation' ] = False
-            
-            system_predicates = {}
-            
-            system_predicates[ 'age' ] = ( 0, 0, 0, 7 )
-            system_predicates[ 'duration' ] = ( 3, 0, 0 )
-            system_predicates[ 'height' ] = ( 1, 1200 )
-            system_predicates[ 'limit' ] = 600
-            system_predicates[ 'mime' ] = ( 0, 0 )
-            system_predicates[ 'num_tags' ] = ( 0, 4 )
-            system_predicates[ 'local_rating_numerical' ] = ( 0, 3 )
-            system_predicates[ 'local_rating_like' ] = 0
-            system_predicates[ 'ratio' ] = ( 0, 16, 9 )
-            system_predicates[ 'size' ] = ( 0, 200, 1 )
-            system_predicates[ 'width' ] = ( 1, 1920 )
-            system_predicates[ 'num_words' ] = ( 0, 30000 )
-            
-            CLIENT_DEFAULT_OPTIONS[ 'file_system_predicates' ] = system_predicates
-            
-            default_namespace_colours = {}
-            
-            default_namespace_colours[ 'system' ] = ( 153, 101, 21 )
-            default_namespace_colours[ 'creator' ] = ( 170, 0, 0 )
-            default_namespace_colours[ 'character' ] = ( 0, 170, 0 )
-            default_namespace_colours[ 'series' ] = ( 170, 0, 170 )
-            default_namespace_colours[ None ] = ( 114, 160, 193 )
-            default_namespace_colours[ '' ] = ( 0, 111, 250 )
-            
-            CLIENT_DEFAULT_OPTIONS[ 'namespace_colours' ] = default_namespace_colours
-            
-            default_sort_by_choices = []
-            
-            default_sort_by_choices.append( ( 'namespaces', [ 'series', 'creator', 'title', 'volume', 'chapter', 'page' ] ) )
-            default_sort_by_choices.append( ( 'namespaces', [ 'creator', 'series', 'title', 'volume', 'chapter', 'page' ] ) )
-            
-            CLIENT_DEFAULT_OPTIONS[ 'sort_by' ] = default_sort_by_choices
-            CLIENT_DEFAULT_OPTIONS[ 'show_all_tags_in_autocomplete' ] = True
-            CLIENT_DEFAULT_OPTIONS[ 'fullscreen_borderless' ] = True
-            
-            shortcuts = {}
-            
-            shortcuts[ wx.ACCEL_NORMAL ] = {}
-            shortcuts[ wx.ACCEL_CTRL ] = {}
-            shortcuts[ wx.ACCEL_ALT ] = {}
-            shortcuts[ wx.ACCEL_SHIFT ] = {}
-            
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F3 ] = 'manage_tags'
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F4 ] = 'manage_ratings'
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F5 ] = 'refresh'
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F7 ] = 'archive'
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F11 ] = 'ratings_filter'
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F12 ] = 'filter'
-            shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_F9 ] = 'new_page'
-            shortcuts[ wx.ACCEL_NORMAL ][ ord( 'F' ) ] = 'fullscreen_switch'
-            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_F7 ] = 'inbox'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'B' ) ] = 'frame_back'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'N' ) ] = 'frame_next'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'T' ) ] = 'new_page'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'W' ) ] = 'close_page'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'R' ) ] = 'show_hide_splitters'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'S' ) ] = 'set_search_focus'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'M' ) ] = 'set_media_focus'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'I' ) ] = 'synchronised_wait_switch'
-            
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_UP ] = 'previous'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_LEFT ] = 'previous'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_UP ] = 'previous'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_LEFT ] = 'previous'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_PAGEUP ] = 'previous'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_PAGEUP ] = 'previous'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_DOWN ] = 'next'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_RIGHT ] = 'next'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_DOWN ] = 'next'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_RIGHT ] = 'next'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_PAGEDOWN ] = 'next'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_PAGEDOWN ] = 'next'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_HOME ] = 'first'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_HOME ] = 'first'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_END ] = 'last'
-            shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_END ] = 'last'
-            
-            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
-            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'
-            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_LEFT ] = 'pan_left'
-            shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_RIGHT ] = 'pan_right'
-            
-            CLIENT_DEFAULT_OPTIONS[ 'shortcuts' ] = shortcuts
-            
-            CLIENT_DEFAULT_OPTIONS[ 'confirm_client_exit' ] = False
-            
-            CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
-            CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = CC.SORT_BY_LEXICOGRAPHIC_ASC
-            
-            CLIENT_DEFAULT_OPTIONS[ 'pause_repo_sync' ] = False
-            CLIENT_DEFAULT_OPTIONS[ 'pause_subs_sync' ] = False
-            
-            c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( CLIENT_DEFAULT_OPTIONS, ) )
             
             c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
             

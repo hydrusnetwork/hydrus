@@ -2605,7 +2605,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
 class ManagementPanelQuery( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier, initial_predicates = [] ):
+    def __init__( self, parent, page, page_key, file_service_identifier, show_search = True, initial_predicates = [] ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
         
@@ -2614,21 +2614,24 @@ class ManagementPanelQuery( ManagementPanel ):
         self._include_current_tags = True
         self._include_pending_tags = True
         
-        self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
-        
-        self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
-        
-        self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, HC.COMBINED_TAG_SERVICE_IDENTIFIER, self._page.GetMedia )
-        
-        self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
-        self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
+        if show_search:
+            
+            self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
+            
+            self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
+            
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, HC.COMBINED_TAG_SERVICE_IDENTIFIER, self._page.GetMedia )
+            
+            self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
+            
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._MakeSort( vbox )
         self._MakeCollect( vbox )
         
-        vbox.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
+        if show_search: vbox.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2785,7 +2788,11 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def SetSearchFocus( self, page_key ):
         
-        if page_key == self._page_key: self._searchbox.SetFocus()
+        if page_key == self._page_key:
+            
+            try: self._searchbox.SetFocus() # there's a chance this doesn't exist!
+            except: pass
+            
         
     
     def ShowQuery( self, query_key, media_results ):

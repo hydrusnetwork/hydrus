@@ -111,6 +111,6 @@ class TaskBarIcon( wx.TaskBarIcon ):
         
         self._tbmenu.Append( wx.ID_EXIT, 'exit' )
         
-        self.Bind( wx.EVT_TASKBAR_RIGHT_UP, lambda event: self.PopupMenu( self._tbmenu ) )
+        self.Bind( wx.EVT_TASKBAR_RIGHT_DOWN, lambda event: self.PopupMenu( self._tbmenu ) )
         
     

@@ -403,6 +403,8 @@ class Canvas():
             
         else: self._DrawBackgroundBitmap()
         
+        event.Skip()
+        
     
     def KeepCursorAlive( self ): pass
     
@@ -495,11 +497,11 @@ class CanvasPanel( Canvas, wx.Window ):
             
         
     
-class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, ClientGUICommon.Frame ):
+class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, ClientGUICommon.FrameThatResizes ):
     
     def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results ):
         
-        ClientGUICommon.Frame.__init__( self, my_parent, title = 'hydrus client fullscreen media viewer' )
+        ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
         Canvas.__init__( self, file_service_identifier, HC.app.GetFullscreenImageCache() )
         ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, predicates, media_results )
         
@@ -509,37 +511,13 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         self._just_started = True
         
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
-        
         self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
         
-        min_width = 920
-        min_height = 600
+        self.Show( True )
         
-        display_index = wx.Display.GetFromWindow( self )
-        
-        if display_index != wx.NOT_FOUND:
-            
-            display = wx.Display( display_index )
-            
-            ( display_width, display_height ) = display.GetGeometry().GetSize()
-            
-            initial_width = max( int( display_width * 0.75 ), min_width )
-            initial_height = max( int( display_height * 0.75 ), min_height )
-            
-            self.SetInitialSize( ( initial_width, initial_height ) )
-            self.SetMinSize( ( 480, 360 ) )
-            
-        
-        if HC.options[ 'fullscreen_borderless' ]:
+        if self.IsMaximized() and HC.options[ 'fullscreen_borderless' ]:
             
             self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-            
-        else:
-            
-            self.Maximize()
-            
-            self.Show( True )
             
         
         HC.app.SetTopWindow( self )
@@ -568,16 +546,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
     def _FullscreenSwitch( self ):
         
-        if self.IsFullScreen():
-            
-            self.ShowFullScreen( False )
-            
-            self.Maximize()
-            
-        else:
-            
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-            
+        if self.IsFullScreen(): self.ShowFullScreen( False )
+        else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
     def _GetCollectionsString( self ):
@@ -1007,7 +977,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventClose )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventClose )
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        self.Bind( wx.EVT_RIGHT_UP, self.EventShowMenu )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
@@ -1279,7 +1249,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventClose )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventClose )
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        self.Bind( wx.EVT_RIGHT_UP, self.EventShowMenu )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
@@ -2261,7 +2231,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
             
         
     
-class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
+class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     RATINGS_FILTER_INEQUALITY_FULL = 0
     RATINGS_FILTER_INEQUALITY_HALF = 1
@@ -2273,7 +2243,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     
     def __init__( self, parent, page_key, service_identifier, media_results ):
         
-        ClientGUICommon.Frame.__init__( self, parent, title = 'hydrus client ratings frame' )
+        ClientGUICommon.FrameThatResizes.__init__( self, parent, resize_option_prefix = 'fs_', title = 'hydrus client ratings frame' )
         
         self._page_key = page_key
         self._service_identifier = service_identifier
@@ -2319,15 +2289,11 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
         self._splitter.SetMinimumPaneSize( 120 )
         self._splitter.SetSashGravity( 0.5 ) # stay in the middle
         
-        if True: # if borderless fullscreen
+        self.Show( True )
+        
+        if self.IsMaximized() and HC.options[ 'fullscreen_borderless' ]:
             
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL ^ wx.FULLSCREEN_NOSTATUSBAR )
-            
-        else:
-            
-            self.Maximize()
-            
-            self.Show( True )
+            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
             
         
         HC.app.SetTopWindow( self )
@@ -2359,16 +2325,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.Frame ):
     
     def _FullscreenSwitch( self ):
         
-        if self.IsFullScreen():
-            
-            self.ShowFullScreen( False )
-            
-            self.Maximize()
-            
-        else:
-            
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-            
+        if self.IsFullScreen(): self.ShowFullScreen( False )
+        else: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
     def _GoBack( self ):

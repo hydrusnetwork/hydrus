@@ -1,4 +1,5 @@
 import bisect
+import bs4
 import collections
 import httplib
 import HydrusExceptions
@@ -37,7 +38,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 82
+SOFTWARE_VERSION = 83
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -974,9 +975,9 @@ def ShowExceptionDefault( e ):
     
     trace = ''.join( trace_list )
     
-    message = u( etype.__name__ ) + ': ' + value + os.linesep + trace
+    message = u( etype.__name__ ) + ': ' + u( value ) + os.linesep + u( trace )
     
-    print( message )
+    print( repr( message ) )
     
 ShowException = ShowExceptionDefault
 
@@ -1043,7 +1044,7 @@ def MergeKeyToListDicts( key_to_list_dicts ):
 
 def u( text_producing_object ):
     
-    if type( text_producing_object ) in ( str, unicode ): text = text_producing_object
+    if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ): text = text_producing_object
     else: text = str( text_producing_object ) # dealing with exceptions, etc...
     
     try: return unicode( text )
@@ -2568,13 +2569,7 @@ class SortedList():
     
     def remove_items( self, items ):
         
-        try: deletee_indices = [ self.index( item ) for item in items ]
-        except:
-            
-            print( self._items_to_indices )
-            
-            raise
-            
+        deletee_indices = [ self.index( item ) for item in items ]
         
         deletee_indices.sort()
         

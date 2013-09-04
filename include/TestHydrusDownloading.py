@@ -108,3 +108,100 @@ class TestDownloaders( unittest.TestCase ):
         HC.get_connection = HC.AdvancedHTTPConnection
         
     
+    def test_hentai_foundry( self ):
+        
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_picture_gallery.html' ) as f: picture_gallery = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_scrap_gallery.html' ) as f: scrap_gallery = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_picture_page.html' ) as f: picture_page = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_scrap_page.html' ) as f: scrap_page = f.read()
+        
+        fake_connection = TestConstants.FakeHTTPConnection( host = 'www.hentai-foundry.com' )
+        
+        # what about page/1 or whatever?
+        
+        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/page/1', picture_gallery )
+        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
+        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/226304/Ashantae', picture_page )
+        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
+        
+        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'www.hentai-foundry.com' )
+        
+        HC.get_connection = TestConstants.fake_http_connection_manager.GetConnection
+        
+        cookies = { 'YII_CSRF_TOKEN' : '19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B' }
+        
+        HC.app.SetWebCookies( 'hentai foundry', cookies )
+        
+        #
+        
+        info = {}
+        
+        info[ 'rating_nudity' ] = 3
+        info[ 'rating_violence' ] = 3
+        info[ 'rating_profanity' ] = 3
+        info[ 'rating_racism' ] = 3
+        info[ 'rating_sex' ] = 3
+        info[ 'rating_spoilers' ] = 3
+        
+        info[ 'rating_yaoi' ] = 1
+        info[ 'rating_yuri' ] = 1
+        info[ 'rating_loli' ] = 1
+        info[ 'rating_shota' ] = 1
+        info[ 'rating_teen' ] = 1
+        info[ 'rating_guro' ] = 1
+        info[ 'rating_furry' ] = 1
+        info[ 'rating_beast' ] = 1
+        info[ 'rating_male' ] = 1
+        info[ 'rating_female' ] = 1
+        info[ 'rating_futa' ] = 1
+        info[ 'rating_other' ] = 1
+        
+        info[ 'filter_media' ] = 'A'
+        info[ 'filter_order' ] = 0
+        info[ 'filter_type' ] = 0
+        
+        pictures_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
+        scraps_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
+        
+        #
+        
+        gallery_urls = pictures_downloader.GetAnotherPage()
+        
+        expected_gallery_urls = [('http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/225935/Coco-VS-Admiral-Swiggins',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/225472/Poon-Cellar',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/225063/Goal-Tending',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/223991/Coco-VS-StarStorm',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/221783/Gala-Event',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/221379/Linda-Rinda',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/220615/Farahs-Day-Off--27',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/219856/Viewing-Room-Workout',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/219284/Farahs-Day-Off--26',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/218886/Nyaow-Streaming',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/218035/Farahs-Day-Off--25',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/216981/A-Vivi-draws-near.-Command',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/216642/Farahs-Day-Off--24',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/215266/Farahs-Day-Off--23',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/213132/Relative-Risk',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/212665/Farahs-Day-Off--21',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/212282/Sticky-Sheva-Situation',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/211269/Farahs-Day-Off-20-2',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/211268/Farahs-Day-Off-20-1',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/211038/Newcomers',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/209967/Farahs-Day-Off-19',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/209292/The-New-Adventures-of-Helena-Lovelace-01',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/208609/Farahs-Day-Off--18',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/207979/Wonderful-Backlit-Foreign-Boyfriend-Experience',)]
+        
+        self.assertEqual( gallery_urls, expected_gallery_urls )
+        
+        gallery_urls = scraps_downloader.GetAnotherPage()
+        
+        expected_gallery_urls = [('http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/224103/Make-Trade',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/220618/Swegabe-Sketches--Gabrielle-020',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/216451/Bigger-Dipper',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/213985/Swegabe-Sketches--Gabrielle-008',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/211271/Swegabe-Sketches--Gabrielle-003',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/210311/Himari-Says-Hi',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/209971/Swegabe-Sketches--Gabrielle-002',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/209970/Swegabe-Sketches--Gabrielle-001',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/204463/Minobred-Overkill',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/203723/Single-File-Please',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/202593/Kneel-O-April',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/201296/McPie-2',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/195882/HANDLED',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/184275/Relative-Frequency',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/183458/Coco-VS-Voltar',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/183085/Coco-VS-Froggy-G',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/181508/Mystra-Meets-Mister-18',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/180699/Tunnel-Trouble',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/177549/Coco-VS-Leon',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/175824/The-Ladies-Boyle',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/168744/Coco-VS-Yuri',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/166167/VVVVViewtiful',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/165429/Walled',), ('http://www.hentai-foundry.com/pictures/user/Sparrow/164936/Coco-VS-Lonestar',)]
+        
+        self.assertEqual( gallery_urls, expected_gallery_urls )
+        
+        #
+        
+        fake_connection = TestConstants.FakeHTTPConnection( host = 'pictures.hentai-foundry.com' )
+        
+        fake_connection.SetResponse( 'GET', '//s/Sparrow/226304.jpg', 'picture' )
+        fake_connection.SetResponse( 'GET', '//s/Sparrow/226084.jpg', 'scrap' )
+        
+        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'pictures.hentai-foundry.com' )
+        
+        # ask for specific url
+        
+        info = pictures_downloader.GetFileAndTags( 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae' )
+        
+        expected_info = ('picture', [u'creator:Sparrow', u'title:Ashantae!', u'Shantae', u'Asha', u'Monster_World', u'cosplay', u'nips'])
+        
+        self.assertEqual( info, expected_info )
+        
+        info = scraps_downloader.GetFileAndTags( 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027' )
+        
+        expected_info = ('scrap', [u'creator:Sparrow', u'title:Swegabe Sketches \u2013 Gabrielle 027', u'bukkake', u'horsecock', u'gokkun', u'prom_night'])
+        
+        self.assertEqual( info, expected_info )
+        
+        #
+        
+        HC.get_connection = HC.AdvancedHTTPConnection
+        
+    

@@ -31,6 +31,8 @@ class App( wx.App ):
         self._tag_parents_manager = HydrusTags.TagParentsManager()
         self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
         
+        self._cookies = {}
+        
         suites = []
         
         suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
@@ -53,6 +55,8 @@ class App( wx.App ):
     def GetTagParentsManager( self ): return self._tag_parents_manager
     def GetTagSiblingsManager( self ): return self._tag_siblings_manager
     
+    def GetWebCookies( self, name ): return self._cookies[ name ]
+    
     def GetWrite( self, name ):
         
         write = self._writes[ name ]
@@ -67,6 +71,8 @@ class App( wx.App ):
     def ReadDaemon( self, name ): return self.Read( name )
     
     def SetRead( self, name, value ): self._reads[ name ] = value
+    
+    def SetWebCookies( self, name, value ): self._cookies[ name ] = value
     
     def Write( self, name, *args, **kwargs ):
         

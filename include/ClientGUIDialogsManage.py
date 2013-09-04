@@ -5748,7 +5748,6 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
-                
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
                 
@@ -5771,6 +5770,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                     for ( child, parent ) in pairs: self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
                     
+                
+                self._tag_parents.SortListItems( 2 )
                 
                 if tag is not None: self.SetChild( tag )
                 
@@ -6232,6 +6233,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     for ( old, new ) in pairs: self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
                     
+                
+                self._tag_siblings.SortListItems( 2 )
+                
+                if tag is not None: self.SetOld( tag )
                 
             
             def ArrangeControls():

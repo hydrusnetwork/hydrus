@@ -219,14 +219,6 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _DeselectAll( self ):
-        
-        self._DeselectSelect( self._selected_media, [] )
-        
-        self._SetFocussedMedia( None )
-        self._shift_focussed_media = None
-        
-    
     def _DeselectSelect( self, media_to_deselect, media_to_select ):
         
         if len( media_to_deselect ) > 0:
@@ -338,7 +330,12 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if media is None:
             
-            if not ctrl and not shift: self._DeselectAll()
+            if not ctrl and not shift:
+                
+                self._Select( 'none' )
+                self._SetFocussedMedia( None )
+                self._shift_focussed_media = None
+                
             
         else:
             
@@ -553,6 +550,8 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self._RefitCanvas()
         
+        self._RedrawCanvas()
+        
         self._PublishSelectionChange()
         
         HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self.GenerateMediaResults() )
@@ -578,40 +577,61 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _ScrollEnd( self ):
+    def _ScrollEnd( self, shift = False ):
         
         if len( self._sorted_media ) > 0:
             
             end_media = self._sorted_media[ -1 ]
             
-            self._HitMedia( end_media, False, False )
+            self._HitMedia( end_media, False, shift )
             
             self._ScrollToMedia( end_media )
             
         
     
-    def _ScrollHome( self ):
+    def _ScrollHome( self, shift = False ):
         
         if len( self._sorted_media ) > 0:
             
             home_media = self._sorted_media[ 0 ]
             
-            self._HitMedia( home_media, False, False )
+            self._HitMedia( home_media, False, shift )
             
             self._ScrollToMedia( home_media )
             
         
     
-    def _SelectAll( self ):
+    def _Select( self, select_type ):
         
         self._RedrawCanvas()
-        self._DeselectSelect( [], self._sorted_media )
         
-    
-    def _SelectNone( self ):
-        
-        self._RedrawCanvas()
-        self._DeselectSelect( self._selected_media, [] )
+        if select_type == 'all': self._DeselectSelect( [], self._sorted_media )
+        else:
+            
+            if select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
+            else:
+                
+                inbox_media = { m for m in self._sorted_media if m.HasInbox() }
+                archive_media = { m for m in self._sorted_media if m not in inbox_media }
+                
+                if select_type == 'inbox':
+                    
+                    media_to_deselect = [ m for m in archive_media if m in self._selected_media ]
+                    media_to_select = [ m for m in inbox_media if m not in self._selected_media ]
+                    
+                elif select_type == 'archive':
+                    
+                    media_to_deselect = [ m for m in inbox_media if m in self._selected_media ]
+                    media_to_select = [ m for m in archive_media if m not in self._selected_media ]
+                    
+                
+            
+            if self._focussed_media in media_to_deselect: self._SetFocussedMedia( None )
+            
+            self._DeselectSelect( media_to_deselect, media_to_select )
+            
+            self._shift_focussed_media = None
+            
         
     
     def _SetFocussedMedia( self, media ):
@@ -671,7 +691,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if page_key == self._page_key:
             
-            self._DeselectAll()
+            self._Select( 'none' )
             
             ClientGUIMixins.ListeningMediaList.Collect( self, collect_by )
             
@@ -725,13 +745,6 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                 hashes = content_update.GetHashes()
                 
                 affected_media = self._GetMedia( hashes )
-                
-                if action == HC.CONTENT_UPDATE_DELETE and service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
-                    
-                    if service_identifier == self._file_service_identifier: self._RedrawCanvas()
-                    
-                    if self._focussed_media in affected_media: self._SetFocussedMedia( None )
-                    
                 
                 if len( affected_media ) > 0:
                     
@@ -857,7 +870,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._timer_animation = wx.Timer( self, ID_TIMER_ANIMATION )
         self._thumbnails_being_faded_in = {}
         
-        self._current_y_start = 0
+        self._current_y_offset = 0
         
         self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
@@ -869,7 +882,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.Bind( wx.EVT_SCROLLWIN, self.EventScroll )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventSelection )
-        self.Bind( wx.EVT_RIGHT_UP, self.EventShowMenu )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseFullScreen )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseFullScreen )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
@@ -905,7 +918,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
         
-        earliest_y = self._current_y_start * yUnit
+        y_start = self._GetYStart()
+        
+        earliest_y = y_start * yUnit
         
         ( my_client_width, my_client_height ) = self.GetClientSize()
         
@@ -936,7 +951,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
         
-        y_offset = self._current_y_start * yUnit
+        y_start = self._GetYStart()
+        
+        y_offset = y_start * yUnit
         
         ( my_client_width, my_client_height ) = self.GetClientSize()
         
@@ -1197,6 +1214,29 @@ class MediaPanelThumbnails( MediaPanel ):
         return self._sorted_media[ thumbnail_index ]
         
     
+    def _GetYStart( self ):
+        
+        ( my_virtual_width, my_virtual_height ) = self.GetVirtualSize()
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+        
+        max_y = ( my_virtual_height - my_height ) / yUnit
+        
+        if ( my_virtual_height - my_height ) % yUnit > 0: max_y += 1
+        
+        ( x, y ) = self.GetViewStart()
+        
+        y += self._current_y_offset
+        
+        y = max( 0, y )
+        
+        y = min( y, max_y )
+        
+        return y
+        
+    
     def _MoveFocussedThumbnail( self, rows, columns, shift ):
         
         if self._focussed_media is not None:
@@ -1350,7 +1390,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         # accelerator tables can't handle escape key in windows, gg
         
-        if event.GetKeyCode() == wx.WXK_ESCAPE: self._DeselectAll()
+        if event.GetKeyCode() == wx.WXK_ESCAPE: self._Select( 'none' )
         else: event.Skip()
         
     
@@ -1375,7 +1415,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             elif command == 'custom_filter': self._CustomFilter()
             elif command == 'delete': self._Delete( data )
-            elif command == 'deselect': self._DeselectAll()
             elif command == 'download': HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
             elif command == 'export': self._ExportFiles()
             elif command == 'filter': self._Filter()
@@ -1391,10 +1430,11 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'remove': self._Remove()
             elif command == 'rescind_petition': self._RescindPetitionFiles( data )
             elif command == 'rescind_upload': self._RescindUploadFiles( data )
-            elif command == 'scroll_end': self._ScrollEnd()
-            elif command == 'scroll_home': self._ScrollHome()
-            elif command == 'select_all': self._SelectAll()
-            elif command == 'select_none': self._SelectNone()
+            elif command == 'scroll_end': self._ScrollEnd( False )
+            elif command == 'scroll_home': self._ScrollHome( False )
+            elif command == 'shift_scroll_end': self._ScrollEnd( True )
+            elif command == 'shift_scroll_home': self._ScrollHome( True )
+            elif command == 'select': self._Select( data )
             elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
             elif command == 'upload': self._UploadFiles( data )
             elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
@@ -1442,6 +1482,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._RefitCanvas()
         
+        self.Refresh() # in case of small resizes where a dc isn't created, I think, where we get tiny black lines
+        
     
     def EventSelection( self, event ):
         
@@ -1464,8 +1506,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             menu.AppendSeparator()
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_all' ), 'select all' )
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_none' ), 'select none' )
+            select_menu = wx.Menu()
+            
+            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
+            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
+            
+            menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
             
         else:
             
@@ -1766,8 +1814,14 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_all' ), 'select all' )
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_none' ), 'select none' )
+                select_menu = wx.Menu()
+                
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
+                
+                menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
                 
                 menu.AppendSeparator()
                 
@@ -1794,28 +1848,24 @@ class MediaPanelThumbnails( MediaPanel ):
         # it seems that some scroll events happen after the viewstart has changed, some happen before
         # so I have to keep track of a manual current_y_start
         
-        ( my_virtual_width, my_virtual_height ) = self.GetVirtualSize()
-        
         ( my_width, my_height ) = self.GetClientSize()
         
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        max_y_units = ( my_virtual_height - my_height ) / yUnit
-        
-        if ( my_virtual_height - my_height ) % yUnit > 0: max_y_units += 1
         
         page_of_y_units = my_height / yUnit
         
         event_type = event.GetEventType()
         
-        if event_type == wx.wxEVT_SCROLLWIN_LINEUP: self._current_y_start = max( 0, self._current_y_start - 1 )
-        elif event_type == wx.wxEVT_SCROLLWIN_LINEDOWN: self._current_y_start = min( max_y_units, self._current_y_start + 1 )
-        elif event_type == wx.wxEVT_SCROLLWIN_THUMBTRACK: self._current_y_start = event.GetPosition()
-        elif event_type == wx.wxEVT_SCROLLWIN_THUMBRELEASE: self._current_y_start = event.GetPosition()
-        elif event_type == wx.wxEVT_SCROLLWIN_PAGEUP: self._current_y_start = max( 0, self._current_y_start - page_of_y_units )
-        elif event_type == wx.wxEVT_SCROLLWIN_PAGEDOWN: self._current_y_start = min( max_y_units, self._current_y_start + page_of_y_units )
+        if event_type == wx.wxEVT_SCROLLWIN_LINEUP: self._current_y_offset = -1
+        elif event_type == wx.wxEVT_SCROLLWIN_LINEDOWN: self._current_y_offset = 1
+        elif event_type == wx.wxEVT_SCROLLWIN_THUMBTRACK: self._current_y_offset = 0
+        elif event_type == wx.wxEVT_SCROLLWIN_THUMBRELEASE: self._current_y_offset = 0
+        elif event_type == wx.wxEVT_SCROLLWIN_PAGEUP: self._current_y_offset = - page_of_y_units
+        elif event_type == wx.wxEVT_SCROLLWIN_PAGEDOWN: self._current_y_offset = page_of_y_units
         
         self._RefitCanvas()
+        
+        self._current_y_offset = 0
         
         event.Skip()
         
@@ -1921,6 +1971,10 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_left' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_right' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_right' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_down' ) ),
@@ -1929,7 +1983,7 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_left' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
-        ( wx.ACCEL_CMD, ord( 'A' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_all' ) ),
+        ( wx.ACCEL_CMD, ord( 'A' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ) ),
         ( wx.ACCEL_CTRL, ord( 'c' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' )  ),
         ( wx.ACCEL_CTRL, wx.WXK_SPACE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ctrl-space' )  )
         ]

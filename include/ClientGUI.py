@@ -38,11 +38,11 @@ FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-class FrameGUI( ClientGUICommon.Frame ):
+class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def __init__( self ):
         
-        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Hydrus Client' ) )
+        ClientGUICommon.FrameThatResizes.__init__( self, None, resize_option_prefix = 'gui_', title = HC.app.PrepStringForDisplay( 'Hydrus Client' ) )
         
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
         
@@ -55,28 +55,6 @@ class FrameGUI( ClientGUICommon.Frame ):
         self._statusbar_inbox = ''
         self._statusbar_downloads = ''
         self._statusbar_db_locked = ''
-        
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
-        
-        min_width = 920
-        min_height = 600
-        
-        display_index = wx.Display.GetFromWindow( self )
-        
-        if display_index != wx.NOT_FOUND:
-            
-            display = wx.Display( display_index )
-            
-            ( display_width, display_height ) = display.GetGeometry().GetSize()
-            
-            initial_width = max( int( display_width * 0.75 ), min_width )
-            initial_height = max( int( display_height * 0.75 ), min_height )
-            
-            self.SetInitialSize( ( initial_width, initial_height ) )
-            self.SetMinSize( ( 480, 360 ) )
-            
-        
-        self.Maximize()
         
         self._notebook = wx.Notebook( self )
         self._notebook.Bind( wx.EVT_MIDDLE_DOWN, self.EventNotebookMiddleClick )
@@ -901,12 +879,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         page = self._notebook.GetCurrentPage()
         
-        if page is not None and self.IsMaximized():
+        if page is not None:
             
             ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
             
-            with wx.BusyCursor(): HC.app.Write( 'save_options' )
-            
+        
+        HC.app.Write( 'save_options' )
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
@@ -1451,8 +1429,6 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
         
         ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Compose Message' ) )
         
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
-        
         self.SetInitialSize( ( 920, 600 ) )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -1529,8 +1505,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
         ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'New Page' ) )
         
         self.Center()
-        
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
         self._keycodes_to_ids = {}
         
@@ -1738,8 +1712,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         pos = ( pos_x + 25, pos_y + 50 )
         
         ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Review Services' ), pos = pos )
-        
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
         InitialiseControls()
         
@@ -2286,8 +2258,6 @@ class FrameSplash( ClientGUICommon.Frame ):
     def __init__( self ):
         
         wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR | wx.FRAME_SHAPED, title = 'hydrus client' )
-        
-        self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
         self._bmp = wx.EmptyBitmap( 154, 220, 32 ) # 32 bit for transparency?
         

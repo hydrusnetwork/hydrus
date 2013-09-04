@@ -296,15 +296,21 @@ class MediaList():
         
         ( sort_by_type, sort_by_data ) = sort_by
         
+        def deal_with_none( x ):
+            
+            if x == None: return -1
+            else: return x
+            
+        
         if sort_by_type == 'system':
             
             if sort_by_data == CC.SORT_BY_RANDOM: sort_function = lambda x: random.random()
-            elif sort_by_data == CC.SORT_BY_SMALLEST: sort_function = lambda x: x.GetSize()
-            elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -x.GetSize()
-            elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: x.GetDuration()
-            elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -x.GetDuration()
-            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: x.GetTimestamp()
-            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -x.GetTimestamp()
+            elif sort_by_data == CC.SORT_BY_SMALLEST: sort_function = lambda x: deal_with_none( x.GetSize() )
+            elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -deal_with_none( x.GetSize() )
+            elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: deal_with_none( x.GetDuration() )
+            elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -deal_with_none( x.GetDuration() )
+            elif sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp() )
+            elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp() )
             elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
             
         elif sort_by_type == 'namespaces':
@@ -314,51 +320,7 @@ class MediaList():
                 x_tags_manager = x.GetTagsManager()
                 
                 return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ) ) for namespace in namespaces ]
-                '''
-                for namespace in sort_by_data:
-                    
-                    x_namespace_slice = x_tags_manager.GetNamespaceSlice( ( namespace, ) )
-                    y_namespace_slice = y_tags_manager.GetNamespaceSlice( ( namespace, ) )
-                    
-                    if x_namespace_slice == y_namespace_slice: continue # this covers len == 0 for both, too
-                    else:
-                        
-                        if len( x_namespace_slice ) == 1 and len( y_namespace_slice ) == 1:
-                            
-                            #convert from frozenset to tuple to extract the single member, then get the t from the n:t concat.
-                            x_value = tuple( x_namespace_slice )[0].split( ':', 1 )[1]
-                            y_value = tuple( y_namespace_slice )[0].split( ':', 1 )[1]
-                            
-                            try: return cmp( int( x_value ), int( y_value ) )
-                            except: return cmp( x_value, y_value )
-                            
-                        elif len( x_namespace_slice ) == 0: return 1 # I'm sure the 1 and -1 should be the other way around, but that seems to be a wrong thought
-                        elif len( y_namespace_slice ) == 0: return -1 # any membership has precedence over non-membership, right? I'm understanding it wrong, clearly.
-                        else:
-                            
-                            # compare the earliest/smallest/lexicographically-first non-common values
-                            
-                            x_list = list( x_namespace_slice )
-                            
-                            x_list.sort()
-                            
-                            for x_value in x_list:
-                                
-                                if x_value not in y_namespace_slice:
-                                    
-                                    x_value = x_value.split( ':', 1 )[1]
-                                    y_value = min( y_namespace_slice ).split( ':', 1 )[1]
-                                    
-                                    try: return cmp( int( x_value ), int( y_value ) )
-                                    except: return cmp( x_value, y_value )
-                                    
-                                
-                            
-                        
-                    
                 
-                return cmp( x.GetSize(), y.GetSize() )
-                '''
             
             sort_function = lambda x: namespace_sort_function( sort_by_data, x )
             
@@ -370,8 +332,8 @@ class MediaList():
                 
                 ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
                 
-                if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = x_local_ratings.GetRating( service_identifier )
-                else: rating = x_remote_ratings.GetScore( service_identifier )
+                if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_identifier ) )
+                else: rating = deal_with_none( x_remote_ratings.GetScore( service_identifier ) )
                 
                 if reverse: rating *= -1
                 
