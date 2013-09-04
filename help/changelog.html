@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 83</h3></li>
+				<ul>
+					<li>sort by longest fixed for files with no duration</li>
+					<li>reverse sort by rating fixed for files with no rating</li>
+					<li>sort by largest, newest fixed for files with unknown size or timestamp</li>
+					<li>sort by unknown/absent values sorts more accurately</li>
+					<li>search by num_tags and min_num_tags fixed</li>
+					<li>remove media thumbnail update bug fixed</li>
+					<li>currently viewable indices screwed up after a remove media bug fixed</li>
+					<li>remove all media entire black screen bug fixed</li>
+					<li>delete media redraw optimised</li>
+					<li>several message print unicode/raw byte errors fixed</li>
+					<li>scrollbar position calculation improved, so 'black rectangle on scrolled thumbnail canvas when num_cols changed after resize' bug should be fixed</li>
+					<li>'tiny black lines on small slider drag' bug fixed</li>
+					<li>moved a bunch of right_up events to right_down, see what you think</li>
+					<li>popup message cleanup is better on shutdown</li>
+					<li>pubsub typeerrors handled more gracefully</li>
+					<li>improved how options init and update works</li>
+					<li>client will now remember the restored size, restored position, maximised state, and screen the gui was last left at</li>
+					<li>client will remember all the same details for fullscreen, separately</li>
+					<li>these sizes _should_ rescue from offscreen if you disconnect/reposition a non-primary display</li>
+					<li>shift+home/end now scrolls and selects, rather than only buggily scrolling</li>
+					<li>I fixed a content_update bug re petitions</li>
+					<li>'show in new page' pages will no longer show search subbox</li>
+					<li>added hentai foundry tests</li>
+					<li>fixed hentai foundry title and creator tag parsing in certain cases</li>
+					<li>fixed some related html unicode issues</li>
+					<li>initial value on tag siblings dialog fixed</li>
+					<li>tag siblings and parent dialogs now start sorted by the right column (parent/older sibling)</li>
+					<li>setting a default collect will no longer cause a nasty crash!</li>
+					<li>setting an orphaned default collect will no longer cause problems</li>
+					<li>deselect thumbnails has improved focussed media management</li>
+					<li>can now select inbox or archive from right click menu</li>
+				</ul>
 				<li><h3>version 82</h3></li>
 				<ul>
 					<li>a bug where slow search results would sometimes appear after search predicates were removed has been fixed</li>
