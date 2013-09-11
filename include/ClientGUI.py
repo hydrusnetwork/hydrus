@@ -1,12 +1,11 @@
 import httplib
 import HydrusConstants as HC
 import ClientConstants as CC
-import ClientConstantsMessages
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
-import ClientGUIMessages
 import ClientGUIPages
+import HydrusDownloading
 import os
 import random
 import subprocess
@@ -56,6 +55,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._statusbar_downloads = ''
         self._statusbar_db_locked = ''
         
+        self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
+        
+        self._closed_pages = []
+        
         self._notebook = wx.Notebook( self )
         self._notebook.Bind( wx.EVT_MIDDLE_DOWN, self.EventNotebookMiddleClick )
         self._notebook.Bind( wx.EVT_RIGHT_DCLICK, self.EventNotebookMiddleClick )
@@ -77,7 +80,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         HC.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
         HC.pubsub.sub( self, 'NewPageImportURL', 'new_page_import_url' )
-        HC.pubsub.sub( self, 'NewPageMessages', 'new_page_messages' )
         HC.pubsub.sub( self, 'NewPagePetitions', 'new_page_petitions' )
         HC.pubsub.sub( self, 'NewPageQuery', 'new_page_query' )
         HC.pubsub.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
@@ -96,6 +98,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.RefreshMenuBar()
         
         self._RefreshStatusBar()
+        
+        vbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        vbox.AddF( self._notebook, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
         
         self.Show( True )
         
@@ -417,15 +425,40 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         selection = self._notebook.GetSelection()
         
-        if selection != wx.NOT_FOUND:
-            
-            page = self._notebook.GetPage( selection )
-            
-            try: page.TryToClose()
-            except: return
-            
-            self._notebook.DeletePage( selection )
-            
+        if selection != wx.NOT_FOUND: self._ClosePage( selection )
+        
+    
+    def _ClosePage( self, selection ):
+        
+        page = self._notebook.GetPage( selection )
+        
+        try: page.TryToClose()
+        except: return
+        
+        page.Pause()
+        
+        page.Hide()
+        
+        name = self._notebook.GetPageText( selection )
+        
+        self._closed_pages.append( ( selection, name, page ) )
+        
+        self._notebook.RemovePage( selection )
+        
+        if self._notebook.GetPageCount() == 0: self._focus_holder.SetFocus()
+        
+        self.RefreshMenuBar()
+        
+    
+    def _DeleteAllPages( self ):
+        
+        for ( selection, name, page ) in self._closed_pages: page.Destroy()
+        
+        self._closed_pages = []
+        
+        self._focus_holder.SetFocus()
+        
+        self.RefreshMenuBar()
         
     
     def _DeletePending( self, service_identifier ):
@@ -588,6 +621,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
         
     
+    def _ManageUPnP( self, service_identifier ):
+        
+        with ClientGUIDialogsManage.DialogManageUPnP( self, service_identifier ) as dlg: dlg.ShowModal()
+        
+    
     def _ModifyAccount( self, service_identifier ):
         
         service = HC.app.Read( 'service', service_identifier )
@@ -684,17 +722,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
         
     
-    def _NewPageMessages( self, identity ):
-        
-        new_page = ClientGUIPages.PageMessages( self._notebook, identity )
-        
-        self._notebook.AddPage( new_page, identity.GetName() + ' messages', select = True )
-        
-        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-        
-        new_page.SetSearchFocus()
-        
-    
     def _NewPagePetitions( self, service_identifier = None ):
         
         if service_identifier is None: service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_types = HC.REPOSITORIES, permission = HC.RESOLVE_PETITIONS )
@@ -743,6 +770,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if sync_type == 'repo': HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
         elif sync_type == 'subs': HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
+        elif sync_type == 'import_folders': HC.options[ 'pause_import_folders_sync' ] = not HC.options[ 'pause_import_folders_sync' ]
         
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
@@ -835,6 +863,38 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if page is not None: page.SetSynchronisedWait()
         
     
+    def _StartYoutubeDownload( self ):
+        
+        with wx.TextEntryDialog( self, 'Enter YouTube URL' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_OK:
+                
+                url = dlg.GetValue()
+                
+                info = HydrusDownloading.GetYoutubeFormats( url )
+                
+                with ClientGUIDialogs.DialogSelectYoutubeURL( self, info ) as select_dlg: select_dlg.ShowModal()
+                
+            
+        
+    
+    def _UnclosePage( self, closed_page_index ):
+        
+        ( index, name, page ) = self._closed_pages.pop( closed_page_index )
+        
+        page.Unpause()
+        
+        page.Show()
+        
+        index = min( index, self._notebook.GetPageCount() )
+        
+        self._notebook.InsertPage( index, page, name, True )
+        
+        self.RefreshMenuBar()
+        
+    
     def _UploadPending( self, service_identifier ):
         
         job_key = os.urandom( 32 )
@@ -891,6 +951,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             try: page.TryToClose()
             except: return
             
+        
+        self._DeleteAllPages()
         
         self._message_manager.CleanUp()
         self._message_manager.Destroy()
@@ -961,6 +1023,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 print( 'garbage: ' + HC.u( gc.garbage ) )
                 
+            elif command == 'delete_all_pages': self._DeleteAllPages()
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
@@ -982,18 +1045,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_tag_parents': self._ManageTagParents()
             elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
             elif command == 'manage_tag_siblings': self._ManageTagSiblings()
+            elif command == 'manage_upnp': self._ManageUPnP( data )
             elif command == 'modify_account': self._ModifyAccount( data )
             elif command == 'new_accounts': self._NewAccounts( data )
             elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
             elif command == 'new_log_page': self._NewPageLog()
-            elif command == 'new_messages_page': self._NewPageMessages( data )
             elif command == 'new_page': FramePageChooser()
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
             elif command == 'open_export_folder': self._OpenExportFolder()
             elif command == 'options': self._ManageOptions( data )
+            elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
             elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
             elif command == 'petitions': self._NewPagePetitions( data )
@@ -1015,10 +1079,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'set_media_focus': self._SetMediaFocus()
             elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
+            elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
             elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
+            elif command == 'unclose_page': self._UnclosePage( data )
             elif command == 'upload_pending': self._UploadPending( data )
             elif command == 'vacuum_db': self._VacuumDatabase()
             else: event.Skip()
@@ -1029,12 +1095,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
         
-        page = self._notebook.GetPage( tab_index )
-        
-        try: page.TryToClose()
-        except: return
-        
-        self._notebook.DeletePage( tab_index )
+        self._ClosePage( tab_index )
         
     
     def EventNotebookPageChanged( self, event ):
@@ -1085,8 +1146,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def NewPageImportThreadWatcher( self ): self._NewPageImportThreadWatcher()
     
     def NewPageImportURL( self ): self._NewPageImportURL()
-    
-    def NewPageMessages( self, identity ): self._NewPageMessages( identity )
     
     def NewPagePetitions( self, service_identifier ): self._NewPagePetitions( service_identifier )
     
@@ -1146,8 +1205,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         admin_message_depots = [ message_depot.GetServiceIdentifier() for message_depot in message_depots if message_depot.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
         
-        identities = HC.app.Read( 'identities' )
-        
         servers_admin = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.SERVER_ADMIN ]
         
         server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
@@ -1164,6 +1221,35 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'exit' ), p( '&Exit' ) )
         
         menu.Append( file, p( '&File' ) )
+        
+        if len( self._closed_pages ) > 0:
+            
+            undo = wx.Menu()
+            
+            if len( self._closed_pages ) > 0:
+                
+                undo_pages = wx.Menu()
+                
+                undo_pages.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_all_pages' ), 'clear all' )
+                
+                undo_pages.AppendSeparator()
+                
+                args = []
+                
+                for ( i, ( index, name, page ) ) in enumerate( self._closed_pages ):
+                    
+                    args.append( ( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                    
+                
+                args.reverse() # so that recently closed are at the top
+                
+                for a in args: undo_pages.Append( *a )
+                
+                undo.AppendMenu( CC.ID_NULL, p( 'Closed Pages' ), undo_pages )
+                
+            
+            menu.Append( undo, p( '&Undo' ) )
+            
         
         view = wx.Menu()
         view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
@@ -1184,14 +1270,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( '&New Booru Download Page' ), p( 'Open a new tab to download files from a booru.' ) )
         view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
         view.AppendSeparator()
-        if len( identities ) > 0:
-            
-            for identity in identities: view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_messages_page', identity ), p( identity.GetName() + ' Message Page' ), p( 'Open a new tab to review the messages for ' + identity.GetName() ) )
-            view.AppendSeparator()
-            
         view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_log_page' ), p( '&New Log Page' ), p( 'Open a new tab to show recently logged events.' ) )
         
         menu.Append( view, p( '&View' ) )
+        
+        download = wx.Menu()
+        download.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&Download a YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+        
+        menu.Append( download, p( 'Do&wnload' ) )
         
         database = wx.Menu()
         database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
@@ -1244,12 +1330,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         submenu = wx.Menu()
         
+        pause_import_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_import_folders_sync' )
         pause_repo_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_repo_sync' )
         pause_subs_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_subs_sync' )
         
+        submenu.AppendCheckItem( pause_import_folders_sync_id, p( '&Import Folders Synchronisation' ), p( 'Pause the client\'s import folders.' ) )
         submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
         submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
         
+        submenu.Check( pause_import_folders_sync_id, HC.options[ 'pause_import_folders_sync' ] )
         submenu.Check( pause_repo_sync_id, HC.options[ 'pause_repo_sync' ] )
         submenu.Check( pause_subs_sync_id, HC.options[ 'pause_subs_sync' ] )
         
@@ -1270,7 +1359,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
         services.AppendSeparator()
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_contacts' ), p( 'Manage &Contacts and Identities' ), p( 'Change the names and addresses of the people you talk to.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( 'Manage Local UPnP' ) )
         services.AppendSeparator()
         submenu = wx.Menu()
         for s_i in tag_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
@@ -1533,8 +1622,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
         
         self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
         
-        self._identities = HC.app.Read( 'identities' )
-        
         self._InitButtons( 'home' )
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
@@ -1562,12 +1649,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
         elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
         elif entry_type == 'page_import_gallery': button.SetLabel( obj )
-        elif entry_type == 'page_messages':
-            
-            name = obj.GetName()
-            
-            button.SetLabel( name )
-            
         elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
         elif entry_type == 'page_import_url': button.SetLabel( 'url' )
         
@@ -1583,8 +1664,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
             entries = [ ( 'menu', 'files' ), ( 'menu', 'download' ) ]
             
             if len( self._petition_service_identifiers ) > 0: entries.append( ( 'menu', 'petitions' ) )
-            
-            if len( self._identities ) > 0: entries.append( ( 'menu', 'messages' ) )
             
         elif menu_keyword == 'files':
             
@@ -1605,7 +1684,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
         elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', 'hentai foundry by artist' ), ( 'page_import_gallery', 'hentai foundry by tags' ) ]
         elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', 'pixiv by artist' ), ( 'page_import_gallery', 'pixiv by tag' ) ]
-        elif menu_keyword == 'messages': entries = [ ( 'page_messages', identity ) for identity in self._identities ]
         elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
         
         if len( entries ) <= 4:
@@ -1648,7 +1726,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
                 elif entry_type == 'page_import_gallery': HC.pubsub.pub( 'new_page_import_gallery', obj )
                 elif entry_type == 'page_import_thread_watcher': HC.pubsub.pub( 'new_page_import_thread_watcher' )
                 elif entry_type == 'page_import_url': HC.pubsub.pub( 'new_page_import_url' )
-                elif entry_type == 'page_messages': HC.pubsub.pub( 'new_page_messages', obj )
                 elif entry_type == 'page_petitions': HC.pubsub.pub( 'new_page_petitions', obj )
                 
                 self.Destroy()

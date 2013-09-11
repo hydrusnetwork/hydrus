@@ -426,6 +426,8 @@ class RenderedImageContainer():
     
     def GetNumFrames( self ): return self._num_frames
     
+    def GetNumFramesRendered( self ): return len( self._frames )
+    
     def GetResolution( self ): return self._original_resolution
     
     def GetSize( self ): return self._my_resolution

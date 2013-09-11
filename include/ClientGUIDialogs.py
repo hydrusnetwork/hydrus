@@ -1,5 +1,6 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
+import HydrusDownloading
 import HydrusEncryption
 import HydrusTags
 import ClientConstants as CC
@@ -12,6 +13,7 @@ import re
 import shutil
 import string
 import subprocess
+import threading
 import time
 import traceback
 import urllib
@@ -3858,6 +3860,88 @@ class DialogSelectLocalFiles( Dialog ):
                 
             
         except: wx.MessageBox( traceback.format_exc() )
+        
+    
+class DialogSelectYoutubeURL( Dialog ):
+    
+    def __init__( self, parent, info ):
+        
+        def InitialiseControls():
+            
+            self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', 150 ) ] )
+            
+            self._urls.SetMinSize( ( 360, 200 ) )
+            
+            self._ok = wx.Button( self, label = 'ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            for ( extension, resolution ) in self._info: self._urls.Append( ( extension, resolution ), ( extension, resolution ) )
+            
+            self._urls.SortListItems( 0 )
+            
+        
+        def ArrangeControls():
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok, FLAGS_MIXED )
+            buttons.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._urls, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'choose youtube format' )
+        
+        self._info = info
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def EventOK( self, event ):
+        
+        indices = self._urls.GetAllSelected()
+        
+        if len( indices ) > 0:
+            
+            for index in indices:
+                
+                ( extension, resolution ) = self._urls.GetClientData( index )
+                
+                ( url, title ) = self._info[ ( extension, resolution ) ]
+                
+                job_key = HC.JobKey()
+                
+                threading.Thread( target = HydrusDownloading.DownloadYoutubeURL, args = ( job_key, url ) ).start()
+                
+                message_string = title + ' ' + resolution + ' ' + extension
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE, ( job_key, message_string ) ) )
+                
+            
+        
+        self.EndModal( wx.ID_OK )
         
     
 class DialogSetupCustomFilterActions( Dialog ):

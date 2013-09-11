@@ -13,6 +13,7 @@ import HydrusTags
 import itertools
 import multipart
 import os
+import Queue
 import random
 import sqlite3
 import sys
@@ -281,6 +282,7 @@ CLIENT_DEFAULT_OPTIONS[ 'confirm_client_exit' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
 CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = SORT_BY_LEXICOGRAPHIC_ASC
 
+CLIENT_DEFAULT_OPTIONS[ 'pause_import_folders_sync' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'pause_repo_sync' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'pause_subs_sync' ] = False
 
@@ -2629,7 +2631,11 @@ class ThumbnailCache():
         
         self._data_cache = DataCache( 'thumbnail_cache_size' )
         
+        self._queue = Queue.Queue()
+        
         self.Clear()
+        
+        threading.Thread( target = self.DAEMONWaterfall, name = 'Waterfall Daemon' ).start()
         
         HC.pubsub.sub( self, 'Clear', 'thumbnail_resize' )
         
@@ -2690,7 +2696,42 @@ class ThumbnailCache():
         else: return self._special_thumbs[ 'hydrus' ]
         
     
-    def Waterfall( self, page_key, medias ): threading.Thread( target = self.THREADWaterfall, args = ( page_key, medias ) ).start()
+    def Waterfall( self, page_key, medias ):
+        
+        self._queue.put( ( page_key, medias ) )
+        
+        #threading.Thread( target = self.THREADWaterfall, args = ( page_key, medias ) ).start()
+        
+    
+    def DAEMONWaterfall( self ):
+        
+        last_paused = time.clock()
+        
+        while not HC.shutdown:
+            
+            try:
+                
+                ( page_key, medias ) = self._queue.get( timeout = 1 )
+                
+                random.shuffle( medias )
+                
+                for media in medias:
+                    
+                    thumbnail = self.GetThumbnail( media )
+                    
+                    HC.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
+                    
+                    if time.clock() - last_paused > 0.005:
+                        
+                        time.sleep( 0.0001 )
+                        
+                        last_paused = time.clock()
+                        
+                    
+                
+            except: pass
+            
+        
     
     def THREADWaterfall( self, page_key, medias ):
         
@@ -2704,7 +2745,7 @@ class ThumbnailCache():
             
             HC.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
             
-            if time.clock() - last_paused > 0.005:
+            if time.clock() - last_paused > 1.0 / 15:
                 
                 time.sleep( 0.0001 )
                 

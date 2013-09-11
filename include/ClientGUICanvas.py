@@ -69,6 +69,165 @@ def GetExtraDimensions( media ):
     
     return ( extra_width, extra_height )
 
+class AnimationBar( wx.Window ):
+    
+    def __init__( self, parent, media, media_window ):
+        
+        ( parent_width, parent_height ) = parent.GetClientSize()
+        
+        wx.Window.__init__( self, parent, size = ( parent_width, ANIMATED_SCANBAR_HEIGHT ), pos = ( 0, parent_height - ANIMATED_SCANBAR_HEIGHT ) )
+        
+        self._canvas_bmp = wx.EmptyBitmap( parent_width, ANIMATED_SCANBAR_HEIGHT, 24 )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        self._media = media
+        self._media_window = media_window
+        self._num_frames = self._media.GetNumFrames()
+        self._current_frame_index = 0
+        
+        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
+        self.Bind( wx.EVT_TIMER, self.EventTimerFlash, id = ID_TIMER_FLASH )
+        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_SIZE, self.EventResize )
+        
+        if media.GetMime() == HC.APPLICATION_FLASH:
+            
+            self._timer_flash = wx.Timer( self, id = ID_TIMER_FLASH )
+            self._timer_flash.Start( 100, wx.TIMER_CONTINUOUS )
+            
+        
+        self._Draw()
+        
+    
+    def _Draw( self ):
+        
+        ( my_width, my_height ) = self._canvas_bmp.GetSize()
+        
+        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        
+        dc.SetPen( wx.TRANSPARENT_PEN )
+        
+        if self._media.GetMime() in HC.IMAGES:
+            
+            image_container = self._media_window.GetImageContainer()
+            
+            num_frames_rendered = image_container.GetNumFramesRendered()
+            
+            num_frames = image_container.GetNumFrames()
+            
+            my_rendered_width = int( my_width * ( float( num_frames_rendered ) / num_frames ) )
+            
+            dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+            
+            dc.DrawRectangle( 0, 0, my_rendered_width, ANIMATED_SCANBAR_HEIGHT )
+            
+            dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
+            
+            dc.DrawRectangle( my_rendered_width, 0, my_width - my_rendered_width, ANIMATED_SCANBAR_HEIGHT )
+            
+        else:
+            
+            dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+            
+            dc.DrawRectangle( 0, 0, my_width, ANIMATED_SCANBAR_HEIGHT )
+            
+        
+        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
+        
+        dc.DrawRectangle( int( float( my_width - ANIMATED_SCANBAR_CARET_WIDTH ) * float( self._current_frame_index ) / float( self._num_frames - 1 ) ), 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
+        
+    
+    def EventKeyDown( self, event ):
+        
+        self.GetParent().GetParent().ProcessEvent( event )
+        
+    
+    def EventMouse( self, event ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        if event.Dragging() or event.ButtonDown():
+            
+            ( x, y ) = event.GetPosition()
+            
+            compensated_x_position = x - ( ANIMATED_SCANBAR_CARET_WIDTH / 2 )
+            
+            proportion = float( compensated_x_position ) / float( my_width - ANIMATED_SCANBAR_CARET_WIDTH )
+            
+            if proportion < 0: proportion = 0
+            if proportion > 1: proportion = 1
+            
+            self._current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
+            
+            self._Draw()
+            
+            should_pause = event.Dragging()
+            
+            self._media_window.GotoFrame( self._current_frame_index )
+            
+            if not should_pause: self._media_window.Play()
+            
+            self.GetParent().GetParent().KeepCursorAlive()
+            
+        else:
+            
+            screen_position = self.ClientToScreen( event.GetPosition() )
+            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+            
+            event.SetX( x )
+            event.SetY( y )
+            
+            event.ResumePropagation( 1 )
+            event.Skip()
+            
+        
+    
+    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    
+    def EventResize( self, event ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
+        
+        if my_width != current_bmp_width or my_height != current_bmp_height:
+            
+            if my_width > 0 and my_height > 0:
+                
+                self._canvas_bmp.Destroy()
+                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                
+                self._Draw()
+                
+            
+        
+    
+    def EventTimerFlash( self, event ):
+        
+        # maybe need to pause this while mouse dragging events are occuring? whatever
+        
+        if self.IsShown() and self._media.GetMime() == HC.APPLICATION_FLASH:
+            
+            frame_index = self._media_window.CurrentFrame()
+            
+            if frame_index != self._current_frame_index:
+                
+                self._current_frame_index = frame_index
+                
+                self._Draw()
+                
+            
+        
+    
+    def GotoFrame( self, frame_index ):
+        
+        self._current_frame_index = frame_index
+        
+        self._Draw()
+        
+    
 class Canvas():
     
     def __init__( self, file_service_identifier, image_cache ):
@@ -937,6 +1096,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         event.Skip()
         
+    
+    def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
     
     def EventTimerCursorHide( self, event ):
         
@@ -1943,10 +2104,14 @@ class FullscreenPopoutFilterCustom( FullscreenPopout ):
         actions = wx.Button( window, label = 'actions' )
         actions.Bind( wx.EVT_BUTTON, parent.EventActions )
         
+        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
+        fullscreen_switch.Bind( wx.EVT_BUTTON, parent.EventFullscreenSwitch )
+        
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, parent.EventClose )
         
         vbox.AddF( actions, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
@@ -1976,6 +2141,9 @@ class FullscreenPopoutFilterInbox( FullscreenPopout ):
         back = wx.Button( window, label = 'back' )
         back.Bind( wx.EVT_BUTTON, parent.EventButtonBack )
         
+        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
+        fullscreen_switch.Bind( wx.EVT_BUTTON, parent.EventFullscreenSwitch )
+        
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
         
@@ -1983,6 +2151,7 @@ class FullscreenPopoutFilterInbox( FullscreenPopout ):
         vbox.AddF( delete, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
@@ -2012,6 +2181,9 @@ class FullscreenPopoutFilterLike( FullscreenPopout ):
         back = wx.Button( window, label = 'back' )
         back.Bind( wx.EVT_BUTTON, parent.EventButtonBack )
         
+        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
+        fullscreen_switch.Bind( wx.EVT_BUTTON, parent.EventFullscreenSwitch )
+        
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
         
@@ -2019,6 +2191,7 @@ class FullscreenPopoutFilterLike( FullscreenPopout ):
         vbox.AddF( dislike, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
@@ -2128,6 +2301,9 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         dont_filter = wx.Button( window, label = 'don\'t filter this file' )
         dont_filter.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDontFilter )
         
+        fullscreen_switch = wx.Button( window, label = 'switch fullscreen' )
+        fullscreen_switch.Bind( wx.EVT_BUTTON, self._callable_parent.EventFullscreenSwitch )
+        
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDone )
         
@@ -2143,6 +2319,7 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( dont_filter, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
@@ -2807,6 +2984,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         self.Destroy()
         
     
+    def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
+    
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
@@ -3333,144 +3512,6 @@ class MediaContainer( wx.Window ):
             
         
     
-class AnimationBar( wx.Window ):
-    
-    def __init__( self, parent, media, media_window ):
-        
-        ( parent_width, parent_height ) = parent.GetClientSize()
-        
-        wx.Window.__init__( self, parent, size = ( parent_width, ANIMATED_SCANBAR_HEIGHT ), pos = ( 0, parent_height - ANIMATED_SCANBAR_HEIGHT ) )
-        
-        self._canvas_bmp = wx.EmptyBitmap( parent_width, ANIMATED_SCANBAR_HEIGHT, 24 )
-        
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        self._media = media
-        self._media_window = media_window
-        self._num_frames = self._media.GetNumFrames()
-        self._current_frame_index = 0
-        
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        self.Bind( wx.EVT_TIMER, self.EventTimerFlash, id = ID_TIMER_FLASH )
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        self.Bind( wx.EVT_PAINT, self.EventPaint )
-        self.Bind( wx.EVT_SIZE, self.EventResize )
-        
-        if media.GetMime() == HC.APPLICATION_FLASH:
-            
-            self._timer_flash = wx.Timer( self, id = ID_TIMER_FLASH )
-            self._timer_flash.Start( 100, wx.TIMER_CONTINUOUS )
-            
-        
-        self._Draw()
-        
-    
-    def _Draw( self ):
-        
-        ( my_width, my_height ) = self._canvas_bmp.GetSize()
-        
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
-        
-        dc.SetPen( wx.TRANSPARENT_PEN )
-        
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
-        
-        dc.DrawRectangle( 0, 0, my_width, ANIMATED_SCANBAR_HEIGHT )
-        
-        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
-        
-        dc.DrawRectangle( int( float( my_width - ANIMATED_SCANBAR_CARET_WIDTH ) * float( self._current_frame_index ) / float( self._num_frames - 1 ) ), 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
-        
-    
-    def EventKeyDown( self, event ):
-        
-        self.GetParent().GetParent().ProcessEvent( event )
-        
-    
-    def EventMouse( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if event.Dragging() or event.ButtonDown():
-            
-            ( x, y ) = event.GetPosition()
-            
-            compensated_x_position = x - ( ANIMATED_SCANBAR_CARET_WIDTH / 2 )
-            
-            proportion = float( compensated_x_position ) / float( my_width - ANIMATED_SCANBAR_CARET_WIDTH )
-            
-            if proportion < 0: proportion = 0
-            if proportion > 1: proportion = 1
-            
-            self._current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
-            
-            self._Draw()
-            
-            should_pause = event.Dragging()
-            
-            self._media_window.GotoFrame( self._current_frame_index )
-            
-            if not should_pause: self._media_window.Play()
-            
-            self.GetParent().GetParent().KeepCursorAlive()
-            
-        else:
-            
-            screen_position = self.ClientToScreen( event.GetPosition() )
-            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-            
-            event.SetX( x )
-            event.SetY( y )
-            
-            event.ResumePropagation( 1 )
-            event.Skip()
-            
-        
-    
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
-    
-    def EventResize( self, event ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
-        
-        if my_width != current_bmp_width or my_height != current_bmp_height:
-            
-            if my_width > 0 and my_height > 0:
-                
-                self._canvas_bmp.Destroy()
-                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
-                
-                self._Draw()
-                
-            
-        
-    
-    def EventTimerFlash( self, event ):
-        
-        # maybe need to pause this while mouse dragging events are occuring? whatever
-        
-        if self.IsShown() and self._media.GetMime() == HC.APPLICATION_FLASH:
-            
-            frame_index = self._media_window.CurrentFrame()
-            
-            if frame_index != self._current_frame_index:
-                
-                self._current_frame_index = frame_index
-                
-                self._Draw()
-                
-            
-        
-    
-    def GotoFrame( self, frame_index ):
-        
-        self._current_frame_index = frame_index
-        
-        self._Draw()
-        
-    
 class EmbedButton( wx.Window ):
     
     def __init__( self, parent, size ):
@@ -3670,6 +3711,13 @@ class Image( wx.Window ):
         
         if self._image_container.HasFrame( self._current_frame_index ):
             
+            if not self._image_container.IsAnimated():
+                
+                dc.SetBackground( wx.Brush( wx.WHITE ) )
+                
+                dc.Clear()
+                
+            
             current_frame = self._image_container.GetFrame( self._current_frame_index )
             
             ( my_width, my_height ) = self._canvas_bmp.GetSize()
@@ -3777,6 +3825,8 @@ class Image( wx.Window ):
             self._Draw()
             
         
+    
+    def GetImageContainer( self ): return self._image_container
     
     def GotoFrame( self, frame_index ):
         

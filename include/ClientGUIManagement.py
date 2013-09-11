@@ -368,7 +368,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
         
+        self._paused = False
+        
         HC.pubsub.sub( self, 'SetSearchFocus', 'set_search_focus' )
+        HC.pubsub.sub( self, 'Pause', 'pause' )
+        HC.pubsub.sub( self, 'Unpause', 'unpause' )
         
     
     def _MakeCollect( self, sizer ):
@@ -392,9 +396,19 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         sizer.AddF( self._sort_by, FLAGS_EXPAND_PERPENDICULAR )
         
     
+    def Pause( self, page_key ):
+        
+        if page_key == self._page_key: self._paused = True
+        
+    
     def SetSearchFocus( self, page_key ): pass
     
     def TryToClose( self ): pass
+    
+    def Unpause( self, page_key ):
+        
+        if page_key == self._page_key: self._paused = False
+        
     
 class ManagementPanelDumper( ManagementPanel ):
     
@@ -938,6 +952,8 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
+            if self._paused: return
+            
             if self._actually_dumping: return
             
             if self._dumping:
@@ -1252,7 +1268,7 @@ class ManagementPanelImport( ManagementPanel ):
         
         self._import_overall_info.SetLabel( ', '.join( status_strings ) )
         
-        if self._pause_import: self._import_current_info.SetLabel( 'paused' )
+        if self._pause_import or self._paused: self._import_current_info.SetLabel( 'paused' )
         else:
             
             if self._cancel_import_queue.is_set(): self._import_queue = self._import_queue[ : self._import_queue_position ] # cut excess queue
@@ -2609,7 +2625,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
         
-        self._query_key = HC.QueryKey()
+        self._query_key = HC.JobKey()
         self._synchronised = True
         self._include_current_tags = True
         self._include_pending_tags = True
@@ -2655,7 +2671,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_key.Cancel()
         
-        self._query_key = HC.QueryKey()
+        self._query_key = HC.JobKey()
         
         if self._synchronised:
             
@@ -2826,7 +2842,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         self._page_key = page_key
         self._identity = identity
         
-        self._query_key = HC.QueryKey()
+        self._query_key = HC.JobKey()
         
         # sort out push-refresh later
         #self._refresh_inbox = wx.Button( self, label = 'refresh inbox' )
@@ -2883,7 +2899,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
                 
                 self._query_key.Cancel()
                 
-                self._query_key = HC.QueryKey()
+                self._query_key = HC.JobKey()
                 
                 if len( current_predicates ) > 0:
                     

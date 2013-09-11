@@ -7,6 +7,7 @@ import ClientConstantsMessages
 import ClientGUICommon
 import ClientGUIDialogs
 import collections
+import HydrusNATPunch
 import itertools
 import os
 import random
@@ -7132,5 +7133,156 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.SetFocus()
             
+        
+    
+class DialogManageUPnP( ClientGUIDialogs.Dialog ):
+    
+    def __init__( self, parent, service_identifier ):
+        
+        def InitialiseControls():
+            
+            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 760, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'enabled', 80 ) ] )
+            
+            self._mappings_list_ctrl.SetMinSize( ( 760, 660 ) )
+            
+            self._add_local = wx.Button( self, label = 'add service mapping' )
+            self._add_local.Bind( wx.EVT_BUTTON, self.EventAddServiceMapping )
+            
+            self._add_custom = wx.Button( self, label = 'add custom mapping' )
+            self._add_custom.Bind( wx.EVT_BUTTON, self.EventAddCustomMapping )
+            
+            self._edit = wx.Button( self, label = 'edit mapping' )
+            self._edit.Bind( wx.EVT_BUTTON, self.EventEditMapping )
+            
+            self._remove = wx.Button( self, label = 'remove mapping' )
+            self._remove.Bind( wx.EVT_BUTTON, self.EventRemoveMapping )
+            
+            self._ok = wx.Button( self, label = 'ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            self._RefreshMappings()
+            
+        
+        def ArrangeControls():
+            
+            edit_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            if self._service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: self._add_local.Hide()
+            
+            edit_buttons.AddF( self._add_local, FLAGS_MIXED )
+            edit_buttons.AddF( self._add_custom, FLAGS_MIXED )
+            edit_buttons.AddF( self._edit, FLAGS_MIXED )
+            edit_buttons.AddF( self._remove, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._mappings_list_ctrl, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( edit_buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( self._ok, FLAGS_LONE_BUTTON )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: title = 'manage local upnp'
+        else:
+            
+            # fetch self._service
+            
+            title = 'manage upnp for ' + service_identifier.GetName()
+            
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, title )
+        
+        wx.MessageBox( 'This dialog is prototype. None of the buttons do anything yet. If it does not load correctly, please inform the hydrus developer of any error messages you receive.' )
+        
+        self._service_identifier = service_identifier
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def _AddMapping( self, description, internal_ip, internal_port, external_ip, external_port, protocol, enabled ):
+        
+        # tell service to add it
+        
+        pass
+        
+    
+    def _RemoveMapping( self, internal_ip, internal_port ):
+        
+        # tell service to remove it
+        
+        pass
+        
+    
+    def _RefreshMappings( self ):
+    
+        self._mappings_list_ctrl.DeleteAllItems()
+        
+        if self._service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: self._mappings = HydrusNATPunch.GetUPnPMappings()
+        else:
+            
+            wx.MessageBox( 'get mappings from service' )
+            
+        
+        for mapping in self._mappings: self._mappings_list_ctrl.Append( mapping, mapping )
+        
+        self._mappings_list_ctrl.SortListItems( 1 )
+        
+    
+    def EventAddCustomMapping( self, event ):
+        
+        # start dialog for custom mapping
+        # attempt to add mapping via service
+        # add to listctrl
+        
+        pass
+        
+    
+    def EventAddServiceMapping( self, event ):
+        
+        # start dialog with helpful default values
+        # attempt to add mapping via service
+        # add to listctrl
+        
+        pass
+        
+    
+    def EventEditMapping( self, event ):
+        
+        # for each index
+        # populate dialog for edit
+        # tell service to remove that mapping
+        # tell service to add that mapping
+        # update listctrl
+        
+        pass
+        
+    
+    def EventOK( self, event ):
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventRemoveMapping( self, event ):
+        
+        # for each index
+        # tell service to remove that mapping
+        # remove all selected from listctrl
+        
+        pass
         
     

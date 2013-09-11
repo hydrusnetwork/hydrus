@@ -121,6 +121,22 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         tlp.Bind( wx.EVT_MOVE, self.EventMove )
         
+        parent = self
+        
+        while True:
+            
+            try:
+                
+                parent = parent.GetParent()
+                
+                if issubclass( type( parent ), wx.ScrolledWindow ):
+                    
+                    parent.Bind( wx.EVT_SCROLLWIN, self.EventMove )
+                    
+                
+            except: break
+            
+        
         wx.CallAfter( self._UpdateList )
         
     
@@ -140,15 +156,18 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def _ShowDropdownIfFocussed( self ):
         
-        if not self._dropdown_window.IsShown() and self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self:
+        if self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self:
             
             ( my_width, my_height ) = self.GetSize()
             
-            self._dropdown_window.Fit()
-            
-            self._dropdown_window.SetSize( ( my_width, -1 ) )
-            
-            self._dropdown_window.Layout()
+            if not self._dropdown_window.IsShown():
+                
+                self._dropdown_window.Fit()
+                
+                self._dropdown_window.SetSize( ( my_width, -1 ) )
+                
+                self._dropdown_window.Layout()
+                
             
             self._dropdown_window.SetPosition( self.ClientToScreenXY( -2, my_height - 2 ) )
             
@@ -234,7 +253,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
             try: self._HideDropdown()
             except: pass
             
-            lag = 100
+            lag = 250
             
             self._move_hide_timer.Start( lag, wx.TIMER_ONE_SHOT )
             
@@ -1267,6 +1286,8 @@ class ListBook( wx.Panel ):
         
         self.Layout()
         
+        self.Refresh()
+        
         event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED, -1 )
         
         self.ProcessEvent( event )
@@ -2106,7 +2127,7 @@ class PopupMessageError( PopupMessage ):
             self._copy_tb_button.Show()
             
         
-        self.GetParent().EventMove( event )
+        self.GetParent().MakeSureEverythingFits()
         
     
 class PopupMessageFiles( PopupMessage ):
@@ -2133,6 +2154,143 @@ class PopupMessageFiles( PopupMessage ):
         media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._hashes )
         
         HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+        
+    
+class PopupMessageGauge( PopupMessage ):
+    
+    def __init__( self, parent, job_key, message_string ):
+        
+        PopupMessage.__init__( self, parent )
+        
+        self._message_string = message_string
+        self._job_key = job_key
+        self._hashes = set()
+        
+        self._done = False
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._text = wx.StaticText( self, label = self._message_string , style = wx.ALIGN_CENTER )
+        self._text.Wrap( 380 )
+        self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._gauge = Gauge( self, size = ( 380, -1 ) )
+        self._gauge.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._cancel_button = wx.Button( self, label = 'cancel' )
+        self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
+        self._cancel_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        hbox.AddF( self._gauge, FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._cancel_button, FLAGS_MIXED )
+        
+        self._show_file_button = wx.Button( self, label = self._message_string  )
+        self._show_file_button.Bind( wx.EVT_BUTTON, self.EventShowFileButton )
+        self._show_file_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._show_file_button.Hide()
+        
+        vbox.AddF( self._text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_file_button, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        HC.pubsub.sub( self, 'Failed', 'message_gauge_failed' )
+        HC.pubsub.sub( self, 'SetInfo', 'message_gauge_info' )
+        HC.pubsub.sub( self, 'Importing', 'message_gauge_importing' )
+        HC.pubsub.sub( self, 'Done', 'message_gauge_done' )
+        
+    
+    def Done( self, job_key, hashes ):
+        
+        if job_key == self._job_key:
+            
+            self._done = True
+            
+            self._hashes = hashes
+            
+            self._text.Hide()
+            self._gauge.Hide()
+            self._show_file_button.Show()
+            
+            self.GetParent().MakeSureEverythingFits()
+            
+        
+    
+    def EventCancelButton( self, event ):
+        
+        self._job_key.Cancel()
+        
+        self.GetParent().Dismiss( self )
+        
+    
+    def EventDismiss( self, event ):
+        
+        if not self._done:
+            
+            import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Do you want to continue the download in the background, or cancel it?', yes_label = 'continue', no_label = 'cancel' ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES: self._job_key.Cancel()
+                
+            
+        
+        self.GetParent().Dismiss( self )
+        
+    
+    def EventShowFileButton( self, event ):
+        
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._hashes )
+        
+        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+        
+    
+    def Failed( self, job_key ):
+        
+        if job_key == self._job_key: self.GetParent().Dismiss( self )
+        
+    
+    def Importing( self, job_key ):
+        
+        if job_key == self._job_key:
+            
+            self._text.SetLabel( 'importing ' + self._message_string  )
+            
+            self._text.Show()
+            self._gauge.Hide()
+            self._cancel_button.Hide()
+            self._show_file_button.Hide()
+            
+            self.GetParent().MakeSureEverythingFits()
+            
+        
+    
+    def SetInfo( self, job_key, range, value ):
+        
+        if job_key == self._job_key:
+            
+            if range is None:
+                
+                self._gauge.Pulse()
+                
+                byte_info = HC.ConvertIntToBytes( value )
+                
+            else:
+                
+                self._gauge.SetRange( range )
+                self._gauge.SetValue( value )
+                
+                byte_info = HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
+                
+            
+            self._text.SetLabel( self._message_string + ' - ' + byte_info )
+            
+            self.GetParent().MakeSureEverythingFits()
+            
         
     
 class PopupMessageText( PopupMessage ):
@@ -2240,6 +2398,12 @@ class PopupMessageManager( wx.Frame ):
             
             window = PopupMessageFiles( self, message_string, hashes )
             
+        elif message_type == HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE:
+            
+            ( job_key, message_string ) = info
+            
+            window = PopupMessageGauge( self, job_key, message_string )
+            
         
         return window
         
@@ -2264,6 +2428,10 @@ class PopupMessageManager( wx.Frame ):
             ( message_string, hashes ) = info
             
             message_string = HC.u( message_string )
+            
+        elif message_type == HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE:
+            
+            ( job_key, message_string ) = info
             
         
         try: print( message_string )
@@ -2342,6 +2510,8 @@ class PopupMessageManager( wx.Frame ):
         
         event.Skip()
         
+    
+    def MakeSureEverythingFits( self ): self._SizeAndPositionAndShow()
     
 class RegexButton( wx.Button ):
     

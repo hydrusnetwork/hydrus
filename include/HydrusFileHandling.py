@@ -60,11 +60,7 @@ def GetFileInfo( path, hash ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( path )
         
-    elif mime == HC.VIDEO_MP4:
-        
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetMP4Properties( path )
-        
-    elif mime == HC.VIDEO_WMV:
+    elif mime in ( HC.VIDEO_WMV, HC.VIDEO_MP4 ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
         

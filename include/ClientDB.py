@@ -6541,7 +6541,6 @@ class DB( ServiceDB ):
         HC.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
         HC.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
         HC.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
-        HC.DAEMONWorker( 'SynchroniseMessages', DAEMONSynchroniseMessages, ( 'notify_new_permissions', 'notify_check_messages' ), period = 60 )
         HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
         HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
         
@@ -6598,114 +6597,119 @@ class DB( ServiceDB ):
     
 def DAEMONCheckImportFolders():
     
-    import_folders = HC.app.ReadDaemon( 'import_folders' )
-    
-    for ( folder_path, details ) in import_folders:
+    if not HC.options[ 'pause_import_folders_sync' ]:
         
-        now = HC.GetNow()
+        import_folders = HC.app.ReadDaemon( 'import_folders' )
         
-        if now > details[ 'last_checked' ] + details[ 'check_period' ]:
+        for ( folder_path, details ) in import_folders:
             
-            if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
+            now = HC.GetNow()
+            
+            if now > details[ 'last_checked' ] + details[ 'check_period' ]:
                 
-                filenames = dircache.listdir( folder_path )
-                
-                raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
-                
-                all_paths = CC.GetAllPaths( raw_paths, quiet = True )
-                
-                HC.pubsub.pub( 'service_status', 'Found ' + HC.u( len( all_paths ) ) + ' files to import from ' + folder_path )
-                
-                if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
+                if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                     
-                    all_paths = [ path for path in all_paths if path not in details[ 'cached_imported_paths' ] ]
+                    filenames = dircache.listdir( folder_path )
                     
-                
-                all_paths = [ path for path in all_paths if path not in details[ 'failed_imported_paths' ] ]
-                
-                successful_hashes = set()
-                
-                for ( i, path ) in enumerate( all_paths ):
+                    raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
                     
-                    should_import = True
-                    should_action = True
+                    all_paths = CC.GetAllPaths( raw_paths, quiet = True )
                     
-                    HC.pubsub.pub( 'service_status', 'Importing ' + HC.u( i ) + ' of ' + HC.u( len( all_paths ) ) )
+                    HC.pubsub.pub( 'service_status', 'Found ' + HC.u( len( all_paths ) ) + ' files to import from ' + folder_path )
                     
-                    temp_path = HC.GetTempPath()
-                    
-                    try:
+                    if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
                         
-                        # make read only perms to make sure it isn't being written/downloaded right now
-                        
-                        os.chmod( path, stat.S_IREAD )
-                        
-                        os.chmod( path, stat.S_IWRITE )
-                        
-                        shutil.copy( path, temp_path )
-                        
-                        os.chmod( temp_path, stat.S_IWRITE )
-                        
-                    except:
-                        
-                        # could not lock, so try again later
-                        
-                        should_import = False
-                        should_action = False
+                        all_paths = [ path for path in all_paths if path not in details[ 'cached_imported_paths' ] ]
                         
                     
-                    if should_import:
+                    all_paths = [ path for path in all_paths if path not in details[ 'failed_imported_paths' ] ]
+                    
+                    successful_hashes = set()
+                    
+                    for ( i, path ) in enumerate( all_paths ):
+                        
+                        if HC.options[ 'pause_import_folders_sync' ]: return
+                        
+                        should_import = True
+                        should_action = True
+                        
+                        HC.pubsub.pub( 'service_status', 'Importing ' + HC.u( i ) + ' of ' + HC.u( len( all_paths ) ) )
+                        
+                        temp_path = HC.GetTempPath()
                         
                         try:
                             
-                            if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
-                            else: service_identifiers_to_tags = {}
+                            # make read only perms to make sure it isn't being written/downloaded right now
                             
-                            ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, service_identifiers_to_tags = service_identifiers_to_tags )
+                            os.chmod( path, stat.S_IREAD )
                             
-                            if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
-                            elif result == 'deleted':
-                                
-                                details[ 'failed_imported_paths' ].add( path )
-                                
+                            os.chmod( path, stat.S_IWRITE )
+                            
+                            shutil.copy( path, temp_path )
+                            
+                            os.chmod( temp_path, stat.S_IWRITE )
                             
                         except:
                             
-                            details[ 'failed_imported_paths' ].add( path )
+                            # could not lock, so try again later
                             
-                            message = 'Import folder failed to import a file: ' + os.linesep + path + os.linesep + traceback.format_exc()
-                            
-                            HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) )
-                            
+                            should_import = False
                             should_action = False
                             
                         
-                        os.remove( temp_path )
-                        
-                    
-                    if should_action:
-                        
-                        if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
+                        if should_import:
                             
-                            try: os.remove( path )
-                            except: details[ 'failed_imported_paths' ].add( path )
+                            try:
+                                
+                                if details[ 'local_tag' ] is not None: service_identifiers_to_tags = { HC.LOCAL_TAG_SERVICE_IDENTIFIER : { details[ 'local_tag' ] } }
+                                else: service_identifiers_to_tags = {}
+                                
+                                ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, service_identifiers_to_tags = service_identifiers_to_tags )
+                                
+                                if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                                elif result == 'deleted':
+                                    
+                                    details[ 'failed_imported_paths' ].add( path )
+                                    
+                                
+                            except:
+                                
+                                details[ 'failed_imported_paths' ].add( path )
+                                
+                                message = 'Import folder failed to import a file: ' + os.linesep + path + os.linesep + traceback.format_exc()
+                                
+                                HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) )
+                                
+                                should_action = False
+                                
                             
-                        elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( path )
+                            os.remove( temp_path )
+                            
+                        
+                        if should_action:
+                            
+                            if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
+                                
+                                try: os.remove( path )
+                                except: details[ 'failed_imported_paths' ].add( path )
+                                
+                            elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( path )
+                            
                         
                     
-                
-                if len( successful_hashes ) > 0:
+                    if len( successful_hashes ) > 0:
+                        
+                        message_text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
+                        
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
+                        
                     
-                    message_text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
+                    details[ 'last_checked' ] = now
                     
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
+                    HC.pubsub.pub( 'service_status', '' )
                     
-                
-                details[ 'last_checked' ] = now
-                
-                HC.pubsub.pub( 'service_status', '' )
-                
-                HC.app.WriteSynchronous( 'import_folder', folder_path, details )
+                    HC.app.WriteSynchronous( 'import_folder', folder_path, details )
+                    
                 
             
         

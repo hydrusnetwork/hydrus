@@ -38,7 +38,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 83
+SOFTWARE_VERSION = 84
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -84,6 +84,7 @@ IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
 MESSAGE_TYPE_TEXT = 0
 MESSAGE_TYPE_ERROR = 1
 MESSAGE_TYPE_FILES = 2
+MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE = 3
 
 GET_DATA = 0
 POST_DATA = 1
@@ -571,6 +572,8 @@ def CalculateScoreFromRating( count, rating ):
     return score
     
 def CleanTag( tag ):
+    
+    tag = tag[:1024]
     
     if tag == '': return ''
     
@@ -1935,6 +1938,27 @@ class JobInternal():
         self._result_ready.set()
         
     
+class JobKey():
+    
+    def __init__( self ):
+        
+        self._key = os.urandom( 32 )
+        
+        self._cancelled = threading.Event()
+        
+    
+    def __eq__( self, other ): return self.__hash__() == other.__hash__()
+    
+    def __hash__( self ): return self._key.__hash__()
+    
+    def __ne__( self, other ): return self.__hash__() != other.__hash__()
+    
+    def Cancel( self ): self._cancelled.set()
+    
+    def GetKey( self ): return self._key
+    
+    def IsCancelled( self ): return self._cancelled.is_set()
+    
 class JobServer():
     
     yaml_tag = u'!JobServer'
@@ -1979,27 +2003,6 @@ class Message():
     def GetInfo( self ): return self._info
     
     def GetType( self ): return self._message_type
-    
-class QueryKey():
-    
-    def __init__( self ):
-        
-        self._key = os.urandom( 32 )
-        
-        self._cancelled = threading.Event()
-        
-    
-    def __eq__( self, other ): return self.__hash__() == other.__hash__()
-    
-    def __hash__( self ): return self._key.__hash__()
-    
-    def __ne__( self, other ): return self.__hash__() != other.__hash__()
-    
-    def Cancel( self ): self._cancelled.set()
-    
-    def GetKey( self ): return self._key
-    
-    def IsCancelled( self ): return self._cancelled.is_set()
     
 class Predicate():
     

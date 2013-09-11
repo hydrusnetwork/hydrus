@@ -1,8 +1,10 @@
 import bs4
 import collections
+import httplib
 import HydrusConstants as HC
 import json
 import lxml
+import pafy
 import traceback
 import urllib
 import urlparse
@@ -70,6 +72,70 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
         
     
     return service_identifiers_to_tags
+    
+def DownloadYoutubeURL( job_key, url ):
+    
+    try:
+        
+        parse_result = urlparse.urlparse( url )
+        
+        connection = httplib.HTTPConnection( parse_result.hostname )
+        
+        connection.request( 'GET', url )
+        
+        response = connection.getresponse()
+        
+        try: num_bytes = int( response.getheader( 'Content-Length' ) )
+        except: num_bytes = None
+        
+        HC.pubsub.pub( 'message_gauge_info', job_key, num_bytes, 0 )
+        
+        block_size = 64 * 1024
+        
+        total_num_bytes = 0
+        
+        temp_path = HC.GetTempPath()
+        
+        with open( temp_path, 'wb' ) as f:
+            
+            while True:
+                
+                if HC.shutdown or job_key.IsCancelled(): return
+                
+                block = response.read( block_size )
+                
+                total_num_bytes += len( block )
+                
+                HC.pubsub.pub( 'message_gauge_info', job_key, num_bytes, total_num_bytes )
+                
+                if block == '': break
+                
+                f.write( block )
+                
+            
+        
+        HC.pubsub.pub( 'message_gauge_importing', job_key )
+        
+        ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
+        
+        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_done', job_key, { hash } )
+        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_failed', job_key )
+        
+    except:
+        
+        HC.pubsub.pub( 'message_gauge_failed', job_key )
+        
+        raise
+        
+    
+def GetYoutubeFormats( youtube_url ):
+    
+    try: p = pafy.Pafy( youtube_url )
+    except: raise Exception( 'Could not fetch video info from youtube!' )
+    
+    info = { ( s.extension, s.resolution ) : ( s.url, s.title ) for s in p.streams if s.extension in ( 'flv', 'mp4' ) }
+    
+    return info
     
 class Downloader():
     

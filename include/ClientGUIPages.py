@@ -54,6 +54,13 @@ class PageBase():
     
     def PageShown( self ): HC.pubsub.pub( 'page_shown', self._page_key )
     
+    def Pause( self ):
+        
+        HC.pubsub.pub( 'pause', self._page_key )
+        
+        HC.pubsub.pub( 'set_focus', self._page_key, None )
+        
+    
     def SetPrettyStatus( self, page_key, status ):
         
         if page_key == self._page_key:
@@ -75,6 +82,8 @@ class PageBase():
     def ShowHideSplit( self ): pass
     
     def TryToClose( self ): pass
+    
+    def Unpause( self ): HC.pubsub.pub( 'unpause', self._page_key )
     
 class PageLog( PageBase, wx.Panel ):
     

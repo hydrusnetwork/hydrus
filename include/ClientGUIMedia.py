@@ -916,6 +916,8 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _CalculateCurrentIndexBounds( self ):
         
+        NUM_ROWS_TO_DRAW_AHEAD = 0 # this is buggy
+        
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
         
         y_start = self._GetYStart()
@@ -932,7 +934,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         earliest_row = earliest_y / thumbnail_span_height
         
-        earliest_index = earliest_row * self._num_columns
+        earliest_index = max( 0, ( earliest_row - NUM_ROWS_TO_DRAW_AHEAD ) * self._num_columns )
         
         #
         
@@ -940,7 +942,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if last_y % thumbnail_span_height > 0: last_row += 1
         
-        virtual_last_index = ( ( last_row + 1 ) * self._num_columns ) - 1
+        virtual_last_index = ( ( last_row + 1 + NUM_ROWS_TO_DRAW_AHEAD ) * self._num_columns ) - 1
         
         last_index = min( virtual_last_index, len( self._sorted_media ) - 1 )
         
@@ -1300,7 +1302,12 @@ class MediaPanelThumbnails( MediaPanel ):
             if last_visible_row > current_canvas_num_rows / 2:
                 
                 if current_canvas_num_rows == 0: new_canvas_num_rows = min( last_visible_row, virtual_num_rows ) + 1
-                else: new_canvas_num_rows = min( int( current_canvas_num_rows * 2.5 ), virtual_num_rows ) + 1
+                else:
+                    
+                    how_far_we_want_to_extend_to = max( int( current_canvas_num_rows * 2.5 ), last_visible_row )
+                    
+                    new_canvas_num_rows = min( how_far_we_want_to_extend_to, virtual_num_rows ) + 1
+                    
                 
                 # +1 to cover gap
                 
@@ -1333,6 +1340,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._CleanCanvas()
             
+        
+    
+    def _RemoveMedia( self, singleton_media, collected_media ):
+        
+        self._drawn_index_bounds = None
+        
+        MediaPanel._RemoveMedia( self, singleton_media, collected_media )
         
     
     def _ScrollToMedia( self, media ):
