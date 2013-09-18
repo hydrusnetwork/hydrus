@@ -38,7 +38,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 84
+SOFTWARE_VERSION = 85
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -85,6 +85,7 @@ MESSAGE_TYPE_TEXT = 0
 MESSAGE_TYPE_ERROR = 1
 MESSAGE_TYPE_FILES = 2
 MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE = 3
+MESSAGE_TYPE_UPLOAD_GAUGE = 4
 
 GET_DATA = 0
 POST_DATA = 1
@@ -538,6 +539,10 @@ def b( text_producing_object ):
     
     if type( text_producing_object ) == unicode: return text_producing_object.encode( 'utf-8' )
     else: return str( text_producing_object )
+    
+def ChunkifyList( the_list, chunk_size ):
+    
+    for i in xrange( 0, len( the_list ), chunk_size ): yield the_list[ i : i + chunk_size ]
     
 def BuildKeyToListDict( pairs ):
     
@@ -1327,7 +1332,7 @@ class AdvancedHTTPConnection():
                 if ( scheme is None or scheme == self._scheme ) and ( request == redirected_request or request in redirected_request or redirected_request in request ): raise Exception( 'Redirection problem' )
                 else:
                     
-                    if host is None or ( host == self._host and port == self._port ): new_connection = self
+                    if host is None or ( scheme == self._scheme and host == self._host and port == self._port ): new_connection = self
                     else: new_connection = AdvancedHTTPConnection( url )
                     
                     if response.status in ( 301, 307 ):

@@ -28,9 +28,11 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
+FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
@@ -110,11 +112,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         wx.CallAfter( self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
-    def _THREADUploadPending( self, service_identifier, job_key, cancel_event ):
+    def _THREADUploadPending( self, service_identifier ):
         
         try:
             
-            HC.pubsub.pub( 'progress_update', job_key, 0, 3, u'gathering pending and petitioned' )
+            job_key = os.urandom( 32 )
+            
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_UPLOAD_GAUGE, job_key ) )
+            
+            HC.pubsub.pub( 'message_upload_gauge_info', job_key, 1, 0, u'gathering pending and petitioned' )
             
             result = HC.app.Read( 'pending', service_identifier )
             
@@ -130,7 +136,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 num_uploads = len( media_results )
                 
-                HC.pubsub.pub( 'progress_update', job_key, 1, num_uploads + 3, u'connecting to repository' )
+                num_other_messages = 1
+                
+                if not update.IsEmpty(): num_other_messages += 1
+                
+                gauge_range = num_uploads + num_other_messages
+                
+                i = 1
+                
+                HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
                 
                 connection = service.GetConnection()
                 
@@ -138,15 +152,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 error_messages = set()
                 
-                for ( index, media_result ) in enumerate( media_results ):
+                for media_result in media_results:
+                    
+                    i += 1
                     
                     hash = media_result.GetHash()
                     
                     mime = media_result.GetMime()
                     
-                    HC.pubsub.pub( 'progress_update', job_key, index + 2, num_uploads + 3, u'Uploading file ' + HC.ConvertIntToPrettyString( index + 1 ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
-                    
-                    if cancel_event.isSet(): break
+                    HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'Uploading file ' + HC.ConvertIntToPrettyString( i ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
                     
                     try:
                         
@@ -156,15 +170,21 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         connection.Post( 'file', file = file )
                         
-                        good_hashes.append( hash )
+                        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = media_result.ToTuple()
+                        
+                        timestamp = HC.GetNow()
+                        
+                        content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
+                        
+                        content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        
+                        service_identfiers_to_content_updates = { service_identifier : content_updates }
+                        
+                        HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
                         
                     except Exception as e:
                         
-                        message = 'Upload pending files error:' + os.linesep + traceback.format_exc()
-                        
-                        HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, 'Error' )
-                        
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                        HC.ShowException( e )
                         
                         time.sleep( 1 )
                         
@@ -172,52 +192,52 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 if not update.IsEmpty():
                     
-                    HC.pubsub.pub( 'progress_update', job_key, num_uploads + 1, num_uploads + 3, u'uploading petitions' )
+                    i += 1
+                    
+                    HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'uploading petitions' )
                     
                     connection.Post( 'update', update = update )
                     
-                
-                HC.pubsub.pub( 'progress_update', job_key, num_uploads + 2, num_uploads + 3, u'saving changes to local database' )
-                
-                content_updates = []
-                
-                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, good_hashes )
-                
-                for media_result in media_results:
+                    content_updates = update.GetContentUpdates( for_client = True )
                     
-                    ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = media_result.ToTuple()
+                    service_identfiers_to_content_updates = { service_identifier : content_updates }
                     
-                    timestamp = HC.GetNow()
+                    HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
                     
-                    content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
-                    
-                    content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
-                    
-                
-                content_updates.extend( update.GetContentUpdates( for_client = True ) )
-                
-                service_identfiers_to_content_updates = { service_identifier : content_updates }
                 
             elif service_type == HC.TAG_REPOSITORY:
                 
-                update = result
+                updates = result
                 
-                HC.pubsub.pub( 'progress_update', job_key, 1, 3, u'connecting to repository' )
+                num_updates = len( updates )
+                
+                num_other_messages = 1
+                
+                gauge_range = num_updates + num_other_messages + 1
+                
+                i = 1
+                
+                HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
                 
                 connection = service.GetConnection()
                 
-                HC.pubsub.pub( 'progress_update', job_key, 2, 3, u'posting update' )
+                for update in updates:
+                    
+                    i += 1
+                    
+                    HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'posting update' )
+                    
+                    connection.Post( 'update', update = update )
+                    
+                    service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
+                    
+                    HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
+                    
                 
-                connection.Post( 'update', update = update )
-                
-                service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
-                
-            
-            HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
             
         except Exception as e: HC.ShowException( e )
         
-        HC.pubsub.pub( 'progress_update', job_key, 3, 3, u'done!' )
+        HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, gauge_range, u'done!' )
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -897,17 +917,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UploadPending( self, service_identifier ):
         
-        job_key = os.urandom( 32 )
-        
-        if service_identifier.GetType() == HC.TAG_REPOSITORY: cancel_event = None
-        else: cancel_event = threading.Event()
-        
-        with ClientGUIDialogs.DialogProgress( self, job_key, cancel_event ) as dlg:
-            
-            threading.Thread( target = self._THREADUploadPending, args = ( service_identifier, job_key, cancel_event ) ).start()
-            
-            dlg.ShowModal()
-            
+        threading.Thread( target = self._THREADUploadPending, args = ( service_identifier, ) ).start()
         
     
     def _VacuumDatabase( self ):
@@ -1551,7 +1561,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
         def InitialiseControls():
             
             self._button_hidden = wx.Button( self )
-            self._button_hidden.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
             self._button_hidden.Hide()
             
             self._button_1 = wx.Button( self, label = '', id = 1 )
@@ -1625,7 +1634,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
         self._InitButtons( 'home' )
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         self._button_hidden.SetFocus()
         
@@ -1735,7 +1744,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
         self._button_hidden.SetFocus()
         
     
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         if event.KeyCode in self._keycodes_to_ids.keys():
             

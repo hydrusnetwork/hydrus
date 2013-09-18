@@ -33,9 +33,11 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
+FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
@@ -1521,6 +1523,7 @@ class ListBox( wx.ScrolledWindow ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventKeyDown )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
@@ -2156,7 +2159,7 @@ class PopupMessageFiles( PopupMessage ):
         HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
         
     
-class PopupMessageGauge( PopupMessage ):
+class PopupMessageFileDownloadGauge( PopupMessage ):
     
     def __init__( self, parent, job_key, message_string ):
         
@@ -2170,7 +2173,7 @@ class PopupMessageGauge( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._text = wx.StaticText( self, label = self._message_string , style = wx.ALIGN_CENTER )
+        self._text = wx.StaticText( self, label = self._message_string, style = wx.ALIGN_CENTER )
         self._text.Wrap( 380 )
         self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
@@ -2198,10 +2201,10 @@ class PopupMessageGauge( PopupMessage ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'Failed', 'message_gauge_failed' )
-        HC.pubsub.sub( self, 'SetInfo', 'message_gauge_info' )
-        HC.pubsub.sub( self, 'Importing', 'message_gauge_importing' )
-        HC.pubsub.sub( self, 'Done', 'message_gauge_done' )
+        HC.pubsub.sub( self, 'Failed', 'message_file_download_gauge_failed' )
+        HC.pubsub.sub( self, 'SetInfo', 'message_file_download_gauge_info' )
+        HC.pubsub.sub( self, 'Importing', 'message_file_download_gauge_importing' )
+        HC.pubsub.sub( self, 'Done', 'message_file_download_gauge_done' )
         
     
     def Done( self, job_key, hashes ):
@@ -2288,6 +2291,44 @@ class PopupMessageGauge( PopupMessage ):
                 
             
             self._text.SetLabel( self._message_string + ' - ' + byte_info )
+            
+            self.GetParent().MakeSureEverythingFits()
+            
+        
+    
+class PopupMessageUploadGauge( PopupMessage ):
+    
+    def __init__( self, parent, job_key ):
+        
+        PopupMessage.__init__( self, parent )
+        
+        self._job_key = job_key
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._text = wx.StaticText( self, label = '', style = wx.ALIGN_CENTER )
+        self._text.Wrap( 380 )
+        self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._gauge = Gauge( self, size = ( 380, -1 ) )
+        self._gauge.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        vbox.AddF( self._text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._gauge, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        HC.pubsub.sub( self, 'SetInfo', 'message_upload_gauge_info' )
+        
+    
+    def SetInfo( self, job_key, range, value, message ):
+        
+        if job_key == self._job_key:
+            
+            self._gauge.SetRange( range )
+            self._gauge.SetValue( value )
+            
+            self._text.SetLabel( message )
             
             self.GetParent().MakeSureEverythingFits()
             
@@ -2402,7 +2443,13 @@ class PopupMessageManager( wx.Frame ):
             
             ( job_key, message_string ) = info
             
-            window = PopupMessageGauge( self, job_key, message_string )
+            window = PopupMessageFileDownloadGauge( self, job_key, message_string )
+            
+        elif message_type == HC.MESSAGE_TYPE_UPLOAD_GAUGE:
+            
+            job_key = info
+            
+            window = PopupMessageUploadGauge( self, job_key )
             
         
         return window
@@ -2432,6 +2479,10 @@ class PopupMessageManager( wx.Frame ):
         elif message_type == HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE:
             
             ( job_key, message_string ) = info
+            
+        elif message_type == HC.MESSAGE_TYPE_UPLOAD_GAUGE:
+            
+            message_string = 'an upload was started'
             
         
         try: print( message_string )
@@ -2842,35 +2893,77 @@ class StaticBox( wx.Panel ):
     
     def AddF( self, widget, flags ): self._sizer.AddF( widget, flags )
     
+class CollapsiblePanel( wx.Panel ):
+    
+    def __init__( self, parent ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._expanded = False
+        
+        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._button = wx.Button( self, label = 'expand' )
+        self._button.Bind( wx.EVT_BUTTON, self.EventChange )
+        
+        line = wx.StaticLine( self, style = wx.LI_HORIZONTAL )
+        
+        hbox.AddF( self._button, FLAGS_MIXED )
+        hbox.AddF( line, FLAGS_EXPAND_DEPTH_ONLY )
+        
+        self._vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( self._vbox )
+        
+    
+    def SetPanel( self, panel ):
+        
+        self._panel = panel
+        
+        self._vbox.AddF( self._panel, FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._panel.Hide()
+        
+    
+    def EventChange( self, event ):
+        
+        if self._expanded:
+            
+            self._button.SetLabel( 'expand' )
+            
+            self._panel.Hide()
+            
+            self._expanded = False
+            
+        else:
+            
+            self._button.SetLabel( 'collapse' )
+            
+            self._panel.Show()
+            
+            self._expanded = True
+            
+        
+        self.GetParent().GetParent().Layout() # this may need to be cleverer
+        
+    
 class AdvancedOptions( StaticBox ):
     
     def __init__( self, parent, title ):
         
         StaticBox.__init__( self, parent, title )
         
-        self._collapsible_panel = wx.CollapsiblePane( self, label = 'expand' )
+        self._collapsible_panel = CollapsiblePanel( self )
         
-        my_panel = self._collapsible_panel.GetPane()
+        panel = wx.Panel( self._collapsible_panel )
         
-        self._InitPanel( my_panel )
+        self._InitPanel( panel )
+        
+        self._collapsible_panel.SetPanel( panel )
         
         self.AddF( self._collapsible_panel, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.Bind( wx.EVT_COLLAPSIBLEPANE_CHANGED, self.EventChanged )
-        
-    
-    def _InitPanel( self, panel ): pass
-    
-    def EventChanged( self, event ):
-        
-        self.GetParent().Layout() # make this vertical only?
-        
-        if self._collapsible_panel.IsExpanded(): label = 'collapse'
-        else: label = 'expand'
-        
-        self._collapsible_panel.SetLabel( label )
-        
-        event.Skip()
         
     
 class AdvancedHentaiFoundryOptions( AdvancedOptions ):
@@ -3000,6 +3093,8 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         
         panel.SetSizer( gridbox )
         
+        return panel
+        
     
     def GetInfo( self ):
         
@@ -3100,6 +3195,8 @@ class AdvancedImportOptions( AdvancedOptions ):
         panel.SetSizer( vbox )
         
         self._SetControls( self._initial_settings )
+        
+        return panel
         
     
     def _SetControls( self, info ):
@@ -3218,6 +3315,8 @@ class AdvancedTagOptions( AdvancedOptions ):
             
             panel.SetSizer( vbox )
             
+        
+        return panel
         
     
     def EventChecked( self, event ):

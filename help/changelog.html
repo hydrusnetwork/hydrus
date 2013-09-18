@@ -8,6 +8,18 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 85</h3></li>
+				<ul>
+					<li>updated to new version of wxpython</li>
+					<li>several key_down events moved to char_hook</li>
+					<li>rewrote collapsiblepane class to remove weird refit and scroll behaviour</li>
+					<li>a problem with adding service via a registration key is fixed</li>
+					<li>tag upload pending is granulated into separate queries, to reduce server and client lag</li>
+					<li>uploads moved to an asynchronous popup message with a gauge, rather than the modal progressdialog</li>
+					<li>reorganised file upload content_updates to be a bit smoother</li>
+					<li>fixed a redirection bug that wasn't obeying schema changes such as http->https</li>
+					<li>updated e621 url to https schema</li>
+				</ul>
 				<li><h3>version 84</h3></li>
 				<ul>
 					<li>switch fullscreen button added to fullscreen canvases</li>

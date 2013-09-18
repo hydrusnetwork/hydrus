@@ -2417,29 +2417,82 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_type == HC.TAG_REPOSITORY:
             
+            updates = []
+            
+            # mappings
+            
+            max_update_weight = 50
+            
             content_data = HC.GetEmptyDataDict()
             
             all_hash_ids = set()
             
-            # mappings
+            current_update_weight = 0
             
             pending_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
-            pending = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items() ]
-            
-            content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
-            
-            for hash_ids in pending_dict.values(): all_hash_ids.update( hash_ids )
-            
-            petitioned_dict = {}
+            for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items():
+                
+                pending = ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids )
+                
+                content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PENDING ].append( pending )
+                
+                all_hash_ids.update( hash_ids )
+                
+                current_update_weight += len( hash_ids )
+                
+                if current_update_weight > max_update_weight:
+                    
+                    hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                    
+                    updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                    
+                    content_data = HC.GetEmptyDataDict()
+                    
+                    all_hash_ids = set()
+                    
+                    current_update_weight = 0
+                    
+                
             
             petitioned_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
             
-            petitioned = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids, self._GetReason( c, reason_id ) ) for ( ( namespace_id, tag_id, reason_id ), hash_ids ) in petitioned_dict.items() ]
+            for ( ( namespace_id, tag_id, reason_id ), hash_ids ) in petitioned_dict.items():
+                
+                petitioned = ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids, self._GetReason( c, reason_id ) )
+                
+                content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ].append( petitioned )
+                
+                all_hash_ids.update( hash_ids )
+                
+                current_update_weight += len( hash_ids )
+                
+                if current_update_weight > max_update_weight:
+                    
+                    hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                    
+                    updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                    
+                    content_data = HC.GetEmptyDataDict()
+                    
+                    all_hash_ids = set()
+                    
+                    current_update_weight = 0
+                    
+                
             
-            content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
-            
-            for hash_ids in petitioned_dict.values(): all_hash_ids.update( hash_ids )
+            if len( content_data ) > 0:
+                
+                hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                
+                updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                
+                content_data = HC.GetEmptyDataDict()
+                
+                all_hash_ids = set()
+                
+                current_update_weight = 0
+                
             
             # tag siblings
             
@@ -2461,13 +2514,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
-            # make the object
+            if len( content_data ) > 0:
+                
+                hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                
+                updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
+                
             
-            hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
-            
-            update = HC.ClientToServerUpdate( content_data, hash_ids_to_hashes )
-            
-            return update
+            return updates
             
         elif service_type == HC.FILE_REPOSITORY:
             
@@ -5029,6 +5083,31 @@ class DB( ServiceDB ):
                     
                     name = 'e621'
                     search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+                    search_separator = '%20'
+                    advance_by_page_num = True
+                    thumb_classname = 'thumb'
+                    image_id = None
+                    image_data = 'Download'
+                    tag_classnames_to_namespaces = { 'tag-type-general categorized-tag' : '', 'tag-type-character categorized-tag' : 'character', 'tag-type-copyright categorized-tag' : 'series', 'tag-type-artist categorized-tag' : 'creator', 'tag-type-species categorized-tag' : 'species' }
+                    
+                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+                    
+                    for booru in boorus:
+                        
+                        name = booru.GetName()
+                        
+                        c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
+                        
+                        c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
+                        
+                    
+                
+                if version < 85:
+                    
+                    boorus = []
+                    
+                    name = 'e621'
+                    search_url = 'https://e621.net/post/index?page=%index%&tags=%tags%'
                     search_separator = '%20'
                     advance_by_page_num = True
                     thumb_classname = 'thumb'

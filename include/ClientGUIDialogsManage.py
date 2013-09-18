@@ -4579,7 +4579,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( HC.u( e ) )
+                    wx.MessageBox( traceback.format_exc() )
                     
                     self.EventAdd( event )
                     

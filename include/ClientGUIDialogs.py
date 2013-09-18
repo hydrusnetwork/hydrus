@@ -3366,8 +3366,8 @@ class DialogRegisterService( Dialog ):
             self._address = wx.TextCtrl( self )
             self._registration_key = wx.TextCtrl( self )
             
-            self._register = wx.Button( self, label = 'register' )
-            self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
+            self._register_button = wx.Button( self, label = 'register' )
+            self._register_button.Bind( wx.EVT_BUTTON, self.EventRegister )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             
@@ -3398,7 +3398,7 @@ class DialogRegisterService( Dialog ):
             
             buttonbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttonbox.AddF( self._register, FLAGS_MIXED )
+            buttonbox.AddF( self._register_button, FLAGS_MIXED )
             buttonbox.AddF( self._cancel, FLAGS_MIXED )
             
             vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
@@ -3420,7 +3420,7 @@ class DialogRegisterService( Dialog ):
         
         self._register = False
         
-        wx.CallAfter( self._register.SetFocus )
+        wx.CallAfter( self._register_button.SetFocus )
         
     
     def EventRegister( self, event ):

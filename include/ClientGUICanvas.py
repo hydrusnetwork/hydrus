@@ -43,9 +43,11 @@ FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
 
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
 FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
+FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
+FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
@@ -88,7 +90,6 @@ class AnimationBar( wx.Window ):
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
         self.Bind( wx.EVT_TIMER, self.EventTimerFlash, id = ID_TIMER_FLASH )
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
@@ -137,11 +138,6 @@ class AnimationBar( wx.Window ):
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
         
         dc.DrawRectangle( int( float( my_width - ANIMATED_SCANBAR_CARET_WIDTH ) * float( self._current_frame_index ) / float( self._num_frames - 1 ) ), 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
-        
-    
-    def EventKeyDown( self, event ):
-        
-        self.GetParent().GetParent().ProcessEvent( event )
         
     
     def EventMouse( self, event ):
@@ -1142,7 +1138,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         if first_hash is None: self.SetMedia( self._GetFirst() )
         else: self.SetMedia( self._GetMedia( { first_hash } )[0] )
@@ -1215,7 +1211,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         if interval > 0: self._timer_slideshow.Start( interval, wx.TIMER_CONTINUOUS )
         
     
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
@@ -1414,7 +1410,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         self.SetMedia( self._GetFirst() )
         
@@ -1471,7 +1467,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
             
         
     
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
@@ -1743,7 +1739,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         self.SetMedia( self._GetFirst() )
         
@@ -1834,13 +1830,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             
         
     
-    def EventDelete( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else: self._Delete()
-        
-    
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
@@ -1870,6 +1860,12 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                 else: event.Skip()
                 
             
+        
+    
+    def EventDelete( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else: self._Delete()
         
     
     def EventMouseKeep( self, event ):
@@ -2455,7 +2451,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         self._statusbar.SetStatusWidths( [ -1, 500, -1 ] )
         
         self._splitter = wx.SplitterWindow( self )
-        self._splitter.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2484,7 +2479,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         self._splitter.SplitVertically( self._left_window, self._right_window, my_width / 2 )
         
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseDown )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseDown )
         
@@ -2986,7 +2981,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
     
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
         elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._ProcessAction( 'equal' )
@@ -3101,7 +3096,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             self.Bind( wx.EVT_MIDDLE_DOWN, self.GetParent().GetParent().EventMouseDown )
             self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
             self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-            self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+            self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
             
             self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
             
@@ -3296,7 +3291,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             event.Skip()
             
         
-        def EventKeyDown( self, event ):
+        def EventCharHook( self, event ):
             
             if self._ShouldSkipInputDueToFlash(): event.Skip()
             else:
@@ -3700,7 +3695,6 @@ class Image( wx.Window ):
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_TIMER, self.EventTimerAnimated, id = ID_TIMER_ANIMATED )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         self.EventResize( None )
         
@@ -3755,11 +3749,6 @@ class Image( wx.Window ):
         
     
     def CurrentFrame( self ): return self._current_frame_index
-    
-    def EventKeyDown( self, event ):
-        
-        self.GetParent().GetParent().ProcessEvent( event )
-        
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     

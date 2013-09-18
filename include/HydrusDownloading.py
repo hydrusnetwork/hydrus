@@ -88,7 +88,7 @@ def DownloadYoutubeURL( job_key, url ):
         try: num_bytes = int( response.getheader( 'Content-Length' ) )
         except: num_bytes = None
         
-        HC.pubsub.pub( 'message_gauge_info', job_key, num_bytes, 0 )
+        HC.pubsub.pub( 'message_file_download_gauge_info', job_key, num_bytes, 0 )
         
         block_size = 64 * 1024
         
@@ -106,7 +106,7 @@ def DownloadYoutubeURL( job_key, url ):
                 
                 total_num_bytes += len( block )
                 
-                HC.pubsub.pub( 'message_gauge_info', job_key, num_bytes, total_num_bytes )
+                HC.pubsub.pub( 'message_file_download_gauge_info', job_key, num_bytes, total_num_bytes )
                 
                 if block == '': break
                 
@@ -114,16 +114,16 @@ def DownloadYoutubeURL( job_key, url ):
                 
             
         
-        HC.pubsub.pub( 'message_gauge_importing', job_key )
+        HC.pubsub.pub( 'message_file_download_gauge_importing', job_key )
         
         ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
         
-        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_done', job_key, { hash } )
-        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_failed', job_key )
+        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_file_download_gauge_done', job_key, { hash } )
+        elif result == 'deleted': HC.pubsub.pub( 'message_file_download_gauge_failed', job_key )
         
     except:
         
-        HC.pubsub.pub( 'message_gauge_failed', job_key )
+        HC.pubsub.pub( 'message_file_download_gauge_failed', job_key )
         
         raise
         
