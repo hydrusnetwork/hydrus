@@ -1,7 +1,8 @@
 import os
+import socket
 import win32com.client
 
-def GetUPnPMappings():
+def GetStaticPortMappingCollection():
     
     try:
         
@@ -12,6 +13,12 @@ def GetUPnPMappings():
     except: raise Exception( 'Could not fetch UPnP Manager!' )
     
     if static_port_mappings is None: raise Exception( 'Could not fetch UPnP info!' + os.linesep + 'Make sure UPnP is enabled for your computer and router, or try restarting your router.' )
+    
+    return static_port_mappings
+    
+def GetUPnPMappings():
+    
+    static_port_mappings = GetStaticPortMappingCollection()
     
     mappings = []
     
@@ -36,5 +43,21 @@ def GetUPnPMappings():
     
     return mappings
     
-# mappings.Add( external_port,'TCP', internal_port, internal_client, enabled true/false, description )
-# socket.gethostbyname( socket.gethostname() )
+def AddUPnPMapping( external_port, protocol, internal_port, description ):
+    
+    internal_client = socket.gethostbyname( socket.gethostname() )
+    
+    enabled = True
+    
+    static_port_mappings = GetStaticPortMappingCollection()
+    
+    try: static_port_mappings.Add( external_port, protocol, internal_port, internal_client, enabled, description )
+    except: raise Exception( 'Attempt to add a UPnP mapping failed; that mapping probably already exists as a UPnP mapping or static port forward already.' )
+    
+def RemoveUPnPMapping( external_port, protocol ):
+    
+    static_port_mappings = GetStaticPortMappingCollection()
+    
+    try: static_port_mappings.Remove( external_port, protocol )
+    except: raise Exception( 'Attempt to remove UPnP mapping failed.' )
+    

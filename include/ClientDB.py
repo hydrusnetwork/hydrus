@@ -6624,32 +6624,6 @@ class DB( ServiceDB ):
         HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
         
     
-    def StartServer( self ):
-        
-        port = HC.DEFAULT_LOCAL_FILE_PORT
-        
-        local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
-        
-        self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
-        
-        server_thread = threading.Thread( target=self._server.serve_forever )
-        server_thread.start()
-        
-        connection = httplib.HTTPConnection( '127.0.0.1:' + HC.u( port ) )
-        
-        try:
-            
-            connection.connect()
-            connection.close()
-            
-        except:
-            
-            message = 'Could not bind the client to port ' + HC.u( port )
-            
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-            
-        
-    
     def WaitUntilGoodTimeToUseDBThread( self ):
         
         while True:

@@ -1,8 +1,10 @@
 import gc
+import httplib
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusImageHandling
 import HydrusSessions
+import HydrusServer
 import HydrusTags
 import ClientConstants as CC
 import ClientDB
@@ -18,6 +20,7 @@ import time
 import traceback
 import wx
 import wx.richtext
+#from twisted.internet import reactor
 
 ID_ANIMATED_EVENT_TIMER = wx.NewId()
 ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
@@ -99,6 +102,8 @@ class Controller( wx.App ):
             self.MaintainDB()
             
         
+        HC.pubsub.pub( 'clear_closed_pages' )
+        
     
     def EventPubSub( self, event ):
         
@@ -160,6 +165,9 @@ class Controller( wx.App ):
     def OnInit( self ):
         
         HC.app = self
+        
+        self._local_service = None
+        self._server = None
         
         try:
             
@@ -238,6 +246,7 @@ class Controller( wx.App ):
             self._gui = ClientGUI.FrameGUI()
             
             HC.pubsub.sub( self, 'Clipboard', 'clipboard' )
+            HC.pubsub.sub( self, 'RestartServer', 'restart_server' )
             
             self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
             
@@ -255,7 +264,7 @@ class Controller( wx.App ):
             if HC.is_first_start: self._gui.DoFirstStart()
             if HC.is_db_updated: wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
             
-            self._db.StartServer()
+            self.RestartServer()
             self._db.StartDaemons()
             
             self._last_idle_time = 0.0
@@ -311,6 +320,85 @@ class Controller( wx.App ):
         time.sleep( 0.1 )
         
         return result
+        
+    
+    def RestartServer( self ):
+        
+        def do_it():
+            
+            # stick it on a thread because the connection test stuff blocks
+            
+            if self._server is not None: self._server.shutdown()
+            
+            port = HC.options[ 'local_port' ]
+            
+            time.sleep( 1 )
+            
+            connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+            
+            try:
+                
+                connection.connect()
+                connection.close()
+                
+                message = 'Something was already bound to port ' + HC.u( port )
+                
+                wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                
+            except:
+                
+                local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
+                
+                self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
+                
+                server_thread = threading.Thread( target=self._server.serve_forever )
+                server_thread.start()
+                
+                time.sleep( 1 )
+                
+                connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+                
+                try:
+                    
+                    connection.connect()
+                    connection.close()
+                    
+                except:
+                    
+                    message = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
+                    
+                    wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                    
+                
+            
+        
+        threading.Thread( target = do_it ).start()
+        
+        def TWISTEDRestartServer():
+            
+            def StartServer():
+                
+                try:
+                    
+                    local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, 1050 )
+                    
+                    self._local_service = reactor.listenTCP( 1050, HydrusServer.HydrusServiceLocal( local_file_server_service_identifier, 'hello' ) )
+                    
+                except Exception as e: HC.ShowException( e )
+                
+                # handle problems
+                
+            
+            if self._local_service is None: StartServer()
+            else:
+                
+                deferred = self._local_service.stopListening()
+                
+                deferred.AddCallback( StartServer )
+                
+            
+        
+        #reactor.callFromThread( TWISTEDRestartServer )
         
     
     def SetSplashText( self, text ):

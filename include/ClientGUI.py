@@ -6,6 +6,9 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIPages
 import HydrusDownloading
+import HydrusFileHandling
+import HydrusImageHandling
+import itertools
 import os
 import random
 import subprocess
@@ -76,6 +79,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.Bind( wx.EVT_CLOSE, self.EventExit )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         
+        HC.pubsub.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         HC.pubsub.sub( self, 'NewCompose', 'new_compose_frame' )
         HC.pubsub.sub( self, 'NewPageImportBooru', 'new_page_import_booru' )
         HC.pubsub.sub( self, 'NewPageImportGallery', 'new_page_import_gallery' )
@@ -116,11 +120,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         try:
             
-            job_key = os.urandom( 32 )
+            job_key = HC.JobKey()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_UPLOAD_GAUGE, job_key ) )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
             
-            HC.pubsub.pub( 'message_upload_gauge_info', job_key, 1, 0, u'gathering pending and petitioned' )
+            HC.pubsub.pub( 'message_gauge_info', job_key, 1, 0, u'gathering pending and petitioned' )
             
             result = HC.app.Read( 'pending', service_identifier )
             
@@ -144,7 +148,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 i = 1
                 
-                HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
+                HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
                 
                 connection = service.GetConnection()
                 
@@ -154,13 +158,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for media_result in media_results:
                     
+                    if job_key.IsCancelled(): return
+                    
                     i += 1
                     
                     hash = media_result.GetHash()
                     
                     mime = media_result.GetMime()
                     
-                    HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'Uploading file ' + HC.ConvertIntToPrettyString( i ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
+                    HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'Uploading file ' + HC.ConvertIntToPrettyString( i ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
                     
                     try:
                         
@@ -194,7 +200,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     i += 1
                     
-                    HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'uploading petitions' )
+                    HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'uploading petitions' )
                     
                     connection.Post( 'update', update = update )
                     
@@ -217,15 +223,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 i = 1
                 
-                HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
+                HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
                 
                 connection = service.GetConnection()
                 
                 for update in updates:
                     
+                    if job_key.IsCancelled(): return
+                    
                     i += 1
                     
-                    HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, i, u'posting update' )
+                    HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'posting update' )
                     
                     connection.Post( 'update', update = update )
                     
@@ -237,7 +245,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         except Exception as e: HC.ShowException( e )
         
-        HC.pubsub.pub( 'message_upload_gauge_info', job_key, gauge_range, gauge_range, u'done!' )
+        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, u'upload done!' )
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -319,7 +327,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     try:
                         
-                        connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT )
+                        connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
                         
                         connection.connect()
                         
@@ -338,7 +346,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                             
-                            if dlg.ShowModal() == wx.ID_NO: return
+                            if dlg.ShowModal() != wx.ID_YES: return
                             
                         
                     else:
@@ -461,7 +469,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         name = self._notebook.GetPageText( selection )
         
-        self._closed_pages.append( ( selection, name, page ) )
+        self._closed_pages.append( ( int( time.time() ), selection, name, page ) )
         
         self._notebook.RemovePage( selection )
         
@@ -472,7 +480,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _DeleteAllPages( self ):
         
-        for ( selection, name, page ) in self._closed_pages: page.Destroy()
+        for ( time_closed, selection, name, page ) in self._closed_pages: page.Destroy()
         
         self._closed_pages = []
         
@@ -833,6 +841,82 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._statusbar.SetStatusText( self._statusbar_db_locked, number = 4 )
         
     
+    def _RegenerateThumbnails( self ):
+        
+        message = 'This will rebuild all your thumbnails from the original files. Only do this if you experience thumbnail errors. If you have a large database, it will take some time. A popup message will appear when it is done.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                def do_it():
+                    
+                    job_key = HC.JobKey()
+                    
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+                    
+                    HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, 'regenerating thumbnails - creating directories' )
+                    
+                    if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
+                    
+                    hex_chars = '0123456789abcdef'
+                    
+                    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                        
+                        dir = HC.CLIENT_THUMBNAILS_DIR + os.path.sep + one + two
+                        
+                        if not os.path.exists( dir ): os.mkdir( dir )
+                        
+                    
+                    i = 0
+                    
+                    for path in CC.IterateAllFilePaths():
+                        
+                        try:
+                            
+                            mime = HydrusFileHandling.GetMime( path )
+                            
+                            if mime in HC.MIMES_WITH_THUMBNAILS:
+                                
+                                if i % 100 == 0:
+                                    
+                                    HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, 'regenerating thumbnails - ' + HC.ConvertIntToPrettyString( i ) + ' done' )
+                                    
+                                
+                                i += 1
+                                
+                                ( base, filename ) = os.path.split( path )
+                                
+                                ( hash_encoded, ext ) = filename.split( '.', 1 )
+                                
+                                hash = hash_encoded.decode( 'hex' )
+                                
+                                thumbnail = HydrusImageHandling.GenerateThumbnail( path )
+                                
+                                thumbnail_path = CC.GetExpectedThumbnailPath( hash, True )
+                                
+                                with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
+                                
+                                thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+                                
+                                thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
+                                
+                                with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+                                
+                            
+                            if HC.shutdown: return
+                            
+                        except: continue
+                        
+                    
+                    HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'regenerating thumbnails - done' )
+                    
+                
+                threading.Thread( target = do_it ).start()
+                
+            
+        
+    
     def _ReviewServices( self ):
         
         try: FrameReviewServices()
@@ -902,7 +986,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UnclosePage( self, closed_page_index ):
         
-        ( index, name, page ) = self._closed_pages.pop( closed_page_index )
+        ( time_closed, index, name, page ) = self._closed_pages.pop( closed_page_index )
         
         page.Unpause()
         
@@ -922,12 +1006,33 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous, optimising most operations. If you have a large database, it will take some time.'
+        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous, optimising most operations. If you have a large database, it will take some time. A popup message will appear when it is done.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'vacuum' )
             
+        
+    
+    def ClearClosedPages( self ):
+        
+        new_closed_pages = []
+        
+        now = int( time.time() )
+        
+        timeout = 60 * 60
+        
+        for ( time_closed, index, name, page ) in self._closed_pages:
+            
+            if time_closed + timeout < now: page.Destroy()
+            else: new_closed_pages.append( ( time_closed, index, name, page ) )
+            
+        
+        old_closed_pages = self._closed_pages
+        
+        self._closed_pages = new_closed_pages
+        
+        if len( old_closed_pages ) != len( new_closed_pages ): self.RefreshMenuBar()
         
     
     def DoFirstStart( self ):
@@ -1078,6 +1183,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None: page.RefreshQuery()
                 
+            elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'show_hide_splitters':
                 
@@ -1246,7 +1352,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 args = []
                 
-                for ( i, ( index, name, page ) ) in enumerate( self._closed_pages ):
+                for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
                     
                     args.append( ( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
                     
@@ -1294,6 +1400,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         database.AppendSeparator()
         #database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'reindex_db' ), '&reindex', 'reindex the database.' )
         database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
         database.AppendSeparator()
         database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
         

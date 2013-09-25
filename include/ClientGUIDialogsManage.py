@@ -2686,6 +2686,15 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             
             self._listbook.AddPage( self._colour_page, 'colours' )
             
+            # server
+            
+            self._server_page = wx.Panel( self._listbook )
+            self._server_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._local_port = wx.SpinCtrl( self._server_page, min = 0, max = 65535 )
+            
+            self._listbook.AddPage( self._server_page, 'local server' )
+            
             # sort/collect
             
             self._sort_by_page = wx.Panel( self._listbook )
@@ -2848,6 +2857,8 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             self._file_system_predicate_num_words.SetValue( num_words )
             
             #
+            
+            self._local_port.SetValue( HC.options[ 'local_port' ] )
             
             #
             
@@ -3057,6 +3068,19 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._server_page, label = 'local server port: ' ), FLAGS_MIXED )
+            hbox.AddF( self._local_port, FLAGS_MIXED )
+            
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self._server_page.SetSizer( vbox )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
             vbox.AddF( self._play_dumper_noises, FLAGS_EXPAND_PERPENDICULAR )
             
             self._sound_page.SetSizer( vbox )
@@ -3077,9 +3101,9 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._sort_by_page, label='Default sort: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._sort_by_page, label = 'default sort: ' ), FLAGS_MIXED )
             gridbox.AddF( self._default_sort, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self._sort_by_page, label='Default collect: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._sort_by_page, label = 'default collect: ' ), FLAGS_MIXED )
             gridbox.AddF( self._default_collect, FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
@@ -3316,6 +3340,12 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
         
         HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetClientData( self._default_tag_repository.GetSelection() )
         HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
+        
+        new_local_port = self._local_port.GetValue()
+        
+        if new_local_port != HC.options[ 'local_port' ]: HC.pubsub.pub( 'restart_server' )
+        
+        HC.options[ 'local_port' ] = new_local_port
         
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
@@ -7201,8 +7231,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, title )
         
-        wx.MessageBox( 'This dialog is prototype. None of the buttons do anything yet. If it does not load correctly, please inform the hydrus developer of any error messages you receive.' )
-        
         self._service_identifier = service_identifier
         
         InitialiseControls()
@@ -7245,11 +7273,32 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventAddCustomMapping( self, event ):
         
-        # start dialog for custom mapping
-        # attempt to add mapping via service
-        # add to listctrl
+        external_port = HC.DEFAULT_SERVICE_PORT
+        protocol = 'TCP'
+        internal_port = HC.DEFAULT_SERVICE_PORT
+        description = 'hydrus service'
         
-        pass
+        with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( external_port, protocol, internal_port, description ) = dlg.GetInfo()
+                
+                for ( existing_description, existing_internal_ip, existing_internal_port, existing_external_ip, existing_external_port, existing_protocol, existing_enabled ) in self._mappings:
+                    
+                    if external_port == existing_external_port and protocol == existing_protocol:
+                        
+                        wx.MessageBox( 'That external port already exists!' )
+                        
+                        return
+                        
+                    
+                
+                HydrusNATPunch.AddUPnPMapping( external_port, protocol, internal_port, description )
+                
+            
+        
+        self._RefreshMappings()
         
     
     def EventAddServiceMapping( self, event ):
@@ -7263,13 +7312,24 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventEditMapping( self, event ):
         
-        # for each index
-        # populate dialog for edit
-        # tell service to remove that mapping
-        # tell service to add that mapping
-        # update listctrl
+        for index in self._mappings_list_ctrl.GetAllSelected():
+            
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, enabled ) = self._mappings_list_ctrl.GetClientData( index )
+            
+            with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( external_port, protocol, internal_port, description ) = dlg.GetInfo()
+                    
+                    HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+                    
+                    HydrusNATPunch.AddUPnPMapping( external_port, protocol, internal_port, description )
+                    
+                
+            
         
-        pass
+        self._RefreshMappings()
         
     
     def EventOK( self, event ):
@@ -7279,10 +7339,13 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventRemoveMapping( self, event ):
         
-        # for each index
-        # tell service to remove that mapping
-        # remove all selected from listctrl
+        for index in self._mappings_list_ctrl.GetAllSelected():
+            
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, enabled ) = self._mappings_list_ctrl.GetClientData( index )
+            
+            HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
+            
         
-        pass
+        self._RefreshMappings()
         
     

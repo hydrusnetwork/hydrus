@@ -143,7 +143,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( 'http://127.0.0.1:45865/file?hash=' + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' ) )
+            data = wx.TextDataObject( 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' ) )
             
             wx.TheClipboard.SetData( data )
             
@@ -556,7 +556,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self._PublishSelectionChange()
         
-        HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self.GenerateMediaResults() )
+        HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
     
     def _RescindPetitionFiles( self, file_service_identifier ):
@@ -808,7 +808,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             self._RedrawCanvas()
             
         
-        HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self.GenerateMediaResults() )
+        HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
     
 class MediaPanelNoQuery( MediaPanel ):

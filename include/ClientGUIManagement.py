@@ -424,9 +424,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._imageboard = imageboard
         
-        self._media_list = ClientGUIMixins.ListeningMediaList( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
-        
-        self._current_media = None
+        self._current_hash = None
         
         self._dumping = False
         self._actually_dumping = False
@@ -570,9 +568,13 @@ class ManagementPanelDumper( ManagementPanel ):
         HC.pubsub.sub( self, 'FocusChanged', 'focus_changed' )
         HC.pubsub.sub( self, 'SortedMediaPulse', 'sorted_media_pulse' )
         
-        self._media_to_dump_info = {}
+        self._sorted_media_hashes = [ media_result.GetHash() for media_result in media_results ]
         
-        for media in self._media_list.GetSortedMedia():
+        self._hashes_to_media = { media_result.GetHash() : ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results }
+        
+        self._hashes_to_dump_info = {}
+        
+        for ( hash, media ) in self._hashes_to_media.items():
             
             dump_status_enum = CC.DUMPER_NOT_DUMPED
             
@@ -590,7 +592,7 @@ class ManagementPanelDumper( ManagementPanel ):
                 elif type == CC.FIELD_VERIFICATION_RECAPTCHA: post_field_info.append( ( name, type, None ) )
                 
             
-            self._media_to_dump_info[ media ] = ( dump_status_enum, dump_status_string, post_field_info )
+            self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, post_field_info )
             
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
@@ -598,7 +600,7 @@ class ManagementPanelDumper( ManagementPanel ):
         self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
-    def _THREADDoDump( self, media_to_dump, post_field_info, headers, body ):
+    def _THREADDoDump( self, hash, post_field_info, headers, body ):
         
         try:
             
@@ -610,12 +612,12 @@ class ManagementPanelDumper( ManagementPanel ):
             
         except Exception as e: ( status, phrase ) = ( 'big error', HC.u( e ) )
         
-        wx.CallAfter( self.CALLBACKDoneDump, media_to_dump, post_field_info, status, phrase )
+        wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
         
     
     def _FreezeCurrentMediaPostInfo( self ):
         
-        ( dump_status_enum, dump_status_string, post_field_info ) = self._media_to_dump_info[ self._current_media ]
+        ( dump_status_enum, dump_status_string, post_field_info ) = self._hashes_to_dump_info[ self._current_hash ]
         
         post_field_info = []
         
@@ -626,19 +628,21 @@ class ManagementPanelDumper( ManagementPanel ):
             elif type == CC.FIELD_VERIFICATION_RECAPTCHA: post_field_info.append( ( name, type, field.GetValues() ) )
             
         
-        self._media_to_dump_info[ self._current_media ] = ( dump_status_enum, dump_status_string, post_field_info )
+        self._hashes_to_dump_info[ self._current_hash ] = ( dump_status_enum, dump_status_string, post_field_info )
         
     
     def _GetInitialComment( self, media ):
         
-        try: index = self._media_list.GetMediaIndex( media )
+        hash = media.GetHash()
+        
+        try: index = self._sorted_media_hashes.index( hash )
         except: return 'media removed'
         
-        num_files = len( self._media_list.GetSortedMedia() )
+        num_files = len( self._sorted_media_hashes )
         
         if index == 0:
             
-            total_size = sum( [ m.GetSize() for m in self._media_list.GetSortedMedia() ] )
+            total_size = sum( [ m.GetSize() for m in self._hashes_to_media.values() ] )
             
             initial = 'Hydrus Network Client is starting a dump of ' + HC.u( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) + ':' + os.linesep + os.linesep
             
@@ -673,7 +677,7 @@ class ManagementPanelDumper( ManagementPanel ):
     
     def _ShowCurrentMedia( self ):
         
-        if self._current_media is None:
+        if self._current_hash is None:
             
             self._post_info.SetLabel( 'no file selected' )
             
@@ -686,11 +690,11 @@ class ManagementPanelDumper( ManagementPanel ):
             
         else:
             
-            num_files = len( self._media_list.GetSortedMedia() )
+            num_files = len( self._sorted_media_hashes )
             
-            ( dump_status_enum, dump_status_string, post_field_info ) = self._media_to_dump_info[ self._current_media ]
+            ( dump_status_enum, dump_status_string, post_field_info ) = self._hashes_to_dump_info[ self._current_hash ]
             
-            index = self._media_list.GetMediaIndex( self._current_media )
+            index = self._sorted_media_hashes.index( self._current_hash )
             
             self._post_info.SetLabel( HC.u( index + 1 ) + '/' + HC.u( num_files ) + ': ' + dump_status_string )
             
@@ -735,13 +739,13 @@ class ManagementPanelDumper( ManagementPanel ):
     
     def _UpdatePendingInitialComments( self ):
         
-        all_media_to_dump = self._media_list.GetSortedMedia()[ self._next_dump_index : ]
+        hashes_to_dump = self._sorted_media_hashes[ self._next_dump_index : ]
         
-        for media_to_dump in all_media_to_dump:
+        for hash in hashes_to_dump:
             
-            if self._current_media == media_to_dump: self._FreezeCurrentMediaPostInfo()
+            if hash == self._current_hash: self._FreezeCurrentMediaPostInfo()
             
-            ( dump_status_enum, dump_status_string, post_field_info ) = self._media_to_dump_info[ media_to_dump ]
+            ( dump_status_enum, dump_status_string, post_field_info ) = self._hashes_to_dump_info[ hash ]
             
             new_post_field_info = []
             
@@ -751,20 +755,22 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                     ( initial, append ) = value
                     
-                    initial = self._GetInitialComment( media_to_dump )
+                    media = self._hashes_to_media[ hash ]
+                    
+                    initial = self._GetInitialComment( media )
                     
                     new_post_field_info.append( ( name, type, ( initial, append ) ) )
                     
                 else: new_post_field_info.append( ( name, type, value ) )
                 
             
-            self._media_to_dump_info[ media_to_dump ] = ( dump_status_enum, dump_status_string, new_post_field_info )
+            self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, new_post_field_info )
             
-            if self._current_media == media_to_dump: self._ShowCurrentMedia()
+            if hash == self._current_hash: self._ShowCurrentMedia()
             
         
     
-    def CALLBACKDoneDump( self, media_to_dump, post_field_info, status, phrase ):
+    def CALLBACKDoneDump( self, hash, post_field_info, status, phrase ):
         
         self._actually_dumping = False
         
@@ -779,7 +785,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_DUMPED_OK
             dump_status_string = 'dumped ok'
             
-            if self._current_media == media_to_dump: HC.pubsub.pub( 'set_focus', self._page_key, None )
+            if hash == self._current_hash: HC.pubsub.pub( 'set_focus', self._page_key, None )
             
             self._next_dump_time = HC.GetNow() + self._flood_time
             
@@ -803,7 +809,7 @@ class ManagementPanelDumper( ManagementPanel ):
                 if type == CC.FIELD_VERIFICATION_RECAPTCHA: new_post_field_info.append( ( name, type, None ) )
                 else: new_post_field_info.append( ( name, type, value ) )
                 
-                if media_to_dump == self._current_media:
+                if hash == self._current_hash:
                     
                     ( type, field, default ) = self._post_fields[ name ]
                     
@@ -851,20 +857,18 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = phrase
             
-            if self._current_media == media_to_dump: HC.pubsub.pub( 'set_focus', self._page_key, None )
+            if hash == self._current_hash: HC.pubsub.pub( 'set_focus', self._page_key, None )
             
             self._next_dump_time = HC.GetNow() + self._flood_time
             
             self._next_dump_index += 1
             
         
-        self._media_to_dump_info[ media_to_dump ] = ( dump_status_enum, dump_status_string, post_field_info )
-        
-        ( hash, ) = media_to_dump.GetDisplayMedia().GetHashes()
+        self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, post_field_info )
         
         HC.pubsub.pub( 'file_dumped', self._page_key, hash, dump_status_enum )
         
-        if self._next_dump_index == len( self._media_list.GetSortedMedia() ):
+        if self._next_dump_index == len( self._sorted_media_hashes ):
             
             self._progress_info.SetLabel( 'done - ' + HC.u( self._num_dumped ) + ' dumped' )
             
@@ -880,7 +884,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            index = self._media_list.GetMediaIndex( self._current_media )
+            index = self._sorted_media_hashes.index( self._current_hash )
             
             if ( ( index + 1 ) - self._next_dump_index ) * ( self._flood_time + 10 ) > 5 * 60: event.Veto()
             
@@ -952,25 +956,25 @@ class ManagementPanelDumper( ManagementPanel ):
     
     def EventTimer( self, event ):
         
-        try:
+        if self._paused: return
+        
+        if self._actually_dumping: return
+        
+        if self._dumping:
             
-            if self._paused: return
+            time_left = self._next_dump_time - HC.GetNow()
             
-            if self._actually_dumping: return
-            
-            if self._dumping:
+            if time_left < 1:
                 
-                time_left = self._next_dump_time - HC.GetNow()
-                
-                if time_left < 1:
+                try:
                     
-                    media_to_dump = self._media_list.GetSortedMedia()[ self._next_dump_index ]
+                    hash = self._sorted_media_hashes[ self._next_dump_index ]
                     
                     wait = False
                     
-                    if self._current_media == media_to_dump: self._FreezeCurrentMediaPostInfo()
+                    if hash == self._current_hash: self._FreezeCurrentMediaPostInfo()
                     
-                    ( dump_status_enum, dump_status_string, post_field_info ) = self._media_to_dump_info[ media_to_dump ]
+                    ( dump_status_enum, dump_status_string, post_field_info ) = self._hashes_to_dump_info[ hash ]
                     
                     for ( name, type, value ) in post_field_info:
                         
@@ -1030,8 +1034,9 @@ class ManagementPanelDumper( ManagementPanel ):
                             else: post_fields.append( ( name, type, value ) )
                             
                         
-                        hash = media_to_dump.GetHash()
-                        mime = media_to_dump.GetMime()
+                        media = self._hashes_to_media[ hash ]
+                        
+                        mime = media.GetMime()
                         
                         path = CC.GetFilePath( hash, mime )
                         
@@ -1047,48 +1052,58 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         self._actually_dumping = True
                         
-                        threading.Thread( target = self._THREADDoDump, args = ( media_to_dump, post_field_info, headers, body ) ).start()
+                        threading.Thread( target = self._THREADDoDump, args = ( hash, post_field_info, headers, body ) ).start()
                         
                     
-                else: self._progress_info.SetLabel( 'dumping next file in ' + HC.u( time_left ) + ' seconds' )
+                except Exception as e:
+                    
+                    ( status, phrase ) = ( 'big error', HC.u( e ) )
+                    
+                    wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
+                    
                 
-            else:
-                
-                if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
-                else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
-                
+            else: self._progress_info.SetLabel( 'dumping next file in ' + HC.u( time_left ) + ' seconds' )
             
-        except Exception as e:
+        else:
             
-            ( status, phrase ) = ( 'big error', HC.u( e ) )
-            
-            wx.CallAfter( self.CALLBACKDoneDump, media_to_dump, post_field_info, status, phrase )
+            if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
+            else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
             
         
     
     def FocusChanged( self, page_key, media ):
         
-        if page_key == self._page_key and media != self._current_media:
+        if page_key == self._page_key:
             
-            old_media = self._current_media
+            if media is None: hash = None
+            else: hash = media.GetHash()
             
-            if old_media is not None: self._FreezeCurrentMediaPostInfo()
-            
-            self._current_media = media
-            
-            self._ShowCurrentMedia()
+            if hash != self._current_hash:
+                
+                old_hash = self._current_hash
+                
+                if old_hash is not None: self._FreezeCurrentMediaPostInfo()
+                
+                self._current_hash = hash
+                
+                self._ShowCurrentMedia()
+                
             
         
     
-    def SortedMediaPulse( self, page_key, media_results ):
+    def SortedMediaPulse( self, page_key, sorted_media ):
         
         if page_key == self._page_key:
             
-            self._media_list = ClientGUIMixins.ListeningMediaList( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+            self._sorted_media_hashes = [ media.GetHash() for media in sorted_media ]
             
-            new_media_to_dump_info = {}
+            self._hashes_to_media = { hash : self._hashes_to_media[ hash ] for hash in self._sorted_media_hashes }
             
-            for ( media, ( dump_status_enum, dump_status_string, post_field_info ) ) in self._media_to_dump_info.items():
+            new_hashes_to_dump_info = {}
+            
+            for ( hash, ( dump_status_enum, dump_status_string, post_field_info ) ) in self._hashes_to_dump_info.items():
+                
+                if hash not in self._sorted_media_hashes: continue
                 
                 new_post_field_info = []
                 
@@ -1098,6 +1113,8 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         ( initial, append ) = value
                         
+                        media = self._hashes_to_media[ hash ]
+                        
                         initial = self._GetInitialComment( media )
                         
                         value = ( initial, append )
@@ -1106,14 +1123,21 @@ class ManagementPanelDumper( ManagementPanel ):
                     new_post_field_info.append( ( name, type, value ) )
                     
                 
-                new_media_to_dump_info[ media ] = ( dump_status_enum, dump_status_string, new_post_field_info )
+                new_hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, new_post_field_info )
                 
             
-            self._media_to_dump_info = new_media_to_dump_info
+            self._hashes_to_dump_info = new_hashes_to_dump_info
             
             self._ShowCurrentMedia()
             
-            if self._current_media is None and len( self._media_list.GetSortedMedia() ) > 0: HC.pubsub.pub( 'set_focus', self._page_key, self._media_list.GetSortedMedia()[0] )
+            if self._current_hash is None and len( self._sorted_media_hashes ) > 0:
+                
+                hash_to_select = self._sorted_media_hashes[0]
+                
+                media_to_select = self._hashes_to_media[ hash_to_select ]
+                
+                HC.pubsub.pub( 'set_focus', self._page_key, media_to_select )
+                
             
         
     

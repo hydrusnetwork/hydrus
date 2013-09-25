@@ -2385,6 +2385,100 @@ class DialogInputShortcut( Dialog ):
         return ( modifier, key, self._actions.GetStringSelection() )
         
     
+class DialogInputUPnPMapping( Dialog ):
+    
+    def __init__( self, parent, external_port, protocol_type, internal_port, description ):
+        
+        def InitialiseControls():
+            
+            self._external_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+            
+            self._protocol_type = ClientGUICommon.BetterChoice( self )
+            self._protocol_type.Append( 'TCP', 'TCP' )
+            self._protocol_type.Append( 'UDP', 'UDP' )
+            
+            self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
+            self._description = wx.TextCtrl( self )
+            
+            self._ok = wx.Button( self, label='Ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+    
+        def PopulateControls():
+            
+            self._external_port.SetValue( external_port )
+            
+            if protocol_type == 'TCP': self._protocol_type.Select( 0 )
+            elif protocol_type == 'UDP': self._protocol_type.Select( 1 )
+            
+            self._internal_port.SetValue( internal_port )
+            self._description.SetValue( description )
+            
+        
+        def ArrangeControls():
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'external port' ), FLAGS_MIXED )
+            gridbox.AddF( self._external_port, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'protocol type' ), FLAGS_MIXED )
+            gridbox.AddF( self._protocol_type, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'internal port' ), FLAGS_MIXED )
+            gridbox.AddF( self._internal_port, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'description' ), FLAGS_MIXED )
+            gridbox.AddF( self._description, FLAGS_EXPAND_BOTH_WAYS )
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'configure upnp mapping' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventOK( self, event ): self.EndModal( wx.ID_OK )
+    
+    def GetInfo( self ):
+        
+        external_port = self._external_port.GetValue()
+        protocol_type = self._protocol_type.GetChoice()
+        internal_port = self._internal_port.GetValue()
+        description = self._description.GetValue()
+        
+        return ( external_port, protocol_type, internal_port, description )
+        
+    
 class DialogMessage( Dialog ):
     
     def __init__( self, parent, message, ok_label = 'ok' ):
@@ -3933,11 +4027,11 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 job_key = HC.JobKey()
                 
-                threading.Thread( target = HydrusDownloading.DownloadYoutubeURL, args = ( job_key, url ) ).start()
-                
                 message_string = title + ' ' + resolution + ' ' + extension
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE, ( job_key, message_string ) ) )
+                threading.Thread( target = HydrusDownloading.DownloadYoutubeURL, args = ( job_key, url, message_string ) ).start()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
                 
             
         
@@ -4689,12 +4783,10 @@ class DialogYesNo( Dialog ):
         
         def InitialiseControls():
             
-            self._yes = wx.Button( self, label = yes_label )
-            self._yes.Bind( wx.EVT_BUTTON, self.EventYes )
+            self._yes = wx.Button( self, id = wx.ID_YES, label = yes_label )
             self._yes.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._no = wx.Button( self, id = wx.ID_CANCEL, label = no_label )
-            self._no.Bind( wx.EVT_BUTTON, self.EventNo )
+            self._no = wx.Button( self, id = wx.ID_NO, label = no_label )
             self._no.SetForegroundColour( ( 128, 0, 0 ) )
             
     
@@ -4744,8 +4836,4 @@ class DialogYesNo( Dialog ):
         if event.KeyCode == wx.WXK_ESCAPE: self.EndModal( wx.ID_NO )
         else: event.Skip()
         
-    
-    def EventNo( self, event ): self.EndModal( wx.ID_NO )
-    
-    def EventYes( self, event ): self.EndModal( wx.ID_YES )
     

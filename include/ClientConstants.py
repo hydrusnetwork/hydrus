@@ -297,6 +297,8 @@ client_size[ 'fs_restored_position' ] = [ 20, 20 ]
 
 CLIENT_DEFAULT_OPTIONS[ 'client_size' ] = client_size
 
+CLIENT_DEFAULT_OPTIONS[ 'local_port' ] = HC.DEFAULT_LOCAL_FILE_PORT
+
 def AddPaddingToDimensions( dimensions, padding ):
     
     ( x, y ) = dimensions
@@ -593,7 +595,7 @@ def GetThumbnailPath( hash, full_size = True ):
             
             thumbnail_dimensions = HC.options[ 'thumbnail_dimensions' ]
             
-            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( fullsize_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
             
             with open( path, 'wb' ) as f: f.write( thumbnail_resized )
             
@@ -2696,12 +2698,7 @@ class ThumbnailCache():
         else: return self._special_thumbs[ 'hydrus' ]
         
     
-    def Waterfall( self, page_key, medias ):
-        
-        self._queue.put( ( page_key, medias ) )
-        
-        #threading.Thread( target = self.THREADWaterfall, args = ( page_key, medias ) ).start()
-        
+    def Waterfall( self, page_key, medias ): self._queue.put( ( page_key, medias ) )
     
     def DAEMONWaterfall( self ):
         
@@ -2730,27 +2727,6 @@ class ThumbnailCache():
                     
                 
             except: pass
-            
-        
-    
-    def THREADWaterfall( self, page_key, medias ):
-        
-        random.shuffle( medias )
-        
-        last_paused = time.clock()
-        
-        for media in medias:
-            
-            thumbnail = self.GetThumbnail( media )
-            
-            HC.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
-            
-            if time.clock() - last_paused > 1.0 / 15:
-                
-                time.sleep( 0.0001 )
-                
-                last_paused = time.clock()
-                
             
         
     

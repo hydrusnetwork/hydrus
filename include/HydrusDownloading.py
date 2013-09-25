@@ -73,28 +73,38 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
     
     return service_identifiers_to_tags
     
-def DownloadYoutubeURL( job_key, url ):
+def DownloadYoutubeURL( job_key, url, message_string ):
     
     try:
         
         parse_result = urlparse.urlparse( url )
         
-        connection = httplib.HTTPConnection( parse_result.hostname )
+        connection = httplib.HTTPConnection( parse_result.hostname, timeout = 20 )
         
         connection.request( 'GET', url )
         
         response = connection.getresponse()
         
-        try: num_bytes = int( response.getheader( 'Content-Length' ) )
-        except: num_bytes = None
-        
-        HC.pubsub.pub( 'message_file_download_gauge_info', job_key, num_bytes, 0 )
+        try:
+            
+            total_num_bytes = int( response.getheader( 'Content-Length' ) )
+            
+            get_message = lambda num_bytes_so_far: message_string + ' - ' + HC.ConvertIntToBytes( num_bytes_so_far ) + '/' + HC.ConvertIntToBytes( total_num_bytes )
+            
+        except:
+            
+            total_num_bytes = None
+            
+            get_message = lambda num_bytes_so_far: message_string + ' - ' + HC.ConvertIntToBytes( num_bytes_so_far )
+            
         
         block_size = 64 * 1024
         
-        total_num_bytes = 0
+        num_bytes_so_far = 0
         
         temp_path = HC.GetTempPath()
+        
+        HC.pubsub.pub( 'message_gauge_info', job_key, total_num_bytes, num_bytes_so_far, get_message( num_bytes_so_far ) )
         
         with open( temp_path, 'wb' ) as f:
             
@@ -104,9 +114,9 @@ def DownloadYoutubeURL( job_key, url ):
                 
                 block = response.read( block_size )
                 
-                total_num_bytes += len( block )
+                num_bytes_so_far += len( block )
                 
-                HC.pubsub.pub( 'message_file_download_gauge_info', job_key, num_bytes, total_num_bytes )
+                HC.pubsub.pub( 'message_gauge_info', job_key, total_num_bytes, num_bytes_so_far, get_message( num_bytes_so_far ) )
                 
                 if block == '': break
                 
@@ -114,16 +124,16 @@ def DownloadYoutubeURL( job_key, url ):
                 
             
         
-        HC.pubsub.pub( 'message_file_download_gauge_importing', job_key )
+        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'importing ' + message_string )
         
         ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
         
-        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_file_download_gauge_done', job_key, { hash } )
-        elif result == 'deleted': HC.pubsub.pub( 'message_file_download_gauge_failed', job_key )
+        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_show_file_button', job_key, message_string, { hash } )
+        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_failed', job_key )
         
     except:
         
-        HC.pubsub.pub( 'message_file_download_gauge_failed', job_key )
+        HC.pubsub.pub( 'message_gauge_failed', job_key )
         
         raise
         

@@ -2159,13 +2159,12 @@ class PopupMessageFiles( PopupMessage ):
         HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
         
     
-class PopupMessageFileDownloadGauge( PopupMessage ):
+class PopupMessageGauge( PopupMessage ):
     
-    def __init__( self, parent, job_key, message_string ):
+    def __init__( self, parent, job_key ):
         
         PopupMessage.__init__( self, parent )
         
-        self._message_string = message_string
         self._job_key = job_key
         self._hashes = set()
         
@@ -2173,7 +2172,7 @@ class PopupMessageFileDownloadGauge( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._text = wx.StaticText( self, label = self._message_string, style = wx.ALIGN_CENTER )
+        self._text = wx.StaticText( self, style = wx.ALIGN_CENTER )
         self._text.Wrap( 380 )
         self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
@@ -2189,7 +2188,7 @@ class PopupMessageFileDownloadGauge( PopupMessage ):
         hbox.AddF( self._gauge, FLAGS_EXPAND_BOTH_WAYS )
         hbox.AddF( self._cancel_button, FLAGS_MIXED )
         
-        self._show_file_button = wx.Button( self, label = self._message_string  )
+        self._show_file_button = wx.Button( self )
         self._show_file_button.Bind( wx.EVT_BUTTON, self.EventShowFileButton )
         self._show_file_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
@@ -2201,26 +2200,9 @@ class PopupMessageFileDownloadGauge( PopupMessage ):
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'Failed', 'message_file_download_gauge_failed' )
-        HC.pubsub.sub( self, 'SetInfo', 'message_file_download_gauge_info' )
-        HC.pubsub.sub( self, 'Importing', 'message_file_download_gauge_importing' )
-        HC.pubsub.sub( self, 'Done', 'message_file_download_gauge_done' )
-        
-    
-    def Done( self, job_key, hashes ):
-        
-        if job_key == self._job_key:
-            
-            self._done = True
-            
-            self._hashes = hashes
-            
-            self._text.Hide()
-            self._gauge.Hide()
-            self._show_file_button.Show()
-            
-            self.GetParent().MakeSureEverythingFits()
-            
+        HC.pubsub.sub( self, 'Failed', 'message_gauge_failed' )
+        HC.pubsub.sub( self, 'SetInfo', 'message_gauge_info' )
+        HC.pubsub.sub( self, 'ShowFileButton', 'message_gauge_show_file_button' )
         
     
     def EventCancelButton( self, event ):
@@ -2236,9 +2218,9 @@ class PopupMessageFileDownloadGauge( PopupMessage ):
             
             import ClientGUIDialogs
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Do you want to continue the download in the background, or cancel it?', yes_label = 'continue', no_label = 'cancel' ) as dlg:
+            with ClientGUIDialogs.DialogYesNo( self, 'Do you want to continue in the background, or stop right now?', yes_label = 'continue', no_label = 'stop' ) as dlg:
                 
-                if dlg.ShowModal() != wx.ID_YES: self._job_key.Cancel()
+                if dlg.ShowModal() == wx.ID_NO: self._job_key.Cancel()
                 
             
         
@@ -2257,78 +2239,59 @@ class PopupMessageFileDownloadGauge( PopupMessage ):
         if job_key == self._job_key: self.GetParent().Dismiss( self )
         
     
-    def Importing( self, job_key ):
-        
-        if job_key == self._job_key:
-            
-            self._text.SetLabel( 'importing ' + self._message_string  )
-            
-            self._text.Show()
-            self._gauge.Hide()
-            self._cancel_button.Hide()
-            self._show_file_button.Hide()
-            
-            self.GetParent().MakeSureEverythingFits()
-            
-        
-    
-    def SetInfo( self, job_key, range, value ):
-        
-        if job_key == self._job_key:
-            
-            if range is None:
-                
-                self._gauge.Pulse()
-                
-                byte_info = HC.ConvertIntToBytes( value )
-                
-            else:
-                
-                self._gauge.SetRange( range )
-                self._gauge.SetValue( value )
-                
-                byte_info = HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
-                
-            
-            self._text.SetLabel( self._message_string + ' - ' + byte_info )
-            
-            self.GetParent().MakeSureEverythingFits()
-            
-        
-    
-class PopupMessageUploadGauge( PopupMessage ):
-    
-    def __init__( self, parent, job_key ):
-        
-        PopupMessage.__init__( self, parent )
-        
-        self._job_key = job_key
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._text = wx.StaticText( self, label = '', style = wx.ALIGN_CENTER )
-        self._text.Wrap( 380 )
-        self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        
-        self._gauge = Gauge( self, size = ( 380, -1 ) )
-        self._gauge.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        
-        vbox.AddF( self._text, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._gauge, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        HC.pubsub.sub( self, 'SetInfo', 'message_upload_gauge_info' )
-        
-    
     def SetInfo( self, job_key, range, value, message ):
         
         if job_key == self._job_key:
             
-            self._gauge.SetRange( range )
-            self._gauge.SetValue( value )
+            if value is None:
+                
+                self._done = True
+                
+                self._gauge.Hide()
+                self._cancel_button.Hide()
+                
+            else:
+                
+                self._gauge.Show()
+                self._cancel_button.Show()
+                
+                if range is None:
+                    
+                    self._gauge.Pulse()
+                    
+                    byte_info = HC.ConvertIntToBytes( value )
+                    
+                else:
+                    
+                    if range == value: self._done = True
+                    else: self._done = False
+                    
+                    self._gauge.SetRange( range )
+                    self._gauge.SetValue( value )
+                    
+                
+            
+            if self._done: self._cancel_button.Hide()
+            else: self._cancel_button.Show()
             
             self._text.SetLabel( message )
+            
+            self.GetParent().MakeSureEverythingFits()
+            
+        
+    
+    def ShowFileButton( self, job_key, message, hashes ):
+        
+        if job_key == self._job_key:
+            
+            self._done = True
+            
+            self._show_file_button.SetLabel( message )
+            self._hashes = hashes
+            
+            self._text.Hide()
+            self._gauge.Hide()
+            self._show_file_button.Show()
             
             self.GetParent().MakeSureEverythingFits()
             
@@ -2439,17 +2402,11 @@ class PopupMessageManager( wx.Frame ):
             
             window = PopupMessageFiles( self, message_string, hashes )
             
-        elif message_type == HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE:
-            
-            ( job_key, message_string ) = info
-            
-            window = PopupMessageFileDownloadGauge( self, job_key, message_string )
-            
-        elif message_type == HC.MESSAGE_TYPE_UPLOAD_GAUGE:
+        elif message_type == HC.MESSAGE_TYPE_GAUGE:
             
             job_key = info
             
-            window = PopupMessageUploadGauge( self, job_key )
+            window = PopupMessageGauge( self, job_key )
             
         
         return window
@@ -2476,13 +2433,9 @@ class PopupMessageManager( wx.Frame ):
             
             message_string = HC.u( message_string )
             
-        elif message_type == HC.MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE:
+        elif message_type == HC.MESSAGE_TYPE_GAUGE:
             
-            ( job_key, message_string ) = info
-            
-        elif message_type == HC.MESSAGE_TYPE_UPLOAD_GAUGE:
-            
-            message_string = 'an upload was started'
+            return
             
         
         try: print( message_string )

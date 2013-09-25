@@ -1697,7 +1697,7 @@ class DB( ServiceDB ):
                 
                 try:
                     
-                    connection = httplib.HTTPConnection( '127.0.0.1', port )
+                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 20 )
                     
                     connection.connect()
                     

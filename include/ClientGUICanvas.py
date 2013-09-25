@@ -1152,7 +1152,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( 'http://127.0.0.1:45865/file?hash=' + self._current_media.GetHash().encode( 'hex' ) )
+            data = wx.TextDataObject( 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' ) )
             
             wx.TheClipboard.SetData( data )
             
@@ -1425,7 +1425,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         if wx.TheClipboard.Open():
             
-            data = wx.TextDataObject( 'http://127.0.0.1:45865/file?hash=' + self._current_media.GetHash().encode( 'hex' ) )
+            data = wx.TextDataObject( 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' ) )
             
             wx.TheClipboard.SetData( data )
             

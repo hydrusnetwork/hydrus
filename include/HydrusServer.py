@@ -12,11 +12,15 @@ import HydrusFlashHandling
 import HydrusImageHandling
 import HydrusVideoHandling
 import os
+import random
 import SocketServer
 import traceback
 import urllib
 import wx
 import yaml
+#from twisted.web.server import Site
+#from twisted.web.resource import Resource
+#from twisted.web.static import File as FileResource
 
 eris = '''<html><head><title>hydrus</title></head><body><pre>
                          <font color="red">8888  8888888</font>
@@ -636,3 +640,290 @@ class HydrusHTTPRequestHandler( BaseHTTPServer.BaseHTTPRequestHandler ):
         
         return server_version + ' ' + self.sys_version
         
+
+#
+'''
+hydrus_favicon = FileResource( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', defaultType = HC.IMAGE_ICON )
+
+class HydrusResourceWelcome( Resource ):
+    
+    def __init__( self, service_identifier, message ):
+        
+        Resource.__init__( self )
+        
+        if service_identifier.GetType() == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
+        else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
+        
+        self._body = body.encode( 'utf-8' )
+        
+
+    def render_GET( self, request ): return self._body
+    
+class HydrusResourceMakeSession( Resource ):
+    
+    def render_GET( self, request ):
+        
+        # parse key from authorisation header
+        
+        # go to db to fetch account, error as appropriate
+        
+        # 200 OK with session key cookie
+        
+        pass
+        
+    
+class HydrusResourceCommand( Resource ):
+    
+    def __init__( self, local_only ):
+        
+        Resource.__init__( self )
+        
+        # set default mime, which is like self.defaultContentType
+        
+        self._local_only = local_only
+        
+    
+    def _checkLocal( self, request ):
+        
+        if self._local_only and request.getClientIP() != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
+        
+    
+    def _checkRestrictions( self, request ):
+        
+        self._checkLocal( request )
+        
+    
+    def _renderResponseContext( self, response_context, request ):
+        
+        status_code = response_context.GetStatusCode()
+        
+        request.setResponseCode( status_code )
+        
+        # this is wrong; addcookie takes k, v
+        # should move to sessions anyway
+        for cookie in response_context.GetCookies(): request.addCookie( cookie )
+        
+        if response_context.HasBody():
+            
+            ( mime, body ) = response_context.GetMimeBody()
+            
+            content_type = HC.mime_string_lookup[ mime ]
+            
+            if response_context.HasFilename():
+                
+                filename = response_context.GetFilename()
+                
+                content_type += '; ' + filename
+                
+            
+            request.setHeader( 'Content-Type', content_type )
+            request.setHeader( 'Content-Length', len( body ) )
+            
+            return body
+            
+        else: return ''
+        
+    
+    def render_GET( self, request ):
+        
+        try:
+            
+            self._checkRestrictions( request )
+            
+            args = FilterGETArgs( request.args )
+            
+            # WAIT, NO. MAKE EVERY REQUEST DEFERRED. THAT'S 10000% easier
+            
+            # d = reactor.deferToThread or something
+            # d.addCallBack( self._renderResponseContext )
+            # and maybe an errback too, or the same one! whatever!
+            
+            # return NOT_READY or whatever
+            
+        except: pass
+        
+    
+class HydrusResourceCommandRestricted( HydrusResourceCommand ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    POST_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _checkPermission( self, method, request ):
+        
+        # get session
+        # get account
+        # test account for that permission
+            # depending on method, use class variable GET_PERMISSION or POST_PERMISSION
+        
+        # fail with a no session found
+        # fail with you do not have that permission
+        
+        pass
+        
+    
+    def _checkRestrictions( self, request ):
+        
+        HydrusResourceCommand._checkRestrictions( self, request )
+        
+        self._checkGETPermission( request )
+        
+    
+    def _doDatabase( self, args ): pass
+    
+    def _databaseDone( self, response_context ):
+        
+        # after a deferred, can I set the response code?
+        pass # renderresponse
+        
+    
+class HydrusResourceLocalFile( Resource ):
+    
+    def render_GET( self, request ):
+        
+        if request.getClientIP() != '127.0.0.1':
+            
+            request.setResponseCode( 403 )
+            
+            return 'nope'
+            
+        else:
+            
+            try:
+                
+                hash = request.args[ 'hash' ][0]
+                print( 'ok')
+                # test hash is ok
+                
+                # test os.path.exists
+                
+                # return a fileresource
+                
+                return hydrus_favicon
+                
+            except:
+                print( traceback.format_exc())
+                return NoResource()
+                
+            
+        
+    
+class HydrusService( Site ):
+    
+    def __init__( self, service_identifier, message ):
+        
+        self._service_identifier = service_identifier
+        self._message = message
+        
+        root = self._InitRoot()
+        
+        Site.__init__( self, root )
+        
+    
+    def _InitRoot( self ):
+        
+        root = Resource()
+        
+        root.putChild( '', HydrusResourceWelcome( self._service_identifier, self._message ) )
+        root.putChild( 'favicon.ico', hydrus_favicon )
+        
+        return root
+        
+
+class HydrusServiceLocal( HydrusService ):
+    
+    def _InitRoot( self ):
+        
+        root = HydrusService._InitRoot( self )
+        
+        root.putChild( 'file', HydrusResourceLocalFile() )
+        
+        return root
+        
+    
+class HydrusServiceRestricted( HydrusService ):
+    
+    def makeSession( self ):
+        
+        uid = os.urandom( 32 ) # only change here is this hydrus-style uid
+        
+        session = self.sessions[uid] = self.sessionFactory(self, uid)
+        
+        session.startCheckingExpiration()
+        
+        return session
+        
+    '''
+'''
+    
+    BANDWIDTH_CONSUMING_REQUESTS = set()
+    
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'update' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, POST, 'mappings' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, POST, 'petitions' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'update' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'file' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'thumbnail' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'file' ) )
+    BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'petitions' ) )
+    
+    service_requests = []
+    service_requests.append( ( GET, '', None ) )
+    service_requests.append( ( GET, 'favicon.ico', None ) )
+    
+    local_file_requests = list( service_requests )
+    local_file_requests.append( ( GET, 'file', None ) )
+    local_file_requests.append( ( GET, 'thumbnail', None ) )
+    
+    restricted_requests = list( service_requests )
+    restricted_requests.append( ( GET, 'access_key', None ) )
+    restricted_requests.append( ( GET, 'account', None ) )
+    restricted_requests.append( ( GET, 'account_info', MANAGE_USERS ) )
+    restricted_requests.append( ( GET, 'account_types', MANAGE_USERS ) )
+    restricted_requests.append( ( GET, 'options', GENERAL_ADMIN ) )
+    restricted_requests.append( ( GET, 'registration_keys', GENERAL_ADMIN ) )
+    restricted_requests.append( ( GET, 'session_key', None ) )
+    restricted_requests.append( ( GET, 'stats', GENERAL_ADMIN ) )
+    restricted_requests.append( ( POST, 'account_modification', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
+    restricted_requests.append( ( POST, 'account_types_modification', GENERAL_ADMIN ) )
+    restricted_requests.append( ( POST, 'options', GENERAL_ADMIN ) )
+    
+    admin_requests = list( restricted_requests )
+    admin_requests.append( ( GET, 'init', None ) )
+    admin_requests.append( ( GET, 'services', EDIT_SERVICES ) )
+    admin_requests.append( ( POST, 'backup', EDIT_SERVICES ) )
+    admin_requests.append( ( POST, 'services_modification', EDIT_SERVICES ) )
+    
+    repository_requests = list( restricted_requests )
+    repository_requests.append( ( GET, 'num_petitions', RESOLVE_PETITIONS ) )
+    repository_requests.append( ( GET, 'petition', RESOLVE_PETITIONS ) )
+    repository_requests.append( ( GET, 'update', GET_DATA ) )
+    repository_requests.append( ( POST, 'news', GENERAL_ADMIN ) )
+    repository_requests.append( ( POST, 'update', POST_DATA ) )
+    
+    file_repository_requests = list( repository_requests )
+    file_repository_requests.append( ( GET, 'file', GET_DATA ) )
+    file_repository_requests.append( ( GET, 'ip', GENERAL_ADMIN ) )
+    file_repository_requests.append( ( GET, 'thumbnail', GET_DATA ) )
+    file_repository_requests.append( ( POST, 'file', POST_DATA ) )
+    
+    tag_repository_requests = list( repository_requests )
+    
+    message_depot_requests = list( restricted_requests )
+    message_depot_requests.append( ( GET, 'message', GET_DATA ) )
+    message_depot_requests.append( ( GET, 'message_info_since', GET_DATA ) )
+    message_depot_requests.append( ( GET, 'public_key', None ) )
+    message_depot_requests.append( ( POST, 'contact', POST_DATA ) )
+    message_depot_requests.append( ( POST, 'message', None ) )
+    message_depot_requests.append( ( POST, 'message_statuses', None ) )
+    
+    all_requests = []
+    all_requests.extend( [ ( LOCAL_FILE, request_type, request, permissions ) for ( request_type, request, permissions ) in local_file_requests ] )
+    all_requests.extend( [ ( SERVER_ADMIN, request_type, request, permissions ) for ( request_type, request, permissions ) in admin_requests ] )
+    all_requests.extend( [ ( FILE_REPOSITORY, request_type, request, permissions ) for ( request_type, request, permissions ) in file_repository_requests ] )
+    all_requests.extend( [ ( TAG_REPOSITORY, request_type, request, permissions ) for ( request_type, request, permissions ) in tag_repository_requests ] )
+    all_requests.extend( [ ( MESSAGE_DEPOT, request_type, request, permissions ) for ( request_type, request, permissions ) in message_depot_requests ] )
+    
+    ALLOWED_REQUESTS = { ( service_type, request_type, request ) for ( service_type, request_type, request, permissions ) in all_requests }
+    
+    REQUESTS_TO_PERMISSIONS = { ( service_type, request_type, request ) : permissions for ( service_type, request_type, request, permissions ) in all_requests }
+'''

@@ -38,7 +38,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 10
-SOFTWARE_VERSION = 85
+SOFTWARE_VERSION = 86
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -84,8 +84,7 @@ IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
 MESSAGE_TYPE_TEXT = 0
 MESSAGE_TYPE_ERROR = 1
 MESSAGE_TYPE_FILES = 2
-MESSAGE_TYPE_FILE_DOWNLOAD_GAUGE = 3
-MESSAGE_TYPE_UPLOAD_GAUGE = 4
+MESSAGE_TYPE_GAUGE = 3
 
 GET_DATA = 0
 POST_DATA = 1
@@ -1193,9 +1192,23 @@ class AdvancedHTTPConnection():
     
     def _DoRequest( self, request_type, request, headers, body, response_to_path ):
         
-        self._connection.request( request_type, request, headers = headers, body = body )
-        
-        response = self._connection.getresponse()
+        if request == '/backup' and self._service_identifier is not None and self._service_identifier.GetType() == SERVER_ADMIN:
+            
+            timeout = 600
+            
+            if self._scheme == 'http': connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
+            else: connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
+            
+            connection.request( request_type, request, headers = headers, body = body )
+            
+            response = connection.getresponse()
+            
+        else:
+            
+            self._connection.request( request_type, request, headers = headers, body = body )
+            
+            response = self._connection.getresponse()
+            
         
         if response.status == 200 and response_to_path:
             
@@ -1219,11 +1232,10 @@ class AdvancedHTTPConnection():
     
     def _RefreshConnection( self ):
         
-        if self._service_identifier is None: timeout = 30
-        else: timeout = 300
+        timeout = 30
         
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port )
-        else: self._connection = httplib.HTTPSConnection( self._host, self._port )
+        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
+        else: self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
         
     
     def _TryToParseResponse( self, response, data ):
@@ -1298,7 +1310,6 @@ class AdvancedHTTPConnection():
             
             ( response, parsed_response, size_of_response ) = self._DoRequest( request_type, request, headers, body, response_to_path )
             
-        except: raise Exception( 'Could not connect to ' + self._scheme + '://' + self._host + '.' )
         
         if self._accept_cookies: self._AcceptCookies( response )
         
