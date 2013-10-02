@@ -10,7 +10,6 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusFlashHandling
 import HydrusImageHandling
-import HydrusServerResources
 import HydrusVideoHandling
 import os
 import random
@@ -25,6 +24,7 @@ from twisted.internet.threads import deferToThread
 from twisted.web.server import Request, Site, NOT_DONE_YET
 from twisted.web.resource import Resource
 from twisted.web.static import File as FileResource, NoRangeStaticProducer
+from twisted.python import log
 
 eris = '''<html><head><title>hydrus</title></head><body><pre>
                          <font color="red">8888  8888888</font>
@@ -230,146 +230,887 @@ ROOT_MESSAGE_BEGIN = '''<html>
 ROOT_MESSAGE_END = '''</p>
     </body>
 </html>'''
-'''
-    def do_OPTIONS( self ):
+
+def ParseFileArguments( path ):
+    
+    HydrusImageHandling.ConvertToPngIfBmp( path )
+    
+    hash = HydrusFileHandling.GetHashFromPath( path )
+    
+    try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, hash )
+    except HydrusExceptions.SizeException: raise HydrusExceptions.ForbiddenException( 'File is of zero length!' )
+    except HydrusExceptions.MimeException: raise HydrusExceptions.ForbiddenException( 'Filetype is not permitted!' )
+    except Exception as e: raise HydrusExceptions.ForbiddenException( HC.u( e ) )
+    
+    args = {}
+    
+    args[ 'path' ] = path
+    args[ 'hash' ] = hash
+    args[ 'size' ] = size
+    args[ 'mime' ] = mime
+    
+    if width is not None: args[ 'width' ] = width
+    if height is not None: args[ 'height' ] = height
+    if duration is not None: args[ 'duration' ] = duration
+    if num_frames is not None: args[ 'num_frames' ] = num_frames
+    if num_words is not None: args[ 'num_words' ] = num_words
+    
+    if mime in HC.IMAGES:
+        
+        try: thumbnail = HydrusImageHandling.GenerateThumbnail( path )
+        except: raise HydrusExceptions.ForbiddenException( 'Could not generate thumbnail from that file.' )
+        
+        args[ 'thumbnail' ] = thumbnail
+        
+    
+    return args
+    
+hydrus_favicon = FileResource( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', defaultType = HC.IMAGE_ICON )
+
+class HydrusResourceWelcome( Resource ):
+    
+    def __init__( self, service_identifier, message ):
+        
+        Resource.__init__( self )
+        
+        if service_identifier.GetType() == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
+        else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
+        
+        self._body = body.encode( 'utf-8' )
+        
+
+    def render_GET( self, request ): return self._body
+    
+class HydrusResourceCommand( Resource ):
+    
+    local_only = False
+    
+    def __init__( self, service_identifier ):
+        
+        Resource.__init__( self )
+        
+        self._service_identifier = service_identifier
         
         service_type = self._service_identifier.GetType()
         
-        if service_type == HC.LOCAL_FILE and ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
-        
-        request = ParseHTTPRequest( self.path )
-        
-        allowed = [ 'OPTIONS' ]
-        
-        if ( service_type, HC.GET, request ) in HC.ALLOWED_REQUESTS: allowed.append( 'GET' )
-        if ( service_type, HC.POST, request ) in HC.ALLOWED_REQUESTS: allowed.append( 'POST' )
-        
-        self.send_response( 200 )
-        
-        self.send_header( 'Allow', ','.join( allowed ) )
-        self.end_headers()
-        
-    '''
-class HydrusRequest( Request ):
-    
-    def __init__( self, *args, **kwargs ):
-        
-        Request.__init__( self, *args, **kwargs )
-        
-        self.is_hydrus_client = True
-        self.hydrus_args = None
-        self.hydrus_response_context = None
-        self.hydrus_request_data_usage = 0
+        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
     
-class HydrusRequestRestricted( HydrusRequest ):
-    
-    def __init__( self, *args, **kwargs ):
+    def _callbackCheckRestrictions( self, request ):
         
-        HydrusRequest.__init__( self, *args, **kwargs )
+        self._checkUserAgent( request )
         
-        self.hydrus_account = None
+        self._checkLocal( request )
         
-    
-class HydrusService( Site ):
-    
-    def __init__( self, service_identifier, message ):
-        
-        self._service_identifier = service_identifier
-        self._message = message
-        
-        root = self._InitRoot()
-        
-        Site.__init__( self, root )
-        
-        self.requestFactory = HydrusRequest
+        return request
         
     
-    def _InitRoot( self ):
+    def _callbackParseGETArgs( self, request ):
         
-        root = Resource()
+        hydrus_args = {}
         
-        root.putChild( '', HydrusServerResources.HydrusResourceWelcome( self._service_identifier, self._message ) )
-        root.putChild( 'favicon.ico', HydrusServerResources.hydrus_favicon )
+        for name in request.args:
+            
+            values = request.args[ name ]
+            
+            value = values[0]
+            
+            if name in ( 'begin', 'num', 'expiration', 'subject_account_id', 'service_type', 'service_port', 'since' ):
+                
+                try: hydrus_args[ name ] = int( value )
+                except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
+                
+            elif name in ( 'access_key', 'title', 'subject_access_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key' ):
+                
+                try: hydrus_args[ name ] = value.decode( 'hex' )
+                except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
+                
+            
         
-        return root
+        if 'subject_account_id' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( access_key = hydrus_args[ 'subject_account_id' ] )
+        elif 'subject_access_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( access_key = hydrus_args[ 'subject_access_key' ] )
+        elif 'subject_hash' in hydrus_args:
+            
+            if 'subject_tag' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( tag = hydrus_args[ 'subject_tag' ], hash = hydrus_args[ 'subject_hash' ] )
+            else: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( hash = hydrus_args[ 'subject_hash' ] )
+            
         
-
-class HydrusServiceLocal( HydrusService ):
-    
-    def _InitRoot( self ):
+        request.hydrus_args = hydrus_args
         
-        root = HydrusService._InitRoot( self )
-        
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandFileLocal( self._service_identifier ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandThumbnailLocal( self._service_identifier ) )
-        
-        return root
-        
-    
-class HydrusServiceRestricted( HydrusService ):
-    
-    def __init__( self, service_identifier, message ):
-        
-        HydrusService.__init__( self, service_identifier, message )
-        
-        self.requestFactory = HydrusRequestRestricted
-        
-    
-    def _InitRoot( self ):
-        
-        root = HydrusService._InitRoot( self )
-        
-        root.putChild( 'access_key', HydrusServerResources.HydrusResourceCommandAccessKey( self._service_identifier ) )
-        root.putChild( 'session_key', HydrusServerResources.HydrusResourceCommandSessionKey( self._service_identifier ) )
-        
-        root.putChild( 'account', HydrusServerResources.HydrusResourceCommandRestrictedAccount( self._service_identifier ) )
-        root.putChild( 'account_info', HydrusServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_identifier ) )
-        root.putChild( 'account_types', HydrusServerResources.HydrusResourceCommandRestrictedAccountTypes( self._service_identifier ) )
-        root.putChild( 'registration_keys', HydrusServerResources.HydrusResourceCommandRestrictedRegistrationKeys( self._service_identifier ) )
-        root.putChild( 'stats', HydrusServerResources.HydrusResourceCommandRestrictedStats( self._service_identifier ) )
-        
-        return root
+        return request
         
     
-class HydrusServiceAdmin( HydrusServiceRestricted ):
+    def _callbackParsePOSTArgs( self, request ):
+        
+        request.content.seek( 0 )
+        
+        if not request.requestHeaders.hasHeader( 'Content-Type' ): raise HydrusExceptions.ForbiddenException( 'No Content-Type header found!' )
+        
+        content_types = request.requestHeaders.getRawHeaders( 'Content-Type' )
+        
+        content_type = content_types[0]
+        
+        try: mime = HC.mime_enum_lookup[ content_type ]
+        except: raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
+        
+        if mime == HC.APPLICATION_YAML:
+            
+            yaml_string = request.content.read()
+            
+            request.hydrus_request_data_usage += len( yaml_string )
+            
+            hydrus_args = yaml.safe_load( yaml_string )
+            
+        else:
+            
+            temp_path = HC.GetTempPath()
+            
+            with open( temp_path, 'wb' ) as f:
+                
+                block_size = 65536
+                
+                while True:
+                    
+                    block = request.content.read( block_size )
+                    
+                    if block == '': break
+                    
+                    f.write( block )
+                    
+                    request.hydrus_request_data_usage += len( block )
+                    
+                
+            
+            hydrus_args = ParseFileArguments( temp_path )
+            
+        
+        request.hydrus_args = hydrus_args
+        
+        return request
+        
     
-    def _InitRoot( self ):
+    def _callbackRenderResponseContext( self, request ):
         
-        root = HydrusServiceRestricted._InitRoot( self )
+        response_context = request.hydrus_response_context
         
-        root.putChild( 'backup', HydrusServerResources.HydrusResourceCommandRestrictedBackup( self._service_identifier ) )
-        root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_identifier ) )
-        root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_identifier ) )
+        status_code = response_context.GetStatusCode()
         
-        return root
+        request.setResponseCode( status_code )
+        
+        for ( k, v, kwargs ) in response_context.GetCookies(): request.addCookie( k, v, **kwargs )
+        
+        do_finish = True
+        
+        if response_context.HasBody():
+            
+            ( mime, body ) = response_context.GetMimeBody()
+            
+            content_type = HC.mime_string_lookup[ mime ]
+            
+            content_length = len( body )
+            
+            request.setHeader( 'Content-Type', content_type )
+            request.setHeader( 'Content-Length', str( content_length ) )
+            
+            if type( body ) == unicode: body = body.encode( 'utf-8' )
+            
+            request.write( body )
+            
+        elif response_context.HasPath():
+            
+            path = response_context.GetPath()
+            
+            info = os.lstat( path )
+            
+            size = info[6]
+            
+            if response_context.IsYAML():
+                
+                mime = HC.APPLICATION_YAML
+                
+                content_type = HC.mime_string_lookup[ mime ]
+                
+            else:
+                
+                mime = HydrusFileHandling.GetMime( path )
+                
+                ( base, filename ) = os.path.split( path )
+                
+                content_type = HC.mime_string_lookup[ mime ] + '; ' + filename
+                
+            
+            content_length = size
+            
+            request.setHeader( 'Content-Type', content_type )
+            request.setHeader( 'Content-Length', str( content_length ) )
+            
+            fileObject = open( path, 'rb' )
+            
+            producer = NoRangeStaticProducer( request, fileObject )
+            
+            producer.start()
+            
+            do_finish = False
+            
+        else:
+            
+            content_length = 0
+            
+            request.setHeader( 'Content-Length', str( content_length ) )
+            
+        
+        request.hydrus_request_data_usage += content_length
+        
+        self._recordDataUsage( request )
+        
+        if do_finish: request.finish()
         
     
-class HydrusServiceRepository( HydrusServiceRestricted ):
-    
-    def _InitRoot( self ):
+    def _callbackDoGETJob( self, request ):
         
-        root = HydrusServiceRestricted._InitRoot( self )
+        def wrap_thread_result( response_context ):
+            
+            request.hydrus_response_context = response_context
+            
+            return request
+            
         
-        root.putChild( 'news', HydrusServerResources.HydrusResourceCommandRestrictedNews( self._service_identifier ) )
-        root.putChild( 'num_petitions', HydrusServerResources.HydrusResourceCommandRestrictedNumPetitions( self._service_identifier ) )
-        root.putChild( 'petition', HydrusServerResources.HydrusResourceCommandRestrictedPetition( self._service_identifier ) )
-        root.putChild( 'update', HydrusServerResources.HydrusResourceCommandRestrictedUpdate( self._service_identifier ) )
+        d = deferToThread( self._threadDoGETJob, request )
         
-        return root
+        d.addCallback( wrap_thread_result )
         
-    
-class HydrusServiceRepositoryFile( HydrusServiceRepository ):
-    
-    def _InitRoot( self ):
-        
-        root = HydrusServiceRepository._InitRoot( self )
-        
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandRestrictedFileRepository( self._service_identifier ) )
-        root.putChild( 'ip', HydrusServerResources.HydrusResourceCommandRestrictedIP( self._service_identifier ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandRestrictedThumbnailRepository( self._service_identifier ) )
-        
-        return root
+        return d
         
     
-class HydrusServiceRepositoryTag( HydrusServiceRepository ): pass
+    def _callbackDoPOSTJob( self, request ):
+        
+        def wrap_thread_result( response_context ):
+            
+            request.hydrus_response_context = response_context
+            
+            return request
+            
+        
+        d = deferToThread( self._threadDoPOSTJob, request )
+        
+        d.addCallback( wrap_thread_result )
+        
+        return d
+        
+    
+    def _checkLocal( self, request ):
+        
+        if self.local_only and request.getClientIP() != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
+        
+    
+    def _checkUserAgent( self, request ):
+        
+        request.is_hydrus_user_agent = False
+        
+        if request.requestHeaders.hasHeader( 'User-Agent' ):
+            
+            user_agent_texts = request.requestHeaders.getRawHeaders( 'User-Agent' )
+            
+            user_agent_text = user_agent_texts[0]
+            
+            try:
+                
+                user_agents = user_agent_text.split( ' ' )
+                
+                for user_agent in user_agents:
+                    
+                    if '/' in user_agent:
+                        
+                        ( client, network_version ) = user_agent.split( '/', 1 )
+                        
+                        if client == 'hydrus':
+                            
+                            request.is_hydrus_user_agent = True
+                            
+                            network_version = int( network_version )
+                            
+                            if network_version == HC.NETWORK_VERSION: return
+                            else:
+                                
+                                if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
+                                else: message = 'This server is out of date; please ask its admin to update to the latest release.'
+                                
+                                raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HC.u( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HC.u( network_version ) + '! ' + message )
+                                
+                            
+                        
+                    
+                
+            except: pass # crazy user agent string, so just assume not a hydrus client
+            
+        
+    
+    def _errbackHandleEmergencyError( self, failure, request ):
+        
+        print( failure.getTraceback() )
+        
+        try: request.write( failure.getTraceback() )
+        except: pass
+        
+        try: request.finish()
+        except: pass
+        
+    
+    def _errbackHandleProcessingError( self, failure, request ):
+        
+        if request.is_hydrus_user_agent: 
+            
+            default_mime = HC.APPLICATION_YAML
+            default_encoding = lambda x: yaml.safe_dump( HC.u( x ) )
+            
+        else:
+            
+            default_mime = HC.TEXT_HTML
+            default_encoding = lambda x: HC.u( x )
+            
+        
+        if failure.type == KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing.' ) )
+        elif failure.type == HydrusExceptions.PermissionException: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.ForbiddenException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.NotFoundException: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.NetworkVersionException: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.SessionException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
+        else:
+            
+            print( failure.getTraceback() )
+            
+            response_context = HC.ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep + os.linesep + traceback.format_exc() ) )
+            
+        
+        request.hydrus_response_context = response_context
+        
+        return request
+        
+    
+    def _parseAccessKey( self, request ):
+        
+        if not request.requestHeaders.hasHeader( 'Hydrus-Key' ): raise HydrusExceptions.PermissionException( 'No hydrus key header found!' )
+        
+        hex_keys = request.requestHeaders.getRawHeaders( 'Hydrus-Key' )
+        
+        hex_key = hex_keys[0]
+        
+        try: access_key = hex_key.decode( 'hex' )
+        except: raise HydrusExceptions.ForbiddenException( 'Could not parse the hydrus key!' )
+        
+        return access_key
+        
+    
+    def _recordDataUsage( self, request ): return request
+    
+    def _threadDoGETJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+    
+    def _threadDoPOSTJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+    
+    def render_GET( self, request ):
+        
+        request.setHeader( 'Server', self._server_version_string )
+        
+        d = defer.Deferred()
+        
+        d.addCallback( self._callbackCheckRestrictions )
+        
+        d.addCallback( self._callbackParseGETArgs )
+        
+        d.addCallback( self._callbackDoGETJob )
+        
+        d.addErrback( self._errbackHandleProcessingError, request )
+        
+        d.addCallback( self._callbackRenderResponseContext )
+        
+        d.addErrback( self._errbackHandleEmergencyError, request )
+        
+        reactor.callLater( 0, d.callback, request )
+        
+        return NOT_DONE_YET
+        
+    
+    def render_POST( self, request ):
+        
+        request.setHeader( 'Server', self._server_version_string )
+        
+        d = defer.Deferred()
+        
+        d.addCallback( self._callbackCheckRestrictions )
+        
+        d.addCallback( self._callbackParsePOSTArgs )
+        
+        d.addCallback( self._callbackDoPOSTJob )
+        
+        d.addErrback( self._errbackHandleProcessingError, request )
+        
+        d.addCallback( self._callbackRenderResponseContext )
+        
+        d.addErrback( self._errbackHandleEmergencyError, request )
+        
+        reactor.callLater( 0, d.callback, request )
+        
+        return NOT_DONE_YET
+        
+    
+class HydrusResourceCommandAccessKey( HydrusResourceCommand ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        registration_key = self._parseAccessKey( request )
+        
+        access_key = HC.app.Read( 'access_key', registration_key )
+        
+        body = yaml.safe_dump( { 'access_key' : access_key } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandFileLocal( HydrusResourceCommand ):
+    
+    local_only = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        path = CC.GetFilePath( hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandInit( HydrusResourceCommand ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        access_key = HC.app.Read( 'init' )
+        
+        body = yaml.safe_dump( { 'access_key' : access_key } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        access_key = self._parseAccessKey( request )
+        
+        account_identifier = HC.AccountIdentifier( access_key = access_key )
+        
+        account = HC.app.Read( 'account', self._service_identifier, account_identifier )
+        
+        ( session_key, expiry ) = HC.app.AddSession( self._service_identifier, account )
+        
+        now = HC.GetNow()
+        
+        max_age = now - expiry
+        
+        cookies = [ ( 'session_key', session_key.encode( 'hex' ), { 'max_age' : max_age, 'path' : '/' } ) ]
+        
+        response_context = HC.ResponseContext( 200, cookies = cookies )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandThumbnailLocal( HydrusResourceCommand ):
+    
+    local_only = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        path = CC.GetThumbnailPath( hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestricted( HydrusResourceCommand ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    POST_PERMISSION = HC.GENERAL_ADMIN
+    RECORD_GET_DATA_USAGE = False
+    RECORD_POST_DATA_USAGE = False
+    
+    def _callbackCheckRestrictions( self, request ):
+        
+        self._checkUserAgent( request )
+        
+        self._checkLocal( request )
+        
+        self._checkSession( request )
+        
+        self._checkPermission( request )
+        
+        return request
+        
+    
+    def _checkPermission( self, request ):
+        
+        account = request.hydrus_account
+        
+        method = request.method
+        
+        if method == 'GET': permission = self.GET_PERMISSION
+        elif method == 'POST': permission = self.POST_PERMISSION
+        
+        if permission is not None: account.CheckPermission( permission )
+        
+        return request
+        
+    
+    def _checkSession( self, request ):
+        
+        if not request.requestHeaders.hasHeader( 'Cookie' ): raise HydrusExceptions.PermissionException( 'No cookies found!' )
+        
+        cookie_texts = request.requestHeaders.getRawHeaders( 'Cookie' )
+        
+        cookie_text = cookie_texts[0]
+        
+        try:
+            
+            cookies = Cookie.SimpleCookie( cookie_text )
+            
+            if 'session_key' not in cookies: session_key = None
+            else: session_key = cookies[ 'session_key' ].value.decode( 'hex' )
+            
+        except: raise Exception( 'Problem parsing cookies!' )
+        
+        account = HC.app.GetAccount( session_key, self._service_identifier )
+        
+        request.hydrus_account = account
+        
+        return request
+        
+    
+    def _recordDataUsage( self, request ):
+        
+        p1 = request.method == 'GET' and self.RECORD_GET_DATA_USAGE
+        p2 = request.method == 'POST' and self.RECORD_POST_DATA_USAGE
+        
+        if p1 or p2:
+            
+            account = request.hydrus_account
+            
+            if account is not None:
+                
+                num_bytes = request.hydrus_request_data_usage
+                
+                account.RequestMade( num_bytes )
+                
+                HC.pubsub.pub( 'request_made', ( self._service_identifier, account, num_bytes ) )
+                
+            
+        
+    
+class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = None
+    POST_PERMISSION = HC.MANAGE_USERS
+    
+    def _threadDoGETJob( self, request ):
+        
+        account = request.hydrus_account
+        
+        body = yaml.safe_dump( { 'account' : account } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        admin_account = request.hydrus_account
+        
+        action = request.hydrus_args[ 'action' ]
+        
+        subject_identifiers = request.hydrus_args[ 'subject_identifiers' ]
+        
+        HC.app.Write( 'account', self._service_identifier, admin_account, action, subject_identifiers )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedAccountInfo( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        subject_identifier = request.hydrus_args[ 'subject_identifier' ]
+        
+        account_info = HC.app.Read( 'account_info', self._service_identifier, subject_identifier )
+        
+        body = yaml.safe_dump( { 'account_info' : account_info } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    POST_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        account_types = HC.app.Read( 'account_types', self._service_identifier )
+        
+        body = yaml.safe_dump( { 'account_types' : account_types } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        edit_log = request.hydrus_args[ 'edit_log' ]
+        
+        HC.app.Write( 'account_types', self._service_identifier, edit_log )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedBackup( HydrusResourceCommandRestricted ):
+    
+    POST_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        HC.app.Write( 'backup' )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedFileRepository( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GET_DATA
+    POST_PERMISSION = HC.POST_DATA
+    RECORD_GET_DATA_USAGE = True
+    RECORD_POST_DATA_USAGE = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        # don't I need to check that we aren't stealing the file from another service?
+        
+        path = SC.GetPath( 'file', hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        account = request.hydrus_account
+        
+        file_dict = request.hydrus_args
+        
+        file_dict[ 'ip' ] = request.getClientIP()
+        
+        HC.app.Write( 'file', self._service_identifier, account, file_dict )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedIP( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        ( ip, timestamp ) = HC.app.Read( 'ip', self._service_identifier, hash )
+        
+        body = yaml.safe_dump( { 'ip' : ip, 'timestamp' : timestamp } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedNews( HydrusResourceCommandRestricted ):
+    
+    POST_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        news = request.hydrus_args[ 'news' ]
+        
+        HC.app.Write( 'news', self._service_identifier, news )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedNumPetitions( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.RESOLVE_PETITIONS
+    
+    def _threadDoGETJob( self, request ):
+        
+        num_petitions = HC.app.Read( 'num_petitions', self._service_identifier )
+        
+        body = yaml.safe_dump( { 'num_petitions' : num_petitions } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedPetition( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.RESOLVE_PETITIONS
+    
+    def _threadDoGETJob( self, request ):
+        
+        petition = HC.app.Read( 'petition', self._service_identifier )
+        
+        body = yaml.safe_dump( { 'petition' : petition } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedRegistrationKeys( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        num = request.hydrus_args[ 'num' ]
+        title = request.hydrus_args[ 'title' ]
+        
+        if 'expiration' in request.hydrus_args: expiration = request.hydrus_args[ 'expiration' ]
+        else: expiration = None
+        
+        registration_keys = HC.app.Read( 'registration_keys', self._service_identifier, num, title, expiration )
+        
+        body = yaml.safe_dump( { 'registration_keys' : registration_keys } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        services_info = HC.app.Read( 'services' )
+        
+        body = yaml.safe_dump( { 'services_info' : services_info } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        account = request.hydrus_account
+        
+        service_identifier = request.hydrus_args[ 'service_identifier' ]
+        action = request.hydrus_args[ 'action' ]
+        data = request.hydrus_args[ 'data' ]
+        
+        HC.app.Write( 'services', account, edit_log )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedStats( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        stats = HC.app.Read( 'stats', self._service_identifier )
+        
+        body = yaml.safe_dump( { 'stats' : stats } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedThumbnailRepository( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GET_DATA
+    RECORD_GET_DATA_USAGE = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        # don't I need to check that we aren't stealing the file from another service?
+        
+        path = SC.GetPath( 'thumbnail', hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GET_DATA
+    POST_PERMISSION = HC.POST_DATA
+    RECORD_GET_DATA_USAGE = True
+    RECORD_POST_DATA_USAGE = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        begin = request.hydrus_args[ 'begin' ]
+        
+        update_key = HC.app.Read( 'update_key', self._service_identifier, begin )
+        
+        path = SC.GetPath( 'update', update_key )
+        
+        response_context = HC.ResponseContext( 200, path = path, is_yaml = True )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        account = request.hydrus_account
+        
+        update = request.hydrus_args[ 'update' ]
+        
+        HC.app.Write( 'update', self._service_identifier, account, update )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    

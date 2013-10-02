@@ -1994,7 +1994,9 @@ class DialogInputNewAccounts( Dialog ):
             
             connection = service.GetConnection()
             
-            account_types = connection.Get( 'account_types' )
+            response = connection.Get( 'account_types' )
+            
+            account_types = response[ 'account_types' ]
             
             for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
             self._account_types.SetSelection( 0 ) # admin
@@ -2057,8 +2059,22 @@ class DialogInputNewAccounts( Dialog ):
             
             connection = service.GetConnection()
             
-            if expiration is None: access_keys = connection.Get( 'registration_keys', num = num, title = title )
-            else: access_keys = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
+            if expiration is None: response = connection.Get( 'registration_keys', num = num, title = title )
+            else: response = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
+            
+            registration_keys = response[ 'registration_keys' ]
+            
+            filename = 'registration keys.txt'
+            
+            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    body = os.linesep.join( [ 'r' + key.encode( 'hex' ) for key in registration_keys ] )
+                    
+                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
+                    
+                
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -2582,7 +2598,9 @@ class DialogModifyAccounts( Dialog ):
                 
                 ( subject_identifier, ) = self._subject_identifiers
                 
-                subject_string = connection.Get( 'account_info', subject_identifier = subject_identifier )
+                response = connection.Get( 'account_info', subject_identifier = subject_identifier )
+                
+                subject_string = HC.u( response[ 'account_info' ] )
                 
             else: subject_string = 'modifying ' + HC.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
             
@@ -2590,7 +2608,9 @@ class DialogModifyAccounts( Dialog ):
             
             #
             
-            account_types = connection.Get( 'account_types' )
+            response = connection.Get( 'account_types' )
+            
+            account_types = response[ 'account_types' ]
             
             for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
             
@@ -2682,13 +2702,17 @@ class DialogModifyAccounts( Dialog ):
         kwargs[ 'subject_identifiers' ] = list( self._subject_identifiers )
         kwargs[ 'action' ] = action
         
-        connection.Post( 'account_modification', **kwargs )
+        connection.Post( 'account', **kwargs )
         
         if len( self._subject_identifiers ) == 1:
             
             ( subject_identifier, ) = self._subject_identifiers
             
-            self._subject_text.SetLabel( HC.u( connection.Get( 'account_info', subject_identifier = subject_identifier ) ) )
+            response = connection.Get( 'account_info', subject_identifier = subject_identifier )
+            
+            account_info = response[ 'account_info' ]
+            
+            self._subject_text.SetLabel( HC.u( account_info ) )
             
         
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
@@ -3550,9 +3574,11 @@ class DialogRegisterService( Dialog ):
         
         headers = {}
         
-        headers[ 'Authorization' ] = 'hydrus_network ' + registration_key.encode( 'hex' )
+        headers[ 'Hydrus-Key' ] = registration_key.encode( 'hex' )
         
-        access_key = connection.request( 'GET', '/access_key', headers = headers )
+        response = connection.request( 'GET', '/access_key', headers = headers )
+        
+        access_key = response[ 'access_key' ]
         
         self._credentials = CC.Credentials( host, port, access_key )
         

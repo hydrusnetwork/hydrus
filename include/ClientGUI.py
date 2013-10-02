@@ -184,9 +184,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
-                        service_identfiers_to_content_updates = { service_identifier : content_updates }
+                        service_identifiers_to_content_updates = { service_identifier : content_updates }
                         
-                        HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
+                        HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
                         
                     except Exception as e:
                         
@@ -206,9 +206,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
-                    service_identfiers_to_content_updates = { service_identifier : content_updates }
+                    service_identifiers_to_content_updates = { service_identifier : content_updates }
                     
-                    HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
+                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
                     
                 
             elif service_type == HC.TAG_REPOSITORY:
@@ -237,9 +237,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     connection.Post( 'update', update = update )
                     
-                    service_identfiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
+                    service_identifiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
                     
-                    HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
+                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
                     
                 
             
@@ -281,7 +281,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 connection = service.GetConnection()
                 
-                account_info = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
+                response = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
+                
+                account_info = response[ 'account_info' ]
                 
                 wx.MessageBox( HC.u( account_info ) )
                 
@@ -409,17 +411,36 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     connection = service.GetConnection()
                     
-                    connection.Get( 'init' )
+                    response = connection.Get( 'init' )
+                    
+                    filename = 'admin access key.txt'
+                    
+                    access_key = response[ 'access_key' ]
+                    
+                    body = access_key.encode( 'hex' )
+                    
+                    ( host, port ) = service.GetCredentials().GetAddress()
+                    
+                    credentials = Credentials( host, port, access_key )
+                    
+                    edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, credentials, None ) ) ) ]
+                    
+                    HC.app.Write( 'update_services', edit_log )
+                    
+                    with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
+                            
+                        
                     
                     edit_log = []
                     
-                    tag_service_identifier = HC.ServerServiceIdentifier( HC.TAG_REPOSITORY, HC.DEFAULT_SERVICE_PORT )
-                    file_service_identifier = HC.ServerServiceIdentifier( HC.FILE_REPOSITORY, HC.DEFAULT_SERVICE_PORT + 1 )
+                    edit_log.append( ( HC.ADD, ( HC.TAG_REPOSITORY, HC.DEFAULT_SERVICE_PORT ) ) )
+                    edit_log.append( ( HC.ADD, ( HC.FILE_REPOSITORY, HC.DEFAULT_SERVICE_PORT + 1 ) ) )
                     
-                    edit_log.append( ( HC.ADD, tag_service_identifier ) )
-                    edit_log.append( ( HC.ADD, file_service_identifier ) )
-                    
-                    connection.Post( 'services_modification', edit_log = edit_log )
+                    connection.Post( 'services', edit_log = edit_log )
                     
                     HC.app.Write( 'update_server_services', admin_service_identifier, edit_log )
                     
@@ -508,7 +529,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         connection = service.GetConnection()
         
-        stats = connection.Get( 'stats' )
+        response = connection.Get( 'stats' )
+        
+        stats = response[ 'stats' ]
         
         wx.MessageBox( HC.u( stats ) )
         
@@ -525,7 +548,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 connection = service.GetConnection()
                 
-                with wx.BusyCursor(): ( ip, timestamp ) = connection.Get( 'ip', hash = hash.encode( 'hex' ) )
+                with wx.BusyCursor(): response = connection.Get( 'ip', hash = hash.encode( 'hex' ) )
+                
+                ip = response[ 'ip' ]
+                timestamp = response[ 'timestamp' ]
                 
                 message = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
                 
@@ -1498,8 +1524,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
                 submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', s_i ), p( '&Options' ), p( 'Set the tag repository\'s options.' ) )
-                submenu.AppendSeparator()
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
                 submenu.AppendSeparator()
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
@@ -1516,8 +1540,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fetch_ip', s_i ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
-                submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', s_i ), p( '&Options' ), p( 'Set the file repository\'s options.' ) )
                 submenu.AppendSeparator()
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
                 submenu.AppendSeparator()
@@ -1541,9 +1563,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 submenu = wx.Menu()
                 
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', s_i ), p( '&Options' ), p( 'Set the server\'s options.' ) )
-                submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                menu_item = submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                submenu.Enable( menu_item.GetId(), False )
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', s_i ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
                 
                 admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
@@ -1556,7 +1577,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help' ), p( '&Help' ) )
         dont_know = wx.Menu()
         dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
-        dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
+        menu_item = dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
+        dont_know.Enable( menu_item.GetId(), False )
         help.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
         links = wx.Menu()
         tumblr = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tumblr' ), p( 'Tumblr' ) )
@@ -2378,7 +2400,29 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             connection = service.GetConnection()
             
-            connection.Get( 'init' )
+            response = connection.Get( 'init' )
+            
+            access_key = response[ 'access_key' ]
+            
+            body = access_key.encode( 'hex' )
+            
+            ( host, port ) = service.GetCredentials().GetAddress()
+            
+            credentials = CC.Credentials( host, port, access_key )
+            
+            edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, credentials, None ) ) ) ]
+            
+            HC.app.Write( 'update_services', edit_log )
+            
+            filename = 'admin access key.txt'
+            
+            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
+                    
+                
             
         
         def EventServiceRefreshAccount( self, event ):
@@ -2387,7 +2431,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             connection = self._service.GetConnection()
             
-            connection.Get( 'account' )
+            response = connection.Get( 'account' )
+            
+            account = response[ 'account' ]
+            
+            account.MakeFresh()
+            
+            HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
             
         
         def EventServiceReset( self, event ):

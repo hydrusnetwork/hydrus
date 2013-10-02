@@ -2604,7 +2604,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             connection = self._service.GetConnection()
             
-            self._current_petition = connection.Get( 'petition' )
+            response = connection.Get( 'petition' )
+            
+            self._current_petition = response[ 'petition' ]
             
             self._DrawCurrentPetition()
             
@@ -2631,7 +2633,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             connection = self._service.GetConnection()
             
-            self._num_petitions = connection.Get( 'num_petitions' )
+            response = connection.Get( 'num_petitions' )
+            
+            self._num_petitions = response[ 'num_petitions' ]
             
             self._DrawNumPetitions()
             

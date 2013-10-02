@@ -20,7 +20,7 @@ import time
 import traceback
 import wx
 import wx.richtext
-#from twisted.internet import reactor
+from twisted.internet import reactor
 
 ID_ANIMATED_EVENT_TIMER = wx.NewId()
 ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
@@ -210,7 +210,8 @@ class Controller( wx.App ):
                     
                 except HydrusExceptions.DBAccessException as e:
                     
-                    print( repr( HC.u( e ) ) )
+                    try: print( HC.u( e ) )
+                    except: print( repr( HC.u( e ) ) )
                     
                     message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
                     message += os.linesep + os.linesep
@@ -324,55 +325,7 @@ class Controller( wx.App ):
     
     def RestartServer( self ):
         
-        def do_it():
-            
-            # stick it on a thread because the connection test stuff blocks
-            
-            if self._server is not None: self._server.shutdown()
-            
-            port = HC.options[ 'local_port' ]
-            
-            time.sleep( 1 )
-            
-            connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-            
-            try:
-                
-                connection.connect()
-                connection.close()
-                
-                message = 'Something was already bound to port ' + HC.u( port )
-                
-                wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-                
-            except:
-                
-                local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, port )
-                
-                self._server = HydrusServer.HydrusHTTPServer( local_file_server_service_identifier )
-                
-                server_thread = threading.Thread( target=self._server.serve_forever )
-                server_thread.start()
-                
-                time.sleep( 1 )
-                
-                connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                
-                try:
-                    
-                    connection.connect()
-                    connection.close()
-                    
-                except:
-                    
-                    message = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
-                    
-                    wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-                    
-                
-            
-        
-        threading.Thread( target = do_it ).start()
+        port = HC.options[ 'local_port' ]
         
         def TWISTEDRestartServer():
             
@@ -380,13 +333,42 @@ class Controller( wx.App ):
                 
                 try:
                     
-                    local_file_server_service_identifier = HC.ServerServiceIdentifier( HC.LOCAL_FILE, 1050 )
+                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                     
-                    self._local_service = reactor.listenTCP( 1050, HydrusServer.HydrusServiceLocal( local_file_server_service_identifier, 'hello' ) )
+                    try:
+                        
+                        connection.connect()
+                        connection.close()
+                        
+                        message = 'Something was already bound to port ' + HC.u( port )
+                        
+                        wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                        
+                    except:
+                        
+                        local_file_server_service_identifier = HC.ServerServiceIdentifier( 'local file', HC.LOCAL_FILE )
+                        
+                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( local_file_server_service_identifier, 'hello' ) )
+                        
+                        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+                        
+                        try:
+                            
+                            connection.connect()
+                            connection.close()
+                            
+                        except:
+                            
+                            message = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
+                            
+                            wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                            
+                        
                     
-                except Exception as e: HC.ShowException( e )
-                
-                # handle problems
+                except Exception as e:
+                    
+                    wx.CallAfter( HC.ShowException, e )
+                    
                 
             
             if self._local_service is None: StartServer()
@@ -398,7 +380,7 @@ class Controller( wx.App ):
                 
             
         
-        #reactor.callFromThread( TWISTEDRestartServer )
+        reactor.callFromThread( TWISTEDRestartServer )
         
     
     def SetSplashText( self, text ):

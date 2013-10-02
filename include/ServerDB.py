@@ -10,6 +10,7 @@ import itertools
 import os
 import Queue
 import random
+import ServerConstants as SC
 import shutil
 import sqlite3
 import sys
@@ -19,52 +20,13 @@ import traceback
 import yaml
 import wx
 
-def GetExpectedPath( file_type, hash ):
-    
-    if file_type == 'file': directory = HC.SERVER_FILES_DIR
-    elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
-    elif file_type == 'update': directory = HC.SERVER_UPDATES_DIR
-    elif file_type == 'message': directory = HC.SERVER_MESSAGES_DIR
-    
-    hash_encoded = hash.encode( 'hex' )
-    
-    first_two_chars = hash_encoded[:2]
-    
-    path = directory + os.path.sep + first_two_chars + os.path.sep + hash_encoded
-    
-    return path
-    
-def GetPath( file_type, hash ):
-    
-    path = GetExpectedPath( file_type, hash )
-    
-    if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( file_type + ' not found!' )
-    
-    return path
-    
-def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
-
-def IterateAllPaths( file_type ):
-    
-    if file_type == 'file': directory = HC.SERVER_FILES_DIR
-    elif file_type == 'thumbnail': directory = HC.SERVER_THUMBNAILS_DIR
-    elif file_type == 'update': directory = HC.SERVER_UPDATES_DIR
-    elif file_type == 'message': directory = HC.SERVER_MESSAGES_DIR
-    
-    hex_chars = '0123456789abcdef'
-    
-    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
-        
-        dir = directory + os.path.sep + one + two
-        
-        next_paths = dircache.listdir( dir )
-        
-        for path in next_paths: yield dir + os.path.sep + path
-        
-    
 class FileDB():
     
-    def _AddFile( self, c, service_id, account_id, file_dict ):
+    def _AddFile( self, c, service_identifier, account, file_dict ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        account_id = account.GetAccountId()
         
         hash = file_dict[ 'hash' ]
         
@@ -92,7 +54,7 @@ class FileDB():
             if 'num_words' in file_dict: num_words = file_dict[ 'num_words' ]
             else: num_words = None
             
-            options = self._GetOptions( c, service_id )
+            options = self._GetOptions( c, service_identifier )
             
             max_storage = options[ 'max_storage' ]
             
@@ -106,13 +68,13 @@ class FileDB():
             
             source_path = file_dict[ 'path' ]
             
-            dest_path = GetExpectedPath( 'file', hash )
+            dest_path = SC.GetExpectedPath( 'file', hash )
             
             if not os.path.exists( dest_path ): shutil.move( source_path, dest_path )
             
             if 'thumbnail' in file_dict:
                 
-                thumbnail_dest_path = GetExpectedPath( 'thumbnail', hash )
+                thumbnail_dest_path = SC.GetExpectedPath( 'thumbnail', hash )
                 
                 if not os.path.exists( thumbnail_dest_path ):
                     
@@ -248,7 +210,7 @@ class FileDB():
     
     def _GetFile( self, hash ):
         
-        path = GetPath( 'file', hash )
+        path = SC.GetPath( 'file', hash )
         
         with open( path, 'rb' ) as f: file = f.read()
         
@@ -339,7 +301,11 @@ class FileDB():
     
     def _GetHashIdsToHashes( self, c, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
     
-    def _GetIPTimestamp( self, c, service_id, hash_id ):
+    def _GetIPTimestamp( self, c, service_identifier, hash ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        hash_id = self._GetHashId( c, hash )
         
         result = c.execute( 'SELECT ip, timestamp FROM ip_addresses WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
@@ -348,11 +314,9 @@ class FileDB():
         return result
         
     
-    def _GetNumFilePetitions( self, c, service_id ): return c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()[0]
-    
     def _GetThumbnail( self, hash ):
         
-        path = GetPath( 'thumbnail', hash )
+        path = SC.GetPath( 'thumbnail', hash )
         
         with open( path, 'rb' ) as f: thumbnail = f.read()
         
@@ -377,7 +341,7 @@ class MessageDB():
         
         c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HC.GetNow() ) )
         
-        dest_path = GetExpectedPath( 'message', message_key )
+        dest_path = SC.GetExpectedPath( 'message', message_key )
         
         with open( dest_path, 'wb' ) as f: f.write( message )
         
@@ -415,7 +379,7 @@ class MessageDB():
         
         if result is None: raise HydrusExceptions.ForbiddenException( 'Could not find that message key on message depot!' )
         
-        path = GetPath( 'message', message_key )
+        path = SC.GetPath( 'message', message_key )
         
         with open( path, 'rb' ) as f: message = f.read()
         
@@ -733,17 +697,6 @@ class TagDB():
         if len( tags_not_in_db ) > 0: c.executemany( 'INSERT INTO tags ( tag ) VALUES( ? );', [ ( tag, ) for tag in tags_not_in_db ] )
         
     
-    def _GetNumTagPetitions( self, c, service_id ):
-        
-        num_mapping_petitions = c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()[0]
-        
-        num_tag_sibling_petitions = c.execute( 'SELECT COUNT( * ) FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()[0]
-        
-        num_tag_parent_petitions = c.execute( 'SELECT COUNT( * ) FROM tag_parents WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()[0]
-        
-        return num_mapping_petitions + num_tag_sibling_petitions + num_tag_parent_petitions
-        
-    
     def _GetTag( self, c, tag_id ):
         
         result = c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
@@ -940,13 +893,20 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _AccountTypeExists( self, c, service_id, title ): return c.execute( 'SELECT 1 FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
-    def _AddNews( self, c, service_id, news ): c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, HC.GetNow() ) )
-    
-    def _AddSession( self, c, session_key, service_identifier, account_identifier, expiry ):
+    def _AddNews( self, c, service_identifier, news ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
-        account_id = account_identifier.GetAccountId()
+        now = HC.GetNow()
+        
+        c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, now ) )
+        
+    
+    def _AddSession( self, c, session_key, service_identifier, account, expiry ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        account_id = account.GetAccountId()
         
         c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expiry ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expiry ) )
         
@@ -1022,7 +982,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            options = self._GetOptions( c, service_id )
+            options = self._GetOptions( c, service_identifier )
             
             service_type = service_identifier.GetType()
             
@@ -1045,7 +1005,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         # have to do this after
         
-        server_admin_options = self._GetOptions( c, self._server_admin_id )
+        server_admin_options = self._GetOptions( c, HC.SERVER_ADMIN_IDENTIFIER )
         
         self._over_monthly_data = False
         
@@ -1068,7 +1028,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         update_key_bytes = update_key.decode( 'hex' )
         
-        path = GetExpectedPath( 'update', update_key_bytes )
+        path = SC.GetExpectedPath( 'update', update_key_bytes )
         
         with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
@@ -1093,7 +1053,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         update_key = update_key_bytes.encode( 'hex' )
         
-        path = GetExpectedPath( 'update', update_key_bytes )
+        path = SC.GetExpectedPath( 'update', update_key_bytes )
         
         with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
@@ -1110,11 +1070,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             deletee_hashes = set( self._GetHashes( c, deletees ) )
             
-            local_files_hashes = GetAllHashes( 'file' )
-            thumbnails_hashes = GetAllHashes( 'thumbnail' )
+            local_files_hashes = SC.GetAllHashes( 'file' )
+            thumbnails_hashes = SC.GetAllHashes( 'thumbnail' )
             
-            for hash in local_files_hashes & deletee_hashes: os.remove( GetPath( 'file', hash ) )
-            for hash in thumbnails_hashes & deletee_hashes: os.remove( GetPath( 'thumbnail', hash ) )
+            for hash in local_files_hashes & deletee_hashes: os.remove( SC.GetPath( 'file', hash ) )
+            for hash in thumbnails_hashes & deletee_hashes: os.remove( SC.GetPath( 'thumbnail', hash ) )
             
             c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( deletees ) + ';' )
             
@@ -1123,11 +1083,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         required_message_keys = { message_key for ( message_key, ) in c.execute( 'SELECT DISTINCT message_key FROM messages;' ) }
         
-        existing_message_keys = GetAllHashes( 'message' )
+        existing_message_keys = SC.GetAllHashes( 'message' )
         
         deletees = existing_message_keys - required_message_keys
         
-        for message_key in deletees: os.remove( GetPath( 'message', message_key ) )
+        for message_key in deletees: os.remove( SC.GetPath( 'message', message_key ) )
         
     
     def _FlushRequestsMade( self, c, all_services_requests ):
@@ -1144,29 +1104,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _GenerateAccessKeys( self, c, service_id, num, account_type_id, expiration ):
+    def _GenerateRegistrationKeys( self, c, service_identifier, num, title, expiration ):
         
-        access_keys = [ os.urandom( HC.HYDRUS_KEY_LENGTH ) for i in range( num ) ]
+        service_id = self._GetServiceId( c, service_identifier )
         
-        c.executemany( 'INSERT INTO accounts ( access_key ) VALUES ( ? );', [ ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) for access_key in access_keys ] )
-        
-        account_ids = self._GetAccountIds( c, access_keys )
+        account_type_id = self._GetAccountTypeId( c, service_id, title )
         
         now = HC.GetNow()
         
-        if expiration is not None: expires = expiration + HC.GetNow()
-        else: expires = None
-        
-        c.executemany( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', [ ( service_id, account_id, account_type_id, now, expires, 0, 0 ) for account_id in account_ids ] )
-        
-        return access_keys
-        
-    
-    def _GenerateRegistrationKeys( self, c, service_id, num, account_type_id, expiration ):
-        
-        now = HC.GetNow()
-        
-        if expiration is not None: expiry = expiration + HC.GetNow()
+        if expiration is not None: expiry = now + expiration
         else: expiry = None
         
         keys = [ ( os.urandom( HC.HYDRUS_KEY_LENGTH ), os.urandom( HC.HYDRUS_KEY_LENGTH ) ) for i in range( num ) ]
@@ -1184,14 +1130,41 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return access_key
         
     
-    def _GetAccount( self, c, service_id, account_identifier ):
+    def _GetAccount( self, c, service_identifier, account_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
         
         if account_identifier.HasAccessKey():
             
             access_key = account_identifier.GetAccessKey()
             
             try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
-            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
+            except:
+                
+                # we do not delete the registration_key (and hence the raw access_key)
+                # until the first attempt to create a session to make sure the user
+                # has the access_key saved somewhere
+                
+                try: ( account_type_id, expiry ) = c.execute( 'SELECT account_type_id, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
+                except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
+                
+                c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
+                
+                #
+                
+                c.execute( 'INSERT INTO accounts ( access_key ) VALUES ( ? );', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) )
+                
+                account_id = c.lastrowid
+                
+                now = HC.GetNow()
+                
+                if expiry is not None: expires = now + expiry
+                else: expires = None
+                
+                c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, account_type_id, now, expiry, 0, 0 ) )
+                
+                ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
+                
             
         elif account_identifier.HasMapping():
             
@@ -1296,6 +1269,25 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_ids
         
     
+    def _GetAccountInfo( self, c, service_identifier, account_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        account = self._GetAccount( c, service_identifier, account_identifier )
+        
+        account_id = account.GetAccountId()
+        
+        service_type = service_identifier.GetType()
+        
+        if service_type == HC.FILE_REPOSITORY: account_info = self._GetAccountFileInfo( c, service_id, account_id )
+        elif service_type == HC.TAG_REPOSITORY: account_info = self._GetAccountMappingInfo( c, service_id, account_id )
+        else: account_info = {}
+        
+        account_info[ 'account' ] = account
+        
+        return account_info
+        
+    
     def _GetAccountMappingInfo( self, c, service_id, account_id ):
         
         ( num_deleted_mappings, ) = c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ?;', ( service_id, account_id, HC.DELETED ) ).fetchone()
@@ -1331,37 +1323,56 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_type_id
         
     
-    def _GetAccountTypes( self, c, service_id ):
+    def _GetAccountTypes( self, c, service_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
         
         return [ account_type for ( account_type, ) in c.execute( 'SELECT account_type FROM account_type_map, account_types USING ( account_type_id ) WHERE service_id = ?;', ( service_id, ) ) ]
         
     
-    def _GetCachedUpdate( self, c, service_id, begin ):
-        
-        result = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND begin = ?;', ( service_id, begin ) ).fetchone()
-        
-        if result is None: result = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND ? BETWEEN begin AND end;', ( service_id, begin ) ).fetchone()
-        
-        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that update in db!' )
-        
-        ( update_key, ) = result
-        
-        update_key_bytes = update_key.decode( 'hex' )
-        
-        path = GetPath( 'update', update_key_bytes )
-        
-        with open( path, 'rb' ) as f: update = f.read()
-        
-        return update
-        
-    
     def _GetDirtyUpdates( self, c ): return c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE dirty = ?;', ( True, ) ).fetchall()
     
-    def _GetOptions( self, c, service_id ):
+    def _GetNumPetitions( self, c, service_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        service_type = service_identifiers.GetType()
+        
+        if service_type == HC.FILE_REPOSITORY:
+            
+            ( num_petitions, ) = c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, reason_id FROM file_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()
+            
+        elif service_type == HC.TAG_REPOSITORY:
+            
+            ( num_mapping_petitions, ) = c.execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT account_id, tag_id, reason_id FROM mapping_petitions WHERE service_id = ? AND status = ? );', ( service_id, HC.PETITIONED ) ).fetchone()
+            
+            ( num_tag_sibling_petitions, ) = c.execute( 'SELECT COUNT( * ) FROM tag_siblings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
+            
+            ( num_tag_parent_petitions, ) = c.execute( 'SELECT COUNT( * ) FROM tag_parents WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.PENDING, HC.PETITIONED ) ).fetchone()
+            
+            num_petitions = num_mapping_petitions + num_tag_sibling_petitions + num_tag_parent_petitions
+            
+        
+        return num_petitions
+        
+    
+    def _GetOptions( self, c, service_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
         
         ( options, ) = c.execute( 'SELECT options FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
         return options
+        
+    
+    def _GetPetition( self, c, service_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        service_type = service_identifiers.GetType()
+        
+        if service_type == HC.FILE_REPOSITORY: petition = self._GetFilePetition( c, service_id )
+        elif service_type == HC.TAG_REPOSITORY: petition = self._GetTagPetition( c, service_id )
         
     
     def _GetReason( self, c, reason_id ):
@@ -1395,23 +1406,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _GetRestrictedServiceStats( self, c, service_id ):
-        
-        stats = {}
-        
-        ( stats[ 'num_accounts' ], ) = c.execute( 'SELECT COUNT( * ) FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone()
-        
-        ( stats[ 'num_banned' ], ) = c.execute( 'SELECT COUNT( * ) FROM bans WHERE service_id = ?;', ( service_id, ) ).fetchone()
-        
-        return stats
-        
-    
     def _GetServiceId( self, c, service_identifier ):
         
-        service_type = service_identifier.GetType()
-        port = service_identifier.GetPort()
+        service_key = service_identifier.GetServiceKey()
         
-        result = c.execute( 'SELECT service_id FROM services WHERE type = ? AND port = ?;', ( service_type, port ) ).fetchone()
+        result = c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
         
         if result is None: raise Exception( 'Service id error in database' )
         
@@ -1424,12 +1423,12 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetServiceIdentifier( self, c, service_id ):
         
-        ( service_type, port ) = c.execute( 'SELECT type, port FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        ( service_key, service_type ) = c.execute( 'SELECT service_key, type FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
-        return HC.ServerServiceIdentifier( service_type, port )
+        return HC.ServerServiceIdentifier( service_key, service_type )
         
     
-    def _GetServiceIdentifiers( self, c, limited_types = HC.ALL_SERVICES ): return [ HC.ServerServiceIdentifier( service_type, port ) for ( service_type, port ) in c.execute( 'SELECT type, port FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ) ]
+    def _GetServiceIdentifiers( self, c, limited_types = HC.ALL_SERVICES ): return [ HC.ServerServiceIdentifier( service_key, service_type ) for ( service_key, service_type ) in c.execute( 'SELECT service_key, type FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ) ]
     
     def _GetServiceType( self, c, service_id ):
         
@@ -1440,6 +1439,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         ( service_type, ) = result
         
         return service_type
+        
+    
+    def _GetServicesInfo( self, c, limited_types = HC.ALL_SERVICES ):
+        
+        service_identifiers = self._GetServiceIdentifiers( c, limited_types )
+        
+        services_info = [ ( service_identifier, self._GetOptions( c, service_identifier ) ) for service_identifier in service_identifiers ]
+        
+        return services_info
         
     
     def _GetSessions( self, c ):
@@ -1462,22 +1470,125 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             account_identifier = HC.AccountIdentifier( account_id = account_id )
             
-            sessions.append( ( session_key, service_identifier, account_identifier, expiry ) )
+            account = self._GetAccount( c, service_identifier, account_identifier )
+            
+            sessions.append( ( session_key, service_identifier, account, expiry ) )
             
         
         return sessions
+        
+    
+    def _GetStats( self, c, service_identifier ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        stats = {}
+        
+        ( stats[ 'num_accounts' ], ) = c.execute( 'SELECT COUNT( * ) FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        
+        ( stats[ 'num_banned' ], ) = c.execute( 'SELECT COUNT( * ) FROM bans WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        
+        return stats
         
     
     def _GetUpdateEnds( self, c ):
         
         service_ids = self._GetServiceIds( c, HC.REPOSITORIES )
         
-        ends = [ c.execute( 'SELECT service_id, end FROM update_cache WHERE service_id = ? ORDER BY end DESC LIMIT 1;', ( service_id, ) ).fetchone() for service_id in service_ids ]
+        result = [ c.execute( 'SELECT service_id, end FROM update_cache WHERE service_id = ? ORDER BY end DESC LIMIT 1;', ( service_id, ) ).fetchone() for service_id in service_ids ]
         
-        return ends
+        return result
         
     
-    def _ModifyAccountTypes( self, c, service_id, edit_log ):
+    def _GetUpdateKey( self, c, service_identifier, begin ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        result = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND begin = ?;', ( service_id, begin ) ).fetchone()
+        
+        if result is None: result = c.execute( 'SELECT update_key FROM update_cache WHERE service_id = ? AND ? BETWEEN begin AND end;', ( service_id, begin ) ).fetchone()
+        
+        if result is None: raise HydrusExceptions.NotFoundException( 'Could not find that update in db!' )
+        
+        ( update_key, ) = result
+        
+        update_key_bytes = update_key.decode( 'hex' )
+        
+        return update_key_bytes
+        
+    
+    def _InitAdmin( self, c ):
+        
+        if c.execute( 'SELECT 1 FROM account_map;' ).fetchone() is not None: raise HydrusExceptions.ForbiddenException( 'This server is already initialised!' )
+        
+        service_id = self._GetServiceId( c, HC.SERVER_ADMIN_IDENTIFIER )
+        
+        # this is a little odd, but better to keep it all the same workflow
+        
+        num = 1
+        
+        title = 'server admin'
+        
+        expiration = None
+        
+        ( registration_key, ) = self._GenerateRegistrationKeys( c, HC.SERVER_ADMIN_IDENTIFIER, num, title, expiration )
+        
+        access_key = self._GetAccessKey( c, registration_key )
+        
+        return access_key
+        
+    
+    def _ModifyAccount( self, c, service_identifier, admin_account, action, subject_identifiers ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        admin_account_id = admin_account.GetAccountId()
+        
+        subjects = [ self._GetAccount( c, service_identifier, subject_identifier ) for subject_identifier in subject_identifiers ]
+        
+        subject_account_ids = [ subject.GetAccountId() for subject in subjects ]
+        
+        if action in ( HC.BAN, HC.SUPERBAN ):
+            
+            reason = request_args[ 'reason' ]
+            
+            reason_id = self._GetReasonId( c, reason )
+            
+            if expiration in request_args: expiration = request_args[ 'expiration' ]
+            else: expiration = None
+            
+            self._Ban( c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiration ) # fold ban and superban together, yo
+            
+        else:
+            
+            account.CheckPermission( HC.GENERAL_ADMIN ) # special case, don't let manage_users people do these:
+            
+            if action == HC.CHANGE_ACCOUNT_TYPE:
+                
+                title = request_args[ 'title' ]
+                
+                account_type_id = self._GetAccountTypeId( c, service_id, title )
+                
+                self._ChangeAccountType( c, service_id, subject_account_ids, account_type_id )
+                
+            elif action == HC.ADD_TO_EXPIRES:
+                
+                expiration = request_args[ 'expiration' ]
+                
+                self._AddToExpires( c, service_id, subject_account_ids, expiration )
+                
+            elif action == HC.SET_EXPIRES:
+                
+                expires = request_args[ 'expiry' ]
+                
+                self._SetExpires( c, service_id, subject_account_ids, expires )
+                
+            
+        
+    
+    def _ModifyAccountTypes( self, c, service_identifier, edit_log ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
         
         for ( action, details ) in edit_log:
             
@@ -1525,95 +1636,255 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _ModifyServices( self, c, account_id, edit_log ):
+    def _ModifyServices( self, c, action, data ):
+        
+        account_id = account.GetAccountId()
         
         now = HC.GetNow()
         
-        for ( action, data ) in edit_log:
+        if action == HC.ADD:
             
-            if action == HC.ADD:
+            ( account, service_type ) = data
+            
+            all_existing_options = c.execute( 'SELECT options FROM services;' ).fetchall()
+            
+            port = HC.DEFAULT_SERVICE_PORT
+            
+            while True in ( port == existing_options[ 'port' ] for existing_options in all_existing_options ): port += 1
+            
+            options = dict( HC.DEFAULT_OPTIONS[ service_type ] )
+            
+            options[ 'port' ] = port
+            
+            service_key = os.urandom( 32 )
+            
+            service_identifier = HC.ServerServiceIdentifier( service_key, service_type )
+            
+            c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( service_key, service_type, options ) )
+            
+            service_id = c.lastrowid
+            
+            service_admin_account_type = HC.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
+            
+            c.execute( 'INSERT INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( 'service admin', service_admin_account_type ) )
+            
+            service_admin_account_type_id = c.lastrowid
+            
+            c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
+            
+            c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, service_admin_account_type_id, now, None, 0, 0 ) )
+            
+            if service_type in HC.REPOSITORIES:
                 
-                service_identifier = data
+                begin = 0
+                end = HC.GetNow()
                 
-                service_type = service_identifier.GetType()
-                port = service_identifier.GetPort()
+                self._CreateUpdate( c, service_id, begin, end )
                 
-                if c.execute( 'SELECT 1 FROM services WHERE port = ?;', ( port, ) ).fetchone() is not None: raise Exception( 'There is already a service hosted at port ' + HC.u( port ) )
+            
+            services_to_boot.add( )
+            
+        elif action == HC.DELETE:
+            
+            service_identifier = data
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+            
+        
+        HC.pubsub.pub( 'restart_service', service_identifier )
+        
+    
+    def _ProcessUpdate( self, c, service_identifier, account, update ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        account_id = account.GetAccountId()
+        
+        service_type = service_identifier.GetType()
+        
+        if service_type == HC.FILE_REPOSITORY:
+            
+            if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
                 
-                c.execute( 'INSERT INTO services ( type, port, options ) VALUES ( ?, ?, ? );', ( service_type, port, yaml.safe_dump( HC.DEFAULT_OPTIONS[ service_type ] ) ) )
+                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveFilePetition
+                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddFilePetition
                 
-                service_id = c.lastrowid
-                
-                service_admin_account_type = HC.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
-                
-                c.execute( 'INSERT INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( 'service admin', service_admin_account_type ) )
-                
-                service_admin_account_type_id = c.lastrowid
-                
-                c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
-                
-                c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, service_admin_account_type_id, now, None, 0, 0 ) )
-                
-                if service_type in HC.REPOSITORIES:
+                for ( hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION ):
                     
-                    begin = 0
-                    end = HC.GetNow()
+                    hash_ids = self._GetHashIds( c, hashes )
                     
-                    self._CreateUpdate( c, service_id, begin, end )
+                    reason_id = self._GetReasonId( c, reason )
+                    
+                    petition_method( c, service_id, account_id, hash_ids, reason_id )
                     
                 
-            elif action == HC.EDIT:
+            
+            if account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
-                ( service_identifier, new_port ) = data
-                
-                service_id = self._GetServiceId( c, service_identifier )
-                
-                if c.execute( 'SELECT 1 FROM services WHERE port = ?;', ( new_port, ) ).fetchone() is not None: raise Exception( 'There is already a service hosted at port ' + HC.u( port ) )
-                
-                c.execute( 'UPDATE services SET port = ? WHERE service_id = ?;', ( new_port, service_id ) )
-                
-            elif action == HC.DELETE:
-                
-                service_identifier = data
-                
-                service_id = self._GetServiceId( c, service_identifier )
-                
-                c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                for hashes in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DENY_PETITION ):
+                    
+                    hash_ids = self._GetHashIds( c, hashes )
+                    
+                    self._DenyFilePetition( c, service_id, hash_ids )
+                    
                 
             
-        
-        # now we are sure the db is happy ( and a commit is like 5ms away), let's boot these servers
-        
-        desired_service_identifiers = self._GetServiceIdentifiers( c )
-        
-        existing_servers = dict( self._servers )
-        
-        for existing_service_identifier in existing_servers.keys():
+        elif service_type == HC.TAG_REPOSITORY:
             
-            if existing_service_identifier not in desired_service_identifiers:
+            tags = update.GetTags()
+            
+            hashes = update.GetHashes()
+            
+            self._GenerateTagIdsEfficiently( c, tags )
+            
+            self._GenerateHashIdsEfficiently( c, hashes )
+            
+            #
+            
+            overwrite_deleted = account.HasPermission( HC.RESOLVE_PETITIONS )
+            
+            for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING ):
                 
-                self._servers[ existing_service_identifier ].shutdown()
+                tag_id = self._GetTagId( c, tag )
                 
-                del self._servers[ existing_service_identifier ]
+                hash_ids = self._GetHashIds( c, hashes )
+                
+                self._AddMappings( c, service_id, account_id, tag_id, hash_ids, overwrite_deleted )
                 
             
-        
-        for desired_service_identifier in desired_service_identifiers:
+            if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveMappingPetition
+                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddMappingPetition
+                
+                for ( tag, hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
+                    
+                    tag_id = self._GetTagId( c, tag )
+                    
+                    hash_ids = self._GetHashIds( c, hashes )
+                    
+                    reason_id = self._GetReasonId( c, reason )
+                    
+                    petition_method( c, service_id, account_id, tag_id, hash_ids, reason_id )
+                    
+                
             
-            if desired_service_identifier not in existing_servers:
+            if account.HasPermission( HC.RESOLVE_PETITIONS ):
                 
-                service_id = self._GetServiceId( c, desired_service_identifier )
+                for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                    
+                    tag_id = self._GetTagId( c, tag )
+                    
+                    hash_ids = self._GetHashIds( c, hashes )
+                    
+                    self._DenyMappingPetition( c, service_id, tag_id, hash_ids )
+                    
                 
-                options = self._GetOptions( c, service_id )
+            
+            #
+            
+            if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
                 
-                if 'message' in options: message = options[ 'message' ]
-                else: message = ''
+                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
+                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
                 
-                server = HydrusServer.HydrusHTTPServer( desired_service_identifier, message )
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PENDING ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    reason_id = self._GetReasonId( c, reason )
+                    
+                    petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PENDING )
+                    
                 
-                self._servers[ desired_service_identifier ] = server
+                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
+                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
                 
-                threading.Thread( target=server.serve_forever ).start()
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    reason_id = self._GetReasonId( c, reason )
+                    
+                    petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PETITIONED )
+                    
+                
+            
+            if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    self._DenyTagSiblingPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
+                    
+                
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    self._DenyTagSiblingPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PETITION )
+                    
+                
+            
+            #
+            
+            if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
+                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
+                
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PENDING ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    reason_id = self._GetReasonId( c, reason )
+                    
+                    petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PENDING )
+                    
+                
+                if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
+                elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
+                
+                for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    reason_id = self._GetReasonId( c, reason )
+                    
+                    petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PETITIONED )
+                    
+                
+            
+            if account.HasPermission( HC.RESOLVE_PETITIONS ):
+                
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    self._DenyTagParentPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
+                    
+                
+                for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PETITION ):
+                    
+                    old_tag_id = self._GetTagId( c, old_tag )
+                    
+                    new_tag_id = self._GetTagId( c, new_tag )
+                    
+                    self._DenyTagParentPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PETITION )
+                    
                 
             
         
@@ -1629,36 +1900,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _SetExpires( self, c, service_id, account_ids, expires ): c.execute( 'UPDATE account_map SET expires = ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expires, service_id ) )
     
-    def _SetOptions( self, c, service_id, service_identifier, options ):
+    def _SetOptions( self, c, service_identifier, options ):
         
-        c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) ).fetchone()
+        service_id = self._GetServiceIdentifier( c, service_identifier )
         
-        if 'message' in options:
-            
-            message = options[ 'message' ]
-            
-            self._servers[ service_identifier ].SetMessage( message )
-            
+        c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
         
-    
-    def _TryToRegisterAccount( self, c, service_id, access_key ):
-        
-        try: ( account_type_id, expiry ) = c.execute( 'SELECT account_type_id, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
-        except: raise HydrusExceptions.ForbiddenException( 'Could not register that account.' )
-        
-        c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
-        
-        #
-        
-        c.execute( 'INSERT INTO accounts ( access_key ) VALUES ( ? );', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) )
-        
-        account_id = c.lastrowid
-        
-        now = HC.GetNow()
-        
-        c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, account_type_id, now, expiry, 0, 0 ) )
-        
-        return HC.AccountIdentifier( account_id = account_id )
+        HC.pubsub.pub( 'restart_service', service_identifier )
         
     
     def _UnbanKey( self, c, service_id, account_id ): c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
@@ -1684,46 +1932,6 @@ class DB( ServiceDB ):
         service_identifiers = self._GetServiceIdentifiers( c )
         
         ( self._server_admin_id, ) = c.execute( 'SELECT service_id FROM services WHERE type = ?;', ( HC.SERVER_ADMIN, ) ).fetchone()
-        
-        self._servers = {}
-        
-        for service_identifier in service_identifiers:
-            
-            service_type = service_identifier.GetType()
-            
-            if service_type == HC.SERVER_ADMIN:
-                
-                port = service_identifier.GetPort()
-                
-                try:
-                    
-                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 20 )
-                    
-                    connection.connect()
-                    
-                    connection.close()
-                    
-                    already_running = True
-                    
-                except:
-                    
-                    already_running = False
-                    
-                
-                if already_running: raise Exception( 'The server appears to be running already!' + os.linesep + 'Either that, or something else is using port ' + HC.u( port ) + '.' )
-                
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            options = self._GetOptions( c, service_id )
-            
-            if 'message' in options: message = options[ 'message' ]
-            else: message = ''
-            
-            self._servers[ service_identifier ] = HydrusServer.HydrusHTTPServer( service_identifier, message )
-            
-        
-        for server in self._servers.values(): threading.Thread( target=server.serve_forever ).start()
         
         HC.DAEMONQueue( 'FlushRequestsMade', self.DAEMONFlushRequestsMade, 'request_made', period = 10 )
         
@@ -1778,7 +1986,7 @@ class DB( ServiceDB ):
             
             now = HC.GetNow()
             
-            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, type INTEGER, port INTEGER, options TEXT_YAML );' )
+            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' )
             
             c.execute( 'CREATE TABLE accounts ( account_id INTEGER PRIMARY KEY, access_key BLOB_BYTES );' )
             c.execute( 'CREATE UNIQUE INDEX accounts_access_key_index ON accounts ( access_key );' )
@@ -1871,7 +2079,17 @@ class DB( ServiceDB ):
             
             # set up server admin
             
-            c.execute( 'INSERT INTO services ( type, port, options ) VALUES ( ?, ?, ? );', ( HC.SERVER_ADMIN, HC.DEFAULT_SERVER_ADMIN_PORT, yaml.safe_dump( HC.DEFAULT_OPTIONS[ HC.SERVER_ADMIN ] ) ) )
+            service_identifier = HC.SERVER_ADMIN_IDENTIFIER
+            
+            service_key = service_identifier.GetServiceKey()
+            
+            service_type = service_identifier.GetType()
+            
+            options = HC.DEFAULT_OPTIONS[ HC.SERVER_ADMIN ]
+            
+            options[ 'port' ] = HC.DEFAULT_SERVER_ADMIN_PORT
+            
+            c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, options ) )
             
             server_admin_service_id = c.lastrowid
             
@@ -2054,11 +2272,42 @@ class DB( ServiceDB ):
                     
                     c.execute( 'DELETE FROM update_cache;' )
                     
-                    update_paths = [ path for path in IterateAllPaths( 'update' ) ]
+                    update_paths = [ path for path in SC.IterateAllPaths( 'update' ) ]
                     
                     for path in update_paths: os.remove( path )
                     
                     for ( service_id, begin, end ) in results: self._CreateUpdate( c, service_id, begin, end )
+                    
+                
+                if version < 87:
+                    
+                    c.execute( 'COMMIT' )
+                    
+                    c.execute( 'PRAGMA foreign_keys = OFF;' )
+                    
+                    c.execute( 'BEGIN IMMEDIATE' )
+                    
+                    old_service_info = c.execute( 'SELECT * FROM services;' ).fetchall()
+                    
+                    c.execute( 'DROP TABLE services;' )
+                    
+                    c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' ).fetchall()
+                    
+                    for ( service_id, service_type, port, options ) in old_service_info:
+                        
+                        if service_type == HC.SERVER_ADMIN: service_key = 'server admin'
+                        else: service_key = os.urandom( 32 )
+                        
+                        options[ 'port' ] = port
+                        
+                        c.execute( 'INSERT INTO services ( service_id, service_key, type, options ) VALUES ( ?, ?, ?, ? );', ( service_id, sqlite3.Binary( service_key ), service_type, options ) )
+                        
+                    
+                    c.execute( 'COMMIT' )
+                    
+                    c.execute( 'PRAGMA foreign_keys = ON;' )
+                    
+                    c.execute( 'BEGIN IMMEDIATE' )
                     
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
@@ -2389,638 +2638,115 @@ class DB( ServiceDB ):
             
         
     
-    def _MainLoop_JobInternal( self, c, job ):
+    def MainLoop( self ):
         
-        job_type = job.GetType()
-        
-        if job_type in ( 'read', 'read_write' ):
+        def ProcessJob( c, job ):
             
-            if job_type == 'read': c.execute( 'BEGIN DEFERRED' )
-            else: c.execute( 'BEGIN IMMEDIATE' )
-            
-            try:
+            def ProcessRead( action, args, kwargs ):
                 
-                action = job.GetAction()
+                if action == 'access_key': result = self._GetAccessKey( c, *args, **kwargs )
+                elif action == 'account': result = self._GetAccount( c, *args, **kwargs )
+                elif action == 'account_info': result = self._GetAccountInfo( c, *args, **kwargs )
+                elif action == 'account_types': result = self._GetAccountTypes( c, *args, **kwargs )
+                elif action == 'dirty_updates': result = self._GetDirtyUpdates( c, *args, **kwargs  )
+                elif action == 'init': result = self._InitAdmin( c, *args, **kwargs  )
+                elif action == 'ip': result = self._GetIPTimestamp( c, *args, **kwargs )
+                elif action == 'num_petitions': result = self._GetNumPetitions( c, *args, **kwargs )
+                elif action == 'petition': result = self._GetPetition( c, *args, **kwargs )
+                elif action == 'registration_keys': result = self._GenerateRegistrationKeys( c, *args, **kwargs )
+                elif action == 'services': result = self._GetServicesInfo( c, *args, **kwargs )
+                elif action == 'sessions': result = self._GetSessions( c, *args, **kwargs )
+                elif action == 'stats': result = self._GetStats( c, *args, **kwargs )
+                elif action == 'update_ends': result = self._GetUpdateEnds( c, *args, **kwargs )
+                elif action == 'update_key': result = self._GetUpdateKey( c, *args, **kwargs )
+                else: raise Exception( 'db received an unknown read command: ' + action )
                 
-                result = self._MainLoop_Read( c, action )
-                
-                c.execute( 'COMMIT' )
-                
-                for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
-                
-                job.PutResult( result )
-                
-            except Exception as e:
-                
-                c.execute( 'ROLLBACK' )
-                
-                ( exception_type, value, tb ) = sys.exc_info()
-                
-                new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                
-                job.PutResult( new_e )
+                return result
                 
             
-        else:
+            def ProcessWrite( action, args, kwargs ):
+                
+                if action == 'account': result = self._ModifyAccount( c, *args, **kwargs )
+                elif action == 'account_types': result = self._ModifyAccountTypes( c, *args, **kwargs )
+                elif action == 'backup': result = self._MakeBackup( c, *args, **kwargs )
+                elif action == 'check_data_usage': result = self._CheckDataUsage( c, *args, **kwargs )
+                elif action == 'check_monthly_data': result = self._CheckMonthlyData( c, *args, **kwargs )
+                elif action == 'clean_update': result = self._CleanUpdate( c, *args, **kwargs )
+                elif action == 'clear_bans': result = self._ClearBans( c, *args, **kwargs )
+                elif action == 'create_update': result = self._CreateUpdate( c, *args, **kwargs )
+                elif action == 'delete_orphans': result = self._DeleteOrphans( c, *args, **kwargs )
+                elif action == 'file': result = self._AddFile( c, *args, **kwargs )
+                elif action == 'flush_requests_made': result = self._FlushRequestsMade( c, *args, **kwargs )
+                elif action == 'news': result = self._AddNews( c, *args, **kwargs )
+                elif action == 'options': result = self._SetOptions( c, *args, **kwargs )
+                elif action == 'services': result = self._ModifyServices( c, *args, **kwargs )
+                elif action == 'session': result = self._AddSession( c, *args, **kwargs )
+                elif action == 'update': result = self._ProcessUpdate( c, *args, **kwargs )
+                else: raise Exception( 'db received an unknown write command: ' + action )
+                
+                return result
+                
             
-            if job_type == 'write': c.execute( 'BEGIN IMMEDIATE' )
+            job_type = job.GetType()
             
-            try:
-                
-                action = job.GetAction()
-                
-                args = job.GetArgs()
-                
-                self._MainLoop_Write( c, action, args )
-                
-                if job_type == 'write': c.execute( 'COMMIT' )
-                
-                for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
-                
-            except Exception as e:
-                
-                if job_type == 'write': c.execute( 'ROLLBACK' )
-                
-                HC.ShowException( Exception( traceback.format_exc() ) )
-                HC.ShowException( e )
+            action = job.GetAction()
             
-        
-    
-    def _MainLoop_JobServer( self, c, job ):
-        
-        ( service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length ) = job.GetArgs()
-        
-        service_type = service_identifier.GetType()
-        
-        if ( service_type, request_type, request ) in HC.BANDWIDTH_CONSUMING_REQUESTS and ( self._over_monthly_data or service_identifier in self._services_over_monthly_data ):  job.PutResult( HydrusExceptions.PermissionException( 'This service has exceeded its monthly data allowance, please check back on the 1st.' ) )
-        else:
+            args = job.GetArgs()
             
-            if request_type == HC.GET and request != 'accesskeys': c.execute( 'BEGIN DEFERRED' )
-            else: c.execute( 'BEGIN IMMEDIATE' )
+            kwargs = job.GetKWArgs()
             
-            try:
+            if job_type in ( 'read', 'read_write' ):
                 
-                service_id = self._GetServiceId( c, service_identifier )
+                if job_type == 'read': c.execute( 'BEGIN DEFERRED' )
+                else: c.execute( 'BEGIN IMMEDIATE' )
                 
-                if request == 'session_key':
+                try:
                     
-                    try: account_identifier = self._GetAccountIdentifier( c, access_key )
-                    except Exception as e:
-                        
-                        try:
-                            
-                            account_identifier = self._TryToRegisterAccount( c, service_id, access_key )
-                            
-                        except: raise e
-                        
+                    result = ProcessRead( action, args, kwargs )
                     
-                    session_key = os.urandom( 32 )
+                    c.execute( 'COMMIT' )
                     
-                    max_age = 30 * 86400
+                    for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
                     
-                    expiry = HC.GetNow() + max_age
+                    job.PutResult( result )
                     
-                    HC.app.AddSession( session_key, service_identifier, account_identifier, expiry )
+                except Exception as e:
                     
-                    cookies = [ 'session_key=' + session_key.encode( 'hex' ) + '; Max-Age=' + HC.u( max_age ) + '; Path=/' ]
+                    c.execute( 'ROLLBACK' )
                     
-                    response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = '', cookies = cookies )
+                    ( exception_type, value, tb ) = sys.exc_info()
                     
-                elif request == 'access_key':
+                    new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
                     
-                    registration_key = access_key
+                    job.PutResult( new_e )
                     
-                    access_key = self._GetAccessKey( c, registration_key )
-                    
-                    response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( access_key ) )
-                    
-                else:
-                   
-                    permissions = HC.REQUESTS_TO_PERMISSIONS[ ( service_type, request_type, request ) ]
-                    
-                    if permissions is not None or request == 'account':
-                        
-                        account_identifier = HC.app.GetAccountIdentifier( session_key, service_identifier )
-                        
-                        account = self._GetAccount( c, service_id, account_identifier )
-                        
-                        if permissions is not None: account.CheckPermissions( permissions )
-                        
-                    else: account = None
-                    
-                    if request_type == HC.GET: response_context = self._MainLoop_Get( c, request, service_type, service_id, account, request_args )
-                    else:
-                        
-                        self._MainLoop_Post( c, request, service_type, service_id, account, ip, request_args )
-                        
-                        response_context = HC.ResponseContext( 200 )
-                        
-                    
-                
-                c.execute( 'COMMIT' )
-                
-                for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
-                
-                if ( service_type, request_type, request ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
-                    
-                    if request_type == HC.GET: HC.pubsub.pub( 'request_made', ( service_identifier, account, response_context.GetLength() ) )
-                    elif request_type == HC.POST: HC.pubsub.pub( 'request_made', ( service_identifier, account, request_length ) )
-                    
-                
-                job.PutResult( response_context )
-                
-            except Exception as e:
-                
-                c.execute( 'ROLLBACK' )
-                
-                ( exception_type, value, tb ) = sys.exc_info()
-                
-                new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
-                
-                job.PutResult( new_e )
-                
-            
-        
-    
-    def _MainLoop_Get( self, c, request, service_type, service_id, account, request_args ):
-        
-        try: account_id = account.GetAccountId()
-        except: pass
-        
-        if request == 'registration_keys':
-            
-            num = request_args[ 'num' ]
-            title = request_args[ 'title' ]
-            expiration = request_args[ 'expiration' ]
-            
-            account_type_id = self._GetAccountTypeId( c, service_id, title )
-            
-            registration_keys = self._GenerateRegistrationKeys( c, service_id, num, account_type_id, expiration )
-            
-            #access_keys = self._GenerateAccessKeys( c, service_id, num, account_type_id, expiration )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( registration_keys ) )
-            
-        elif request == 'account': response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( account ) )
-        elif request == 'account_info':
-            
-            subject_identifier = request_args[ 'subject_identifier' ]
-            
-            subject = self._GetAccount( c, service_id, subject_identifier )
-            
-            subject_account_id = subject.GetAccountId()
-            
-            if service_type == HC.FILE_REPOSITORY: subject_info = self._GetAccountFileInfo( c, service_id, subject_account_id )
-            elif service_type == HC.TAG_REPOSITORY: subject_info = self._GetAccountMappingInfo( c, service_id, subject_account_id )
-            else: subject_info = {}
-            
-            subject_info[ 'account' ] = subject
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( subject_info ) )
-            
-        elif request == 'account_types':
-            
-            account_types = self._GetAccountTypes( c, service_id )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( account_types ) )
-            
-        elif request == 'file':
-            
-            try:
-                
-                hash = request_args[ 'hash' ]
-                
-                path = GetPath( 'file', hash )
-                
-                mime = HydrusFileHandling.GetMime( path )
-                
-                with open( path, 'rb' ) as f: file = f.read()
-                
-                response_context = HC.ResponseContext( 200, mime = mime, body = file, filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ] )
-                
-            except: response_context = HC.ResponseContext( 404, body = '404 - Not Found' )
-            
-        elif request == 'init':
-            
-            if c.execute( 'SELECT 1 FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone() is not None: raise HydrusExceptions.ForbiddenException( 'This server is already initialised!' )
-            
-            account_type_id = self._GetAccountTypeId( c, service_id, 'server admin' )
-            
-            ( access_key, ) = self._GenerateAccessKeys( c, service_id, 1, account_type_id, None )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( access_key ) )
-            
-        elif request == 'ip':
-            
-            hash = request_args[ 'hash' ]
-            
-            hash_id = self._GetHashId( c, hash )
-            
-            ( ip, timestamp ) = self._GetIPTimestamp( c, service_id, hash_id )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( ( ip, timestamp ) ) )
-            
-        elif request == 'message':
-            
-            message_key = request_args[ 'message_key' ]
-            
-            message = self._GetMessage( c, service_id, account_id, message_key )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_OCTET_STREAM, body = message )
-            
-        elif request == 'message_info_since':
-            
-            timestamp = request_args[ 'since' ]
-            
-            ( message_keys, statuses ) = self._GetMessageInfoSince( c, service_id, account_id, timestamp )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( ( message_keys, statuses ) ) )
-            
-        elif request == 'num_petitions':
-            
-            if service_type == HC.FILE_REPOSITORY: num_petitions = self._GetNumFilePetitions( c, service_id )
-            elif service_type == HC.TAG_REPOSITORY: num_petitions = self._GetNumTagPetitions( c, service_id )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( num_petitions ) )
-            
-        elif request == 'options':
-            
-            options = self._GetOptions( c, service_id )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( options ) )
-            
-        elif request == 'petition':
-            
-            if service_type == HC.FILE_REPOSITORY: petition = self._GetFilePetition( c, service_id )
-            if service_type == HC.TAG_REPOSITORY: petition = self._GetTagPetition( c, service_id )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( petition ) )
-            
-        elif request == 'public_key':
-            
-            contact_key = request_args[ 'contact_key' ]
-            
-            public_key = self._GetPublicKey( c, contact_key )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( public_key ) )
-            
-        elif request == 'services':
-            
-            service_identifiers = self._GetServiceIdentifiers( c )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( service_identifiers ) )
-            
-        elif request == 'stats':
-            
-            stats = self._GetRestrictedServiceStats( c, service_id )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = yaml.safe_dump( stats ) )
-            
-        elif request == 'thumbnail':
-            
-            try:
-                
-                hash = request_args[ 'hash' ]
-                
-                path = GetPath( 'thumbnail', hash )
-                
-                mime = HydrusFileHandling.GetMime( thumbnail )
-                
-                with open( path, 'rb' ) as f: thumbnail = f.read()
-                
-                response_context = HC.ResponseContext( 200, mime = mime, body = thumbnail, filename = hash.encode( 'hex' ) + '_thumbnail' + HC.mime_ext_lookup[ mime ] )
-                
-            except: response_context = HC.ResponseContext( 404, body = '404 - Not Found' )
-            
-        elif request == 'update':
-            
-            begin = request_args[ 'begin' ]
-            
-            update = self._GetCachedUpdate( c, service_id, begin )
-            
-            response_context = HC.ResponseContext( 200, mime = HC.APPLICATION_YAML, body = update ) # note that we don't yaml.safe_dump, because it already is!
-            
-        
-        return response_context
-        
-    
-    def _MainLoop_Post( self, c, request, service_type, service_id, account, ip, request_args ):
-        
-        try: account_id = account.GetAccountId()
-        except: pass
-        
-        if request == 'account_modification':
-            
-            action = request_args[ 'action' ]
-            subject_identifiers = request_args[ 'subject_identifiers' ]
-            
-            admin_account_id = account.GetAccountId()
-            
-            subjects = [ self._GetAccount( c, service_id, subject_identifier ) for subject_identifier in subject_identifiers ]
-            
-            subject_account_ids = [ subject.GetAccountId() for subject in subjects ]
-            
-            if action in ( HC.BAN, HC.SUPERBAN ):
-                
-                reason = request_args[ 'reason' ]
-                
-                reason_id = self._GetReasonId( c, reason )
-                
-                if expiration in request_args: expiration = request_args[ 'expiration' ]
-                else: expiration = None
-                
-                self._Ban( c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiration ) # fold ban and superban together, yo
                 
             else:
                 
-                account.CheckPermissions( HC.GENERAL_ADMIN ) # special case, don't let manage_users people do these:
+                if job_type == 'write': c.execute( 'BEGIN IMMEDIATE' )
                 
-                if action == HC.CHANGE_ACCOUNT_TYPE:
+                try:
                     
-                    title = request_args[ 'title' ]
+                    result = ProcessWrite( action, args, kwargs )
                     
-                    account_type_id = self._GetAccountTypeId( c, service_id, title )
+                    if job_type == 'write': c.execute( 'COMMIT' )
                     
-                    self._ChangeAccountType( c, service_id, subject_account_ids, account_type_id )
+                    for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
                     
-                elif action == HC.ADD_TO_EXPIRES:
+                    job.PutResult( result )
                     
-                    expiration = request_args[ 'expiration' ]
+                except Exception as e:
                     
-                    self._AddToExpires( c, service_id, subject_account_ids, expiration )
+                    if job_type == 'write': c.execute( 'ROLLBACK' )
                     
-                elif action == HC.SET_EXPIRES:
+                    ( exception_type, value, tb ) = sys.exc_info()
                     
-                    expires = request_args[ 'expiry' ]
+                    new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
                     
-                    self._SetExpires( c, service_id, subject_account_ids, expires )
-                    
-                
-            
-        elif request == 'account_types_modification':
-            
-            edit_log = request_args[ 'edit_log' ]
-            
-            self._ModifyAccountTypes( c, service_id, edit_log )
-            
-        elif request == 'backup': self._MakeBackup( c )
-        elif request == 'contact':
-            
-            public_key = request_args[ 'public_key' ]
-            
-            self._CreateContact( c, service_id, account_id, public_key )
-            
-        elif request == 'file':
-            
-            request_args[ 'ip' ] = ip
-            
-            self._AddFile( c, service_id, account_id, request_args )
-            
-        elif request == 'message':
-            
-            contact_key = request_args[ 'contact_key' ]
-            message = request_args[ 'message' ]
-            
-            self._AddMessage( c, contact_key, message )
-            
-        elif request == 'message_statuses':
-            
-            contact_key = request_args[ 'contact_key' ]
-            statuses = request_args[ 'statuses' ]
-            
-            self._AddStatuses( c, contact_key, statuses )
-            
-        elif request == 'news':
-            
-            news = request_args[ 'news' ]
-            
-            self._AddNews( c, service_id, news )
-            
-        elif request == 'options':
-            
-            options = request_args[ 'options' ]
-            
-            service_identifier = self._GetServiceIdentifier( c, service_id )
-            
-            self._SetOptions( c, service_id, service_identifier, options )
-            
-        elif request == 'services_modification':
-            
-            edit_log = request_args[ 'edit_log' ]
-            
-            self._ModifyServices( c, account_id, edit_log )
-            
-        elif request == 'update':
-            
-            update = request_args[ 'update' ]
-            
-            if service_type == HC.FILE_REPOSITORY:
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
-                    
-                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveFilePetition
-                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddFilePetition
-                    
-                    for ( hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PETITION ):
-                        
-                        hash_ids = self._GetHashIds( c, hashes )
-                        
-                        reason_id = self._GetReasonId( c, reason )
-                        
-                        petition_method( c, service_id, account_id, hash_ids, reason_id )
-                        
-                    
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ):
-                    
-                    for hashes in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DENY_PETITION ):
-                        
-                        hash_ids = self._GetHashIds( c, hashes )
-                        
-                        self._DenyFilePetition( c, service_id, hash_ids )
-                        
-                    
-                
-            elif service_type == HC.TAG_REPOSITORY:
-                
-                tags = update.GetTags()
-                
-                hashes = update.GetHashes()
-                
-                self._GenerateTagIdsEfficiently( c, tags )
-                
-                self._GenerateHashIdsEfficiently( c, hashes )
-                
-                #
-                
-                overwrite_deleted = account.HasPermission( HC.RESOLVE_PETITIONS )
-                
-                for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING ):
-                    
-                    tag_id = self._GetTagId( c, tag )
-                    
-                    hash_ids = self._GetHashIds( c, hashes )
-                    
-                    self._AddMappings( c, service_id, account_id, tag_id, hash_ids, overwrite_deleted )
-                    
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
-                    
-                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveMappingPetition
-                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddMappingPetition
-                    
-                    for ( tag, hashes, reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
-                        
-                        tag_id = self._GetTagId( c, tag )
-                        
-                        hash_ids = self._GetHashIds( c, hashes )
-                        
-                        reason_id = self._GetReasonId( c, reason )
-                        
-                        petition_method( c, service_id, account_id, tag_id, hash_ids, reason_id )
-                        
-                    
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ):
-                    
-                    for ( tag, hashes ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
-                        
-                        tag_id = self._GetTagId( c, tag )
-                        
-                        hash_ids = self._GetHashIds( c, hashes )
-                        
-                        self._DenyMappingPetition( c, service_id, tag_id, hash_ids )
-                        
-                    
-                
-                #
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
-                    
-                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
-                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
-                    
-                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PENDING ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        reason_id = self._GetReasonId( c, reason )
-                        
-                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PENDING )
-                        
-                    
-                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagSiblingPetition
-                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagSiblingPetition
-                    
-                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        reason_id = self._GetReasonId( c, reason )
-                        
-                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PETITIONED )
-                        
-                    
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ):
-                    
-                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        self._DenyTagSiblingPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
-                        
-                    
-                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        self._DenyTagSiblingPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PETITION )
-                        
-                    
-                
-                #
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ) or account.HasPermission( HC.POST_PETITIONS ):
-                    
-                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
-                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
-                    
-                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PENDING ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        reason_id = self._GetReasonId( c, reason )
-                        
-                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PENDING )
-                        
-                    
-                    if account.HasPermission( HC.RESOLVE_PETITIONS ): petition_method = self._ApproveTagParentPetition
-                    elif account.HasPermission( HC.POST_PETITIONS ): petition_method = self._AddTagParentPetition
-                    
-                    for ( ( old_tag, new_tag ), reason ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        reason_id = self._GetReasonId( c, reason )
-                        
-                        petition_method( c, service_id, account_id, old_tag_id, new_tag_id, reason_id, HC.PETITIONED )
-                        
-                    
-                
-                if account.HasPermission( HC.RESOLVE_PETITIONS ):
-                    
-                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        self._DenyTagParentPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PEND )
-                        
-                    
-                    for ( old_tag, new_tag ) in update.GetContentDataIterator( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PETITION ):
-                        
-                        old_tag_id = self._GetTagId( c, old_tag )
-                        
-                        new_tag_id = self._GetTagId( c, new_tag )
-                        
-                        self._DenyTagParentPetition( c, service_id, old_tag_id, new_tag_id, HC.CONTENT_UPDATE_DENY_PETITION )
-                        
+                    job.PutResult( new_e )
                     
                 
             
-    
-    def _MainLoop_Read( self, c, action ):
-        
-        if action == 'dirty_updates': return self._GetDirtyUpdates( c )
-        elif action == 'sessions': return self._GetSessions( c )
-        elif action == 'update_ends': return self._GetUpdateEnds( c )
-        else: raise Exception( 'db received an unknown read command: ' + action )
-        
-    
-    def _MainLoop_Write( self, c, action, args ):
-        
-        if action == 'check_data_usage': self._CheckDataUsage( c )
-        elif action == 'check_monthly_data': self._CheckMonthlyData( c )
-        elif action == 'clear_bans': self._ClearBans( c )
-        elif action == 'delete_orphans': self._DeleteOrphans( c )
-        elif action == 'flush_requests_made': self._FlushRequestsMade( c, *args )
-        elif action == 'clean_update': self._CleanUpdate( c, *args )
-        elif action == 'create_update': self._CreateUpdate( c, *args )
-        elif action == 'session': self._AddSession( c, *args )
-        else: raise Exception( 'db received an unknown write command: ' + action )
-        
-    
-    def MainLoop( self ):
         
         ( db, c ) = self._GetDBCursor()
         
@@ -3034,8 +2760,7 @@ class DB( ServiceDB ):
                 
                 try:
                     
-                    if isinstance( job, HC.JobServer ): self._MainLoop_JobServer( c, job )
-                    else: self._MainLoop_JobInternal( c, job )
+                    ProcessJob( c, job )
                     
                 except:
                     
@@ -3052,7 +2777,9 @@ class DB( ServiceDB ):
         
         job_type = 'read'
         
-        job = HC.JobInternal( action, job_type, True, *args, **kwargs )
+        synchronous = True
+        
+        job = HC.JobInternal( action, job_type, synchronous, *args, **kwargs )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -3063,8 +2790,12 @@ class DB( ServiceDB ):
         
         job_type = 'write'
         
-        job = HC.JobInternal( action, job_type, False, *args, **kwargs )
+        synchronous = True
+        
+        job = HC.JobInternal( action, job_type, synchronous, *args, **kwargs )
         
         self._jobs.put( ( priority, job ) )
+        
+        return job.GetResult()
         
     

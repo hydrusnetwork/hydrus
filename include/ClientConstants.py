@@ -1160,7 +1160,7 @@ class ConnectionToService():
                 
                 access_key = self._credentials.GetAccessKey()
                 
-                if access_key != '': headers[ 'Authorization' ] = 'hydrus_network ' + access_key.encode( 'hex' )
+                if access_key != '': headers[ 'Hydrus-Key' ] = access_key.encode( 'hex' )
                 
             else: raise Exception( 'No access key!' )
             
@@ -1177,6 +1177,8 @@ class ConnectionToService():
     def _SendRequest( self, request_type, request, request_args = {} ):
         
         # prepare
+        
+        headers = self._GetHeaders( request )
         
         if request_type == HC.GET:
             
@@ -1232,11 +1234,21 @@ class ConnectionToService():
             
             request_string = '/' + request
             
-            if request == 'file': body = request_args[ 'file' ]
-            else: body = yaml.safe_dump( request_args )
+            if request == 'file':
+                
+                content_type = HC.APPLICATION_OCTET_STREAM
+                
+                body = request_args[ 'file' ]
+                
+            else:
+                
+                content_type = HC.APPLICATION_YAML
+                
+                body = yaml.safe_dump( request_args )
+                
             
-        
-        headers = self._GetHeaders( request )
+            headers[ 'Content-Type' ] = HC.mime_string_lookup[ content_type ]
+            
         
         # send
         
@@ -1261,54 +1273,7 @@ class ConnectionToService():
         except: pass
         
     
-    def Get( self, request, **kwargs ):
-        
-        response = self._SendRequest( HC.GET, request, kwargs )
-        
-        if request in ( 'registration_keys', 'init' ):
-            
-            if request == 'registration_keys':
-                
-                body = os.linesep.join( [ 'r' + key.encode( 'hex' ) for key in response ] )
-                
-                filename = 'registration keys.txt'
-                
-            elif request == 'init':
-                
-                filename = 'admin access key.txt'
-                
-                access_key = response
-                
-                body = access_key.encode( 'hex' )
-                
-                ( host, port ) = self._credentials.GetAddress()
-                
-                self._credentials = Credentials( host, port, access_key )
-                
-                edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, self._credentials, None ) ) ) ]
-                
-                HC.app.Write( 'update_services', edit_log )
-                
-            
-            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
-                    
-                
-            
-        elif request == 'account':
-            
-            account = response
-            
-            account.MakeFresh()
-            
-            HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
-            
-        
-        return response
-        
+    def Get( self, request, **kwargs ): return self._SendRequest( HC.GET, request, kwargs )
     
     def GetCookies( self ): return self._connection.GetCookies()
     

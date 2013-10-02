@@ -218,7 +218,9 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
             connection = service.GetConnection()
             
-            account_types = connection.Get( 'account_types' )
+            response = connection.Get( 'account_types' )
+            
+            account_types = response[ 'account_types' ]
             
             self._titles_to_account_types = {}
             
@@ -394,7 +396,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         
         connection = service.GetConnection()
         
-        connection.Post( 'account_types_modification', edit_log = self._edit_log )
+        connection.Post( 'account_types', edit_log = self._edit_log )
         
         self.EndModal( wx.ID_OK )
         
@@ -2453,7 +2455,9 @@ class DialogManageOptionsFileRepository( ClientGUIDialogs.Dialog ):
             
             connection = self._service.GetConnection()
             
-            options = connection.Get( 'options' )
+            response = connection.Get( 'options' )
+            
+            options = response[ 'options' ]
             
             self._max_monthly_data.SetValue( options[ 'max_monthly_data' ] )
             self._max_storage.SetValue( options[ 'max_storage' ] )
@@ -3446,7 +3450,9 @@ class DialogManageOptionsServerAdmin( ClientGUIDialogs.Dialog ):
             
             connection = self._service.GetConnection()
             
-            options = connection.Get( 'options' )
+            response = connection.Get( 'options' )
+            
+            options = response[ 'options' ]
             
             self._max_monthly_data.SetValue( options[ 'max_monthly_data' ] )
             self._max_storage.SetValue( options[ 'max_storage' ] )
@@ -3547,7 +3553,9 @@ class DialogManageOptionsTagRepository( ClientGUIDialogs.Dialog ):
             
             connection = self._service.GetConnection()
             
-            options = connection.Get( 'options' )
+            response = connection.Get( 'options' )
+            
+            options = response[ 'options' ]
             
             self._max_monthly_data.SetValue( options[ 'max_monthly_data' ] )
             
@@ -3817,7 +3825,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         try:
             
-            service_identfiers_to_content_updates = {}
+            service_identifiers_to_content_updates = {}
             
             for panel in self._panels:
                 
@@ -3825,11 +3833,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                     
                     ( service_identifier, content_updates ) = panel.GetContentUpdates()
                     
-                    service_identfiers_to_content_updates[ service_identifier ] = content_updates
+                    service_identifiers_to_content_updates[ service_identifier ] = content_updates
                     
                 
             
-            HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving ratings changes to DB raised this error: ' + HC.u( e ) )
         
@@ -4125,8 +4133,6 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._edit_log = []
-            
             self._services_listbook = ClientGUICommon.ListBook( self )
             self._services_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             self._services_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
@@ -4141,24 +4147,8 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._ok = wx.Button( self, label='ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            # goes after self._remove, because of events
-            
-            for service_identifier in self._service_identifiers:
-                
-                page = self._Panel( self._services_listbook, service_identifier )
-                
-                name = HC.service_string_lookup[ service_identifier.GetType() ]
-                
-                self._services_listbook.AddPage( page, name )
-                
+            self._done = wx.Button( self, label='done' )
+            self._done.Bind( wx.EVT_BUTTON, self.EventDone )
             
         
         def PopulateControls():
@@ -4166,6 +4156,21 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             for service_type in [ HC.TAG_REPOSITORY, HC.FILE_REPOSITORY, HC.MESSAGE_DEPOT ]: self._service_types.Append( HC.service_string_lookup[ service_type ], service_type )
             
             self._service_types.SetSelection( 0 )
+            
+            connection = self._service.GetConnection()
+            
+            response = connection.Get( 'services' )
+            
+            services_info = response[ 'services_info' ]
+            
+            for ( service_identifier, options ) in services_info:
+                
+                page = self._Panel( self._services_listbook, service_identifier, options )
+                
+                name = HC.service_string_lookup[ service_identifier.GetType() ]
+                
+                self._services_listbook.AddPage( page, name )
+                
             
         
         def ArrangeControls():
@@ -4175,14 +4180,10 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             add_remove_hbox.AddF( self._add, FLAGS_MIXED )
             add_remove_hbox.AddF( self._remove, FLAGS_MIXED )
             
-            ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, FLAGS_MIXED )
-            ok_hbox.AddF( self._cancel, FLAGS_MIXED )
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._services_listbook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( self._done, FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
             
@@ -4199,7 +4200,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         connection = self._service.GetConnection()
         
-        self._service_identifiers = connection.Get( 'services' )
+        response = connection.Get( 'services' )
+        
+        self._service_identifiers = response[ 'service_identifiers' ]
         
         InitialiseControls()
         
@@ -4221,11 +4224,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         if service_panel is not None:
             
-            port = service_panel.GetInfo()
+            ( service_identifier, options ) = service_panel.GetInfo()
             
-            for existing_port in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() if page != service_panel ]:
+            for ( existing_service_identifier, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() if page != service_panel ]:
                 
-                if port == existing_port: raise Exception( 'That port is already in use!' )
+                if options[ 'port' ] == existing_options[ 'port' ]: raise Exception( 'That port is already in use!' )
                 
             
         
@@ -4236,26 +4239,23 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
         
-        existing_ports = [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]
+        connection = self._service.GetConnection()
         
-        port = HC.DEFAULT_SERVICE_PORT
+        response = connection.Post( 'services', action = 'add', data = service_type )
         
-        while port in existing_ports: port += 1
+        service_identifier = response[ 'service_identifier' ]
+        options = response[ 'options' ]
         
-        service_identifier = HC.ServerServiceIdentifier( service_type, port )
+        # commit to local db now
         
-        self._edit_log.append( ( HC.ADD, service_identifier ) )
-        
-        page = self._Panel( self._services_listbook, service_identifier )
+        page = self._Panel( self._services_listbook, service_identifier, options )
         
         name = HC.service_string_lookup[ service_type ]
         
         self._services_listbook.AddPage( page, name, select = True )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ):
+    def EventDone( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
@@ -4267,21 +4267,8 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         for page in self._services_listbook.GetNameToPageDict().values():
             
-            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalServiceIdentifier(), page.GetInfo() ) ) )
+            if page.HasChanges(): page.CommitChanges()
             
-        
-        try:
-            
-            if len( self._edit_log ) > 0:
-                
-                connection = self._service.GetConnection()
-                
-                connection.Post( 'services_modification', edit_log = self._edit_log )
-                
-                HC.app.Write( 'update_server_services', self._service.GetServiceIdentifier(), self._edit_log )
-                
-            
-        except Exception as e: wx.MessageBox( 'Saving services to server raised this error: ' + HC.u( e ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -4292,9 +4279,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         if service_panel is not None:
             
-            service_identifier = service_panel.GetOriginalServiceIdentifier()
+            service_identifier = service_panel.GetServiceIdentifier()
             
-            self._edit_log.append( ( HC.DELETE, service_identifier ) )
+            connection = self._service.GetConnection()
+            
+            response = connection.Post( 'services', action = 'delete', data = service_identifier )
             
             self._services_listbook.DeleteCurrentPage()
             
@@ -4321,17 +4310,22 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier ):
+        def __init__( self, parent, service_identifier, options ):
             
             wx.Panel.__init__( self, parent )
             
             self._service_identifier = service_identifier
+            self._options = options
             
             def InitialiseControls():
                 
                 self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
                 
+                # all possible options here. hide as appropriate in arrange
+                
                 self._service_port = wx.SpinCtrl( self._service_panel, min = 1, max = 65535 )
+                
+                # a button to commit options, should enable when changes
                 
             
             def PopulateControls():
@@ -4364,6 +4358,20 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             PopulateControls()
             
             ArrangeControls()
+            
+        
+        def EventUploadOptions( self, event ):
+            
+            # create service/connection to service/whatever
+            
+            connection.Post( 'options', options = options )
+            
+            pass
+            
+        
+        def CommitChanges( self ):
+            
+            pass
             
         
         def GetInfo( self ):
@@ -6866,16 +6874,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         try:
             
-            service_identfiers_to_content_updates = {}
+            service_identifiers_to_content_updates = {}
             
             for page in self._tag_repositories.GetNameToPageDict().values():
                 
                 ( service_identifier, content_updates ) = page.GetContentUpdates()
                 
-                service_identfiers_to_content_updates[ service_identifier ] = content_updates
+                service_identifiers_to_content_updates[ service_identifier ] = content_updates
                 
             
-            if len( service_identfiers_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_identfiers_to_content_updates )
+            if len( service_identifiers_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
         except Exception as e: wx.MessageBox( 'Saving mapping changes to DB raised this error: ' + HC.u( e ) )
         

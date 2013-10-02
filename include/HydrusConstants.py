@@ -37,8 +37,8 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 
 # Misc
 
-NETWORK_VERSION = 10
-SOFTWARE_VERSION = 86
+NETWORK_VERSION = 11
+SOFTWARE_VERSION = 87
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -127,7 +127,15 @@ service_string_lookup[ TAG_REPOSITORY ] = 'hydrus tag repository'
 service_string_lookup[ FILE_REPOSITORY ] = 'hydrus file repository'
 service_string_lookup[ LOCAL_FILE ] = 'hydrus local file service'
 service_string_lookup[ MESSAGE_DEPOT ] = 'hydrus message depot'
+service_string_lookup[ LOCAL_TAG ] = 'local tag service'
+service_string_lookup[ LOCAL_RATING_NUMERICAL ] = 'local numerical rating service'
+service_string_lookup[ LOCAL_RATING_LIKE ] = 'local like/dislike rating service'
+service_string_lookup[ RATING_NUMERICAL_REPOSITORY ] = 'hydrus numerical rating repository'
+service_string_lookup[ RATING_LIKE_REPOSITORY ] = 'hydrus like/dislike rating repository'
+service_string_lookup[ COMBINED_TAG ] = 'virtual combined tag service'
+service_string_lookup[ COMBINED_FILE ] = 'virtual combined file service'
 service_string_lookup[ SERVER_ADMIN ] = 'hydrus server administration'
+service_string_lookup[ NULL_SERVICE ] = 'null service'
 
 RATINGS_SERVICES = [ LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
 REPOSITORIES = [ TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
@@ -453,15 +461,15 @@ restricted_requests.append( ( GET, 'options', GENERAL_ADMIN ) )
 restricted_requests.append( ( GET, 'registration_keys', GENERAL_ADMIN ) )
 restricted_requests.append( ( GET, 'session_key', None ) )
 restricted_requests.append( ( GET, 'stats', GENERAL_ADMIN ) )
-restricted_requests.append( ( POST, 'account_modification', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
-restricted_requests.append( ( POST, 'account_types_modification', GENERAL_ADMIN ) )
+restricted_requests.append( ( POST, 'account', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
+restricted_requests.append( ( POST, 'account_types', GENERAL_ADMIN ) )
 restricted_requests.append( ( POST, 'options', GENERAL_ADMIN ) )
 
 admin_requests = list( restricted_requests )
 admin_requests.append( ( GET, 'init', None ) )
 admin_requests.append( ( GET, 'services', EDIT_SERVICES ) )
 admin_requests.append( ( POST, 'backup', EDIT_SERVICES ) )
-admin_requests.append( ( POST, 'services_modification', EDIT_SERVICES ) )
+admin_requests.append( ( POST, 'services', EDIT_SERVICES ) )
 
 repository_requests = list( restricted_requests )
 repository_requests.append( ( GET, 'num_petitions', RESOLVE_PETITIONS ) )
@@ -984,7 +992,8 @@ def ShowExceptionDefault( e ):
     
     message = u( etype.__name__ ) + ': ' + u( value ) + os.linesep + u( trace )
     
-    print( repr( message ) )
+    try: print( message )
+    except: print( repr( message ) )
     
 ShowException = ShowExceptionDefault
 
@@ -1431,9 +1440,7 @@ class Account( HydrusYAMLBase ):
         else: return GetNow() > self._expires
         
     
-    def CheckPermissions( self, permissions ):
-        
-        if type( permissions ) == int: permissions = ( permissions, )
+    def CheckPermission( self, permission ):
         
         if self._IsBanned(): raise HydrusExceptions.PermissionException( 'This account is banned!' )
         
@@ -1443,11 +1450,11 @@ class Account( HydrusYAMLBase ):
         
         ( used_bytes, used_requests ) = self._used_data
         
-        if max_num_bytes is not None and used_bytes > max_num_bytes: raise HydrusExceptions.PermissionException( 'You have hit your data transfer limit (' + ConvertIntToBytes( max_num_bytes ) + '), and cannot download any more for the month.' )
+        if max_num_bytes is not None and used_bytes > max_num_bytes: raise HydrusExceptions.PermissionException( 'You have hit your data transfer limit (' + ConvertIntToBytes( max_num_bytes ) + '), and cannot make any more requests for the month.' )
         
-        if max_num_requests is not None and used_requests > max_num_requests: raise HydrusExceptions.PermissionException( 'You have hit your requests limit (' + ConvertIntToPrettyString( max_num_requests ) + '), and cannot download any more for the month.' )
+        if max_num_requests is not None and used_requests > max_num_requests: raise HydrusExceptions.PermissionException( 'You have hit your requests limit (' + ConvertIntToPrettyString( max_num_requests ) + '), and cannot make any more requests for the month.' )
         
-        if len( permissions ) > 0 and True not in [ self._account_type.HasPermission( permission ) for permission in permissions ]: raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
+        if not self._account_type.HasPermission( permission ): raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
         
     
     def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._created ) + os.linesep + self._account_type.ConvertToString( self._used_data ) + os.linesep + 'which '+ ConvertTimestampToPrettyExpires( self._expires )
@@ -1496,6 +1503,8 @@ class Account( HydrusYAMLBase ):
     def GetUsedData( self ): return self._used_data
     
     def HasPermission( self, permission ):
+        
+        if self._IsBanned(): return False
         
         if self._IsExpired(): return False
         
@@ -1636,7 +1645,7 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Client Service Identifier: ' + u( ( self._name, self._type, self._service_key ) )
+    def __repr__( self ): return 'Client Service Identifier: ' + u( ( self._name, service_string_lookup[ self._type ] ) )
     
     def GetInfo( self ): return ( self._service_key, self._type, self._name )
     
@@ -2256,53 +2265,58 @@ SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICAT
 
 class ResponseContext():
     
-    def __init__( self, status_code, mime = None, body = '', filename = None, cookies = [] ):
+    def __init__( self, status_code, mime = APPLICATION_YAML, body = None, path = None, is_yaml = False, cookies = [] ):
         
         self._status_code = status_code
         self._mime = mime
         self._body = body
-        self._filename = filename
+        self._path = path
+        self._is_yaml = is_yaml
         self._cookies = cookies
         
     
     def GetCookies( self ): return self._cookies
     
-    def GetFilename( self ): return self._filename
-    
     def GetLength( self ): return len( self._body )
     
     def GetMimeBody( self ): return ( self._mime, self._body )
     
+    def GetPath( self ): return self._path
+    
     def GetStatusCode( self ): return self._status_code
     
-    def HasBody( self ): return self._body != ''
+    def HasBody( self ): return self._body is not None
     
-    def HasFilename( self ): return self._filename is not None
-
+    def HasPath( self ): return self._path is not None
+    
+    def IsYAML( self ): return self._is_yaml
+    
 class ServerServiceIdentifier( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerServiceIdentifier'
     
-    def __init__( self, type, port ):
+    def __init__( self, service_key, type ):
         
         HydrusYAMLBase.__init__( self )
         
+        self._service_key = service_key
         self._type = type
-        self._port = port
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
     
-    def __hash__( self ): return ( self._type, self._port ).__hash__()
+    def __hash__( self ): return self._service_key.__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Server Service Identifier: ' + u( ( self._type, self._port ) )
+    def __repr__( self ): return 'Server Service Identifier: ' + service_string_lookup[ self._type ]
     
-    def GetPort( self ): return self._port
+    def GetServiceKey( self ): return self._service_key
     
     def GetType( self ): return self._type
     
+SERVER_ADMIN_IDENTIFIER = ServerServiceIdentifier( 'server admin', SERVER_ADMIN )
+
 class ServiceUpdate():
     
     def __init__( self, action, row = None ):

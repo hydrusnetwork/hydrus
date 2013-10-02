@@ -8,6 +8,50 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 87</h3></li>
+				<ul>
+					<li>misc:</li>
+					<li><ul>
+						<li>fixed system:untagged, which was doing numtags>0 by accident</li>
+					</ul></li>
+					<li>basics:</li>
+					<li><ul>
+						<li>moved client local service to twisted</li>
+						<li>moved server to twisted</li>
+						<li>cleaned up a whole lot of unrelated server stuff I haven't touched in a while</li>
+						<li>fixed some misc typos</li>
+					</ul></li>
+					<li>details:</li>
+					<li><ul>
+						<li>built twisted server framework to plug into hydrus</li>
+						<li>changed hydrus authorisation header</li>
+						<li>changed sessions to manage accounts, reducing server db load</li>
+						<li>reworked session cookie to be neater</li>
+						<li>cleaned up a bunch of server code</li>
+						<li>fixed how certain server errors were being printed to the log</li>
+						<li>reworked response_context to a body/path dichotomy to reduce cpu+memory on file requests</li>
+						<li>collapsed a bunch of GET POST requests to the same path</li>
+						<li>reworked server_service_identifiers to be port-independant</li>
+						<li>improved data use logging to support new session management system</li>
+						<li>moved session management to new system</li>
+						<li>moved error management to new system</li>
+						<li>integrated twisted thread into hydrus controller</li>
+						<li>reworked root and favicon</li>
+						<li>reworked local file and thumbnail requests</li>
+						<li>reworked restricted service requests</li>
+						<li>reworked admin service requests</li>
+						<li>reworked repository service requests</li>
+						<li>removed manage options query; it'll be rolled into manage services admin queries</li>
+						<li>updated serverdb to manage with new system, harmonising internal and external requests to one workflow</li>
+						<li>made server-side data use tracking simpler</li>
+						<li>added Content-Type header to most requests</li>
+						<li>improved how key registration, init, and account GET requests are handled client-side</li>
+						<li>harmonised how account_keys are created server-side</li>
+						<li>moved server management from serverdb to servercontroller, with better pubsub restart</li>
+						<li>moved several useful functions to the new serverconstants.py</li>
+						<li>fixed a max_age sessions issue</li>
+					</ul></li>
+				</ul>
 				<li><h3>version 86</h3></li>
 				<ul>
 					<li>timeout on connections improved</li>

@@ -1892,7 +1892,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if num_tags_zero or num_tags_nonzero:
             
-            query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ';', ( tag_service_id, ) ) }
+            tag_query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ';', ( tag_service_id, ) ) }
+            
+            if num_tags_zero: query_hash_ids.difference_update( tag_query_hash_ids )
+            elif num_tags_nonzero: query_hash_ids = tag_query_hash_ids
             
         
         if len( tag_predicates ) > 0:
@@ -4079,32 +4082,24 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if action == HC.ADD:
                 
-                server_service_identifier = data
+                ( service_type, port ) = data
                 
                 service_key = os.urandom( 32 )
                 
                 service_type = server_service_identifier.GetType()
                 
-                service_port = server_service_identifier.GetPort()
+                port = server_service_identifier.GetPort()
                 
-                service_name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( service_port )
+                service_name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( port )
                 
                 client_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, service_name )
                 
-                credentials = CC.Credentials( host, service_port, access_key )
+                credentials = CC.Credentials( host, port, access_key )
                 
                 if service_type == HC.MESSAGE_DEPOT: extra_info = ( 'identity@' + service_name, 180, HydrusEncryption.GenerateNewPrivateKey(), True )
                 else: extra_info = None
                 
                 self._AddService( c, client_service_identifier, credentials, extra_info )
-                
-            elif action == HC.EDIT:
-                
-                ( server_service_identifier, new_port ) = data
-                
-                current_port = server_service_identifier.GetPort()
-                
-                c.execute( 'UPDATE addresses SET port = ? WHERE host = ? AND port = ?;', ( new_port, host, current_port ) )
                 
             elif action == HC.DELETE:
                 
@@ -6473,60 +6468,62 @@ class DB( ServiceDB ):
             
             def ProcessWrite( action, args, kwargs ):
                 
-                if action == '4chan_pass': self._Set4chanPass( c, *args, **kwargs )
-                elif action == 'add_downloads': self._AddDownloads( c, *args, **kwargs )
-                elif action == 'add_uploads': self._AddUploads( c, *args, **kwargs )
-                elif action == 'archive_conversation': self._ArchiveConversation( c, *args, **kwargs )
-                elif action == 'contact_associated': self._AssociateContact( c, *args, **kwargs )
-                elif action == 'content_updates': self._ProcessContentUpdates( c, *args, **kwargs )
-                elif action == 'copy_files': self._CopyFiles( c, *args, **kwargs )
-                elif action == 'delete_conversation': self._DeleteConversation( c, *args, **kwargs )
-                elif action == 'delete_draft': self._DeleteDraft( c, *args, **kwargs )
-                elif action == 'delete_orphans': self._DeleteOrphans( c, *args, **kwargs )
-                elif action == 'delete_pending': self._DeletePending( c, *args, **kwargs )
-                elif action == 'delete_hydrus_session_key': self._DeleteHydrusSessionKey( c, *args, **kwargs )
-                elif action == 'draft_message': self._DraftMessage( c, *args, **kwargs )
-                elif action == 'fatten_autocomplete_cache': self._FattenAutocompleteCache( c, *args, **kwargs )
-                elif action == 'favourite_custom_filter_actions': self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
-                elif action == 'flush_message_statuses': self._FlushMessageStatuses( c, *args, **kwargs )
-                elif action == 'generate_tag_ids': self._GenerateTagIdsEfficiently( c, *args, **kwargs )
+                if action == '4chan_pass': result = self._Set4chanPass( c, *args, **kwargs )
+                elif action == 'add_downloads': result = self._AddDownloads( c, *args, **kwargs )
+                elif action == 'add_uploads': result = self._AddUploads( c, *args, **kwargs )
+                elif action == 'archive_conversation': result = self._ArchiveConversation( c, *args, **kwargs )
+                elif action == 'contact_associated': result = self._AssociateContact( c, *args, **kwargs )
+                elif action == 'content_updates': result = self._ProcessContentUpdates( c, *args, **kwargs )
+                elif action == 'copy_files': result = self._CopyFiles( c, *args, **kwargs )
+                elif action == 'delete_conversation': result = self._DeleteConversation( c, *args, **kwargs )
+                elif action == 'delete_draft': result = self._DeleteDraft( c, *args, **kwargs )
+                elif action == 'delete_orphans': result = self._DeleteOrphans( c, *args, **kwargs )
+                elif action == 'delete_pending': result = self._DeletePending( c, *args, **kwargs )
+                elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( c, *args, **kwargs )
+                elif action == 'draft_message': result = self._DraftMessage( c, *args, **kwargs )
+                elif action == 'fatten_autocomplete_cache': result = self._FattenAutocompleteCache( c, *args, **kwargs )
+                elif action == 'favourite_custom_filter_actions': result = self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
+                elif action == 'flush_message_statuses': result = self._FlushMessageStatuses( c, *args, **kwargs )
+                elif action == 'generate_tag_ids': result = self._GenerateTagIdsEfficiently( c, *args, **kwargs )
                 elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
-                elif action == 'import_file': return self._ImportFile( c, *args, **kwargs )
-                elif action == 'import_file_from_page': self._ImportFilePage( c, *args, **kwargs )
-                elif action == 'import_folder': self._UpdateImportFolder( c, *args, **kwargs )
-                elif action == 'import_folders': self._SetImportFolders( c, *args, **kwargs )
-                elif action == 'inbox_conversation': self._InboxConversation( c, *args, **kwargs )
-                elif action == 'message': self._AddMessage( c, *args, **kwargs )
-                elif action == 'message_info_since': self._AddMessageInfoSince( c, *args, **kwargs )
-                elif action == 'message_statuses': self._UpdateMessageStatuses( c, *args, **kwargs )
-                elif action == 'pixiv_account': self._SetPixivAccount( c, *args, **kwargs )
-                elif action == 'reset_service': self._ResetService( c, *args, **kwargs )
-                elif action == 'save_options': self._SaveOptions( c, *args, **kwargs )
-                elif action == 'service_updates': self._ProcessServiceUpdates( c, *args, **kwargs )
-                elif action == 'session': self._AddSession( c, *args, **kwargs )
-                elif action == 'set_password': self._SetPassword( c, *args, **kwargs )
-                elif action == 'set_tag_service_precedence': self._SetTagServicePrecedence( c, *args, **kwargs )
-                elif action == 'subscription': self._SetSubscription( c, *args, **kwargs )
-                elif action == 'subscriptions': self._SetSubscriptions( c, *args, **kwargs )
-                elif action == 'tag_parents': self._UpdateTagParents( c, *args, **kwargs )
-                elif action == 'tag_siblings': self._UpdateTagSiblings( c, *args, **kwargs )
-                elif action == 'thumbnails': self._AddThumbnails( c, *args, **kwargs )
-                elif action == 'update': self._AddUpdate( c, *args, **kwargs )
-                elif action == 'update_boorus': self._UpdateBoorus( c, *args, **kwargs )
-                elif action == 'update_contacts': self._UpdateContacts( c, *args, **kwargs )
-                elif action == 'update_imageboards': self._UpdateImageboards( c, *args, **kwargs )
-                elif action == 'update_server_services': self._UpdateServerServices( c, *args, **kwargs )
-                elif action == 'update_services': self._UpdateServices( c, *args, **kwargs )
-                elif action == 'vacuum': self._Vacuum()
+                elif action == 'import_file': result = self._ImportFile( c, *args, **kwargs )
+                elif action == 'import_file_from_page': result = self._ImportFilePage( c, *args, **kwargs )
+                elif action == 'import_folder': result = self._UpdateImportFolder( c, *args, **kwargs )
+                elif action == 'import_folders': result = self._SetImportFolders( c, *args, **kwargs )
+                elif action == 'inbox_conversation': result = self._InboxConversation( c, *args, **kwargs )
+                elif action == 'message': result = self._AddMessage( c, *args, **kwargs )
+                elif action == 'message_info_since': result = self._AddMessageInfoSince( c, *args, **kwargs )
+                elif action == 'message_statuses': result = self._UpdateMessageStatuses( c, *args, **kwargs )
+                elif action == 'pixiv_account': result = self._SetPixivAccount( c, *args, **kwargs )
+                elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
+                elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
+                elif action == 'service_updates': result = self._ProcessServiceUpdates( c, *args, **kwargs )
+                elif action == 'session': result = self._AddSession( c, *args, **kwargs )
+                elif action == 'set_password': result = self._SetPassword( c, *args, **kwargs )
+                elif action == 'set_tag_service_precedence': result = self._SetTagServicePrecedence( c, *args, **kwargs )
+                elif action == 'subscription': result = self._SetSubscription( c, *args, **kwargs )
+                elif action == 'subscriptions': result = self._SetSubscriptions( c, *args, **kwargs )
+                elif action == 'tag_parents': result = self._UpdateTagParents( c, *args, **kwargs )
+                elif action == 'tag_siblings': result = self._UpdateTagSiblings( c, *args, **kwargs )
+                elif action == 'thumbnails': result = self._AddThumbnails( c, *args, **kwargs )
+                elif action == 'update': result = self._AddUpdate( c, *args, **kwargs )
+                elif action == 'update_boorus': result = self._UpdateBoorus( c, *args, **kwargs )
+                elif action == 'update_contacts': result = self._UpdateContacts( c, *args, **kwargs )
+                elif action == 'update_imageboards': result = self._UpdateImageboards( c, *args, **kwargs )
+                elif action == 'update_server_services': result = self._UpdateServerServices( c, *args, **kwargs )
+                elif action == 'update_services': result = self._UpdateServices( c, *args, **kwargs )
+                elif action == 'vacuum': result = self._Vacuum()
                 elif action == 'web_session': result = self._AddWebSession( c, *args, **kwargs )
                 else: raise Exception( 'db received an unknown write command: ' + action )
+                
+                return result
                 
             
             HC.pubsub.pub( 'db_locked_status', 'db locked' )
             
-            action = job.GetAction()
-            
             job_type = job.GetType()
+            
+            action = job.GetAction()
             
             args = job.GetArgs()
             
@@ -6864,7 +6861,12 @@ def DAEMONDownloadThumbnails():
                         
                         thumbnails = []
                         
-                        for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]: thumbnails.append( ( hash, connection.Get( 'thumbnail', hash = hash.encode( 'hex' ) ) ) )
+                        for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]:
+                            
+                            thumbnail = connection.Get( 'thumbnail', hash = hash.encode( 'hex' ) )
+                            
+                            thumbnails.append( ( hash, thumbnail ) )
+                            
                         
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
@@ -6958,11 +6960,19 @@ def DAEMONSynchroniseAccounts():
                 
                 connection = service.GetConnection()
                 
-                connection.Get( 'account' )
+                response = connection.Get( 'account' )
+                
+                account = response[ 'account' ]
+                
+                account.MakeFresh()
+                
+                HC.app.Write( 'service_updates', { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
                 
                 do_notify = True
                 
             except Exception as e:
+                
+                print( traceback.format_exc() )
                 
                 name = service_identifier.GetName()
                 

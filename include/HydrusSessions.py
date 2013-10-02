@@ -13,6 +13,8 @@ import traceback
 import wx
 import yaml
 
+HYDRUS_SESSION_EXPIRY_TIME = 30 * 86400
+
 class HydrusSessionManagerClient():
     
     def __init__( self ):
@@ -61,7 +63,7 @@ class HydrusSessionManagerClient():
             try: session_key = cookies[ 'session_key' ].decode( 'hex' )
             except: raise Exception( 'Service did not return a session key!' )
             
-            expiry = now + 30 * 86400
+            expiry = now + HYDRUS_SESSION_EXPIRY_TIME
             
             self._sessions[ service_identifier ] = ( session_key, expiry )
             
@@ -75,21 +77,32 @@ class HydrusSessionManagerServer():
     
     def __init__( self ):
         
-        existing_sessions = HC.app.GetDB().Read( 'sessions', HC.HIGH_PRIORITY )
+        existing_sessions = HC.app.Read( 'sessions' )
         
-        self._sessions = { ( session_key, service_identifier ) : ( account_identifier, expiry ) for ( session_key, service_identifier, account_identifier, expiry ) in existing_sessions }
+        self._sessions = { ( session_key, service_identifier ) : ( account, expiry ) for ( session_key, service_identifier, account, expiry ) in existing_sessions }
         
         self._lock = threading.Lock()
         
     
-    def AddSession( self, session_key, service_identifier, account_identifier, expiry ):
+    def AddSession( self, service_identifier, account ):
         
-        HC.app.GetDB().Write( 'session', HC.HIGH_PRIORITY, session_key, service_identifier, account_identifier, expiry )
+        session_key = os.urandom( 32 )
         
-        self._sessions[ ( session_key, service_identifier ) ] = ( account_identifier, expiry )
+        now = HC.GetNow()
+    
+        expiry = now + HYDRUS_SESSION_EXPIRY_TIME
+        
+        HC.app.Write( 'session', session_key, service_identifier, account, expiry )
+        
+        with self._lock:
+            
+            self._sessions[ ( session_key, service_identifier ) ] = ( account, expiry )
+            
+        
+        return ( session_key, expiry )
         
     
-    def GetAccountIdentifier( self, session_key, service_identifier ):
+    def GetAccount( self, session_key, service_identifier ):
         
         now = HC.GetNow()
         
@@ -97,13 +110,11 @@ class HydrusSessionManagerServer():
             
             if ( session_key, service_identifier ) in self._sessions:
                 
-                ( account_identifier, expiry ) = self._sessions[ ( session_key, service_identifier ) ]
+                ( account, expiry ) = self._sessions[ ( session_key, service_identifier ) ]
                 
                 if now > expiry: del self._sessions[ ( session_key, service_identifier ) ]
-                else: return account_identifier
+                else: return account
                 
-            
-            # session not found, or expired
             
             raise HydrusExceptions.SessionException()
             

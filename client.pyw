@@ -18,7 +18,7 @@ import sys
 from include import HydrusConstants as HC
 from include import ClientController
 import threading
-#from twisted.internet import reactor
+from twisted.internet import reactor
 
 initial_sys_stdout = sys.stdout
 initial_sys_stderr = sys.stderr
@@ -30,7 +30,7 @@ with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
     
     try:
         
-        #threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         app = ClientController.Controller()
         
@@ -47,6 +47,6 @@ sys.stderr = initial_sys_stderr
 
 HC.shutdown = True
 
-#reactor.callFromThread( reactor.stop )
+reactor.callFromThread( reactor.stop )
 
 HC.pubsub.pubimmediate( 'shutdown' )
