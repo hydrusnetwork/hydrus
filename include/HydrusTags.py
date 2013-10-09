@@ -7,6 +7,186 @@ import time
 import traceback
 import wx
 
+# important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
+def BuildServiceIdentifiersToChildrenToParents( service_identifiers_to_simple_children_to_parents ):
+    
+    def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
+        
+        for parent in parents:
+            
+            children_to_parents[ child ].append( parent )
+            
+            if parent in simple_children_to_parents:
+                
+                grandparents = simple_children_to_parents[ parent ]
+                
+                AddParents( simple_children_to_parents, children_to_parents, child, grandparents )
+                
+            
+        
+    
+    service_identifiers_to_children_to_parents = collections.defaultdict( HC.default_dict_list )
+    
+    for ( service_identifier, simple_children_to_parents ) in service_identifiers_to_simple_children_to_parents.items():
+        
+        children_to_parents = service_identifiers_to_children_to_parents[ service_identifier ]
+        
+        for ( child, parents ) in simple_children_to_parents.items(): AddParents( simple_children_to_parents, children_to_parents, child, parents )
+        
+    
+    return service_identifiers_to_children_to_parents
+    
+def BuildServiceIdentifiersToSimpleChildrenToParents( service_identifiers_to_pairs_flat ):
+    
+    service_identifiers_to_simple_children_to_parents = collections.defaultdict( HC.default_dict_set )
+    
+    for ( service_identifier, pairs ) in service_identifiers_to_pairs_flat.items():
+        
+        service_identifiers_to_simple_children_to_parents[ service_identifier ] = BuildSimpleChildrenToParents( pairs )
+        
+    
+    return service_identifiers_to_simple_children_to_parents
+    
+def BuildSimpleChildrenToParents( pairs ):
+    
+    simple_children_to_parents = HC.default_dict_set()
+    
+    for ( child, parent ) in pairs:
+        
+        if child == parent: continue
+        
+        if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
+        
+        simple_children_to_parents[ child ].add( parent )
+        
+    
+    return simple_children_to_parents
+    
+def CollapseTagSiblingChains( processed_siblings ):
+    
+    # now to collapse chains
+    # A -> B and B -> C goes to A -> C and B -> C
+    
+    siblings = {}
+    
+    for ( old_tag, new_tag ) in processed_siblings.items():
+        
+        # adding A -> B
+        
+        if new_tag in siblings:
+            
+            # B -> F already calculated and added, so add A -> F
+            
+            siblings[ old_tag ] = siblings[ new_tag ]
+            
+        else:
+            
+            while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
+            
+            siblings[ old_tag ] = new_tag
+            
+        
+    
+    reverse_lookup = collections.defaultdict( list )
+    
+    for ( old_tag, new_tag ) in siblings.items(): reverse_lookup[ new_tag ].append( old_tag )
+    
+    return ( siblings, reverse_lookup )
+    
+def CombineTagParentPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
+    
+    service_identifiers_to_pairs_flat = HC.default_dict_set()
+    
+    combined = service_identifiers_to_pairs_flat[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+    
+    current_deleted_pairs = set()
+    
+    for service_identifier in tag_service_precedence:
+        
+        statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+        
+        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+        
+        service_identifiers_to_pairs_flat[ service_identifier ] = pairs
+        
+        pairs.difference_update( current_deleted_pairs )
+        
+        combined.update( pairs )
+        
+        current_deleted_pairs.update( statuses_to_pairs[ HC.DELETED ] )
+        
+    
+    return service_identifiers_to_pairs_flat
+    
+def CombineTagSiblingPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
+    
+    # first combine the services
+    # go from high precedence to low, writing A -> B
+    # if A map already exists, don't overwrite
+    # if A -> B forms a loop, don't write it
+    
+    processed_siblings = {}
+    current_deleted_pairs = set()
+    
+    for service_identifier in tag_service_precedence:
+        
+        statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+        
+        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+        
+        pairs.difference_update( current_deleted_pairs )
+        
+        for ( old, new ) in pairs:
+            
+            if old == new: continue
+            
+            if old not in processed_siblings:
+                
+                next_new = new
+                
+                we_have_a_loop = False
+                
+                while next_new in processed_siblings:
+                    
+                    next_new = processed_siblings[ next_new ]
+                    
+                    if next_new == old:
+                        
+                        we_have_a_loop = True
+                        
+                        break
+                        
+                    
+                
+                if not we_have_a_loop: processed_siblings[ old ] = new
+                
+            
+        
+        current_deleted_pairs.update( statuses_to_pairs[ HC.DELETED ] )
+        
+    
+    return processed_siblings
+    
+def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
+    
+    potential_loop_paths = { parent }
+    
+    while len( potential_loop_paths.intersection( simple_children_to_parents.keys() ) ) > 0:
+        
+        new_potential_loop_paths = set()
+        
+        for potential_loop_path in potential_loop_paths.intersection( simple_children_to_parents.keys() ):
+            
+            new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
+            
+        
+        potential_loop_paths = new_potential_loop_paths
+        
+        if child in potential_loop_paths: return True
+        
+    
+    return False
+    
 def MergeTagsManagers( tag_service_precedence, tags_managers ):
     
     def CurrentAndPendingFilter( items ):
@@ -49,9 +229,102 @@ def MergeTagsManagers( tag_service_precedence, tags_managers ):
     
     return TagsManagerSimple( merged_service_identifiers_to_statuses_to_tags )
     
+class NamespaceBlacklistsManager():
+    
+    def __init__( self ):
+        
+        self.RefreshData()
+        
+        HC.pubsub.sub( self, 'RefreshData', 'notify_new_namespace_blacklists' )
+        
+    
+    def _GetPredicate( self, service_identifier ):
+        
+        ( blacklist, namespaces ) = self._service_identifiers_to_blacklists[ service_identifier ]
+        
+        tag_matches = lambda tag: True in ( tag.startswith( namespace ) for namespace in namespaces )
+        
+        if blacklist: predicate = lambda tag: not tag_matches( tag )
+        else: predicate = tag_matches
+        
+        return predicate
+        
+    
+    def RefreshData( self ):
+        
+        info = HC.app.Read( 'namespace_blacklists' )
+        
+        self._service_identifiers_to_predicates = {}
+        
+        for ( service_identifier, blacklist, namespaces ) in info:
+            
+            unnamespaced = '' in namespaces
+            
+            ns = [ namespace for namespace in namespaces if namespace != '' ]
+            
+            namespaced_match = lambda tag: True in ( tag.startswith( namespace ) for namespace in ns )
+            
+            if unnamespaced:
+                
+                unnamespaced_match = lambda tag: ':' not in tag
+                
+                if len( ns ) > 0: tag_match = lambda tag: unnamespaced_match( tag ) or namespaced_match( tag )
+                else: tag_match = unnamespaced_match
+                
+            else:
+                
+                tag_match = namespaced_match
+                
+            
+            if blacklist: predicate = lambda tag: not tag_match( tag )
+            else: predicate = tag_match
+            
+            self._service_identifiers_to_predicates[ service_identifier ] = predicate
+            
+        
+    
+    def FilterServiceidentifiersToStatusesToTags( self, service_identifiers_to_statuses_to_tags ):
+        
+        filtered_service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        
+        for ( service_identifier, statuses_to_tags ) in service_identifiers_to_statuses_to_tags.items():
+            
+            if service_identifier in self._service_identifiers_to_predicates:
+                
+                predicate = self._service_identifiers_to_predicates[ service_identifier ]
+                
+                for ( status, tags ) in statuses_to_tags.items():
+                    
+                    tags = { tag for tag in tags if predicate( tag ) }
+                    
+                    filtered_service_identifiers_to_statuses_to_tags[ service_identifier ][ status ] = tags
+                    
+                
+            else: filtered_service_identifiers_to_statuses_to_tags[ service_identifier ] = statuses_to_tags
+            
+        
+        return filtered_service_identifiers_to_statuses_to_tags
+        
+    
+    def FilterTags( self, service_identifier, tags ):
+        
+        if service_identifier in self._service_identifiers_to_predicates:
+            
+            predicate = self._service_identifiers_to_predicates[ service_identifier ]
+            
+            tags = { tag for tag in tags if predicate( tag ) }
+            
+        
+        return tags
+        
+    
 class TagsManagerSimple():
     
     def __init__( self, service_identifiers_to_statuses_to_tags ):
+        
+        namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+        
+        service_identifiers_to_statuses_to_tags = namespace_blacklists_manager.FilterServiceidentifiersToStatusesToTags( service_identifiers_to_statuses_to_tags )
         
         self._service_identifiers_to_statuses_to_tags = service_identifiers_to_statuses_to_tags
         
@@ -154,6 +427,8 @@ class TagsManager( TagsManagerSimple ):
         TagsManagerSimple.__init__( self, service_identifiers_to_statuses_to_tags )
         
         self._tag_service_precedence = tag_service_precedence
+        
+        self._RecalcCombined()
         
     
     def _RecalcCombined( self ):
@@ -290,106 +565,6 @@ class TagsManager( TagsManagerSimple ):
             
         
     
-def CombineTagParentPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
-    
-    service_identifiers_to_pairs_flat = HC.default_dict_set()
-    
-    combined = service_identifiers_to_pairs_flat[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
-    
-    current_deleted_pairs = set()
-    
-    for service_identifier in tag_service_precedence:
-        
-        statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
-        
-        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
-        
-        service_identifiers_to_pairs_flat[ service_identifier ] = pairs
-        
-        pairs.difference_update( current_deleted_pairs )
-        
-        combined.update( pairs )
-        
-        current_deleted_pairs.update( statuses_to_pairs[ HC.DELETED ] )
-        
-    
-    return service_identifiers_to_pairs_flat
-    
-def BuildSimpleChildrenToParents( pairs ):
-    
-    simple_children_to_parents = HC.default_dict_set()
-    
-    for ( child, parent ) in pairs:
-        
-        if child == parent: continue
-        
-        if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
-        
-        simple_children_to_parents[ child ].add( parent )
-        
-    
-    return simple_children_to_parents
-    
-def BuildServiceIdentifiersToSimpleChildrenToParents( service_identifiers_to_pairs_flat ):
-    
-    service_identifiers_to_simple_children_to_parents = collections.defaultdict( HC.default_dict_set )
-    
-    for ( service_identifier, pairs ) in service_identifiers_to_pairs_flat.items():
-        
-        service_identifiers_to_simple_children_to_parents[ service_identifier ] = BuildSimpleChildrenToParents( pairs )
-        
-    
-    return service_identifiers_to_simple_children_to_parents
-    
-def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
-    
-    potential_loop_paths = { parent }
-    
-    while len( potential_loop_paths.intersection( simple_children_to_parents.keys() ) ) > 0:
-        
-        new_potential_loop_paths = set()
-        
-        for potential_loop_path in potential_loop_paths.intersection( simple_children_to_parents.keys() ):
-            
-            new_potential_loop_paths.update( simple_children_to_parents[ potential_loop_path ] )
-            
-        
-        potential_loop_paths = new_potential_loop_paths
-        
-        if child in potential_loop_paths: return True
-        
-    
-    return False
-    
-# important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
-def BuildServiceIdentifiersToChildrenToParents( service_identifiers_to_simple_children_to_parents ):
-    
-    def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
-        
-        for parent in parents:
-            
-            children_to_parents[ child ].append( parent )
-            
-            if parent in simple_children_to_parents:
-                
-                grandparents = simple_children_to_parents[ parent ]
-                
-                AddParents( simple_children_to_parents, children_to_parents, child, grandparents )
-                
-            
-        
-    
-    service_identifiers_to_children_to_parents = collections.defaultdict( HC.default_dict_list )
-    
-    for ( service_identifier, simple_children_to_parents ) in service_identifiers_to_simple_children_to_parents.items():
-        
-        children_to_parents = service_identifiers_to_children_to_parents[ service_identifier ]
-        
-        for ( child, parents ) in simple_children_to_parents.items(): AddParents( simple_children_to_parents, children_to_parents, child, parents )
-        
-    
-    return service_identifiers_to_children_to_parents
-    
 class TagParentsManager():
     
     def __init__( self ):
@@ -478,86 +653,6 @@ class TagParentsManager():
         
         with self._lock: self._RefreshParents()
         
-    
-def CombineTagSiblingPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
-    
-    # first combine the services
-    # go from high precedence to low, writing A -> B
-    # if A map already exists, don't overwrite
-    # if A -> B forms a loop, don't write it
-    
-    processed_siblings = {}
-    current_deleted_pairs = set()
-    
-    for service_identifier in tag_service_precedence:
-        
-        statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
-        
-        pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
-        
-        pairs.difference_update( current_deleted_pairs )
-        
-        for ( old, new ) in pairs:
-            
-            if old == new: continue
-            
-            if old not in processed_siblings:
-                
-                next_new = new
-                
-                we_have_a_loop = False
-                
-                while next_new in processed_siblings:
-                    
-                    next_new = processed_siblings[ next_new ]
-                    
-                    if next_new == old:
-                        
-                        we_have_a_loop = True
-                        
-                        break
-                        
-                    
-                
-                if not we_have_a_loop: processed_siblings[ old ] = new
-                
-            
-        
-        current_deleted_pairs.update( statuses_to_pairs[ HC.DELETED ] )
-        
-    
-    return processed_siblings
-    
-def CollapseTagSiblingChains( processed_siblings ):
-    
-    # now to collapse chains
-    # A -> B and B -> C goes to A -> C and B -> C
-    
-    siblings = {}
-    
-    for ( old_tag, new_tag ) in processed_siblings.items():
-        
-        # adding A -> B
-        
-        if new_tag in siblings:
-            
-            # B -> F already calculated and added, so add A -> F
-            
-            siblings[ old_tag ] = siblings[ new_tag ]
-            
-        else:
-            
-            while new_tag in processed_siblings: new_tag = processed_siblings[ new_tag ] # pursue endpoint F
-            
-            siblings[ old_tag ] = new_tag
-            
-        
-    
-    reverse_lookup = collections.defaultdict( list )
-    
-    for ( old_tag, new_tag ) in siblings.items(): reverse_lookup[ new_tag ].append( old_tag )
-    
-    return ( siblings, reverse_lookup )
     
 class TagSiblingsManager():
     

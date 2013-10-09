@@ -110,10 +110,10 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( ( 'add', ( new_tag_repo, new_tag_repo_credentials, None ) ) )
-        edit_log.append( ( 'add', ( other_new_tag_repo, new_tag_repo_credentials, None ) ) )
-        edit_log.append( ( 'add', ( new_local_like, None, new_local_like_extra_info ) ) )
-        edit_log.append( ( 'add', ( new_local_numerical, None, new_local_numerical_extra_info ) ) )
+        edit_log.append( ( HC.ADD, ( new_tag_repo, new_tag_repo_credentials, None ) ) )
+        edit_log.append( ( HC.ADD, ( other_new_tag_repo, new_tag_repo_credentials, None ) ) )
+        edit_log.append( ( HC.ADD, ( new_local_like, None, new_local_like_extra_info ) ) )
+        edit_log.append( ( HC.ADD, ( new_local_numerical, None, new_local_numerical_extra_info ) ) )
         
         self._db.Write( 'update_services', HC.HIGH_PRIORITY, True, edit_log )
         
@@ -134,8 +134,8 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( ( 'delete', new_local_like ) )
-        edit_log.append( ( 'edit', ( other_new_tag_repo, ( other_new_tag_repo_updated, other_new_tag_repo_credentials_updated, None ) ) ) )
+        edit_log.append( ( HC.DELETE, new_local_like ) )
+        edit_log.append( ( HC.EDIT, ( other_new_tag_repo, ( other_new_tag_repo_updated, other_new_tag_repo_credentials_updated, None ) ) ) )
         
         self._db.Write( 'update_services', HC.HIGH_PRIORITY, True, edit_log )
         

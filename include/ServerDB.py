@@ -1336,7 +1336,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
-        service_type = service_identifiers.GetType()
+        service_type = service_identifier.GetType()
         
         if service_type == HC.FILE_REPOSITORY:
             
@@ -1369,10 +1369,12 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
-        service_type = service_identifiers.GetType()
+        service_type = service_identifier.GetType()
         
         if service_type == HC.FILE_REPOSITORY: petition = self._GetFilePetition( c, service_id )
         elif service_type == HC.TAG_REPOSITORY: petition = self._GetTagPetition( c, service_id )
+        
+        return petition
         
     
     def _GetReason( self, c, reason_id ):
@@ -1592,7 +1594,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         for ( action, details ) in edit_log:
             
-            if action == 'add':
+            if action == HC.ADD:
                 
                 account_type = details
                 
@@ -1606,7 +1608,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 c.execute( 'INSERT OR IGNORE INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, account_type_id ) )
                 
-            elif action == 'delete':
+            elif action == HC.DELETE:
                 
                 ( title, new_title ) = details
                 
@@ -1621,7 +1623,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 c.execute( 'DELETE FROM account_type_map WHERE service_id = ? AND account_type_id = ?;', ( service_id, account_type_id ) )
                 
-            elif action == 'edit':
+            elif action == HC.EDIT:
                 
                 ( old_title, account_type ) = details
                 
@@ -1636,64 +1638,70 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _ModifyServices( self, c, action, data ):
+    def _ModifyServices( self, c, account, edit_log ):
         
         account_id = account.GetAccountId()
         
+        modified_services = {}
+        
         now = HC.GetNow()
         
-        if action == HC.ADD:
+        for ( action, data ) in edit_log:
             
-            ( account, service_type ) = data
-            
-            all_existing_options = c.execute( 'SELECT options FROM services;' ).fetchall()
-            
-            port = HC.DEFAULT_SERVICE_PORT
-            
-            while True in ( port == existing_options[ 'port' ] for existing_options in all_existing_options ): port += 1
-            
-            options = dict( HC.DEFAULT_OPTIONS[ service_type ] )
-            
-            options[ 'port' ] = port
-            
-            service_key = os.urandom( 32 )
-            
-            service_identifier = HC.ServerServiceIdentifier( service_key, service_type )
-            
-            c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( service_key, service_type, options ) )
-            
-            service_id = c.lastrowid
-            
-            service_admin_account_type = HC.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
-            
-            c.execute( 'INSERT INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( 'service admin', service_admin_account_type ) )
-            
-            service_admin_account_type_id = c.lastrowid
-            
-            c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
-            
-            c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, service_admin_account_type_id, now, None, 0, 0 ) )
-            
-            if service_type in HC.REPOSITORIES:
+            if action == HC.ADD:
                 
-                begin = 0
-                end = HC.GetNow()
+                ( service_identifier, options ) = data
                 
-                self._CreateUpdate( c, service_id, begin, end )
+                service_key = service_identifier.GetServiceKey()
+                service_type = service_identifier.GetType()
                 
-            
-            services_to_boot.add( )
-            
-        elif action == HC.DELETE:
-            
-            service_identifier = data
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, options ) )
+                
+                service_id = c.lastrowid
+                
+                service_admin_account_type = HC.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
+                
+                c.execute( 'INSERT INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( 'service admin', service_admin_account_type ) )
+                
+                service_admin_account_type_id = c.lastrowid
+                
+                c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
+                
+                c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, service_admin_account_type_id, now, None, 0, 0 ) )
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    begin = 0
+                    end = HC.GetNow()
+                    
+                    self._CreateUpdate( c, service_id, begin, end )
+                    
+                
+                modified_services[ service_identifier ] = options
+                
+            elif action == HC.DELETE:
+                
+                service_identifier = data
+                
+                service_id = self._GetServiceId( c, service_identifier )
+                
+                c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                
+                modified_services[ service_identifier ] = {}
+                
+            elif action == HC.EDIT:
+                
+                ( service_identifier, options ) = data
+                
+                service_id = self._GetServiceId( c, service_identifier )
+                
+                c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
+                
+                modified_services[ service_identifier ] = options
+                
             
         
-        HC.pubsub.pub( 'restart_service', service_identifier )
+        for ( service_identifier, options ) in modified_services.items(): self.pub( 'restart_service', service_identifier, options )
         
     
     def _ProcessUpdate( self, c, service_identifier, account, update ):
@@ -1930,16 +1938,6 @@ class DB( ServiceDB ):
         self._UpdateDB( c )
         
         service_identifiers = self._GetServiceIdentifiers( c )
-        
-        ( self._server_admin_id, ) = c.execute( 'SELECT service_id FROM services WHERE type = ?;', ( HC.SERVER_ADMIN, ) ).fetchone()
-        
-        HC.DAEMONQueue( 'FlushRequestsMade', self.DAEMONFlushRequestsMade, 'request_made', period = 10 )
-        
-        HC.DAEMONWorker( 'CheckMonthlyData', self.DAEMONCheckMonthlyData, period = 3600 )
-        HC.DAEMONWorker( 'ClearBans', self.DAEMONClearBans, period = 3600 )
-        HC.DAEMONWorker( 'DeleteOrphans', self.DAEMONDeleteOrphans, period = 86400 )
-        HC.DAEMONWorker( 'GenerateUpdates', self.DAEMONGenerateUpdates, period = 1200 )
-        HC.DAEMONWorker( 'CheckDataUsage', self.DAEMONCheckDataUsage, period = 86400 )
         
         threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
         
@@ -2586,6 +2584,8 @@ class DB( ServiceDB ):
             
         
     
+    def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
+    
     def AddJobServer( self, service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length ):
         
         priority = HC.HIGH_PRIORITY
@@ -2597,45 +2597,6 @@ class DB( ServiceDB ):
         if not HC.shutdown: return job.GetResult()
         
         raise Exception( 'Application quit before db could serve result!' )
-        
-    
-    def DAEMONCheckDataUsage( self ): self.Write( 'check_data_usage', HC.LOW_PRIORITY )
-    
-    def DAEMONCheckMonthlyData( self ): self.Write( 'check_monthly_data', HC.LOW_PRIORITY )
-    
-    def DAEMONClearBans( self ): self.Write( 'clear_bans', HC.LOW_PRIORITY )
-    
-    def DAEMONDeleteOrphans( self ): self.Write( 'delete_orphans', HC.LOW_PRIORITY )
-    
-    def DAEMONFlushRequestsMade( self, all_services_requests ): self.Write( 'flush_requests_made', HC.LOW_PRIORITY, all_services_requests )
-    
-    def DAEMONGenerateUpdates( self ):
-        
-        dirty_updates = self.Read( 'dirty_updates', HC.LOW_PRIORITY )
-        
-        for ( service_id, begin, end ) in dirty_updates: self.Write( 'clean_update', HC.LOW_PRIORITY, service_id, begin, end )
-        
-        update_ends = self.Read( 'update_ends', HC.LOW_PRIORITY )
-        
-        for ( service_id, biggest_end ) in update_ends:
-            
-            now = HC.GetNow()
-            
-            next_begin = biggest_end + 1
-            next_end = biggest_end + HC.UPDATE_DURATION
-            
-            while next_end < now:
-                
-                self.Write( 'create_update', HC.LOW_PRIORITY, service_id, next_begin, next_end )
-                
-                biggest_end = next_end
-                
-                now = HC.GetNow()
-                
-                next_begin = biggest_end + 1
-                next_end = biggest_end + HC.UPDATE_DURATION
-                
-            
         
     
     def MainLoop( self ):
@@ -2797,5 +2758,43 @@ class DB( ServiceDB ):
         self._jobs.put( ( priority, job ) )
         
         return job.GetResult()
+        
+    
+def DAEMONCheckDataUsage(): HC.app.WriteDaemon( 'check_data_usage' )
+
+def DAEMONCheckMonthlyData(): HC.app.WriteDaemon( 'check_monthly_data' )
+
+def DAEMONClearBans(): HC.app.WriteDaemon( 'clear_bans' )
+
+def DAEMONDeleteOrphans(): HC.app.WriteDaemon( 'delete_orphans' )
+
+def DAEMONFlushRequestsMade( all_services_requests ): HC.app.WriteDaemon( 'flush_requests_made', all_services_requests )
+
+def DAEMONGenerateUpdates():
+    
+    dirty_updates = HC.app.ReadDaemon( 'dirty_updates' )
+    
+    for ( service_id, begin, end ) in dirty_updates: HC.app.WriteDaemon( 'clean_update', service_id, begin, end )
+    
+    update_ends = HC.app.ReadDaemon( 'update_ends' )
+    
+    for ( service_id, biggest_end ) in update_ends:
+        
+        now = HC.GetNow()
+        
+        next_begin = biggest_end + 1
+        next_end = biggest_end + HC.UPDATE_DURATION
+        
+        while next_end < now:
+            
+            HC.app.WriteDaemon( 'create_update', service_id, next_begin, next_end )
+            
+            biggest_end = next_end
+            
+            now = HC.GetNow()
+            
+            next_begin = biggest_end + 1
+            next_end = biggest_end + HC.UPDATE_DURATION
+            
         
     

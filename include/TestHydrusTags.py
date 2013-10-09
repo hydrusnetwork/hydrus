@@ -218,7 +218,14 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_service_identifiers_to_statuses_to_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetServiceIdentifiersToStatusesToTags(), self._service_identifiers_to_statuses_to_tags )
+        s = self._tags_manager.GetServiceIdentifiersToStatusesToTags()
+        
+        self.assertEqual( s[ self._first ], self._service_identifiers_to_statuses_to_tags[ self._first ] )
+        self.assertEqual( s[ self._second ], self._service_identifiers_to_statuses_to_tags[ self._second ] )
+        self.assertEqual( s[ self._third ], self._service_identifiers_to_statuses_to_tags[ self._third ] )
+        
+        # there is also s[ HC.COMBINED_TAG_S_I ], auto-generated on tags_manager init
+        # so can't just do a straight s == self._s
         
     
     def test_get_statuses_to_tags( self ):

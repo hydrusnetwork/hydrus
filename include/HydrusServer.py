@@ -340,7 +340,7 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         
         root.putChild( 'backup', HydrusServerResources.HydrusResourceCommandRestrictedBackup( self._service_identifier ) )
         root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_identifier ) )
-        root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_identifier ) )
+        root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedServices( self._service_identifier ) )
         
         return root
         

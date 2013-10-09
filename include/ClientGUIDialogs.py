@@ -4088,14 +4088,14 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             self._current_actions_selection = wx.NOT_FOUND
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._edit = wx.Button( self, label='edit' )
+            self._edit = wx.Button( self, label = 'edit' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self, label = 'remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             

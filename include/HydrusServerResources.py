@@ -569,7 +569,7 @@ class HydrusResourceCommand( Resource ):
             default_encoding = lambda x: HC.u( x )
             
         
-        if failure.type == KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing.' ) )
+        if failure.type == KeyError: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
         elif failure.type == HydrusExceptions.PermissionException: response_context = HC.ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.ForbiddenException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NotFoundException: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
@@ -579,7 +579,7 @@ class HydrusResourceCommand( Resource ):
             
             print( failure.getTraceback() )
             
-            response_context = HC.ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep + os.linesep + traceback.format_exc() ) )
+            response_context = HC.ResponseContext( 500, mime = default_mime, body = default_encoding( 'The repository encountered an error it could not handle! Here is a dump of what happened, which will also be written to your client.log file. If it persists, please forward it to hydrus.admin@gmail.com:' + os.linesep + os.linesep + failure.getTraceback() ) )
             
         
         request.hydrus_response_context = response_context
@@ -1037,9 +1037,7 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         
         account = request.hydrus_account
         
-        service_identifier = request.hydrus_args[ 'service_identifier' ]
-        action = request.hydrus_args[ 'action' ]
-        data = request.hydrus_args[ 'data' ]
+        edit_log = request.hydrus_args[ 'edit_log' ]
         
         HC.app.Write( 'services', account, edit_log )
         

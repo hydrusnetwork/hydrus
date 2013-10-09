@@ -194,20 +194,20 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
             self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ] )
             
-            self._add = wx.Button( self._account_types_panel, label='add' )
+            self._add = wx.Button( self._account_types_panel, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             
-            self._edit = wx.Button( self._account_types_panel, label='edit' )
+            self._edit = wx.Button( self._account_types_panel, label = 'edit' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
-            self._delete = wx.Button( self._account_types_panel, label='delete' )
+            self._delete = wx.Button( self._account_types_panel, label = 'delete' )
             self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
             
-            self._apply = wx.Button( self, label='apply' )
+            self._apply = wx.Button( self, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -305,7 +305,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                 
                 self._titles_to_account_types[ title ] = account_type
                 
-                self._edit_log.append( ( 'add', account_type ) )
+                self._edit_log.append( ( HC.ADD, account_type ) )
                 
                 self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
                 
@@ -339,7 +339,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                 else: return
                 
             
-            self._edit_log.append( ( 'delete', ( title, title_to_move_to ) ) )
+            self._edit_log.append( ( HC.DELETE, ( title, title_to_move_to ) ) )
             
         
         self._ctrl_account_types.RemoveAllSelected()
@@ -382,7 +382,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                     
                     self._titles_to_account_types[ title ] = account_type
                     
-                    self._edit_log.append( ( 'edit', ( old_title, account_type ) ) )
+                    self._edit_log.append( ( HC.EDIT, ( old_title, account_type ) ) )
                     
                     self._ctrl_account_types.UpdateRow( index, ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
                     
@@ -411,22 +411,22 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             self._boorus = ClientGUICommon.ListBook( self )
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self, label = 'remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._export = wx.Button( self, label='export' )
+            self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -497,7 +497,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     booru = CC.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                     
-                    self._edit_log.append( ( 'add', name ) )
+                    self._edit_log.append( ( HC.ADD, name ) )
                     
                     page = self._Panel( self._boorus, booru )
                     
@@ -539,7 +539,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         for ( name, page ) in self._boorus.GetNameToPageDict().items():
             
-            if page.HasChanges(): self._edit_log.append( ( 'edit', ( name, page.GetBooru() ) ) )
+            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( name, page.GetBooru() ) ) )
             
         
         try:
@@ -559,7 +559,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             name = self._boorus.GetCurrentName()
             
-            self._edit_log.append( ( 'delete', name ) )
+            self._edit_log.append( ( HC.DELETE, name ) )
             
             self._boorus.DeleteCurrentPage()
             
@@ -585,7 +585,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                         
                         new_booru = CC.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                         
-                        self._edit_log.append( ( 'add', name ) )
+                        self._edit_log.append( ( HC.ADD, name ) )
                         
                         page = self._Panel( self._boorus, new_booru )
                         
@@ -1046,7 +1046,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
                 contact = ClientConstantsMessages.Contact( public_key, name, host, port )
                 
-                self._edit_log.append( ( 'add', contact ) )
+                self._edit_log.append( ( HC.ADD, contact ) )
                 
                 page = self._Panel( self._contacts, contact, is_identity = False )
                 
@@ -1083,7 +1083,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
                 contact = ClientConstantsMessages.Contact( public_key, name, host, port )
                 
-                self._edit_log.append( ( 'add', contact ) )
+                self._edit_log.append( ( HC.ADD, contact ) )
                 
                 page = self._Panel( self._contacts, contact, is_identity = False )
                 
@@ -1165,7 +1165,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         
         for ( name, page ) in self._contacts.GetNameToPageDict().items():
             
-            if page.HasChanges(): self._edit_log.append( ( 'edit', ( page.GetOriginalName(), page.GetContact() ) ) )
+            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalName(), page.GetContact() ) ) )
             
         
         try:
@@ -1186,7 +1186,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             name = contact_panel.GetOriginalName()
             
-            self._edit_log.append( ( 'delete', name ) )
+            self._edit_log.append( ( HC.DELETE, name ) )
             
             self._contacts.DeleteCurrentPage()
             
@@ -1241,7 +1241,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                                 
                                 new_contact = ClientConstantsMessages.Contact( public_key, name, host, port )
                                 
-                                self._edit_log.append( ( 'add', contact ) )
+                                self._edit_log.append( ( HC.ADD, contact ) )
                                 
                                 self._deletable_names.add( name )
                                 
@@ -1257,7 +1257,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                         
                         new_contact = ClientConstantsMessages.Contact( public_key, name, host, port )
                         
-                        self._edit_log.append( ( 'add', contact ) )
+                        self._edit_log.append( ( HC.ADD, contact ) )
                         
                         self._deletable_names.add( name )
                         
@@ -1516,7 +1516,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if name == '': raise Exception( 'Please enter a nickname for the service.' )
                     
-                    self._edit_log.append( ( 'add', name ) )
+                    self._edit_log.append( ( HC.ADD, name ) )
                     
                     page = self._Panel( self._sites, [] )
                     
@@ -1560,7 +1560,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         for ( name, page ) in self._sites.GetNameToPageDict().items():
             
-            if page.HasChanges(): self._edit_log.append( ( 'edit', ( name, page.GetChanges() ) ) )
+            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( name, page.GetChanges() ) ) )
             
         
         try:
@@ -1580,7 +1580,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             name = self._sites.GetCurrentName()
             
-            self._edit_log.append( ( 'delete', name ) )
+            self._edit_log.append( ( HC.DELETE, name ) )
             
             self._sites.DeleteCurrentPage()
             
@@ -1602,7 +1602,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if not self._sites.NameExists( name ):
                         
-                        self._edit_log.append( ( 'add', name ) )
+                        self._edit_log.append( ( HC.ADD, name ) )
                         
                         page = self._Panel( self._sites, [] )
                         
@@ -1644,15 +1644,15 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 self._imageboards = ClientGUICommon.ListBook( self._site_panel )
                 
-                self._add = wx.Button( self._site_panel, label='add' )
+                self._add = wx.Button( self._site_panel, label = 'add' )
                 self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
                 self._add.SetForegroundColour( ( 0, 128, 0 ) )
                 
-                self._remove = wx.Button( self._site_panel, label='remove' )
+                self._remove = wx.Button( self._site_panel, label = 'remove' )
                 self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
                 self._remove.SetForegroundColour( ( 128, 0, 0 ) )
                 
-                self._export = wx.Button( self._site_panel, label='export' )
+                self._export = wx.Button( self._site_panel, label = 'export' )
                 self._export.Bind( wx.EVT_BUTTON, self.EventExport )
                 
             
@@ -1714,7 +1714,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                         
                         imageboard = CC.Imageboard( name, '', 60, [], {} )
                         
-                        self._edit_log.append( ( 'add', name ) )
+                        self._edit_log.append( ( HC.ADD, name ) )
                         
                         page = self._Panel( self._imageboards, imageboard )
                         
@@ -1756,7 +1756,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 name = self._imageboards.GetCurrentName()
                 
-                self._edit_log.append( ( 'delete', name ) )
+                self._edit_log.append( ( HC.DELETE, name ) )
                 
                 self._imageboards.DeleteCurrentPage()
                 
@@ -1766,7 +1766,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             for page in self._imageboards.GetNameToPageDict().values():
                 
-                if page.HasChanges(): self._edit_log.append( ( 'edit', page.GetImageboard() ) )
+                if page.HasChanges(): self._edit_log.append( ( HC.EDIT, page.GetImageboard() ) )
                 
             
             return self._edit_log
@@ -1784,7 +1784,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 new_imageboard = CC.Imageboard( name, '', 60, [], {} )
                 
-                self._edit_log.append( ( 'add', name ) )
+                self._edit_log.append( ( HC.ADD, name ) )
                 
                 page = self._Panel( self._imageboards, new_imageboard )
                 
@@ -1824,13 +1824,13 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     self._form_fields = ClientGUICommon.SaneListCtrl( self._form_fields_panel, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ] )
                     
-                    self._add = wx.Button( self._form_fields_panel, label='add' )
+                    self._add = wx.Button( self._form_fields_panel, label = 'add' )
                     self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
                     
-                    self._edit = wx.Button( self._form_fields_panel, label='edit' )
+                    self._edit = wx.Button( self._form_fields_panel, label = 'edit' )
                     self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
                     
-                    self._delete = wx.Button( self._form_fields_panel, label='delete' )
+                    self._delete = wx.Button( self._form_fields_panel, label = 'delete' )
                     self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
                     
                     #
@@ -2146,20 +2146,20 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
             self._import_folders.SetMinSize( ( 780, 360 ) )
             
-            self._add_button = wx.Button( self, label='add' )
+            self._add_button = wx.Button( self, label = 'add' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
             
-            self._edit_button = wx.Button( self, label='edit' )
+            self._edit_button = wx.Button( self, label = 'edit' )
             self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
             
-            self._delete_button = wx.Button( self, label='delete' )
+            self._delete_button = wx.Button( self, label = 'delete' )
             self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
             
-            self._ok = wx.Button( self, id = wx.ID_OK, label='ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2425,62 +2425,43 @@ synchronise - try to import all new files in folder'''
         return ( path, type, check_period, local_tag )
         
     
-class DialogManageOptionsFileRepository( ClientGUIDialogs.Dialog ):
+class DialogManageNamespaceBlacklists( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, service_identifier ):
+    def __init__( self, parent ):
         
         def InitialiseControls():
             
-            self._file_repository_panel = ClientGUICommon.StaticBox( self, 'file repository' )
+            self._tag_services = ClientGUICommon.ListBook( self )
+            self._tag_services.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._file_repository_panel, 'max monthly data (MB)', multiplier = 1048576 )
-            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._file_repository_panel, 'max storage (MB)', multiplier = 1048576 )
-            
-            self._log_uploader_ips = wx.CheckBox( self._file_repository_panel, label='' )
-            
-            self._message = wx.TextCtrl( self._file_repository_panel )
-            
-            self._ok = wx.Button( self, label='Save' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
         def PopulateControls():
             
-            self._service = HC.app.Read( 'service', self._service_identifier )
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
-            connection = self._service.GetConnection()
+            for service_identifier in service_identifiers:
+                
+                page = self._Panel( self._tag_services, service_identifier )
+                
+                name = service_identifier.GetName()
+                
+                self._tag_services.AddPage( page, name )
+                
             
-            response = connection.Get( 'options' )
+            default_tag_repository = HC.options[ 'default_tag_repository' ]
             
-            options = response[ 'options' ]
-            
-            self._max_monthly_data.SetValue( options[ 'max_monthly_data' ] )
-            self._max_storage.SetValue( options[ 'max_storage' ] )
-            
-            self._log_uploader_ips.SetValue( options[ 'log_uploader_ips' ] )
-            
-            self._message.SetValue( options[ 'message' ] )
+            self._tag_services.Select( default_tag_repository.GetName() )
             
         
         def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._file_repository_panel, label='Log uploader ips?' ), FLAGS_MIXED )
-            gridbox.AddF( self._log_uploader_ips, FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self._file_repository_panel, label='Message' ), FLAGS_MIXED )
-            gridbox.AddF( self._message, FLAGS_MIXED )
-            
-            self._file_repository_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
-            self._file_repository_panel.AddF( self._max_storage, FLAGS_EXPAND_PERPENDICULAR )
-            self._file_repository_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -2489,19 +2470,15 @@ class DialogManageOptionsFileRepository( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._file_repository_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_services, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
             
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x + 80, y ) )
+            self.SetInitialSize( ( 550, 680 ) )
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, service_identifier.GetName() + ' options' )
-        
-        self._service_identifier = service_identifier
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'namespace blacklists' )
         
         InitialiseControls()
         
@@ -2509,35 +2486,125 @@ class DialogManageOptionsFileRepository( ClientGUIDialogs.Dialog ):
         
         ArrangeControls()
         
-        wx.CallAfter( self._ok.SetFocus )
+        interested_actions = [ 'set_search_focus' ]
+        
+        entries = []
+        
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_services.GetCurrentPage()
+        
+        page.SetTagBoxFocus()
         
     
     def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventOK( self, event ):
         
-        options = {}
-        
-        options[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
-        
-        options[ 'max_storage' ] = self._max_storage.GetValue()
-        
-        options[ 'log_uploader_ips' ] = self._log_uploader_ips.GetValue()
-        
-        options[ 'message' ] = self._message.GetValue()
-        
         try:
             
-            connection = self._service.GetConnection()
+            info = [ page.GetInfo() for page in self._tag_services.GetNameToPageDict().values() if page.HasInfo() ]
             
-            connection.Post( 'options', options = options )
+            HC.app.Write( 'namespace_blacklists', info )
             
-        except Exception as e: wx.MessageBox( 'Something went wrong when trying to send the options to the file repository: ' + HC.u( e ) )
+        except Exception as e: wx.MessageBox( 'Saving namespace blacklists to DB raised this error: ' + HC.u( e ) )
         
         self.EndModal( wx.ID_OK )
         
     
-class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
+    def EventServiceChanged( self, event ):
+        
+        page = self._tag_services.GetCurrentPage()
+        
+        wx.CallAfter( page.SetTagBoxFocus )
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_identifier ):
+            
+            def InitialiseControls():
+                
+                choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
+                
+                self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
+                
+                self._namespaces = ClientGUICommon.TagsBoxNamespaces( self )
+                
+                self._namespace_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+                self._namespace_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
+                
+            
+            def PopulateControls():
+                
+                ( blacklist, namespaces ) = HC.app.Read( 'namespace_blacklists', self._service_identifier )
+                
+                if blacklist: self._blacklist.SetSelection( 0 )
+                else: self._blacklist.SetSelection( 1 )
+                
+                for namespace in namespaces: self._namespaces.AddNamespace( namespace )
+                
+            
+            def ArrangeControls():
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._blacklist, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._namespaces, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( self._namespace_input, FLAGS_EXPAND_PERPENDICULAR )
+                
+                self.SetSizer( vbox )
+                
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_identifier = service_identifier
+            
+            InitialiseControls()
+            
+            PopulateControls()
+            
+            ArrangeControls()
+            
+        
+        def EventKeyDownNamespace( self, event ):
+            
+            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                namespace = self._namespace_input.GetValue()
+                
+                self._namespaces.AddNamespace( namespace )
+                
+                self._namespace_input.SetValue( '' )
+                
+            else: event.Skip()
+            
+        
+        def GetInfo( self ):
+            
+            blacklist = self._blacklist.GetSelectedClientData()
+            
+            namespaces = self._namespaces.GetClientData()
+            
+            return ( self._service_identifier, blacklist, namespaces )
+            
+        
+        def HasInfo( self ):
+            
+            ( service_identifier, blacklist, namespaces ) = self.GetInfo()
+            
+            return len( namespaces ) > 0
+            
+        
+        def SetTagBoxFocus( self ): self._namespace_input.SetFocus()
+        
+    
+class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
         
@@ -2680,7 +2747,7 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
             self._colour_page = wx.Panel( self._listbook )
             self._colour_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._namespace_colours = ClientGUICommon.TagsBoxOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
+            self._namespace_colours = ClientGUICommon.TagsBoxColourOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
             
             self._edit_namespace_colour = wx.Button( self._colour_page, label = 'edit selected' )
             self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
@@ -3421,210 +3488,6 @@ class DialogManageOptionsLocal( ClientGUIDialogs.Dialog ):
         self._estimated_number_thumbnails.SetLabel( '(about ' + HC.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
         
     
-class DialogManageOptionsServerAdmin( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent, service_identifier ):
-        
-        def InitialiseControls():
-            
-            self._server_panel = ClientGUICommon.StaticBox( self, 'server' )
-            
-            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._server_panel, 'max monthly data (MB)', multiplier = 1048576 )
-            
-            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._server_panel, 'max storage (MB)', multiplier = 1048576 )
-            
-            self._message = wx.TextCtrl( self._server_panel )
-            
-            self._ok = wx.Button( self, label='Save' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._service = HC.app.Read( 'service', self._service_identifier )
-            
-            connection = self._service.GetConnection()
-            
-            response = connection.Get( 'options' )
-            
-            options = response[ 'options' ]
-            
-            self._max_monthly_data.SetValue( options[ 'max_monthly_data' ] )
-            self._max_storage.SetValue( options[ 'max_storage' ] )
-            
-            self._message.SetValue( options[ 'message' ] )
-            
-        
-        def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._server_panel, label='Message' ), FLAGS_MIXED )
-            gridbox.AddF( self._message, FLAGS_MIXED )
-            
-            self._server_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
-            self._server_panel.AddF( self._max_storage, FLAGS_EXPAND_PERPENDICULAR )
-            self._server_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._server_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, service_identifier.GetName() + ' options' )
-        
-        self._service_identifier = service_identifier
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-    
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x + 80, y ) )
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ):
-        
-        options = {}
-        
-        options[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
-        
-        options[ 'max_storage' ] = self._max_storage.GetValue()
-        
-        options[ 'message' ] = self._message.GetValue()
-        
-        try:
-            
-            connection = self._service.GetConnection()
-            
-            connection.Post( 'options', options = options )
-            
-        except Exception as e: wx.MessageBox( 'Something went wrong when trying to send the options to the server admin: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-class DialogManageOptionsTagRepository( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent, service_identifier ):
-        
-        def InitialiseControls():
-            
-            self._tag_repository_panel = ClientGUICommon.StaticBox( self, 'tag repository' )
-            
-            self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._tag_repository_panel, 'max monthly data (MB)', multiplier = 1048576 )
-            
-            self._message = wx.TextCtrl( self._tag_repository_panel )
-            
-            self._ok = wx.Button( self, label='Save' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._service = HC.app.Read( 'service', self._service_identifier )
-            
-            connection = self._service.GetConnection()
-            
-            response = connection.Get( 'options' )
-            
-            options = response[ 'options' ]
-            
-            self._max_monthly_data.SetValue( options[ 'max_monthly_data' ] )
-            
-            self._message.SetValue( options[ 'message' ] )
-            
-        
-        def ArrangeControls():
-            
-            gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            gridbox.AddGrowableCol( 1, 1 )
-            
-            gridbox.AddF( wx.StaticText( self._tag_repository_panel, label='Message' ), FLAGS_MIXED )
-            gridbox.AddF( self._message, FLAGS_MIXED )
-            
-            self._tag_repository_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_PERPENDICULAR )
-            self._tag_repository_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._tag_repository_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, service_identifier.GetName() + ' options' )
-        
-        self._service_identifier = service_identifier
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-    
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x + 80, y ) )
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ):
-        
-        options = {}
-        
-        options[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
-        
-        options[ 'message' ] = self._message.GetValue()
-        
-        try:
-            
-            connection = self._service.GetConnection()
-            
-            connection.Post( 'options', options = options )
-            
-        except Exception as e: wx.MessageBox( 'Something went wrong when trying to send the options to the tag repository: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
-        
-    
 class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -4133,22 +3996,29 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
+            self._edit_log = []
+            
             self._services_listbook = ClientGUICommon.ListBook( self )
             self._services_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             self._services_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
             self._service_types = wx.Choice( self )
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self, label = 'remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._done = wx.Button( self, label='done' )
-            self._done.Bind( wx.EVT_BUTTON, self.EventDone )
+            self._ok = wx.Button( self, label = 'ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
         def PopulateControls():
@@ -4167,13 +4037,17 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 page = self._Panel( self._services_listbook, service_identifier, options )
                 
-                name = HC.service_string_lookup[ service_identifier.GetType() ]
+                name = HC.service_string_lookup[ service_identifier.GetType() ] + '@' + HC.u( options[ 'port' ] )
                 
                 self._services_listbook.AddPage( page, name )
                 
             
         
         def ArrangeControls():
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
             
             add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
             add_remove_hbox.AddF( self._service_types, FLAGS_MIXED )
@@ -4183,7 +4057,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._services_listbook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( self._done, FLAGS_LONE_BUTTON )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
             
@@ -4196,13 +4070,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + service_identifier.GetName() + ' services' )
         
-        self._service = HC.app.Read( 'service', service_identifier )
+        self._service_identifier = service_identifier
         
-        connection = self._service.GetConnection()
-        
-        response = connection.Get( 'services' )
-        
-        self._service_identifiers = response[ 'service_identifiers' ]
+        self._service = HC.app.Read( 'service', self._service_identifier )
         
         InitialiseControls()
         
@@ -4210,10 +4080,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         ArrangeControls()
         
-        current_page = self._services_listbook.GetCurrentPage()
-        
-        if current_page.GetOriginalServiceIdentifier().GetType() == HC.SERVER_ADMIN: self._remove.Disable()
-        else: self._remove.Enable()
+        self.EventServiceChanged( None )
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -4231,31 +4098,48 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 if options[ 'port' ] == existing_options[ 'port' ]: raise Exception( 'That port is already in use!' )
                 
             
+            name = self._services_listbook.GetCurrentName()
+            
+            new_name = HC.service_string_lookup[ service_identifier.GetType() ] + '@' + HC.u( options[ 'port' ] )
+            
+            if name != new_name: self._services_listbook.RenamePage( name, new_name )
+            
         
     
     def EventAdd( self, event ):
         
         self._CheckCurrentServiceIsValid()
         
+        service_key = os.urandom( 32 )
+        
         service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
         
-        connection = self._service.GetConnection()
+        service_identifier = HC.ServerServiceIdentifier( service_key, service_type )
+
+        port = HC.DEFAULT_SERVICE_PORT
         
-        response = connection.Post( 'services', action = 'add', data = service_type )
+        existing_ports = set()
         
-        service_identifier = response[ 'service_identifier' ]
-        options = response[ 'options' ]
+        for ( existing_service_identifier, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]: existing_ports.add( existing_options[ 'port' ] )
         
-        # commit to local db now
+        while port in existing_ports: port += 1
+        
+        options = dict( HC.DEFAULT_OPTIONS[ service_type ] )
+        
+        options[ 'port' ] = port
+        
+        self._edit_log.append( ( HC.ADD, ( service_identifier, options ) ) )
         
         page = self._Panel( self._services_listbook, service_identifier, options )
         
-        name = HC.service_string_lookup[ service_type ]
+        name = HC.service_string_lookup[ service_type ] + '@' + HC.u( port )
         
         self._services_listbook.AddPage( page, name, select = True )
         
     
-    def EventDone( self, event ):
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventOK( self, event ):
         
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
@@ -4265,10 +4149,28 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             return
             
         
-        for page in self._services_listbook.GetNameToPageDict().values():
+        for ( name, page ) in self._services_listbook.GetNameToPageDict().items():
             
-            if page.HasChanges(): page.CommitChanges()
+            if page.HasChanges():
+                
+                ( service_identifier, options ) = page.GetInfo()
+                
+                self._edit_log.append( ( HC.EDIT, ( service_identifier, options ) ) )
+                
             
+        
+        try:
+            
+            if len( self._edit_log ) > 0:
+                
+                connection = self._service.GetConnection()
+                
+                connection.Post( 'services', edit_log = self._edit_log )
+                
+                HC.app.Write( 'update_server_services', self._service_identifier, self._edit_log )
+                
+            
+        except Exception as e: wx.MessageBox( 'Saving boorus to DB raised this error: ' + HC.u( e ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -4279,11 +4181,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         if service_panel is not None:
             
-            service_identifier = service_panel.GetServiceIdentifier()
+            ( service_identifier, options ) = service_panel.GetInfo()
             
-            connection = self._service.GetConnection()
-            
-            response = connection.Post( 'services', action = 'delete', data = service_identifier )
+            self._edit_log.append( ( HC.DELETE, service_identifier ) )
             
             self._services_listbook.DeleteCurrentPage()
             
@@ -4293,7 +4193,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         page = self._services_listbook.GetCurrentPage()
         
-        if page.GetOriginalServiceIdentifier().GetType() == HC.SERVER_ADMIN: self._remove.Disable()
+        ( service_identifier, options ) = page.GetInfo()
+        
+        if service_identifier.GetType() == HC.SERVER_ADMIN: self._remove.Disable()
         else: self._remove.Enable()
         
     
@@ -4319,18 +4221,22 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             def InitialiseControls():
                 
-                self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+                self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
                 
-                # all possible options here. hide as appropriate in arrange
-                
-                self._service_port = wx.SpinCtrl( self._service_panel, min = 1, max = 65535 )
-                
-                # a button to commit options, should enable when changes
+                if 'port' in self._options: self._port = wx.SpinCtrl( self._options_panel, min = 1, max = 65535 )
+                if 'max_monthly_data' in self._options: self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max monthly data (MB)', multiplier = 1048576 )
+                if 'max_storage' in self._options: self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max storage (MB)', multiplier = 1048576 )
+                if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel, label='' )
+                if 'message' in self._options: self._message = wx.TextCtrl( self._options_panel )
                 
             
             def PopulateControls():
                 
-                self._service_port.SetValue( self._service_identifier.GetPort() )
+                if 'port' in self._options: self._port.SetValue( self._options[ 'port' ] )
+                if 'max_monthly_data' in self._options: self._max_monthly_data.SetValue( self._options[ 'max_monthly_data' ] )
+                if 'max_storage' in self._options: self._max_storage.SetValue( self._options[ 'max_storage' ] )
+                if 'log_uploader_ips' in self._options: self._log_uploader_ips.SetValue( self._options[ 'log_uploader_ips' ] )
+                if 'message' in self._options: self._message.SetValue( self._options[ 'message' ] )
                 
             
             def ArrangeControls():
@@ -4343,12 +4249,39 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='port' ), FLAGS_MIXED )
-                gridbox.AddF( self._service_port, FLAGS_EXPAND_BOTH_WAYS )
+                if 'port' in self._options:
+                    
+                    gridbox.AddF( wx.StaticText( self._options_panel, label = 'port' ), FLAGS_MIXED )
+                    gridbox.AddF( self._port, FLAGS_EXPAND_BOTH_WAYS )
+                    
                 
-                self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                if 'max_monthly_data' in self._options:
+                    
+                    gridbox.AddF( wx.StaticText( self._options_panel, label = 'max monthly data' ), FLAGS_MIXED )
+                    gridbox.AddF( self._max_monthly_data, FLAGS_EXPAND_BOTH_WAYS )
+                    
                 
-                vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
+                if 'max_storage' in self._options:
+                    
+                    gridbox.AddF( wx.StaticText( self._options_panel, label = 'max storage' ), FLAGS_MIXED )
+                    gridbox.AddF( self._max_storage, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
+                if 'log_uploader_ips' in self._options:
+                    
+                    gridbox.AddF( wx.StaticText( self._options_panel, label = 'log uploader IPs' ), FLAGS_MIXED )
+                    gridbox.AddF( self._log_uploader_ips, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
+                if 'message' in self._options:
+                    
+                    gridbox.AddF( wx.StaticText( self._options_panel, label = 'message' ), FLAGS_MIXED )
+                    gridbox.AddF( self._message, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
+                self._options_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._options_panel, FLAGS_EXPAND_BOTH_WAYS )
                 
                 self.SetSizer( vbox )
                 
@@ -4360,37 +4293,27 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             ArrangeControls()
             
         
-        def EventUploadOptions( self, event ):
-            
-            # create service/connection to service/whatever
-            
-            connection.Post( 'options', options = options )
-            
-            pass
-            
-        
-        def CommitChanges( self ):
-            
-            pass
-            
-        
         def GetInfo( self ):
             
-            port = self._service_port.GetValue()
+            options = {}
+        
+            if 'port' in self._options: options[ 'port' ] = self._port.GetValue()
+            if 'max_monthly_data' in self._options: options[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
+            if 'max_storage' in self._options: options[ 'max_storage' ] = self._max_storage.GetValue()
+            if 'log_uploader_ips' in self._options: options[ 'log_uploader_ips' ] = self._log_uploader_ips.GetValue()
+            if 'message' in self._options: options[ 'message' ] = self._message.GetValue()
             
-            return port
+            return ( self._service_identifier, options )
             
         
         def HasChanges( self ):
             
-            port = self.GetInfo()
+            ( service_identifier, options ) = self.GetInfo()
             
-            if port != self._service_identifier.GetPort(): return True
+            if options != self._options: return True
             
             return False
             
-        
-        def GetOriginalServiceIdentifier( self ): return self._service_identifier
         
     
 class DialogManageServices( ClientGUIDialogs.Dialog ):
@@ -4423,22 +4346,22 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self._servers_admin = ClientGUICommon.ListBook( self._listbook )
             self._servers_admin.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self, label = 'remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._export = wx.Button( self, label='export' )
+            self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -4609,7 +4532,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     elif service_type == HC.LOCAL_RATING_NUMERICAL: extra_info = ( 0, 5 )
                     else: extra_info = None
                     
-                    self._edit_log.append( ( 'add', ( service_identifier, credentials, extra_info ) ) )
+                    self._edit_log.append( ( HC.ADD, ( service_identifier, credentials, extra_info ) ) )
                     
                     page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
                     
@@ -4691,7 +4614,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         for page in all_pages:
             
-            if page.HasChanges(): self._edit_log.append( ( 'edit', ( page.GetOriginalServiceIdentifier(), page.GetInfo() ) ) )
+            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalServiceIdentifier(), page.GetInfo() ) ) )
             
         
         try:
@@ -4724,7 +4647,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             service_identifier = service_panel.GetOriginalServiceIdentifier()
             
-            self._edit_log.append( ( 'delete', service_identifier ) )
+            self._edit_log.append( ( HC.DELETE, service_identifier ) )
             
             services_listbook.DeleteCurrentPage()
             
@@ -4786,7 +4709,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                 else:
                     
-                    self._edit_log.append( ( 'add', ( service_identifier, credentials, extra_info ) ) )
+                    self._edit_log.append( ( HC.ADD, ( service_identifier, credentials, extra_info ) ) )
                     
                     page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
                     
@@ -5068,22 +4991,22 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._tumblr = ClientGUICommon.ListBook( self._listbook )
             self._tumblr.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             
-            self._add = wx.Button( self, label='add' )
+            self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
             self._add.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self, label = 'remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._export = wx.Button( self, label='export' )
+            self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             

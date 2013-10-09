@@ -721,11 +721,20 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             ( operator, tag ) = predicate.GetValue()
             
-            parent_manager = HC.app.GetTagParentsManager()
+            namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
             
-            parents = parent_manager.GetParents( self._tag_service_identifier, tag )
+            result = namespace_blacklists_manager.FilterTags( self._tag_service_identifier, ( tag, ) )
             
-            self._chosen_tag_callable( tag, parents )
+            if len( result ) > 0:
+                
+                tag_parents_manager = HC.app.GetTagParentsManager()
+                
+                parents = tag_parents_manager.GetParents( self._tag_service_identifier, tag )
+                
+                parents = namespace_blacklists_manager.FilterTags( self._tag_service_identifier, parents )
+                
+                self._chosen_tag_callable( tag, parents )
+                
             
         
     
@@ -1769,6 +1778,12 @@ class ListBox( wx.ScrolledWindow ):
             
             self._DrawTexts()
             
+        
+    
+    def GetClientData( self, s = None ):
+        
+        if s is None: return self._strings_to_terms.values()
+        else: return self._strings_to_terms[ s ]
         
     
     def SetTexts( self, ordered_strings ):
@@ -3559,6 +3574,84 @@ class TagsBoxActiveOnly( TagsBox ):
             
         
     
+class TagsBoxColourOptions( TagsBox ):
+    
+    def __init__( self, parent, initial_namespace_colours ):
+        
+        TagsBox.__init__( self, parent )
+        
+        self._namespace_colours = dict( initial_namespace_colours )
+        
+        for namespace in self._namespace_colours:
+            
+            if namespace is None: namespace_string = 'default namespace:tag'
+            elif namespace == '': namespace_string = 'unnamespaced tag'
+            else: namespace_string = namespace + ':tag'
+            
+            self._ordered_strings.append( namespace_string )
+            self._strings_to_terms[ namespace_string ] = namespace
+            
+        
+        self._TextsHaveChanged()
+        
+    
+    def _Activate( self, s, term ): self.RemoveNamespace( term )
+    
+    def _GetNamespaceColours( self ): return self._namespace_colours
+    
+    def SetNamespaceColour( self, namespace, colour ):
+        
+        if namespace not in self._namespace_colours:
+            
+            namespace_string = namespace + ':tag'
+            
+            self._ordered_strings.append( namespace_string )
+            self._strings_to_terms[ namespace_string ] = namespace
+            
+            self._ordered_strings.sort()
+            
+        
+        self._namespace_colours[ namespace ] = colour.Get()
+        
+        self._TextsHaveChanged()
+        
+    
+    def GetNamespaceColours( self ): return self._namespace_colours
+    
+    def GetSelectedNamespaceColour( self ):
+        
+        if self._current_selected_index is not None:
+            
+            namespace_string = self._ordered_strings[ self._current_selected_index ]
+            
+            namespace = self._strings_to_terms[ namespace_string ]
+            
+            ( r, g, b ) = self._namespace_colours[ namespace ]
+            
+            colour = wx.Colour( r, g, b )
+            
+            return ( namespace, colour )
+            
+        
+        return None
+        
+    
+    def RemoveNamespace( self, namespace ):
+        
+        if namespace is not None and namespace != '':
+            
+            namespace_string = namespace + ':tag'
+            
+            self._ordered_strings.remove( namespace_string )
+            
+            del self._strings_to_terms[ namespace_string ]
+            
+            del self._namespace_colours[ namespace ]
+            
+            self._TextsHaveChanged()
+            
+        
+    
 class TagsBoxCPP( TagsBox ):
     
     def __init__( self, parent, page_key ):
@@ -3902,82 +3995,35 @@ class TagsBoxManage( TagsBox ):
         self._RebuildTagStrings()
         
     
-class TagsBoxOptions( TagsBox ):
-    
-    def __init__( self, parent, initial_namespace_colours ):
-        
-        TagsBox.__init__( self, parent )
-        
-        self._namespace_colours = dict( initial_namespace_colours )
-        
-        for namespace in self._namespace_colours:
-            
-            if namespace is None: namespace_string = 'default namespace:tag'
-            elif namespace == '': namespace_string = 'unnamespaced tag'
-            else: namespace_string = namespace + ':tag'
-            
-            self._ordered_strings.append( namespace_string )
-            self._strings_to_terms[ namespace_string ] = namespace
-            
-        
-        self._TextsHaveChanged()
-        
+class TagsBoxNamespaces( TagsBox ):
     
     def _Activate( self, s, term ): self.RemoveNamespace( term )
     
-    def _GetNamespaceColours( self ): return self._namespace_colours
-    
-    def SetNamespaceColour( self, namespace, colour ):
+    def AddNamespace( self, namespace ):
         
-        if namespace not in self._namespace_colours:
-            
-            namespace_string = namespace + ':tag'
+        if namespace == '': namespace_string = 'unnamespaced'
+        else: namespace_string = namespace + ':'
+        
+        if namespace_string in self._strings_to_terms: self.RemoveNamespace( namespace )
+        else:
             
             self._ordered_strings.append( namespace_string )
             self._strings_to_terms[ namespace_string ] = namespace
             
-            self._ordered_strings.sort()
+            self._TextsHaveChanged()
             
-        
-        self._namespace_colours[ namespace ] = colour.Get()
-        
-        self._TextsHaveChanged()
-        
-    
-    def GetNamespaceColours( self ): return self._namespace_colours
-    
-    def GetSelectedNamespaceColour( self ):
-        
-        if self._current_selected_index is not None:
-            
-            namespace_string = self._ordered_strings[ self._current_selected_index ]
-            
-            namespace = self._strings_to_terms[ namespace_string ]
-            
-            ( r, g, b ) = self._namespace_colours[ namespace ]
-            
-            colour = wx.Colour( r, g, b )
-            
-            return ( namespace, colour )
-            
-        
-        return None
         
     
     def RemoveNamespace( self, namespace ):
         
-        if namespace is not None and namespace != '':
-            
-            namespace_string = namespace + ':tag'
-            
-            self._ordered_strings.remove( namespace_string )
-            
-            del self._strings_to_terms[ namespace_string ]
-            
-            del self._namespace_colours[ namespace ]
-            
-            self._TextsHaveChanged()
-            
+        if namespace == '': namespace_string = 'unnamespaced'
+        else: namespace_string = namespace + ':'
+        
+        self._ordered_strings.remove( namespace_string )
+        
+        del self._strings_to_terms[ namespace_string ]
+        
+        self._TextsHaveChanged()
         
     
 class TagsBoxPredicates( TagsBox ):

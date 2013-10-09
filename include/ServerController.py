@@ -29,7 +29,7 @@ class Controller( wx.App ):
         except: return False
         
     
-    def _Read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+    def _Read( self, action, priority, *args, **kwargs ): return self._db.Read( action, priority, *args, **kwargs )
     
     def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
@@ -76,6 +76,8 @@ class Controller( wx.App ):
             
             for ( service_identifier, options ) in services_info: self.RestartService( service_identifier, options )
             
+            self.StartDaemons()
+            
             return True
             
         except Exception as e:
@@ -88,7 +90,12 @@ class Controller( wx.App ):
     
     def Read( self, action, *args, **kwargs ):
         
-        return self._Read( action, *args, **kwargs )
+        return self._Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        
+    
+    def ReadDaemon( self, action, *args, **kwargs ):
+        
+        return self._Read( action, HC.LOW_PRIORITY, *args, **kwargs )
         
     
     def RestartService( self, service_identifier, options ):
@@ -98,6 +105,8 @@ class Controller( wx.App ):
             def StartService():
                 
                 try:
+                    
+                    if 'port' not in options: return
                     
                     port = options[ 'port' ]
                     
@@ -140,6 +149,7 @@ class Controller( wx.App ):
                     
                     print( traceback.format_exc() )
                     
+                
             
             if service_identifier not in self._services: StartService()
             else:
@@ -149,13 +159,30 @@ class Controller( wx.App ):
                 deferred.AddCallback( StartService )
                 
             
+            
         
         reactor.callFromThread( TWISTEDRestartService )
+        
+    
+    def StartDaemons( self ):
+        
+        HC.DAEMONQueue( 'FlushRequestsMade', ServerDB.DAEMONFlushRequestsMade, 'request_made', period = 60 )
+        
+        HC.DAEMONWorker( 'CheckMonthlyData', ServerDB.DAEMONCheckMonthlyData, period = 3600 )
+        HC.DAEMONWorker( 'ClearBans', ServerDB.DAEMONClearBans, period = 3600 )
+        HC.DAEMONWorker( 'DeleteOrphans', ServerDB.DAEMONDeleteOrphans, period = 86400 )
+        HC.DAEMONWorker( 'GenerateUpdates', ServerDB.DAEMONGenerateUpdates, period = 1200 )
+        HC.DAEMONWorker( 'CheckDataUsage', ServerDB.DAEMONCheckDataUsage, period = 86400 )
         
     
     def Write( self, action, *args, **kwargs ):
         
         return self._Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        
+    
+    def WriteDaemon( self, action, *args, **kwargs ):
+        
+        return self._Write( action, HC.LOW_PRIORITY, *args, **kwargs )
         
     
 class TaskBarIcon( wx.TaskBarIcon ):

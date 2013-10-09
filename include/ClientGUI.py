@@ -303,12 +303,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
                 tag_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45871, '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' ) )
                 
-                edit_log.append( ( 'add', ( tag_repo_identifier, tag_repo_credentials, None ) ) )
+                edit_log.append( ( HC.ADD, ( tag_repo_identifier, tag_repo_credentials, None ) ) )
                 
                 file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
                 file_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45872, '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' ) )
                 
-                edit_log.append( ( 'add', ( file_repo_identifier, file_repo_credentials, None ) ) )
+                edit_log.append( ( HC.ADD, ( file_repo_identifier, file_repo_credentials, None ) ) )
                 
                 HC.app.Write( 'update_services', edit_log )
                 
@@ -319,7 +319,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _AutoServerSetup( self ):
         
-        message = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts.'
+        host = '127.0.0.1'
+        port = HC.DEFAULT_SERVER_ADMIN_PORT
+        
+        message = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -379,9 +382,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     edit_log = []
                     
                     admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
-                    admin_service_credentials = CC.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, '' )
+                    admin_service_credentials = CC.Credentials( host, port, '' )
                     
-                    edit_log.append( ( 'add', ( admin_service_identifier, admin_service_credentials, None ) ) )
+                    edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_credentials, None ) ) )
                     
                     HC.app.Write( 'update_services', edit_log )
                     
@@ -419,11 +422,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     body = access_key.encode( 'hex' )
                     
-                    ( host, port ) = service.GetCredentials().GetAddress()
+                    credentials = CC.Credentials( host, port, access_key )
                     
-                    credentials = Credentials( host, port, access_key )
-                    
-                    edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, credentials, None ) ) ) ]
+                    edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, credentials, None ) ) ) ]
                     
                     HC.app.Write( 'update_services', edit_log )
                     
@@ -435,10 +436,20 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                         
                     
+                    tag_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
+                    
+                    tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
+                    tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
+                    
+                    file_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY )
+                    
+                    file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
+                    file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
+                    
                     edit_log = []
                     
-                    edit_log.append( ( HC.ADD, ( HC.TAG_REPOSITORY, HC.DEFAULT_SERVICE_PORT ) ) )
-                    edit_log.append( ( HC.ADD, ( HC.FILE_REPOSITORY, HC.DEFAULT_SERVICE_PORT + 1 ) ) )
+                    edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
+                    edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
                     
                     connection.Post( 'services', edit_log = edit_log )
                     
@@ -597,31 +608,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageOptions( self, service_identifier ):
+    def _ManageNamespaceBlacklists( self ):
         
-        if service_identifier.GetType() == HC.LOCAL_FILE:
-            
-            with ClientGUIDialogsManage.DialogManageOptionsLocal( self ) as dlg: dlg.ShowModal()
-            
-        else:
-            
-            if service_identifier.GetType() == HC.FILE_REPOSITORY:
-                
-                with ClientGUIDialogsManage.DialogManageOptionsFileRepository( self, service_identifier ) as dlg: dlg.ShowModal()
-                
-            elif service_identifier.GetType() == HC.TAG_REPOSITORY:
-                
-                with ClientGUIDialogsManage.DialogManageOptionsTagRepository( self, service_identifier ) as dlg: dlg.ShowModal()
-                
-            elif service_identifier.GetType() == HC.MESSAGE_DEPOT:
-                
-                with ClientGUIDialogsManage.DialogManageOptionsMessageDepot( self, service_identifier ) as dlg: dlg.ShowModal()
-                
-            elif service_identifier.GetType() == HC.SERVER_ADMIN:
-                
-                with ClientGUIDialogsManage.DialogManageOptionsServerAdmin( self, service_identifier ) as dlg: dlg.ShowModal()
-                
-            
+        with ClientGUIDialogsManage.DialogManageNamespaceBlacklists( self ) as dlg: dlg.ShowModal()
+        
+    
+    def _ManageOptions( self ):
+        
+        with ClientGUIDialogsManage.DialogManageOptions( self ) as dlg: dlg.ShowModal()
         
     
     def _ManagePixivAccount( self ):
@@ -1179,6 +1173,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_contacts': self._ManageContacts()
             elif command == 'manage_imageboards': self._ManageImageboards()
             elif command == 'manage_import_folders': self._ManageImportFolders()
+            elif command == 'manage_namespace_blacklists': self._ManageNamespaceBlacklists()
             elif command == 'manage_pixiv_account': self._ManagePixivAccount()
             elif command == 'manage_server_services': self._ManageServer( data )
             elif command == 'manage_services': self._ManageServices()
@@ -1197,7 +1192,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
             elif command == 'open_export_folder': self._OpenExportFolder()
-            elif command == 'options': self._ManageOptions( data )
+            elif command == 'options': self._ManageOptions()
             elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
             elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
@@ -1358,7 +1353,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
         file.AppendSeparator()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&Options' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options' ), p( '&Options' ) )
         file.AppendSeparator()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'exit' ), p( '&Exit' ) )
         
@@ -1493,7 +1488,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
-        #services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
+        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_namespace_blacklists' ), p( '&Manage Namespace Blacklists' ), p( 'Set which kinds of tags you want to see from which services.' ) )
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
         services.AppendSeparator()
         services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
@@ -1563,8 +1558,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 submenu = wx.Menu()
                 
-                menu_item = submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
-                submenu.Enable( menu_item.GetId(), False )
+                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
                 submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', s_i ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
                 
                 admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
@@ -1577,8 +1571,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help' ), p( '&Help' ) )
         dont_know = wx.Menu()
         dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
-        menu_item = dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
-        dont_know.Enable( menu_item.GetId(), False )
+        dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
         help.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
         links = wx.Menu()
         tumblr = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tumblr' ), p( 'Tumblr' ) )
@@ -2410,7 +2403,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             credentials = CC.Credentials( host, port, access_key )
             
-            edit_log = [ ( 'edit', ( self._service_identifier, ( self._service_identifier, credentials, None ) ) ) ]
+            edit_log = [ ( HC.EDIT, ( self._service_identifier, ( self._service_identifier, credentials, None ) ) ) ]
             
             HC.app.Write( 'update_services', edit_log )
             

@@ -1024,13 +1024,13 @@ class MessageDB():
         
         for ( action, details ) in edit_log:
             
-            if action == 'add':
+            if action == HC.ADD:
                 
                 contact = details
                 
                 self._AddContact( c, contact )
                 
-            elif action == 'delete':
+            elif action == HC.DELETE:
                 
                 name = details
                 
@@ -1038,7 +1038,7 @@ class MessageDB():
                 
                 if result is not None: c.execute( 'DELETE FROM contacts WHERE name = ?;', ( name, ) )
                 
-            elif action == 'edit':
+            elif action == HC.EDIT:
                 
                 ( old_name, contact ) = details
                 
@@ -1741,7 +1741,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             [ tags_to_count.update( { ( 1, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results if namespace_id != 1 and tag_id in unnamespaced_tag_ids ]
             
         
-        matches = CC.AutocompleteMatchesPredicates( tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', self._GetNamespaceTag( c, namespace_id, tag_id ) ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ], collapse = collapse )
+        tag_info = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ]
+        
+        tags = [ tag for ( tag, num_tags ) in tag_info ]
+        
+        namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+        
+        filtered_tags = namespace_blacklists_manager.FilterTags( tag_service_identifier, tags )
+        
+        predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), num_tags ) for ( tag, num_tags ) in tag_info if tag in filtered_tags ]
+        
+        matches = CC.AutocompleteMatchesPredicates( tag_service_identifier, predicates, collapse = collapse )
         
         return matches
         
@@ -1890,9 +1900,25 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if include_current_tags: statuses.append( HC.CURRENT )
         if include_pending_tags: statuses.append( HC.PENDING )
         
+        if num_tags_zero or num_tags_nonzero or len( tag_predicates ) > 0:
+            
+            namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+            
+            ( blacklist, namespaces ) = namespace_blacklists_manager.GetInfo( tag_service_identifier )
+            
+            if len( namespaces ) == 0: namespace_predicate = ''
+            else:
+                
+                namespace_ids = [ self._GetNamespaceId( c, namespace ) for namespace in namespaces ]
+                
+                if blacklist: namespace_predicate = 'namespace_id NOT IN ' + HC.SplayListForDB( namespace_ids )
+                else: namespace_predicate = 'namespace_id IN ' + HC.SplayListForDB( namespace_ids )
+                
+            
+        
         if num_tags_zero or num_tags_nonzero:
             
-            tag_query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ';', ( tag_service_id, ) ) }
+            tag_query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ' AND ' + namespace_predicate + ';', ( tag_service_id, ) ) }
             
             if num_tags_zero: query_hash_ids.difference_update( tag_query_hash_ids )
             elif num_tags_nonzero: query_hash_ids = tag_query_hash_ids
@@ -1900,7 +1926,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( tag_predicates ) > 0:
             
-            query_hash_ids = { id for ( id, count ) in c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
+            query_hash_ids = { id for ( id, count ) in c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ' AND ' + namespace_predicate + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
             
         
         #
@@ -2116,7 +2142,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetHashIdsFromTag( self, c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ):
         
-        # this does siblings too!
+        # this does siblings and blacklists too!
         
         statuses = []
         
@@ -2133,6 +2159,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         siblings_manager = HC.app.GetTagSiblingsManager()
         
         tags = siblings_manager.GetAllSiblings( tag )
+        
+        namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+        
+        tags = namespace_blacklists_manager.FilterTags( tag_service_identifier, tags )
         
         hash_ids = set()
         
@@ -2376,6 +2406,31 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         ( mime, ) = result
         
         return mime
+        
+    
+    def _GetNamespaceBlacklists( self, c, service_identifier = None ):
+        
+        if service_identifier is None:
+            
+            result = []
+            
+            for ( service_id, blacklist, namespaces ) in c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall():
+                
+                service_identifier = self._GetServiceIdentifier( c, service_id )
+                
+                result.append( ( service_identifier, blacklist, namespaces ) )
+                
+            
+        else:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            result = c.execute( 'SELECT blacklist, namespaces FROM namespace_blacklists WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            if result is None: result = ( True, set() )
+            
+        
+        return result
         
     
     def _GetNews( self, c, service_identifier ):
@@ -3633,6 +3688,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT INTO favourite_custom_filter_actions ( name, actions ) VALUES ( ?, ? );', [ ( name, actions ) for ( name, actions ) in favourites.items() ] )
         
     
+    def _SetNamespaceBlacklists( self, c, info ):
+        
+        c.execute( 'DELETE FROM namespace_blacklists;' )
+        
+        for ( service_identifier, blacklist, namespaces ) in info:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            c.execute( 'INSERT OR IGNORE INTO namespace_blacklists ( service_id, blacklist, namespaces ) VALUES ( ?, ?, ? );', ( service_id, blacklist, namespaces ) )
+            
+        
+        self.pub( 'notify_new_namespace_blacklists' )
+        
+    
     def _SetImportFolders( self, c, import_folders ):
         
         c.execute( 'DELETE FROM import_folders;' )
@@ -4082,13 +4151,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if action == HC.ADD:
                 
-                ( service_type, port ) = data
+                ( server_service_identifier, server_options ) = data
                 
-                service_key = os.urandom( 32 )
-                
+                service_key = server_service_identifier.GetServiceKey()
                 service_type = server_service_identifier.GetType()
                 
-                port = server_service_identifier.GetPort()
+                port = server_options[ 'port' ]
                 
                 service_name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( port )
                 
@@ -4105,18 +4173,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 server_service_identifier = data
                 
-                service_type = server_service_identifier.GetType()
-                service_port = server_service_identifier.GetPort()
+                service_key = server_service_identifier.GetServiceKey()
                 
-                service_info = c.execute( 'SELECT service_key, name FROM services, addresses USING ( service_id ) WHERE type = ? AND host = ? AND port = ?;', ( service_type, host, service_port ) ).fetchall()
+                result = c.execute( 'SELECT service_id, name FROM services, addresses USING ( service_id ) WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
                 
-                for ( service_key, name ) in service_info:
+                if result is not None:
+                    
+                    ( service_id, name ) = result
+                    
+                    c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                    
+                    service_type = server_service_identifier.GetType()
                     
                     client_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
-                    
-                    client_service_id = self._GetServiceId( c, client_service_identifier )
-                    
-                    c.execute( 'DELETE FROM services WHERE service_id = ?;', ( client_service_id, ) )
                     
                     service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                     
@@ -4124,8 +4193,25 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     self.pub_service_updates( service_identifiers_to_service_updates )
                     
+                    recalc_combined_mappings = True
+                    
                 
-                if len( names ) > 0: recalc_combined_mappings = True
+            elif action == HC.EDIT:
+                
+                ( server_service_identifier, server_options ) = data
+                
+                service_key = server_service_identifier.GetServiceKey()
+                
+                port = server_options[ 'port' ]
+                
+                result = c.execute( 'SELECT service_id FROM services, addresses USING ( service_id ) WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
+                
+                if result is not None:
+                    
+                    ( service_id, ) = result
+                    
+                    c.execute( 'UPDATE addresses SET port = ? WHERE service_id = ?;', ( port, service_id ) )
+                    
                 
             
         
@@ -4148,13 +4234,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( action, details ) in edit_log:
             
-            if action == 'add':
+            if action == HC.ADD:
                 
                 ( service_identifier, credentials, extra_info ) = details
                 
                 self._AddService( c, service_identifier, credentials, extra_info )
                 
-            elif action == 'delete':
+            elif action == HC.DELETE:
                 
                 service_identifier = details
                 
@@ -4172,7 +4258,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if service_type == HC.TAG_REPOSITORY: recalc_combined_mappings = True
                 
-            elif action == 'edit':
+            elif action == HC.EDIT:
                 
                 ( old_service_identifier, ( new_service_identifier, credentials, extra_info ) ) = details
                 
@@ -4547,6 +4633,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX messages_contact_id_from_index ON messages ( contact_id_from );' )
             c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
             
+            c.execute( 'CREATE TABLE namespace_blacklists ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, namespaces TEXT_YAML );' )
+            
             c.execute( 'CREATE TABLE namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX namespaces_namespace_index ON namespaces ( namespace );' )
             
@@ -4692,7 +4780,7 @@ class DB( ServiceDB ):
         
         for ( action, data ) in edit_log:
             
-            if action == 'add':
+            if action == HC.ADD:
                 
                 name = data
                 
@@ -4700,13 +4788,13 @@ class DB( ServiceDB ):
                 
                 c.execute( 'INSERT INTO boorus ( name, booru ) VALUES ( ?, ? );', ( name, booru ) )
                 
-            elif action == 'delete':
+            elif action == HC.DELETE:
                 
                 name = data
                 
                 c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
                 
-            elif action == 'edit':
+            elif action == HC.EDIT:
                 
                 ( name, booru ) = data
                 
@@ -4719,13 +4807,13 @@ class DB( ServiceDB ):
         
         for ( site_action, site_data ) in site_edit_log:
             
-            if site_action == 'add':
+            if site_action == HC.ADD:
                 
                 site_name = site_data
                 
                 self._GetSiteId( c, site_name )
                 
-            elif site_action == 'delete':
+            elif site_action == HC.DELETE:
                 
                 site_name = site_data
                 
@@ -4734,7 +4822,7 @@ class DB( ServiceDB ):
                 c.execute( 'DELETE FROM imageboard_sites WHERE site_id = ?;', ( site_id, ) )
                 c.execute( 'DELETE FROM imageboards WHERE site_id = ?;', ( site_id, ) )
                 
-            elif site_action == 'edit':
+            elif site_action == HC.EDIT:
                 
                 ( site_name, edit_log ) = site_data
                 
@@ -4742,7 +4830,7 @@ class DB( ServiceDB ):
                 
                 for ( action, data ) in edit_log:
                     
-                    if action == 'add':
+                    if action == HC.ADD:
                         
                         name = data
                         
@@ -4750,13 +4838,13 @@ class DB( ServiceDB ):
                         
                         c.execute( 'INSERT INTO imageboards ( site_id, name, imageboard ) VALUES ( ?, ?, ? );', ( site_id, name, imageboard ) )
                         
-                    elif action == 'delete':
+                    elif action == HC.DELETE:
                         
                         name = data
                         
                         c.execute( 'DELETE FROM imageboards WHERE site_id = ? AND name = ?;', ( site_id, name ) )
                         
-                    elif action == 'edit':
+                    elif action == HC.EDIT:
                         
                         imageboard = data
                         
@@ -4781,296 +4869,6 @@ class DB( ServiceDB ):
             try:
                 
                 self._UpdateDBOld( c, version )
-                
-                if version < 68:
-                    
-                    ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    HC.options[ 'confirm_client_exit' ] = False
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
-                    
-                    #
-                    
-                    boorus = []
-                    
-                    name = 'e621'
-                    search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
-                    search_separator = '%20'
-                    advance_by_page_num = True
-                    thumb_classname = 'thumb'
-                    image_id = None
-                    image_data = 'Download'
-                    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-                    
-                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
-                    
-                    name = 'danbooru'
-                    search_url = 'http://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
-                    search_separator = '%20'
-                    advance_by_page_num = True
-                    thumb_classname = 'post-preview'
-                    image_id = 'image'
-                    image_data = None
-                    tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
-                    
-                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
-                    
-                    for booru in boorus:
-                        
-                        name = booru.GetName()
-                        
-                        c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
-                        
-                        c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
-                        
-                    
-                
-                if version < 69:
-                    
-                    boorus = []
-                    
-                    name = 'e621'
-                    search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
-                    search_separator = '%20'
-                    advance_by_page_num = True
-                    thumb_classname = 'thumb'
-                    image_id = None
-                    image_data = 'Download'
-                    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
-                    
-                    boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
-                    
-                    for booru in boorus:
-                        
-                        name = booru.GetName()
-                        
-                        c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
-                        
-                        c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
-                        
-                    
-                    #
-                    
-                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
-                    
-                    #
-                    
-                    subscriptions = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' ).fetchall()
-                    
-                    paused = False
-                    
-                    for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) ) in subscriptions:
-                        
-                        updated_info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ]
-                        
-                        c.execute( 'UPDATE subscriptions SET info = ? WHERE site_download_type = ? AND name = ?;', ( updated_info, site_download_type, name ) )
-                        
-                    
-                
-                if version < 70:
-                    
-                    c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER );' )
-                    c.execute( 'CREATE UNIQUE INDEX tag_parents_all_index ON tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id );' )
-                    
-                    #
-                    
-                    c.execute( 'CREATE VIRTUAL TABLE tags_fts4 USING fts4( tag );' )
-                    c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags;' )
-                    
-                
-                if version < 71:
-                    
-                    init_service_identifiers = [ HC.COMBINED_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
-                    
-                    for init_service_identifier in init_service_identifiers:
-                        
-                        ( service_key, service_type, service_name ) = init_service_identifier.GetInfo()
-                        
-                        c.execute( 'INSERT INTO services ( service_key, type, name ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, service_name ) )
-                        
-                    
-                    c.execute( 'ALTER TABLE mappings ADD COLUMN status INTEGER;' )
-                    c.execute( 'UPDATE mappings SET status = ?;', ( HC.CURRENT, ) )
-                    
-                    c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
-                    c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
-                    
-                    c.execute( 'ANALYZE' )
-                    
-                    deleted_mappings = set( c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM deleted_mappings;' ).fetchall() )
-                    pending_mappings = set( c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM pending_mappings;' ).fetchall() )
-                    
-                    deleted_pending_mappings = pending_mappings.intersection( deleted_mappings )
-                    
-                    deleted_mappings.difference_update( deleted_pending_mappings )
-                    pending_mappings.difference_update( deleted_pending_mappings )
-                    
-                    c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED_PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in deleted_pending_mappings ) )
-                    c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED ) for ( service_id, namespace_id, tag_id, hash_id ) in deleted_mappings ) )
-                    c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in pending_mappings ) )
-                    
-                    c.execute( 'DROP TABLE deleted_mappings;' )
-                    c.execute( 'DROP TABLE pending_mappings;' )
-                    c.execute( 'DROP TABLE active_mappings;' )
-                    c.execute( 'DROP TABLE active_pending_mappings;' )
-                    
-                    #
-                    
-                    c.execute( 'DELETE FROM service_info;' )
-                    
-                    service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-                    
-                    for service_identifier in service_identifiers: self._GetServiceInfo( c, service_identifier )
-                    
-                    #
-                    
-                    self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
-                    self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
-                    
-                    c.execute( 'DELETE FROM autocomplete_tags_cache;' )
-                    
-                    self._RecalcCombinedMappings( c )
-                    
-                    self._FattenAutocompleteCache( c )
-                    
-                    #
-                    
-                    ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-                    
-                    HC.options[ 'play_dumper_noises' ] = True
-                    
-                    c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
-                    
-                
-                if version < 72:
-                    
-                    c.execute( 'ALTER TABLE tag_siblings ADD COLUMN status INTEGER;' )
-                    c.execute( 'UPDATE tag_siblings SET status = ?;', ( HC.CURRENT, ) )
-                    
-                    c.execute( 'ALTER TABLE tag_parents ADD COLUMN status INTEGER;' )
-                    c.execute( 'UPDATE tag_parents SET status = ?;', ( HC.CURRENT, ) )
-                    
-                    tag_siblings = c.execute( 'SELECT * FROM tag_siblings;' ).fetchall()
-                    tag_parents = c.execute( 'SELECT * FROM tag_parents;' ).fetchall()
-                    
-                    c.execute( 'DROP TABLE tag_siblings;' )
-                    c.execute( 'DROP TABLE tag_parents;' )
-                    
-                    c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
-                    c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
-                    c.execute( 'CREATE INDEX tag_parents_status_index ON tag_parents ( status );' )
-                    
-                    c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
-                    
-                    c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
-                    c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
-                    c.execute( 'CREATE INDEX tag_siblings_status_index ON tag_siblings ( status );' )
-                    
-                    c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
-                    
-                    c.executemany( 'INSERT INTO tag_siblings VALUES ( ?, ?, ?, ?, ?, ? );', tag_siblings )
-                    c.executemany( 'INSERT INTO tag_parents VALUES ( ?, ?, ?, ?, ?, ? );', tag_parents )
-                    
-                    #
-                    
-                    c.execute( 'ALTER TABLE mappings RENAME TO mappings_old;' )
-                    
-                    c.execute( 'DROP INDEX mappings_hash_id_index;' )
-                    c.execute( 'DROP INDEX mappings_service_id_tag_id_index;' )
-                    c.execute( 'DROP INDEX mappings_service_id_hash_id_index;' )
-                    c.execute( 'DROP INDEX mappings_service_id_status_index;' )
-                    c.execute( 'DROP INDEX mappings_status_index;' )
-                    
-                    c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
-                    c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
-                    c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
-                    c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
-                    c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
-                    c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
-                    
-                    c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
-                    
-                    c.execute( 'DROP TABLE mappings_old;' )
-                    
-                    #
-                    
-                    download_data = c.execute( 'SELECT service_id_to, hash_id FROM file_transfers;' ).fetchall()
-                    
-                    c.execute( 'DROP TABLE file_transfers;' )
-                    
-                    c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-                    c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
-                    
-                    c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', download_data )
-                    
-                    #
-                    
-                    c.execute( 'DELETE FROM service_info;' )
-                    
-                
-                if version < 73:
-                    
-                    inserts = c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM mappings WHERE status = ?;', ( HC.DELETED_PENDING, ) ).fetchall()
-                    
-                    c.execute( 'DELETE FROM mappings WHERE status = ?;', ( HC.DELETED_PENDING, ) )
-                    
-                    c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
-                    c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
-                    
-                    #
-                    
-                    self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
-                    self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
-                    
-                    c.execute( 'DELETE FROM autocomplete_tags_cache;' )
-                    
-                    self._RecalcCombinedMappings( c )
-                    
-                    self._FattenAutocompleteCache( c )
-                    
-                
-                if version < 74:
-                    
-                    fourchan_imageboards = []
-                    
-                    fourchan_imageboards.append( CC.Imageboard( '/asp/', 'https://sys.4chan.org/asp/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
-                    fourchan_imageboards.append( CC.Imageboard( '/gd/', 'https://sys.4chan.org/gd/post', 75, CC.fourchan_typical_form_fields, { CC.RESTRICTION_MAX_FILE_SIZE : 8388608, CC.RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.APPLICATION_PDF ] } ) )
-                    fourchan_imageboards.append( CC.Imageboard( '/lgbt/', 'https://sys.4chan.org/lgbt/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
-                    fourchan_imageboards.append( CC.Imageboard( '/vr/', 'https://sys.4chan.org/vr/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
-                    fourchan_imageboards.append( CC.Imageboard( '/wsg/', 'https://sys.4chan.org/wsg/post', 75, CC.fourchan_typical_form_fields, { CC.RESTRICTION_MAX_FILE_SIZE : 4194304, CC.RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF ] } ) )
-                    
-                    new_imageboards = []
-                    
-                    new_imageboards.append( ( '4chan', fourchan_imageboards ) )
-                    
-                    for ( site_name, imageboards ) in new_imageboards:
-                        
-                        site_id = self._GetSiteId( c, site_name )
-                        
-                        try: c.executemany( 'INSERT INTO imageboards VALUES ( ?, ?, ? );', [ ( site_id, imageboard.GetName(), imageboard ) for imageboard in imageboards ] )
-                        except: pass
-                        
-                    
-                    self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
-                    self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
-                    
-                    c.execute( 'DELETE FROM autocomplete_tags_cache;' )
-                    
-                    self._RecalcCombinedMappings( c )
-                    
-                    self._FattenAutocompleteCache( c )
-                    
-                
-                if version < 77:
-                    
-                    c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
-                    
-                
-                if version < 79:
-                    
-                    c.execute( 'DELETE FROM import_folders;' )
-                    
                 
                 if version < 80:
                     
@@ -5120,6 +4918,11 @@ class DB( ServiceDB ):
                         
                         c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
                         
+                    
+                
+                if version < 88:
+                    
+                    c.execute( 'CREATE TABLE namespace_blacklists ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, namespaces TEXT_YAML );' )
                     
                 
                 unknown_account = HC.GetUnknownAccount()
@@ -6272,6 +6075,296 @@ class DB( ServiceDB ):
                 
             
         
+        if version < 68:
+            
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            HC.options[ 'confirm_client_exit' ] = False
+            
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            
+            #
+            
+            boorus = []
+            
+            name = 'e621'
+            search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+            search_separator = '%20'
+            advance_by_page_num = True
+            thumb_classname = 'thumb'
+            image_id = None
+            image_data = 'Download'
+            tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+            
+            boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+            
+            name = 'danbooru'
+            search_url = 'http://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
+            search_separator = '%20'
+            advance_by_page_num = True
+            thumb_classname = 'post-preview'
+            image_id = 'image'
+            image_data = None
+            tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
+            
+            boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+            
+            for booru in boorus:
+                
+                name = booru.GetName()
+                
+                c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
+                
+                c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
+                
+            
+        
+        if version < 69:
+            
+            boorus = []
+            
+            name = 'e621'
+            search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
+            search_separator = '%20'
+            advance_by_page_num = True
+            thumb_classname = 'thumb'
+            image_id = None
+            image_data = 'Download'
+            tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+            
+            boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
+            
+            for booru in boorus:
+                
+                name = booru.GetName()
+                
+                c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
+                
+                c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
+                
+            
+            #
+            
+            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id ) );' )
+            
+            #
+            
+            subscriptions = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' ).fetchall()
+            
+            paused = False
+            
+            for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) ) in subscriptions:
+                
+                updated_info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ]
+                
+                c.execute( 'UPDATE subscriptions SET info = ? WHERE site_download_type = ? AND name = ?;', ( updated_info, site_download_type, name ) )
+                
+            
+        
+        if version < 70:
+            
+            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER );' )
+            c.execute( 'CREATE UNIQUE INDEX tag_parents_all_index ON tag_parents ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id );' )
+            
+            #
+            
+            c.execute( 'CREATE VIRTUAL TABLE tags_fts4 USING fts4( tag );' )
+            c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags;' )
+            
+        
+        if version < 71:
+            
+            init_service_identifiers = [ HC.COMBINED_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+            
+            for init_service_identifier in init_service_identifiers:
+                
+                ( service_key, service_type, service_name ) = init_service_identifier.GetInfo()
+                
+                c.execute( 'INSERT INTO services ( service_key, type, name ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, service_name ) )
+                
+            
+            c.execute( 'ALTER TABLE mappings ADD COLUMN status INTEGER;' )
+            c.execute( 'UPDATE mappings SET status = ?;', ( HC.CURRENT, ) )
+            
+            c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
+            c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
+            
+            c.execute( 'ANALYZE' )
+            
+            deleted_mappings = set( c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM deleted_mappings;' ).fetchall() )
+            pending_mappings = set( c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM pending_mappings;' ).fetchall() )
+            
+            deleted_pending_mappings = pending_mappings.intersection( deleted_mappings )
+            
+            deleted_mappings.difference_update( deleted_pending_mappings )
+            pending_mappings.difference_update( deleted_pending_mappings )
+            
+            c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED_PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in deleted_pending_mappings ) )
+            c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED ) for ( service_id, namespace_id, tag_id, hash_id ) in deleted_mappings ) )
+            c.executemany( 'INSERT OR IGNORE INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in pending_mappings ) )
+            
+            c.execute( 'DROP TABLE deleted_mappings;' )
+            c.execute( 'DROP TABLE pending_mappings;' )
+            c.execute( 'DROP TABLE active_mappings;' )
+            c.execute( 'DROP TABLE active_pending_mappings;' )
+            
+            #
+            
+            c.execute( 'DELETE FROM service_info;' )
+            
+            service_identifiers = self._GetServiceIdentifiers( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            
+            for service_identifier in service_identifiers: self._GetServiceInfo( c, service_identifier )
+            
+            #
+            
+            self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
+            self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+            
+            c.execute( 'DELETE FROM autocomplete_tags_cache;' )
+            
+            self._RecalcCombinedMappings( c )
+            
+            self._FattenAutocompleteCache( c )
+            
+            #
+            
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            HC.options[ 'play_dumper_noises' ] = True
+            
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            
+        
+        if version < 72:
+            
+            c.execute( 'ALTER TABLE tag_siblings ADD COLUMN status INTEGER;' )
+            c.execute( 'UPDATE tag_siblings SET status = ?;', ( HC.CURRENT, ) )
+            
+            c.execute( 'ALTER TABLE tag_parents ADD COLUMN status INTEGER;' )
+            c.execute( 'UPDATE tag_parents SET status = ?;', ( HC.CURRENT, ) )
+            
+            tag_siblings = c.execute( 'SELECT * FROM tag_siblings;' ).fetchall()
+            tag_parents = c.execute( 'SELECT * FROM tag_parents;' ).fetchall()
+            
+            c.execute( 'DROP TABLE tag_siblings;' )
+            c.execute( 'DROP TABLE tag_parents;' )
+            
+            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+            c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
+            c.execute( 'CREATE INDEX tag_parents_status_index ON tag_parents ( status );' )
+            
+            c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+            
+            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+            c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
+            c.execute( 'CREATE INDEX tag_siblings_status_index ON tag_siblings ( status );' )
+            
+            c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+            
+            c.executemany( 'INSERT INTO tag_siblings VALUES ( ?, ?, ?, ?, ?, ? );', tag_siblings )
+            c.executemany( 'INSERT INTO tag_parents VALUES ( ?, ?, ?, ?, ?, ? );', tag_parents )
+            
+            #
+            
+            c.execute( 'ALTER TABLE mappings RENAME TO mappings_old;' )
+            
+            c.execute( 'DROP INDEX mappings_hash_id_index;' )
+            c.execute( 'DROP INDEX mappings_service_id_tag_id_index;' )
+            c.execute( 'DROP INDEX mappings_service_id_hash_id_index;' )
+            c.execute( 'DROP INDEX mappings_service_id_status_index;' )
+            c.execute( 'DROP INDEX mappings_status_index;' )
+            
+            c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+            c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
+            c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
+            c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
+            c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
+            c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
+            
+            c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
+            
+            c.execute( 'DROP TABLE mappings_old;' )
+            
+            #
+            
+            download_data = c.execute( 'SELECT service_id_to, hash_id FROM file_transfers;' ).fetchall()
+            
+            c.execute( 'DROP TABLE file_transfers;' )
+            
+            c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+            c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
+            
+            c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', download_data )
+            
+            #
+            
+            c.execute( 'DELETE FROM service_info;' )
+            
+        
+        if version < 73:
+            
+            inserts = c.execute( 'SELECT service_id, namespace_id, tag_id, hash_id FROM mappings WHERE status = ?;', ( HC.DELETED_PENDING, ) ).fetchall()
+            
+            c.execute( 'DELETE FROM mappings WHERE status = ?;', ( HC.DELETED_PENDING, ) )
+            
+            c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.DELETED ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
+            c.executemany( 'INSERT INTO mappings ( service_id, namespace_id, tag_id, hash_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for ( service_id, namespace_id, tag_id, hash_id ) in inserts ) )
+            
+            #
+            
+            self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
+            self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+            
+            c.execute( 'DELETE FROM autocomplete_tags_cache;' )
+            
+            self._RecalcCombinedMappings( c )
+            
+            self._FattenAutocompleteCache( c )
+            
+        
+        if version < 74:
+            
+            fourchan_imageboards = []
+            
+            fourchan_imageboards.append( CC.Imageboard( '/asp/', 'https://sys.4chan.org/asp/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
+            fourchan_imageboards.append( CC.Imageboard( '/gd/', 'https://sys.4chan.org/gd/post', 75, CC.fourchan_typical_form_fields, { CC.RESTRICTION_MAX_FILE_SIZE : 8388608, CC.RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.APPLICATION_PDF ] } ) )
+            fourchan_imageboards.append( CC.Imageboard( '/lgbt/', 'https://sys.4chan.org/lgbt/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
+            fourchan_imageboards.append( CC.Imageboard( '/vr/', 'https://sys.4chan.org/vr/post', 75, CC.fourchan_typical_form_fields, CC.fourchan_typical_restrictions ) )
+            fourchan_imageboards.append( CC.Imageboard( '/wsg/', 'https://sys.4chan.org/wsg/post', 75, CC.fourchan_typical_form_fields, { CC.RESTRICTION_MAX_FILE_SIZE : 4194304, CC.RESTRICTION_ALLOWED_MIMES : [ HC.IMAGE_GIF ] } ) )
+            
+            new_imageboards = []
+            
+            new_imageboards.append( ( '4chan', fourchan_imageboards ) )
+            
+            for ( site_name, imageboards ) in new_imageboards:
+                
+                site_id = self._GetSiteId( c, site_name )
+                
+                try: c.executemany( 'INSERT INTO imageboards VALUES ( ?, ?, ? );', [ ( site_id, imageboard.GetName(), imageboard ) for imageboard in imageboards ] )
+                except: pass
+                
+            
+            self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
+            self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+            
+            c.execute( 'DELETE FROM autocomplete_tags_cache;' )
+            
+            self._RecalcCombinedMappings( c )
+            
+            self._FattenAutocompleteCache( c )
+            
+        
+        if version < 77:
+            
+            c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
+            
+        
+        if version < 79:
+            
+            c.execute( 'DELETE FROM import_folders;' )
+            
+        
     
     def _UpdateDBOldPost( self, c, version ):
         
@@ -6439,6 +6532,7 @@ class DB( ServiceDB ):
                 elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
                 elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( c, *args, **kwargs )
                 elif action == 'messages_to_send': result = self._GetMessagesToSend( c, *args, **kwargs )
+                elif action == 'namespace_blacklists': result = self._GetNamespaceBlacklists( c, *args, **kwargs )
                 elif action == 'news': result = self._GetNews( c, *args, **kwargs )
                 elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
                 elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
@@ -6494,6 +6588,7 @@ class DB( ServiceDB ):
                 elif action == 'message': result = self._AddMessage( c, *args, **kwargs )
                 elif action == 'message_info_since': result = self._AddMessageInfoSince( c, *args, **kwargs )
                 elif action == 'message_statuses': result = self._UpdateMessageStatuses( c, *args, **kwargs )
+                elif action == 'namespace_blacklists': result = self._SetNamespaceBlacklists( c, *args, **kwargs )
                 elif action == 'pixiv_account': result = self._SetPixivAccount( c, *args, **kwargs )
                 elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
                 elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
@@ -6618,7 +6713,7 @@ class DB( ServiceDB ):
         HC.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
         HC.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HC.DAEMONWorker( 'SynchroniseRepositoriesAndSubscriptions', DAEMONSynchroniseRepositoriesAndSubscriptions, ( 'notify_new_permissions', 'notify_new_subscriptions' ) )
-        HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 2 )
+        HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
     
     def WaitUntilGoodTimeToUseDBThread( self ):

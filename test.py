@@ -8,6 +8,7 @@ from include import TestDialogs
 from include import TestDB
 from include import TestFunctions
 from include import TestHydrusDownloading
+from include import TestServer
 from include import TestHydrusTags
 import collections
 import os
@@ -23,6 +24,7 @@ class App( wx.App ):
         self._reads = {}
         
         self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
+        self._reads[ 'namespace_blacklists' ] = []
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_service_precedence' ] = []
         self._reads[ 'tag_siblings' ] = {}
@@ -31,6 +33,7 @@ class App( wx.App ):
         
         self._writes = collections.defaultdict( list )
         
+        self._namespace_blacklists_manager = HydrusTags.NamespaceBlacklistsManager()
         self._tag_parents_manager = HydrusTags.TagParentsManager()
         self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
         
@@ -44,6 +47,7 @@ class App( wx.App ):
         suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
         suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
         suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusDownloading ) )
+        suites.append( unittest.TestLoader().loadTestsFromModule( TestServer ) )
         suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
         
         suite = unittest.TestSuite( suites )
@@ -55,6 +59,7 @@ class App( wx.App ):
         return True
         
     
+    def GetNamespaceBlacklistsManager( self ): return self._namespace_blacklists_manager
     def GetTagParentsManager( self ): return self._tag_parents_manager
     def GetTagSiblingsManager( self ): return self._tag_siblings_manager
     

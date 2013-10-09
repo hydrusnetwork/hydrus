@@ -133,6 +133,8 @@ class Controller( wx.App ):
     
     def GetLog( self ): return self._log
     
+    def GetNamespaceBlacklistsManager( self ): return self._namespace_blacklists_manager
+    
     def GetPreviewImageCache( self ): return self._preview_image_cache
     
     def GetSessionKey( self, service_identifier ): return self._session_manager.GetSessionKey( service_identifier )
@@ -229,6 +231,7 @@ class Controller( wx.App ):
             
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
             self._web_session_manager = CC.WebSessionManagerClient()
+            self._namespace_blacklists_manager = HydrusTags.NamespaceBlacklistsManager()
             self._tag_parents_manager = HydrusTags.TagParentsManager()
             self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
             self._undo_manager = CC.UndoManager()

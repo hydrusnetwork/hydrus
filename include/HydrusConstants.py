@@ -38,7 +38,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 11
-SOFTWARE_VERSION = 87
+SOFTWARE_VERSION = 88
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1248,7 +1248,7 @@ class AdvancedHTTPConnection():
         
     
     def _TryToParseResponse( self, response, data ):
-    
+        
         content_type = response.getheader( 'Content-Type' )
         
         if content_type is None: parsed_response = data
