@@ -8,7 +8,80 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 89</h3></li>
+				<ul>
+					<li>fixed blacklist manager for numtags</li>
+					<li>fixed a sql typo for numtags</li>
+					<li>delete from fullscreen menu fixed</li>
+					<li>fixed a unicode error-handling issue</li>
+					<li>sped up autocomplete tag fetch for large result sets</li>
+					<li>improved the way autocomplete dropdown scrolls</li>
+					<li>vastly improved efficiency of how all listboxes draw</li>
+					<li>the server will no longer start if something is using the server admin port</li>
+					<li><i>i.e. you can no longer run multiple copies of the same server by accident</i></li>
+					<li>improved client and server port change (service shutdown and restart)</li>
+					<li>improved testing framework to handle fake db reads better</li>
+					<li>improved testing framework to manage client and server sessions</li>
+					<li>several network request unit tests added:</li>
+					<ul>
+						<li>access_key
+						<li>account
+						<li>account_info
+						<li>account_types GET
+						<li>account_types POST
+						<li>file_repo file
+						<li>file_repo thumbnail
+						<li>init
+						<li>ip
+						<li>news
+						<li>petition
+						<li>registration_keys
+						<li>services GET
+						<li>services POST
+						<li>session_key
+						<li>stats
+						<li>update GET
+						<li>update POST
+					</ul>
+					<li>fixed clientside permissions exception</li>
+					<li>several db unit tests added:</li>
+					<ul>
+						<li>import_file
+						<li>system_predicates:
+						<ul>
+							<li>age
+							<li>archive
+							<li>duration
+							<li>everything
+							<li>file_service
+							<li>hash
+							<li>height
+							<li>inbox
+							<li>local
+							<li>mime
+							<li>not_local
+							<li>num_tags
+							<li>num_words
+							<li>ratio
+							<li>similar_to
+							<li>size
+							<li>width
+							<li>limit
+						</ul>
+					</ul>
+					<li>fixed a bug in system:age?</li>
+					<li>fixed a bug in system:duration&lt;0</li>
+					<li>fixed a bug in system:duration?0</li>
+					<li>improved num_tags logic</li>
+					<li>fixed system:num_tags&lt;1</li>
+					<li>fixed system:num_tags&gt;1</li>
+					<li>fixed a hash filter bug for system:similar_to</li>
+					<li>fixed system:similar_to for unknown hashes</li>
+					<li>fixed system:size Bytes</li>
+					<li>updated linux.html and running_from_source.html in help</li>
+				</ul>
 				<li><h3>version 88</h3></li>
+				<ul>
 					<li>moved server daemon start to a better place</li>
 					<li>cleaned up more server db code</li>
 					<li>fixed getnumpetitions</li>
@@ -31,8 +104,7 @@
 					<li>fixed a problem with deleted tags not being applied correctly on initial thumbnail display</li>
 					<li>started a server unit testing framework</li>
 					<li>added 'running in linux' info to help</li>
-			</ul>
-			<ul>
+				</ul>
 				<li><h3>version 87</h3></li>
 				<ul>
 					<li>misc:</li>

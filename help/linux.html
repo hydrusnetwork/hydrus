@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>access keys</title>
+		<title>running in linux</title>
 		<link href="hydrus.ico" rel="shortcut icon" />
 		<link href="style.css" rel="stylesheet" type="text/css" />
 	</head>
@@ -9,24 +9,22 @@
 			<h3>getting it to work on linux</h3>
 			<p>I don't have a dev machine for linux (although this should soon change!), so your best bet is trying Wine. Here is a post from someone who has had success:</p>
 			<i>
-			<p>Ok, so I have got it working for some weeks now, I am not certain if it is because I got new computer, or if it was because of one of the new versions, or something totally other.</p>
-			<p>Anyways, the way I got it to work in ubuntu was:</p>
+			<p>Some things I picked up on after extended use:</p>
 			<ul>
-				<li>0. Get a standard Wine installation</li>
-				<li>1. Download the latest hydrus .exe file</li>
-				<li>2. Run it with Wine</li>
-				<li>3. This will open the installation program, choose where to put it, and continue</li>
-				<li>4. When you get to the page where you choose to either "install" or "extract only", choose extract only</li>
-				<li>5. Let it finish</li>
-				<li>6. Start the terminal and start it with Wine (I am not sure if you could just run it from within nautilous)</li>
-				<li><ul>
-					<li>With the default folder it would be:</li>
-					<li>wine /home/[USERNAME]/.wine/drive_c/Hydrus\ Network/client.exe</li>
-					<li>Just change USERNAME to your username</li>
-				</ul></li>
-				<li>7. It should run just as it would on a windows computer</li>
-				<li>8. ???</li>
-				<li>9. Profit</li>
+				<li>Wine is kinda retarded sometimes, do not try to close the window by pressing the red close button, while in fullscreen.</li>
+				<li>It will just "go through" it, and do whatever to whats behind it.</li>
+				<li>Flash do work, IF you download the internet explorer version, and install it through wine.</li>
+				<li>Hydrus is selfcontained, and portable. That means that one instance of hydrus do not know what another is doing. This is great if you want different installations for different things.</li>
+				<li>Some of the input fields behave a little wonky. Though that may just be standard Hydrus behavior.</li>
+				<li>Mostly everything else works fine. I was able to connect to the test server and view there. Only thing I need to test is the ability to host a server.</li>
+			</ul>
+			<p>Installation process:</p>
+			<ul>
+				<li>0. Get a standard Wine installation.</li>
+				<li>1. Download the latest hydrus .zip file.</li>
+				<li>2. Unpack it with your chosen zip file opener, in the chosen folder. Do not need to be in the wine folder.</li>
+				<li>3. Run it with wine, either though the file manager, or though the terminal.</li>
+				<li>4. For Flash support install the IE version through wine.</li>
 			</ul>
 			</i>
 			<p>If you try to get the client running in linux, please let me know how you get on!</p>
