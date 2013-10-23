@@ -21,6 +21,7 @@ import traceback
 import wx
 import wx.richtext
 from twisted.internet import reactor
+from twisted.internet import defer
 
 ID_ANIMATED_EVENT_TIMER = wx.NewId()
 ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
@@ -332,7 +333,7 @@ class Controller( wx.App ):
         
         def TWISTEDRestartServer():
             
-            def StartServer():
+            def StartServer( *args, **kwargs ):
                 
                 try:
                     
@@ -377,9 +378,9 @@ class Controller( wx.App ):
             if self._local_service is None: StartServer()
             else:
                 
-                deferred = self._local_service.stopListening()
+                deferred = defer.maybeDeferred( self._local_service.stopListening )
                 
-                deferred.AddCallback( StartServer )
+                deferred.addCallback( StartServer )
                 
             
         

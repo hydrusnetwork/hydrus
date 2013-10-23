@@ -2250,25 +2250,29 @@ class Thumbnail( Selectable ):
         
         siblings_manager = HC.app.GetTagSiblingsManager()
         
+        upper_info_string = ''
+        
         if len( creators ) > 0:
             
             creators = siblings_manager.CollapseNamespacedTags( 'creator', creators )
             
             upper_info_string = ', '.join( creators )
             
-        elif len( series ) > 0:
+            if len( series ) > 0 or len( titles ) > 0: upper_info_string += ' - '
+            
+        
+        if len( series ) > 0:
             
             series = siblings_manager.CollapseNamespacedTags( 'series', series )
             
-            upper_info_string = ', '.join( series )
+            upper_info_string += ', '.join( series )
             
         elif len( titles ) > 0:
             
             titles = siblings_manager.CollapseNamespacedTags( 'title', titles )
             
-            upper_info_string = ', '.join( titles )
+            upper_info_string += ', '.join( titles )
             
-        else: upper_info_string = ''
         
         if len( upper_info_string ) > 0:
             

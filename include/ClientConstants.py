@@ -777,7 +777,9 @@ def ParseImportablePaths( raw_paths ):
             
             num_odd_files += 1
             
-            HC.ShowException( HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' ) )
+            e = HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' )
+            
+            HC.ShowException( e )
             
             continue
             
@@ -1695,16 +1697,18 @@ class FileSystemPredicates():
                 
                 ( operator, years, months, days, hours ) = info
                 
-                timestamp = HC.GetNow() - ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                
+                now = HC.GetNow()
                 
                 # this is backwards because we are talking about age, not timestamp
                 
-                if operator == '<': self._min_timestamp = timestamp
-                elif operator == '>': self._max_timestamp = timestamp
+                if operator == '<': self._min_timestamp = now - age
+                elif operator == '>': self._max_timestamp = now - age
                 elif operator == u'\u2248':
                     
-                    self._min_timestamp = int( timestamp * 0.85 )
-                    self._max_timestamp = int( timestamp * 1.15 )
+                    self._min_timestamp = now - int( age * 1.15 )
+                    self._max_timestamp = now - int( age * 0.85 )
                     
                 
             
@@ -1726,8 +1730,12 @@ class FileSystemPredicates():
                 elif operator == '=': self._duration = duration
                 elif operator == u'\u2248':
                     
-                    self._min_duration = int( duration * 0.85 )
-                    self._max_duration = int( duration * 1.15 )
+                    if duration == 0: self._duration = 0
+                    else:
+                        
+                        self._min_duration = int( duration * 0.85 )
+                        self._max_duration = int( duration * 1.15 )
+                        
                     
                 
             
@@ -1784,8 +1792,12 @@ class FileSystemPredicates():
                 elif operator == '=': self._width = width
                 elif operator == u'\u2248':
                     
-                    self._min_width = int( width * 0.85 )
-                    self._max_width = int( width * 1.15 )
+                    if width == 0: self._width = 0
+                    else:
+                        
+                        self._min_width = int( width * 0.85 )
+                        self._max_width = int( width * 1.15 )
+                        
                     
                 
             
@@ -1798,8 +1810,12 @@ class FileSystemPredicates():
                 elif operator == '=': self._height = height
                 elif operator == u'\u2248':
                     
-                    self._min_height = int( height * 0.85 )
-                    self._max_height = int( height * 1.15 )
+                    if height == 0: self._height = 0
+                    else:
+                        
+                        self._min_height = int( height * 0.85 )
+                        self._max_height = int( height * 1.15 )
+                        
                     
                 
             
@@ -1812,8 +1828,12 @@ class FileSystemPredicates():
                 elif operator == '=': self._num_words = num_words
                 elif operator == u'\u2248':
                     
-                    self._min_num_words = int( num_words * 0.85 )
-                    self._max_num_words = int( num_words * 1.15 )
+                    if num_words == 0: self._num_words = 0
+                    else:
+                        
+                        self._min_num_words = int( num_words * 0.85 )
+                        self._max_num_words = int( num_words * 1.15 )
+                        
                     
                 
             

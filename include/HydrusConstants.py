@@ -38,7 +38,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 11
-SOFTWARE_VERSION = 88
+SOFTWARE_VERSION = 89
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -960,7 +960,7 @@ def ConvertTimeToPrettyTime( secs ):
     
 def ConvertUnitToInteger( unit ):
     
-    if unit == 'B': return 8
+    if unit == 'B': return 1
     elif unit == 'KB': return 1024
     elif unit == 'MB': return 1048576
     elif unit == 'GB': return 1073741824
@@ -1061,7 +1061,9 @@ def MergeKeyToListDicts( key_to_list_dicts ):
 def u( text_producing_object ):
     
     if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ): text = text_producing_object
-    else: text = str( text_producing_object ) # dealing with exceptions, etc...
+    else:
+        try: text = str( text_producing_object ) # dealing with exceptions, etc...
+        except: text = repr( text_producing_object )
     
     try: return unicode( text )
     except:
@@ -1382,7 +1384,7 @@ class AdvancedHTTPConnection():
                 if response.status in ( 401, 426 ): app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] } )
                 
             
-            if response.status == 401: raise PermissionsException( parsed_response )
+            if response.status == 401: raise HydrusExceptions.PermissionException( parsed_response )
             elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
             elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
             elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
@@ -1941,7 +1943,6 @@ class JobInternal():
             etype = type( self._result )
             
             db_traceback = unicode( self._result )
-            
             
             trace_list = traceback.format_stack()
             

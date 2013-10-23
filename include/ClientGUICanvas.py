@@ -1258,7 +1258,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                     with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == HC.DELETE: self._Delete()
+                elif command == 'delete': self._Delete()
                 elif command == 'fullscreen_switch': self._FullscreenSwitch()
                 elif command == 'first': self._ShowFirst()
                 elif command == 'last': self._ShowLast()

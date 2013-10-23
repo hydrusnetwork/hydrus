@@ -1594,7 +1594,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             hex_filter = lambda c: c in string.hexdigits
             
-            hash = filter( hex_filter, lower( self._hash.GetValue() ) )
+            hash = filter( hex_filter, self._hash.GetValue().lower() )
             
             if len( hash ) == 0: hash == '00'
             elif len( hash ) % 2 == 1: hash += '0' # since we are later decoding to byte

@@ -12,6 +12,7 @@ import traceback
 import wx
 import yaml
 from twisted.internet import reactor
+from twisted.internet import defer
 
 class Controller( wx.App ):
     
@@ -64,8 +65,6 @@ class Controller( wx.App ):
             
             self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
             
-            self._tbicon = TaskBarIcon()
-            
             self._session_manager = HydrusSessions.HydrusSessionManagerServer()
             
             HC.pubsub.sub( self, 'RestartService', 'restart_service' )
@@ -74,9 +73,34 @@ class Controller( wx.App ):
             
             services_info = self.Read( 'services' )
             
+            for ( service_identifier, options ) in services_info:
+                
+                if service_identifier.GetType() == HC.SERVER_ADMIN:
+                    
+                    port = options[ 'port' ]
+                    
+                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+                    
+                    try:
+                        
+                        connection.connect()
+                        connection.close()
+                        
+                        message = 'Something was already bound to port ' + HC.u( port )
+                        
+                        wx.MessageBox( message )
+                        
+                        return False
+                        
+                    except: pass
+                    
+                
+            
             for ( service_identifier, options ) in services_info: self.RestartService( service_identifier, options )
             
             self.StartDaemons()
+            
+            self._tbicon = TaskBarIcon()
             
             return True
             
@@ -102,7 +126,7 @@ class Controller( wx.App ):
         
         def TWISTEDRestartService():
             
-            def StartService():
+            def StartService( *args, **kwargs ):
                 
                 try:
                     
@@ -154,9 +178,9 @@ class Controller( wx.App ):
             if service_identifier not in self._services: StartService()
             else:
                 
-                deferred = self._services[ service_identifier ].stopListening()
+                deferred = defer.maybeDeferred( self._services[ service_identifier ].stopListening )
                 
-                deferred.AddCallback( StartService )
+                deferred.addCallback( StartService )
                 
             
             

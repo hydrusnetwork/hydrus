@@ -1,5 +1,6 @@
 from include import ClientConstants as CC
 from include import HydrusConstants as HC
+from include import HydrusSessions
 from include import HydrusTags
 from include import TestClientConstants
 from include import TestClientDaemons
@@ -28,6 +29,8 @@ class App( wx.App ):
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_service_precedence' ] = []
         self._reads[ 'tag_siblings' ] = {}
+        self._reads[ 'hydrus_sessions' ] = []
+        self._reads[ 'sessions' ] = []
         
         HC.options = CC.CLIENT_DEFAULT_OPTIONS
         
@@ -36,6 +39,9 @@ class App( wx.App ):
         self._namespace_blacklists_manager = HydrusTags.NamespaceBlacklistsManager()
         self._tag_parents_manager = HydrusTags.TagParentsManager()
         self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
+        
+        self._client_session_manager = HydrusSessions.HydrusSessionManagerClient()
+        self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self._cookies = {}
         
@@ -59,7 +65,14 @@ class App( wx.App ):
         return True
         
     
+    def AddSession( self, service_identifier, account ): return self._server_session_manager.AddSession( service_identifier, account )
+    
+    def GetAccount( self, session_key, service_identifier ): return self._server_session_manager.GetAccount( session_key, service_identifier )
+    
     def GetNamespaceBlacklistsManager( self ): return self._namespace_blacklists_manager
+    
+    def GetSessionKey( self, service_identifier ): return self._client_session_manager.GetSessionKey( service_identifier )
+    
     def GetTagParentsManager( self ): return self._tag_parents_manager
     def GetTagSiblingsManager( self ): return self._tag_siblings_manager
     
@@ -74,9 +87,9 @@ class App( wx.App ):
         return write
         
     
-    def Read( self, name ): return self._reads[ name ]
+    def Read( self, name, *args, **kwargs ): return self._reads[ name ]
     
-    def ReadDaemon( self, name ): return self.Read( name )
+    def ReadDaemon( self, name, *args, **kwargs ): return self.Read( name )
     
     def SetRead( self, name, value ): self._reads[ name ] = value
     

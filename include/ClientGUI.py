@@ -501,7 +501,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         name = self._notebook.GetPageText( selection )
         
-        self._closed_pages.append( ( int( time.time() ), selection, name, page ) )
+        self._closed_pages.append( ( HC.GetNow(), selection, name, page ) )
         
         self._notebook.RemovePage( selection )
         
@@ -1038,7 +1038,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         new_closed_pages = []
         
-        now = int( time.time() )
+        now = HC.GetNow()
         
         timeout = 60 * 60
         

@@ -1743,7 +1743,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         tag_info = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ]
         
-        tags = [ tag for ( tag, num_tags ) in tag_info ]
+        tags = { tag for ( tag, num_tags ) in tag_info }
         
         namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
         
@@ -1834,8 +1834,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         if min_num_words is not None: sql_predicates.append( 'num_words > ' + HC.u( min_num_words ) )
-        if num_words is not None: sql_predicates.append( 'num_words = ' + HC.u( num_words ) )
-        if max_num_words is not None: sql_predicates.append( 'num_words < ' + HC.u( max_num_words ) )
+        if num_words is not None:
+            
+            if num_words == 0: sql_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
+            else: sql_predicates.append( 'num_words = ' + HC.u( num_words ) )
+            
+        if max_num_words is not None:
+            if max_num_words == 0: sql_predicates.append( 'num_words < ' + HC.u( max_num_words ) )
+            else: sql_predicates.append( '( num_words < ' + HC.u( max_num_words ) + ' OR num_words IS NULL )' )
         
         if min_duration is not None: sql_predicates.append( 'duration > ' + HC.u( min_duration ) )
         if duration is not None:
@@ -1843,7 +1849,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             if duration == 0: sql_predicates.append( '( duration IS NULL OR duration = 0 )' )
             else: sql_predicates.append( 'duration = ' + HC.u( duration ) )
             
-        if max_duration is not None: sql_predicates.append( 'duration < ' + HC.u( max_duration ) )
+        if max_duration is not None:
+            
+            if max_duration == 0: sql_predicates.append( 'duration < ' + HC.u( max_duration ) )
+            else: sql_predicates.append( '( duration < ' + HC.u( max_duration ) + ' OR duration IS NULL )' )
+            
         
         if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0:
             
@@ -1879,8 +1889,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if min_num_tags is not None:
             
-            if min_num_tags == 1: num_tags_nonzero = True
-            else: tag_predicates.append( lambda x: x >= min_num_tags )
+            if min_num_tags == 0: num_tags_nonzero = True
+            else: tag_predicates.append( lambda x: x > min_num_tags )
             
         
         if num_tags is not None:
@@ -1891,8 +1901,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if max_num_tags is not None:
             
-            if max_num_tags == 1: num_tags_nonzero = True
-            else: tag_predicates.append( lambda x: x <= max_num_tags )
+            if max_num_tags == 1: num_tags_zero = True
+            else: tag_predicates.append( lambda x: x < max_num_tags )
             
         
         statuses = []
@@ -1911,22 +1921,22 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 namespace_ids = [ self._GetNamespaceId( c, namespace ) for namespace in namespaces ]
                 
-                if blacklist: namespace_predicate = 'namespace_id NOT IN ' + HC.SplayListForDB( namespace_ids )
-                else: namespace_predicate = 'namespace_id IN ' + HC.SplayListForDB( namespace_ids )
+                if blacklist: namespace_predicate = ' AND namespace_id NOT IN ' + HC.SplayListForDB( namespace_ids )
+                else: namespace_predicate = ' AND namespace_id IN ' + HC.SplayListForDB( namespace_ids )
                 
             
         
         if num_tags_zero or num_tags_nonzero:
             
-            tag_query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ' AND ' + namespace_predicate + ';', ( tag_service_id, ) ) }
+            nonzero_tag_query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ';', ( tag_service_id, ) ) }
             
-            if num_tags_zero: query_hash_ids.difference_update( tag_query_hash_ids )
-            elif num_tags_nonzero: query_hash_ids = tag_query_hash_ids
+            if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
+            elif num_tags_nonzero: query_hash_ids = nonzero_tag_query_hash_ids
             
         
         if len( tag_predicates ) > 0:
             
-            query_hash_ids = { id for ( id, count ) in c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + ' AND ' + namespace_predicate + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
+            query_hash_ids = { id for ( id, count ) in c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
             
         
         #
@@ -2038,7 +2048,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             result = c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
             
-            if result is not None:
+            if result is None: query_hash_ids = set()
+            else:
                 
                 ( phash, ) = result
                 

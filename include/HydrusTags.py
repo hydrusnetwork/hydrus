@@ -250,6 +250,12 @@ class NamespaceBlacklistsManager():
         return predicate
         
     
+    def GetInfo( self, service_identifier ):
+        
+        if service_identifier in self._service_identifiers_to_predicates: return self._service_identifiers_to_predicates[ service_identifier ]
+        else: return ( True, set() )
+        
+    
     def RefreshData( self ):
         
         info = HC.app.Read( 'namespace_blacklists' )
