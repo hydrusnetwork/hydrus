@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 90</h3></li>
+				<ul>
+					<li>client db unit tests added:</li>
+					<ul>
+						<li>4chan_pass</li>
+						<li>autocomplete_tags</li>
+						<li>booru and boorus</li>
+						<li>downloads</li>
+						<li>favourite_custom_filter_actions</li>
+						<li>imageboard</li>
+						<li>import_folders</li>
+						<li>md5_status</li>
+						<li>media_results</li>
+						<li>namespace_blacklists</li>
+						<li>news</li>
+						<li>pixiv_account</li>
+						<li>improved services</li>
+						<li>sessions</li>
+						<li>shutdown_timestamps</li>
+					</ul>
+					<li>fixed modify account</li>
+					<li>fixed modify account again!</li>
+					<li>made account_info respond a lot faster with large tag counts</li>
+					<li>neatened some client db code</li>
+					<li>youtube 'file already deleted' error now reported correctly</li>
+					<li>youtube general error reporting improved</li>
+					<li>fixed multiple-computer-single-account data use reporting</li>
+					<li>moved file parsing from nested dialogs to a single popup message gauge</li>
+					<li>fixed an export folder path-display issue when an install moves location</li>
+					<li>improved how some file downloaders process their files</li>
+					<li>added prototype file download status bars to all download management panels</li>
+					<li>fixed a bunch of tests that were cleaning up inelegantly</li>
+				</ul>
 				<li><h3>version 89</h3></li>
 				<ul>
 					<li>fixed blacklist manager for numtags</li>
@@ -24,49 +57,49 @@
 					<li>improved testing framework to manage client and server sessions</li>
 					<li>several network request unit tests added:</li>
 					<ul>
-						<li>access_key
-						<li>account
-						<li>account_info
-						<li>account_types GET
-						<li>account_types POST
-						<li>file_repo file
-						<li>file_repo thumbnail
-						<li>init
-						<li>ip
-						<li>news
-						<li>petition
-						<li>registration_keys
-						<li>services GET
-						<li>services POST
-						<li>session_key
-						<li>stats
-						<li>update GET
-						<li>update POST
+						<li>access_key</li>
+						<li>account</li>
+						<li>account_info</li>
+						<li>account_types GET</li>
+						<li>account_types POST</li>
+						<li>file_repo file</li>
+						<li>file_repo thumbnail</li>
+						<li>init</li>
+						<li>ip</li>
+						<li>news</li>
+						<li>petition</li>
+						<li>registration_keys</li>
+						<li>services GET</li>
+						<li>services POST</li>
+						<li>session_key</li>
+						<li>stats</li>
+						<li>update GET</li>
+						<li>update POST</li>
 					</ul>
 					<li>fixed clientside permissions exception</li>
 					<li>several db unit tests added:</li>
 					<ul>
-						<li>import_file
-						<li>system_predicates:
+						<li>import_file</li>
+						<li>system_predicates:</li>
 						<ul>
-							<li>age
-							<li>archive
-							<li>duration
-							<li>everything
-							<li>file_service
-							<li>hash
-							<li>height
-							<li>inbox
-							<li>local
-							<li>mime
-							<li>not_local
-							<li>num_tags
-							<li>num_words
-							<li>ratio
-							<li>similar_to
-							<li>size
-							<li>width
-							<li>limit
+							<li>age</li>
+							<li>archive</li>
+							<li>duration</li>
+							<li>everything</li>
+							<li>file_service</li>
+							<li>hash</li>
+							<li>height</li>
+							<li>inbox</li>
+							<li>local</li>
+							<li>mime</li>
+							<li>not_local</li>
+							<li>num_tags</li>
+							<li>num_words</li>
+							<li>ratio</li>
+							<li>similar_to</li>
+							<li>size</li>
+							<li>width</li>
+							<li>limit</li>
 						</ul>
 					</ul>
 					<li>fixed a bug in system:age?</li>
