@@ -1481,6 +1481,8 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         
         ManagementPanelImport.__init__( self, parent, page, page_key )
         
+        self._download_progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
+        
         self._import_cancel_button = wx.Button( self._processing_panel, label = 'that\'s enough' )
         self._import_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImport )
         self._import_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
@@ -1513,6 +1515,7 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         self._outer_queue_timer.Start( 1000, wx.TIMER_ONE_SHOT )
         
         HC.pubsub.sub( self, 'SetOuterQueueInfo', 'set_outer_queue_info' )
+        HC.pubsub.sub( self, 'SetDownloadProgress', 'set_download_progress' )
         
     
     def _GetPreprocessStatus( self ):
@@ -1633,6 +1636,16 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
             
         
     
+    def SetDownloadProgress( self, range, value ):
+        
+        if range is None: self._download_progress_gauge.Pulse()
+        else:
+            
+            self._download_progress_gauge.SetRange( range )
+            self._download_progress_gauge.SetValue( value )
+            
+        
+    
     def SetOuterQueueInfo( self, page_key, info ):
         
         if self._page_key == page_key: self._outer_queue_info.SetLabel( info )
@@ -1670,8 +1683,10 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
         c_p_hbox.AddF( self._import_pause_button, FLAGS_EXPAND_BOTH_WAYS )
         c_p_hbox.AddF( self._import_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
         
+        
         self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._download_progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1780,6 +1795,10 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
                 HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
                 
+                def hook( range, value ): wx.CallAfter( self.SetDownloadProgress, range, value )
+                
+                downloader.AddReportHook( hook )
+                
                 if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
                 else:
                     
@@ -1787,6 +1806,8 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                     
                     tags = []
                     
+                
+                downloader.ClearReportHooks()
                 
                 temp_path = HC.GetTempPath()
                 
@@ -2056,6 +2077,7 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
         
         self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._download_progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -2115,11 +2137,13 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
             
             connection = self._connections[ ( scheme, host, port ) ]
             
-            file = connection.geturl( url )
+            def hook( range, value ): wx.CallAfter( self.SetDownloadProgress, range, value )
             
-            temp_path = HC.GetTempPath()
+            connection.AddReportHook( hook )
             
-            with open( temp_path, 'wb' ) as f: f.write( file )
+            temp_path = connection.geturl( url, response_to_path = True )
+            
+            connection.ClearReportHooks()
             
             advanced_import_options = self._advanced_import_options.GetInfo()
             
@@ -2169,6 +2193,8 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         ManagementPanelImport.__init__( self, parent, page, page_key )
         
+        self._download_progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
+        
         self._connections = {}
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2177,6 +2203,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._processing_panel.AddF( self._download_progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
         self._processing_panel.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2325,11 +2352,13 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
                 connection = self._connections[ ( scheme, host, port ) ]
                 
-                file = connection.geturl( url )
+                def hook( range, value ): wx.CallAfter( self.SetDownloadProgress, range, value )
                 
-                temp_path = HC.GetTempPath()
+                connection.AddReportHook( hook )
                 
-                with open( temp_path, 'wb' ) as f: f.write( file )
+                temp_path = connection.geturl( url, response_to_path = True )
+                
+                connection.ClearReportHooks()
                 
                 advanced_import_options = self._advanced_import_options.GetInfo()
                 
@@ -2435,6 +2464,16 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             self._thread_pause_button.SetLabel( 'resume' )
             self._thread_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+        
+    
+    def SetDownloadProgress( self, range, value ):
+        
+        if range is None: self._download_progress_gauge.Pulse()
+        else:
+            
+            self._download_progress_gauge.SetRange( range )
+            self._download_progress_gauge.SetValue( value )
             
         
     

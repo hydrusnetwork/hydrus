@@ -1290,9 +1290,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetAccountMappingInfo( self, c, service_id, account_id ):
         
-        ( num_deleted_mappings, ) = c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ?;', ( service_id, account_id, HC.DELETED ) ).fetchone()
+        num_deleted_mappings = len( c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ? AND account_id = ? AND status = ? LIMIT 5000;', ( service_id, account_id, HC.DELETED ) ).fetchall() )
         
-        ( num_mappings, ) = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
+        num_mappings = len( c.execute( 'SELECT 1 FROM mappings WHERE service_id = ? AND account_id = ? LIMIT 5000;', ( service_id, account_id ) ).fetchall() )
         
         result = c.execute( 'SELECT score FROM account_scores WHERE service_id = ? AND account_id = ? AND score_type = ?;', ( service_id, account_id, HC.SCORE_PETITION ) ).fetchone()
         
@@ -1540,7 +1540,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return access_key
         
     
-    def _ModifyAccount( self, c, service_identifier, admin_account, action, subject_identifiers ):
+    def _ModifyAccount( self, c, service_identifier, admin_account, action, subject_identifiers, kwargs ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
@@ -1552,22 +1552,22 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         if action in ( HC.BAN, HC.SUPERBAN ):
             
-            reason = request_args[ 'reason' ]
+            reason = kwargs[ 'reason' ]
             
             reason_id = self._GetReasonId( c, reason )
             
-            if expiration in request_args: expiration = request_args[ 'expiration' ]
+            if expiration in request_args: expiration = kwargs[ 'expiration' ]
             else: expiration = None
             
             self._Ban( c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiration ) # fold ban and superban together, yo
             
         else:
             
-            account.CheckPermission( HC.GENERAL_ADMIN ) # special case, don't let manage_users people do these:
+            admin_account.CheckPermission( HC.GENERAL_ADMIN ) # special case, don't let manage_users people do these:
             
             if action == HC.CHANGE_ACCOUNT_TYPE:
                 
-                title = request_args[ 'title' ]
+                title = kwargs[ 'title' ]
                 
                 account_type_id = self._GetAccountTypeId( c, service_id, title )
                 
@@ -1575,13 +1575,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
             elif action == HC.ADD_TO_EXPIRES:
                 
-                expiration = request_args[ 'expiration' ]
+                expiration = kwargs[ 'expiration' ]
                 
                 self._AddToExpires( c, service_id, subject_account_ids, expiration )
                 
             elif action == HC.SET_EXPIRES:
                 
-                expires = request_args[ 'expiry' ]
+                expires = kwargs[ 'expiry' ]
                 
                 self._SetExpires( c, service_id, subject_account_ids, expires )
                 

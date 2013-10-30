@@ -1,6 +1,7 @@
 import bisect
 import bs4
 import collections
+import cStringIO
 import httplib
 import HydrusExceptions
 import HydrusPubSub
@@ -38,7 +39,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 11
-SOFTWARE_VERSION = 89
+SOFTWARE_VERSION = 90
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1145,6 +1146,8 @@ class AdvancedHTTPConnection():
             ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
             
         
+        self._report_hooks = []
+        
         self._scheme = scheme
         self._host = host
         self._port = port
@@ -1221,17 +1224,50 @@ class AdvancedHTTPConnection():
             response = self._connection.getresponse()
             
         
+        content_length = response.getheader( 'Content-Length' )
+        
+        if content_length is not None: content_length = int( content_length )
+        
+        block_size = 64 * 1024
+        
         if response.status == 200 and response_to_path:
             
             temp_path = GetTempPath()
             
-            with open( temp_path, 'wb' ) as f: size_of_response = StreamToStream( response, f )
+            size_of_response = 0
+            
+            with open( temp_path, 'wb' ) as f:
+                
+                next_block = response.read( block_size )
+                
+                while next_block != '':
+                    
+                    size_of_response += len( next_block )
+                    
+                    f.write( next_block )
+                    
+                    for hook in self._report_hooks: hook( content_length, size_of_response )
+                    
+                    next_block = response.read( block_size )
+                    
+                
             
             parsed_response = temp_path
             
         else:
             
-            data = response.read()
+            data = ''
+            
+            next_block = response.read( block_size )
+            
+            while next_block != '':
+                
+                data += next_block
+                
+                for hook in self._report_hooks: hook( content_length, len( data ) )
+                
+                next_block = response.read( block_size )
+                
             
             size_of_response = len( data )
             
@@ -1284,13 +1320,17 @@ class AdvancedHTTPConnection():
         return parsed_response
         
     
+    def AddReportHook( self, hook ): self._report_hooks.append( hook )
+    
+    def ClearReportHooks( self ): self._report_hooks = []
+    
     def close( self ): self._connection.close()
     
     def connect( self ): self._connection.connect()
     
     def GetCookies( self ): return self._cookies
     
-    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True ):
+    def geturl( self, url, headers = {}, response_to_path = False, is_redirect = False, follow_redirects = True ):
         
         parse_result = urlparse.urlparse( url )
         
@@ -1300,7 +1340,7 @@ class AdvancedHTTPConnection():
         
         if query != '': request += '?' + query
         
-        return self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects )
+        return self.request( 'GET', request, headers = headers, response_to_path = response_to_path, is_redirect = is_redirect, follow_redirects = follow_redirects )
         
     
     def request( self, request_type, request, headers = {}, body = None, response_to_path = False, is_redirect = False, follow_redirects = True ):
@@ -1908,27 +1948,15 @@ class DAEMONWorker( DAEMON ):
     
     def set( self, *args, **kwargs ): self._event.set()
     
-class JobInternal():
+class Job():
     
-    yaml_tag = u'!JobInternal'
+    yaml_tag = u'!Job'
     
-    def __init__( self, action, type, synchronous, *args, **kwargs ):
-        
-        self._action = action
-        self._type = type
-        self._synchronous = synchronous
-        self._args = args
-        self._kwargs = kwargs
+    def __init__( self ):
         
         self._result = None
         self._result_ready = threading.Event()
         
-    
-    def GetAction( self ): return self._action
-    
-    def GetArgs( self ): return self._args
-    
-    def GetKWArgs( self ): return self._kwargs
     
     def GetResult( self ):
         
@@ -1953,16 +1981,37 @@ class JobInternal():
         else: return self._result
         
     
-    def GetType( self ): return self._type
-    
-    def IsSynchronous( self ): return self._synchronous
-    
     def PutResult( self, result ):
         
         self._result = result
         
         self._result_ready.set()
         
+    
+class JobInternal( Job ):
+    
+    yaml_tag = u'!JobInternal'
+    
+    def __init__( self, action, type, synchronous, *args, **kwargs ):
+        
+        Job.__init__( self )
+        
+        self._action = action
+        self._type = type
+        self._synchronous = synchronous
+        self._args = args
+        self._kwargs = kwargs
+        
+    
+    def GetAction( self ): return self._action
+    
+    def GetArgs( self ): return self._args
+    
+    def GetKWArgs( self ): return self._kwargs
+    
+    def GetType( self ): return self._type
+    
+    def IsSynchronous( self ): return self._synchronous
     
 class JobKey():
     

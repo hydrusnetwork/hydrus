@@ -38,6 +38,10 @@ class FakeHTTPConnection():
     
     def connect( self ): pass
     
+    def AddReportHook( self, hook ): pass
+    
+    def ClearReportHooks( self ): pass
+    
     def GetCookies( self ): return self._cookies
     
     def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True ):

@@ -704,9 +704,7 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         account_identifier = HC.AccountIdentifier( access_key = access_key )
         
-        account = HC.app.Read( 'account', self._service_identifier, account_identifier )
-        
-        ( session_key, expiry ) = HC.app.AddSession( self._service_identifier, account )
+        ( session_key, expiry ) = HC.app.AddSession( self._service_identifier, account_identifier )
         
         now = HC.GetNow()
         
@@ -836,7 +834,9 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         subject_identifiers = request.hydrus_args[ 'subject_identifiers' ]
         
-        HC.app.Write( 'account', self._service_identifier, admin_account, action, subject_identifiers )
+        kwargs = request.hydrus_args # for things like expiry, title, and so on
+        
+        HC.app.Write( 'account', self._service_identifier, admin_account, action, subject_identifiers, kwargs )
         
         response_context = HC.ResponseContext( 200 )
         

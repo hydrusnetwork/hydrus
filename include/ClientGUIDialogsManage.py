@@ -2814,7 +2814,12 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            if HC.options[ 'export_path' ] is not None: self._export_location.SetPath( HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] ) )
+            if HC.options[ 'export_path' ] is not None:
+                
+                abs_path = HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+                
+                if abs_path is not None: self._export_location.SetPath( abs_path )
+                
             
             self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
             

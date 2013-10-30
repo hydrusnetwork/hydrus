@@ -2438,7 +2438,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             result = c.execute( 'SELECT blacklist, namespaces FROM namespace_blacklists WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
-            if result is None: result = ( True, set() )
+            if result is None: result = ( True, [] )
             
         
         return result
@@ -2647,8 +2647,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         return reason_id
         
-    
-    def _GetResolution( self, c, hash ): return c.execute( 'SELECT width, height FROM files_info, hashes USING ( hash_id ) WHERE service_id = ? AND hash = ?;', ( self._local_file_service_id, sqlite3.Binary( hash ) ) ).fetchone()
     
     def _GetService( self, c, parameter ):
         
@@ -4350,6 +4348,7 @@ class DB( ServiceDB ):
     def __init__( self ):
         
         self._local_shutdown = False
+        self._loop_finished = False
         
         self._db_path = HC.DB_DIR + os.path.sep + 'client.db'
         
@@ -6501,6 +6500,8 @@ class DB( ServiceDB ):
         HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'vacuumed successfully' ) )
         
     
+    def GetLoopFinished( self ): return self._loop_finished
+    
     def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
     def pub_content_updates( self, service_identifiers_to_content_updates ):
@@ -6527,10 +6528,10 @@ class DB( ServiceDB ):
                 elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
                 elif action == 'boorus': result = self._GetBoorus( c, *args, **kwargs )
                 elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
-                elif action == 'file_query_ids': result = self._GetFileQueryIds( c, *args, **kwargs )
                 elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
                 elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
                 elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
+                elif action == 'file_query_ids': result = self._GetFileQueryIds( c, *args, **kwargs )
                 elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
                 elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
                 elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
@@ -6550,7 +6551,6 @@ class DB( ServiceDB ):
                 elif action == 'pixiv_account': result = self._GetPixivAccount( c, *args, **kwargs )
                 elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
                 elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
-                elif action == 'resolution': result = self._GetResolution( c, *args, **kwargs )
                 elif action == 'service': result = self._GetService( c, *args, **kwargs )
                 elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
                 elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
@@ -6604,7 +6604,6 @@ class DB( ServiceDB ):
                 elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
                 elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
                 elif action == 'service_updates': result = self._ProcessServiceUpdates( c, *args, **kwargs )
-                elif action == 'session': result = self._AddSession( c, *args, **kwargs )
                 elif action == 'set_password': result = self._SetPassword( c, *args, **kwargs )
                 elif action == 'set_tag_service_precedence': result = self._SetTagServicePrecedence( c, *args, **kwargs )
                 elif action == 'subscription': result = self._SetSubscription( c, *args, **kwargs )
@@ -6697,6 +6696,11 @@ class DB( ServiceDB ):
             except: pass # no jobs this second; let's see if we should shutdown
             
         
+        c.close()
+        db.close()
+        
+        self._loop_finished = True
+        
     
     def Read( self, action, priority, *args, **kwargs ):
         
@@ -6769,7 +6773,7 @@ def DAEMONCheckImportFolders():
                     
                     raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
                     
-                    all_paths = CC.GetAllPaths( raw_paths, quiet = True )
+                    all_paths = CC.GetAllPaths( raw_paths )
                     
                     HC.pubsub.pub( 'service_status', 'Found ' + HC.u( len( all_paths ) ) + ' files to import from ' + folder_path )
                     

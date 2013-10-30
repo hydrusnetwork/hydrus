@@ -3869,7 +3869,12 @@ class DialogSelectLocalFiles( Dialog ):
     
     def _AddPathsToList( self, paths ):
         
-        good_paths_info = CC.ParseImportablePaths( paths )
+        threading.Thread( target = CC.THREADParseImportablePaths, args = ( self.AddParsedPaths, paths ) ).start()
+        
+    
+    def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
+    
+    def AddParsedPaths( self, good_paths_info ):
         
         odd_paths = False
         
@@ -3890,8 +3895,6 @@ class DialogSelectLocalFiles( Dialog ):
         
         if odd_paths: wx.MessageBox( HC.u( len( odd_paths ) ) + ' files could not be added.' )
         
-    
-    def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
     
     def EventAddPaths( self, event ):
         
@@ -4435,7 +4438,12 @@ class DialogSetupExport( Dialog ):
                 self._paths.Append( pretty_tuple, data_tuple )
                 
             
-            if HC.options[ 'export_path' ] is not None: self._directory_picker.SetPath( HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] ) )
+            if HC.options[ 'export_path' ] is not None:
+                
+                abs_path = HC.ConvertPortablePathToAbsPath( HC.options[ 'export_path' ] )
+                
+                if abs_path is not None: self._directory_picker.SetPath( abs_path )
+                
             
             self._zip_name.SetValue( 'archive name.zip' )
             

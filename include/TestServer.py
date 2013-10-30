@@ -108,7 +108,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( data, 'file' )
         
-        os.remove( path )
+        try: os.remove( path )
+        except: pass
         
         #
         
@@ -124,7 +125,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( data, 'thumb' )
         
-        os.remove( path )
+        try: os.remove( path )
+        except: pass
         
     
     def _test_file_repo( self, host, port ):
@@ -149,7 +151,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response, 'file' )
         
-        os.remove( path )
+        try: os.remove( path )
+        except: pass
         
         path = HC.STATIC_DIR + os.path.sep + 'hydrus.png'
 
@@ -191,7 +194,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response, 'thumb' )
         
-        os.remove( path )
+        try: os.remove( path )
+        except: pass
         
     
     def _test_repo( self, host, port, service_type ):
@@ -254,7 +258,8 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response, update )
         
-        os.remove( path )
+        try: os.remove( path )
+        except: pass
         
         connection.Post( 'update', update = update )
         

@@ -424,71 +424,39 @@ def GetAllFileHashes():
     
     return file_hashes
     
-def GetAllPaths( raw_paths, quiet = False ):
+def GetAllPaths( raw_paths ):
     
     file_paths = []
     
     title = 'Parsing files and subdirectories'
     
-    if not quiet: progress = wx.ProgressDialog( title, u'Preparing', 1000, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
+    paths_to_process = raw_paths
     
-    try:
-        
-        paths_to_process = raw_paths
-        
-        total_paths_to_process = len( paths_to_process )
-        
-        num_processed = 0
-        
-        while len( paths_to_process ) > 0:
-            
-            next_paths_to_process = []
-            
-            for path in paths_to_process:
-                
-                if not quiet:
-                    
-                    # would rather use progress.SetRange( total_paths_to_process ) here, but for some reason wx python doesn't support it!
-                    
-                    permill = int( 1000 * ( float( num_processed ) / float( total_paths_to_process ) ) )
-                    
-                    ( should_continue, skip ) = progress.Update( permill, 'Done ' + HC.u( num_processed ) + '/' + HC.u( total_paths_to_process ) )
-                    
-                    if not should_continue:
-                        
-                        progress.Destroy()
-                        
-                        return []
-                        
-                    
-                
-                if os.path.isdir( path ):
-                    
-                    subpaths = [ path + os.path.sep + filename for filename in dircache.listdir( path ) ]
-                    
-                    total_paths_to_process += len( subpaths )
-                    
-                    next_paths_to_process.extend( subpaths )
-                    
-                else: file_paths.append( path )
-                
-                num_processed += 1
-                
-            
-            paths_to_process = next_paths_to_process
-            
-        
-    except:
-        
-        if not quiet:
-            
-            message = 'While parsing files, encountered this error:' + os.linesep + traceback.format_exc()
-        
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-            
-        
+    total_paths_to_process = len( paths_to_process )
     
-    if not quiet: progress.Destroy()
+    num_processed = 0
+    
+    while len( paths_to_process ) > 0:
+        
+        next_paths_to_process = []
+        
+        for path in paths_to_process:
+            
+            if os.path.isdir( path ):
+                
+                subpaths = [ path + os.path.sep + filename for filename in dircache.listdir( path ) ]
+                
+                total_paths_to_process += len( subpaths )
+                
+                next_paths_to_process.extend( subpaths )
+                
+            else: file_paths.append( path )
+            
+            num_processed += 1
+            
+        
+        paths_to_process = next_paths_to_process
+        
     
     gc.collect()
     
@@ -638,7 +606,25 @@ def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_I
     
     return ( current, deleted, pending, petitioned )
     
-def ParseImportablePaths( raw_paths ):
+def ShowExceptionClient( e ):
+    
+    etype = type( e )
+    
+    value = HC.u( e )
+    
+    trace_list = traceback.format_stack()
+    
+    trace = ''.join( trace_list )
+    
+    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+    
+def THREADParseImportablePaths( result_callable, raw_paths ):
+    
+    job_key = HC.JobKey()
+    
+    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+    
+    HC.pubsub.pub( 'message_gauge_info', job_key, None, None, u'Parsing files and folders.' )
     
     file_paths = GetAllPaths( raw_paths )
     
@@ -647,15 +633,13 @@ def ParseImportablePaths( raw_paths ):
     num_file_paths = len( file_paths )
     num_odd_files = 0
     
-    progress = wx.ProgressDialog( 'Checking files\' mimetypes', u'Preparing', num_file_paths, HC.app.GetTopWindow(), style=wx.PD_APP_MODAL | wx.PD_AUTO_HIDE | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME | wx.PD_ESTIMATED_TIME | wx.PD_REMAINING_TIME )
-    
     for ( i, path ) in enumerate( file_paths ):
         
         if i % 500 == 0: gc.collect()
         
-        ( should_continue, skip ) = progress.Update( i, 'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
+        HC.pubsub.pub( 'message_gauge_info', job_key, num_file_paths, i, u'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
         
-        if not should_continue: break
+        if job_key.IsCancelled(): break
         
         info = os.lstat( path )
         
@@ -675,7 +659,7 @@ def ParseImportablePaths( raw_paths ):
         if mime in HC.ALLOWED_MIMES: good_paths_info.append( ( 'path', mime, size, path ) )
         elif mime in HC.ARCHIVES:
             
-            ( should_continue, skip ) = progress.Update( i, u'Found an archive; parsing\u2026' )
+            HC.pubsub.pub( 'message_gauge_info', job_key, num_file_paths, i, u'Found an archive; parsing\u2026' )
             
             if mime == HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP:
                 
@@ -703,24 +687,38 @@ def ParseImportablePaths( raw_paths ):
                         
                     
                 
-                while aes_key is None:
+                job = HC.Job()
+                
+                def WXTHREADGetAESKey():
                     
-                    with wx.TextEntryDialog( HC.app.GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
+                    while aes_key is None:
                         
-                        result = dlg.ShowModal()
-                        
-                        if result == wx.ID_OK:
+                        with wx.TextEntryDialog( HC.app.GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
                             
-                            try:
-                                
-                                key_text = dlg.GetValue()
-                                
-                                ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
-                                
-                            except: wx.MessageBox( 'Did not understand that key!' )
+                            result = dlg.ShowModal()
                             
-                        elif result == wx.ID_CANCEL: break
+                            if result == wx.ID_OK:
+                                
+                                try:
+                                    
+                                    key_text = dlg.GetValue()
+                                    
+                                    ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
+                                    
+                                    job.PutResult( ( aes_key, iv ) )
+                                    
+                                except: wx.MessageBox( 'Did not understand that key!' )
+                                
+                            elif result == wx.ID_CANCEL: job.PutResult( ( None, None ) )
+                            
                         
+                    
+                
+                if aes_key is None:
+                    
+                    wx.CallAfter( WXTHREADGetAESKey )
+                    
+                    ( aes_key, iv ) = job.GetResult()
                     
                 
                 if aes_key is not None:
@@ -785,29 +783,23 @@ def ParseImportablePaths( raw_paths ):
             
         
     
-    progress.Destroy()
-    
-    if num_odd_files > 0:
+    if len( good_paths_info ) > 0:
         
-        message = HC.u( num_odd_files ) + ' files could not be added.'
+        if len( good_paths_info ) == 1: message = '1 file was parsed successfully'
+        else: message = HC.u( len( good_paths_info ) ) + ' files were parsed successfully'
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+        if num_odd_files > 0: message += ', but ' + HC.u( num_odd_files ) + ' failed.'
+        else: message += '.'
+        
+    else:
+        
+        message = HC.u( num_odd_files ) + ' files could not be parsed.'
         
     
-    return good_paths_info
+    HC.pubsub.pub( 'message_gauge_info', job_key, None, None, message )
     
-def ShowExceptionClient( e ):
+    wx.CallAfter( result_callable, good_paths_info )
     
-    etype = type( e )
-    
-    value = HC.u( e )
-    
-    trace_list = traceback.format_stack()
-    
-    trace = ''.join( trace_list )
-    
-    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
-
 class AutocompleteMatches():
     
     def __init__( self, matches ):

@@ -34,7 +34,7 @@ class Controller( wx.App ):
     
     def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
-    def AddSession( self, service_identifier, account ): return self._session_manager.AddSession( service_identifier, account )
+    def AddSession( self, service_identifier, account_identifier ): return self._session_manager.AddSession( service_identifier, account_identifier )
     
     def GetAccount( self, session_key, service_identifier ): return self._session_manager.GetAccount( session_key, service_identifier )
     

@@ -79,12 +79,23 @@ class HydrusSessionManagerServer():
         
         existing_sessions = HC.app.Read( 'sessions' )
         
+        self._account_cache = dict()
+        
         self._sessions = { ( session_key, service_identifier ) : ( account, expiry ) for ( session_key, service_identifier, account, expiry ) in existing_sessions }
         
         self._lock = threading.Lock()
         
     
-    def AddSession( self, service_identifier, account ):
+    def AddSession( self, service_identifier, account_identifier ):
+        
+        if ( service_identifier, account_identifier ) not in self._account_cache:
+            
+            account = HC.app.Read( 'account', service_identifier, account_identifier )
+            
+            self._account_cache[ ( service_identifier, account_identifier ) ] = account
+            
+        
+        account = self._account_cache[ ( service_identifier, account_identifier ) ]
         
         session_key = os.urandom( 32 )
         

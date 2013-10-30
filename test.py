@@ -65,7 +65,7 @@ class App( wx.App ):
         return True
         
     
-    def AddSession( self, service_identifier, account ): return self._server_session_manager.AddSession( service_identifier, account )
+    def AddSession( self, service_identifier, account_identifier ): return self._server_session_manager.AddSession( service_identifier, account_identifier )
     
     def GetAccount( self, session_key, service_identifier ): return self._server_session_manager.GetAccount( session_key, service_identifier )
     

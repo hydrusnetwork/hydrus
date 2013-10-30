@@ -129,13 +129,13 @@ def DownloadYoutubeURL( job_key, url, message_string ):
         ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
         
         if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_show_file_button', job_key, message_string, { hash } )
-        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_failed', job_key )
+        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'File was already deleted!' )
         
-    except:
+    except Exception as e:
         
-        HC.pubsub.pub( 'message_gauge_failed', job_key )
+        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'Error with ' + message_string + '!' )
         
-        raise
+        HC.ShowException( e )
         
     
 def GetYoutubeFormats( youtube_url ):
@@ -155,9 +155,22 @@ class Downloader():
         
         self._connections = {}
         
+        self._report_hooks = []
+        
         self._all_urls_so_far = set()
         
         self._num_pages_done = 0
+        
+    
+    def _DownloadFile( self, connection, *args, **kwargs ):
+        
+        for hook in self._report_hooks: connection.AddReportHook( hook )
+        
+        response = connection.geturl( *args, **kwargs )
+        
+        connection.ClearReportHooks()
+        
+        return response
         
     
     def _EstablishSession( self, connection ): pass
@@ -181,6 +194,10 @@ class Downloader():
         
     
     def _GetNextGalleryPageURLs( self ): return ( self._GetNextGalleryPageURL(), )
+    
+    def AddReportHook( self, hook ): self._report_hooks.append( hook )
+    
+    def ClearReportHooks( self ): self._report_hooks = []
     
     def GetAnotherPage( self ):
         
@@ -216,7 +233,7 @@ class Downloader():
         
         connection = self._GetConnection( url )
         
-        return connection.geturl( url )
+        return self._DownloadFile( connection, url )
         
     
     def GetFileAndTags( self, url, *args ):
@@ -370,7 +387,7 @@ class DownloaderBooru( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return connection.geturl( file_url )
+        return self._DownloadFile( connection, file_url )
         
     
     def GetFileAndTags( self, url ):
@@ -379,7 +396,7 @@ class DownloaderBooru( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        file = connection.geturl( file_url )
+        file = self._DownloadFile( connection, file_url )
         
         return ( file, tags )
         
@@ -491,7 +508,7 @@ class DownloaderDeviantArt( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return connection.geturl( file_url )
+        return self._DownloadFile( connection, file_url )
         
     
     def GetTags( self, url, tags ): return tags
@@ -698,7 +715,7 @@ class DownloaderHentaiFoundry( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return connection.geturl( file_url )
+        return self._DownloadFile( connection, file_url )
         
     
     def GetFileAndTags( self, url ):
@@ -707,7 +724,7 @@ class DownloaderHentaiFoundry( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        file = connection.geturl( file_url )
+        file = self._DownloadFile( connection, file_url )
         
         return ( file, tags )
         
@@ -883,7 +900,7 @@ class DownloaderNewgrounds( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return connection.geturl( file_url )
+        return self._DownloadFile( connection, file_url )
         
     
     def GetFileAndTags( self, url ):
@@ -892,7 +909,7 @@ class DownloaderNewgrounds( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        file = connection.geturl( file_url )
+        file = self._DownloadFile( connection, file_url )
         
         return ( file, tags )
         
@@ -1018,7 +1035,7 @@ class DownloaderPixiv( Downloader ):
         
         headers = { 'Referer' : referral_url }
         
-        return connection.geturl( image_url, headers = headers )
+        return self._DownloadFile( connection, image_url, headers = headers )
         
     
     def GetFileAndTags( self, url ):
@@ -1029,7 +1046,7 @@ class DownloaderPixiv( Downloader ):
         
         headers = { 'Referer' : referral_url }
         
-        file = connection.geturl( image_url, headers = headers )
+        file = self._DownloadFile( connection, image_url, headers = headers )
         
         return ( file, tags )
         
