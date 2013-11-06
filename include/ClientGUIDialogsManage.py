@@ -4233,6 +4233,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 if 'max_storage' in self._options: self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max storage (MB)', multiplier = 1048576 )
                 if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel, label='' )
                 if 'message' in self._options: self._message = wx.TextCtrl( self._options_panel )
+                if 'upnp' in self._options: self._upnp = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'external port', none_phrase = 'do not forward port', max = 65535 )
                 
             
             def PopulateControls():
@@ -4242,6 +4243,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 if 'max_storage' in self._options: self._max_storage.SetValue( self._options[ 'max_storage' ] )
                 if 'log_uploader_ips' in self._options: self._log_uploader_ips.SetValue( self._options[ 'log_uploader_ips' ] )
                 if 'message' in self._options: self._message.SetValue( self._options[ 'message' ] )
+                if 'upnp' in self._options: self._upnp.SetValue( self._options[ 'upnp' ] )
                 
             
             def ArrangeControls():
@@ -4284,6 +4286,12 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                     gridbox.AddF( self._message, FLAGS_EXPAND_BOTH_WAYS )
                     
                 
+                if 'upnp' in self._options:
+                    
+                    gridbox.AddF( wx.StaticText( self._options_panel, label = 'UPnP' ), FLAGS_MIXED )
+                    gridbox.AddF( self._upnp, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                
                 self._options_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 vbox.AddF( self._options_panel, FLAGS_EXPAND_BOTH_WAYS )
@@ -4307,6 +4315,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             if 'max_storage' in self._options: options[ 'max_storage' ] = self._max_storage.GetValue()
             if 'log_uploader_ips' in self._options: options[ 'log_uploader_ips' ] = self._log_uploader_ips.GetValue()
             if 'message' in self._options: options[ 'message' ] = self._message.GetValue()
+            if 'upnp' in self._options: options[ 'upnp' ] = self._upnp.GetValue()
             
             return ( self._service_identifier, options )
             

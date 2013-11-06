@@ -30,6 +30,8 @@ import zlib
 
 ID_NULL = wx.NewId()
 
+CAN_HIDE_MOUSE = True
+
 # Hue is generally 200, Sat and Lum changes based on need
 COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
 COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
@@ -252,6 +254,8 @@ shortcuts[ wx.ACCEL_CTRL ][ ord( 'R' ) ] = 'show_hide_splitters'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'S' ) ] = 'set_search_focus'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'M' ) ] = 'set_media_focus'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'I' ) ] = 'synchronised_wait_switch'
+shortcuts[ wx.ACCEL_CTRL ][ ord( 'Z' ) ] = 'undo'
+shortcuts[ wx.ACCEL_CTRL ][ ord( 'Y' ) ] = 'redo'
 
 shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_UP ] = 'previous'
 shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_LEFT ] = 'previous'
@@ -2420,15 +2424,18 @@ class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
     
     yaml_tag = u'!ServiceRemoteRestrictedRepository'
     
-    def __init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin ):
+    def __init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin, extra_info = None ):
         
         ServiceRemoteRestricted.__init__( self, service_identifier, credentials, last_error, account )
         
         self._first_begin = first_begin
         self._next_begin = next_begin
+        self._extra_info = extra_info
         
     
     def CanUpdate( self ): return self._account.HasPermission( HC.GET_DATA ) and not self.HasRecentError() and self.HasUpdateDue()
+    
+    def GetExtraInfo( self ): return self._extra_info
     
     def GetFirstBegin( self ): return self._first_begin
     
@@ -2491,34 +2498,6 @@ class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
                 
             
         
-    
-class ServiceRemoteRestrictedRepositoryRatingLike( ServiceRemoteRestrictedRepository ):
-    
-    yaml_tag = u'!ServiceRemoteRestrictedRepositoryRatingLike'
-    
-    def __init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin, like, dislike ):
-        
-        ServiceRemoteRestricted.__init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin )
-        
-        self._like = like
-        self._dislike = dislike
-        
-    
-    def GetExtraInfo( self ): return ( self._like, self._dislike )
-    
-class ServiceRemoteRestrictedRepositoryRatingNumerical( ServiceRemoteRestrictedRepository ):
-    
-    yaml_tag = u'!ServiceRemoteRestrictedRepositoryRatingNumerical'
-    
-    def __init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin, lower, upper ):
-        
-        ServiceRemoteRestricted.__init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin )
-        
-        self._lower = lower
-        self._upper = upper
-        
-    
-    def GetExtraInfo( self ): return ( self._lower, self._upper )
     
 class ServiceRemoteRestrictedDepot( ServiceRemoteRestricted ):
     
@@ -2715,6 +2694,37 @@ class UndoManager():
         self._inverted_commands = []
         self._current_index = 0
         
+        HC.pubsub.sub( self, 'Undo', 'undo' )
+        HC.pubsub.sub( self, 'Redo', 'redo' )
+        
+    
+    def _FilterServiceIdentifiersToContentUpdates( self, service_identifiers_to_content_updates ):
+        
+        filtered_service_identifiers_to_content_updates = {}
+        
+        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+            
+            filtered_content_updates = []
+            
+            for content_update in content_updates:
+                
+                ( data_type, action, row ) = content_update.ToTuple()
+                
+                if action not in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX ): continue
+                
+                filtered_content_update = HC.ContentUpdate( data_type, action, row )
+                
+                filtered_content_updates.append( filtered_content_update )
+                
+            
+            if len( content_updates ) > 0:
+                
+                filtered_service_identifiers_to_content_updates[ service_identifier ] = filtered_content_updates
+                
+            
+        
+        return filtered_service_identifiers_to_content_updates
+        
     
     def _InvertServiceIdentifiersToContentUpdates( self, service_identifiers_to_content_updates ):
         
@@ -2728,33 +2738,10 @@ class UndoManager():
                 
                 ( data_type, action, row ) = content_update.ToTuple()
                 
-                # tags is simple, but files is more complicated here
-                # this is more complicated with files than tags
+                if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
+                elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
                 
-                # I add the command before the db does the thing, so I _could_ get mediaresults or whatever when I Add
-                # maybe keep two lists, of command and invert command, whatever
-                
-                if action == CONTENT_UPDATE_ADD:
-                    
-                    inverted_action = CONTENT_UPDATE_DELETE
-                    
-                    # not sure what this means, since this is usually an import
-                    
-                elif action == CONTENT_UPDATE_ARCHIVE: inverted_action = CONTENT_UPDATE_INBOX
-                elif action == CONTENT_UPDATE_DELETE:
-                    
-                    inverted_action = CONTENT_UPDATE_ADD
-                    
-                    # convert the deleted_hashes to multiple content updates or whatever with the add file media_results business
-                    
-                elif action == CONTENT_UPDATE_INBOX: inverted_action = CONTENT_UPDATE_ARCHIVE
-                elif action == CONTENT_UPDATE_PENDING: inverted_action = CONTENT_UPDATE_RESCIND_PENDING
-                elif action == CONTENT_UPDATE_PETITION: inverted_action = CONTENT_UPDATE_RESCIND_PETITION
-                elif action == CONTENT_UPDATE_RESCIND_PENDING: inverted_action = CONTENT_UPDATE_PENDING
-                elif action == CONTENT_UPDATE_RESCIND_PETITION: inverted_action = CONTENT_UPDATE_PETITION
-                else: pass # what do we do here?
-                
-                inverted_content_update = ContentUpdate( data_type, inverted_action, row )
+                inverted_content_update = HC.ContentUpdate( data_type, inverted_action, row )
                 
                 inverted_content_updates.append( inverted_content_update )
                 
@@ -2767,44 +2754,73 @@ class UndoManager():
     
     def AddCommand( self, action, *args, **kwargs ):
         
-        self._commands = self._commands[ : self._current_index ]
-        
-        self._commands.append( ( action, args, kwargs ) )
-        
         inverted_action = action
+        inverted_args = args
         inverted_kwargs = kwargs
         
         if action == 'content_updates':
             
             ( service_identifiers_to_content_updates, ) = args
             
+            service_identifiers_to_content_updates = self._FilterServiceIdentifiersToContentUpdates( service_identifiers_to_content_updates )
+            
+            if len( service_identifiers_to_content_updates ) == 0: return
+            
             inverted_service_identifiers_to_content_updates = self._InvertServiceIdentifiersToContentUpdates( service_identifiers_to_content_updates )
             
             inverted_args = ( inverted_service_identifiers_to_content_updates, )
             
+        else: return
+        
+        self._commands = self._commands[ : self._current_index ]
+        self._inverted_commands = self._inverted_commands[ : self._current_index ]
+        
+        self._commands.append( ( action, args, kwargs ) )
         
         self._inverted_commands.append( ( inverted_action, inverted_args, inverted_kwargs ) )
         
         self._current_index += 1
         
+        HC.pubsub.pub( 'refresh_menu_bar' )
+        
     
     def GetUndoRedoStrings( self ):
         
-        ( undo, redo ) = ( None, None )
+        ( undo_string, redo_string ) = ( None, None )
         
-        # something like "Undo add "blah" to 24 files", if that it doable
-        # Undo "add 46 mappings" if several tags
+        if self._current_index > 0:
+            
+            undo_index = self._current_index - 1
+            
+            ( action, args, kwargs ) = self._commands[ undo_index ]
+            
+            if action == 'content_updates':
+                
+                ( service_identifiers_to_content_updates, ) = args
+                
+                undo_string = 'undo ' + HC.ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers_to_content_updates )
+                
+            
         
-        # Delete 23 files
+        if len( self._commands ) > 0 and self._current_index < len( self._commands ):
+            
+            redo_index = self._current_index
+            
+            ( action, args, kwargs ) = self._commands[ redo_index ]
+            
+            if action == 'content_updates':
+                
+                ( service_identifiers_to_content_updates, ) = args
+                
+                redo_string = 'redo ' + HC.ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers_to_content_updates )
+                
+            
         
-        # return None if None
-        
-        return ( undo, redo )
+        return ( undo_string, redo_string )
         
     
     def Undo( self ):
-        wx.MessageBox( 'undo')
-        return
+        
         if self._current_index > 0:
             
             self._current_index -= 1
@@ -2813,11 +2829,12 @@ class UndoManager():
             
             HC.app.WriteSynchronous( action, *args, **kwargs )
             
+            HC.pubsub.pub( 'refresh_menu_bar' )
+            
         
     
     def Redo( self ):
-        wx.MessageBox( 'redo')
-        return
+        
         if len( self._commands ) > 0 and self._current_index < len( self._commands ):
             
             ( action, args, kwargs ) = self._commands[ self._current_index ]
@@ -2825,6 +2842,8 @@ class UndoManager():
             self._current_index += 1
             
             HC.app.WriteSynchronous( action, *args, **kwargs )
+            
+            HC.pubsub.pub( 'refresh_menu_bar' )
             
         
     
@@ -2916,84 +2935,4 @@ class VPTreeNodeEmpty():
     def __len__( self ): return 0
     
     def GetMatches( self, phash, max_hamming ): return []
-    
-class WebSessionManagerClient():
-    
-    def __init__( self ):
-        
-        existing_sessions = HC.app.Read( 'web_sessions' )
-        
-        self._sessions = { name : ( cookies, expiry ) for ( name, cookies, expiry ) in existing_sessions }
-        
-        self._lock = threading.Lock()
-        
-    
-    def GetCookies( self, name ):
-        
-        now = HC.GetNow()
-        
-        with self._lock:
-            
-            if name in self._sessions:
-                
-                ( cookies, expiry ) = self._sessions[ name ]
-                
-                if now + 300 > expiry: del self._sessions[ name ]
-                else: return cookies
-                
-            
-            # name not found, or expired
-            
-            if name == 'hentai foundry':
-                
-                connection = HC.get_connection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
-                
-                # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
-                connection.request( 'GET', '/?enterAgree=1' )
-                
-                cookies = connection.GetCookies()
-                
-                expiry = now + 90 * 60
-                
-            elif name == 'pixiv':
-                
-                ( id, password ) = HC.app.Read( 'pixiv_account' )
-                
-                if id == '' and password == '':
-                    
-                    raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
-                    
-                
-                connection = HC.get_connection( url = 'http://www.pixiv.net', accept_cookies = True )
-                
-                form_fields = {}
-                
-                form_fields[ 'mode' ] = 'login'
-                form_fields[ 'pixiv_id' ] = id
-                form_fields[ 'pass' ] = password
-                form_fields[ 'skip' ] = '1'
-                
-                body = urllib.urlencode( form_fields )
-                
-                headers = {}
-                headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-                
-                # this logs in and establishes the php session cookie
-                response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
-                
-                cookies = connection.GetCookies()
-                
-                # _ only given to logged in php sessions
-                if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Login credentials not accepted!' )
-                
-                expiry = now + 30 * 86400
-                
-            
-            self._sessions[ name ] = ( cookies, expiry )
-            
-            HC.app.Write( 'web_session', name, cookies, expiry )
-            
-            return cookies
-            
-        
     

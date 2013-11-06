@@ -3490,7 +3490,11 @@ class RadioBox( StaticBox ):
     
 class TagsBox( ListBox ):
     
+    has_counts = False
+    
     def _GetNamespaceColours( self ): return HC.options[ 'namespace_colours' ]
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ): return self._ordered_strings
     
     def _GetTextColour( self, tag_string ):
         
@@ -3523,6 +3527,8 @@ class TagsBox( ListBox ):
             ( command, data ) = action
             
             if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+            elif command == 'copy_all_tags': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
+            elif command == 'copy_all_tags_with_counts': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
             elif command in ( 'parent', 'sibling' ):
                 
                 tag = data
@@ -3553,25 +3559,34 @@ class TagsBox( ListBox ):
         
         self._Select( index )
         
-        if self._current_selected_index is not None:
-            
+        if len( self._ordered_strings ) > 0:
+        
             menu = wx.Menu()
             
-            term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
+            if self.has_counts: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', term ), 'copy ' + term )
-            
-            if ':' in term:
+            if self._current_selected_index is not None:
                 
-                sub_term = term.split( ':', 1 )[1]
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', sub_term ), 'copy ' + sub_term )
+                if type( term ) in ( str, unicode ):
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', term ), 'copy ' + term )
+                    
+                    if ':' in term:
+                        
+                        sub_term = term.split( ':', 1 )[1]
+                        
+                        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', sub_term ), 'copy ' + sub_term )
+                        
+                    
+                    menu.AppendSeparator()
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent', term ), 'add parent to ' + term )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling', term ), 'add sibling to ' + term )
+                    
                 
-            
-            menu.AppendSeparator()
-            
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent', term ), 'add parent to ' + term )
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling', term ), 'add sibling to ' + term )
             
             self.PopupMenu( menu )
             
@@ -3583,6 +3598,8 @@ class TagsBox( ListBox ):
     
 class TagsBoxActiveOnly( TagsBox ):
     
+    has_counts = True
+    
     def __init__( self, parent, callable ):
         
         TagsBox.__init__( self, parent )
@@ -3593,6 +3610,11 @@ class TagsBoxActiveOnly( TagsBox ):
         
     
     def _Activate( self, s, term ): self._callable( term )
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
+        
     
     def _Select( self, index ):
         
@@ -3755,6 +3777,8 @@ class TagsBoxColourOptions( TagsBox ):
     
 class TagsBoxCPP( TagsBox ):
     
+    has_counts = True
+    
     def __init__( self, parent, page_key ):
         
         TagsBox.__init__( self, parent, min_height = 200 )
@@ -3779,6 +3803,12 @@ class TagsBoxCPP( TagsBox ):
         predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ), None )
         
         HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        if with_counts: return self._ordered_strings
+        else: return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
         
     
     def _RecalcStrings( self ):
@@ -3957,6 +3987,15 @@ class TagsBoxFlat( TagsBox ):
         self._tags = set()
         
     
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        tags = list( self._tags )
+        
+        tags.sort()
+        
+        return tags
+        
+    
     def _RecalcTags( self ):
         
         self._strings_to_terms = {}
@@ -4032,6 +4071,17 @@ class TagsBoxManage( TagsBox ):
         
     
     def _Activate( self, s, term ): self._callable( term )
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        all_tags = set( itertools.chain( self._current_tags, self._pending_tags ) )
+        
+        all_tags = list( all_tags )
+        
+        all_tags.sort()
+        
+        return all_tags
+        
     
     def _RebuildTagStrings( self ):
         
@@ -4129,6 +4179,8 @@ class TagsBoxNamespaces( TagsBox ):
     
 class TagsBoxPredicates( TagsBox ):
     
+    has_counts = True
+    
     def __init__( self, parent, page_key, initial_predicates = [] ):
         
         TagsBox.__init__( self, parent, min_height = 100 )
@@ -4150,6 +4202,11 @@ class TagsBoxPredicates( TagsBox ):
         
     
     def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
+        
     
     def AddPredicate( self, predicate ):
         

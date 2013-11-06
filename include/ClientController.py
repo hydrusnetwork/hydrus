@@ -1,4 +1,5 @@
 import gc
+import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusExceptions
@@ -146,6 +147,8 @@ class Controller( wx.App ):
     
     def GetThumbnailCache( self ): return self._thumbnail_cache
     
+    def GetUndoManager( self ): return self._undo_manager
+    
     def GetWebCookies( self, name ): return self._web_session_manager.GetCookies( name )
     
     def MaintainDB( self ):
@@ -171,6 +174,8 @@ class Controller( wx.App ):
         
         self._local_service = None
         self._server = None
+        
+        init_result = True
         
         try:
             
@@ -223,21 +228,38 @@ class Controller( wx.App ):
                     with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'quit now' ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
-                        else: return False
+                        else: raise HydrusExceptions.PermissionException()
                         
                     
                 
             
             threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
             
+            if HC.options[ 'password' ] is not None:
+                
+                self.SetSplashText( 'waiting for password' )
+                
+                while True:
+                    
+                    with wx.PasswordEntryDialog( None, 'Enter your password', 'Enter password' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            if hashlib.sha256( dlg.GetValue() ).digest() == HC.options[ 'password' ]: break
+                            
+                        else: raise HydrusExceptions.PermissionException()
+                        
+                    
+                
+            
+            self.SetSplashText( 'caches' )
+            
             self._session_manager = HydrusSessions.HydrusSessionManagerClient()
-            self._web_session_manager = CC.WebSessionManagerClient()
+            self._web_session_manager = HydrusSessions.WebSessionManagerClient()
             self._namespace_blacklists_manager = HydrusTags.NamespaceBlacklistsManager()
             self._tag_parents_manager = HydrusTags.TagParentsManager()
             self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
             self._undo_manager = CC.UndoManager()
-            
-            self.SetSplashText( 'caches' )
             
             self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
             self._preview_image_cache = CC.RenderedImageCache( 'preview' )
@@ -287,9 +309,9 @@ class Controller( wx.App ):
             
             wx.MessageBox( message )
             
-            return False
+            init_result = False
             
-        except HydrusExceptions.PermissionException as e: pass
+        except HydrusExceptions.PermissionException as e: init_result = False
         except:
             
             wx.MessageBox( 'Woah, bad error:' + os.linesep + os.linesep + traceback.format_exc() )
@@ -297,12 +319,12 @@ class Controller( wx.App ):
             try: self._splash.Close()
             except: pass
             
-            return False
+            init_result = False
             
         
         self._splash.Close()
         
-        return True
+        return init_result
         
     
     def PrepStringForDisplay( self, text ):
@@ -463,7 +485,7 @@ class Controller( wx.App ):
         
         self._last_idle_time = HC.GetNow()
         
-        if False and action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
+        if action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
         
         return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
         

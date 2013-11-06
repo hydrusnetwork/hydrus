@@ -9,12 +9,16 @@ from include import TestDialogs
 from include import TestDB
 from include import TestFunctions
 from include import TestHydrusDownloading
-from include import TestServer
+from include import TestHydrusSessions
 from include import TestHydrusTags
+from include import TestServer
 import collections
 import os
+import sys
 import unittest
 import wx
+
+only_run = None
 
 class App( wx.App ):
     
@@ -47,14 +51,18 @@ class App( wx.App ):
         
         suites = []
         
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusDownloading ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestServer ) )
-        suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
+        if only_run is None: run_all = True
+        else: run_all = False
+        
+        if run_all or only_run == 'cc': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
+        if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
+        if run_all or only_run == 'dialogs': suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
+        if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
+        if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
+        if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusDownloading ) )
+        if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
+        if run_all or only_run == 'tags': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
+        if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestServer ) )
         
         suite = unittest.TestSuite( suites )
         
@@ -65,13 +73,11 @@ class App( wx.App ):
         return True
         
     
-    def AddSession( self, service_identifier, account_identifier ): return self._server_session_manager.AddSession( service_identifier, account_identifier )
-    
-    def GetAccount( self, session_key, service_identifier ): return self._server_session_manager.GetAccount( session_key, service_identifier )
-    
     def GetNamespaceBlacklistsManager( self ): return self._namespace_blacklists_manager
     
     def GetSessionKey( self, service_identifier ): return self._client_session_manager.GetSessionKey( service_identifier )
+    
+    def GetSessionManager( self ): return self._server_session_manager
     
     def GetTagParentsManager( self ): return self._tag_parents_manager
     def GetTagSiblingsManager( self ): return self._tag_siblings_manager
@@ -115,6 +121,14 @@ class App( wx.App ):
         
     
 if __name__ == '__main__':
+    
+    args = sys.argv[1:]
+    
+    if len( args ) > 0:
+        
+        only_run = args[0]
+        
+    else: only_run = None
     
     app = App()
     

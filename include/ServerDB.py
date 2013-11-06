@@ -5,6 +5,7 @@ import httplib
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
+import HydrusNATPunch
 import HydrusServer
 import itertools
 import os
@@ -968,6 +969,8 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             c.execute( 'UPDATE account_map SET used_bytes = ?, used_requests = ?;', ( 0, 0 ) )
             
+            self.pub( 'update_all_session_accounts' )
+            
         
     
     def _CheckMonthlyData( self, c ):
@@ -1914,7 +1917,8 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
         
-        HC.pubsub.pub( 'restart_service', service_identifier )
+        self.pub( 'restart_service', service_identifier )
+        self.pub( 'notify_new_options' )
         
     
     def _UnbanKey( self, c, service_id, account_id ): c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
@@ -2306,6 +2310,16 @@ class DB( ServiceDB ):
                     c.execute( 'PRAGMA foreign_keys = ON;' )
                     
                     c.execute( 'BEGIN IMMEDIATE' )
+                    
+                
+                if version < 91:
+                    
+                    for ( service_id, options ) in c.execute( 'SELECT service_id, options FROM services;' ).fetchall():
+                        
+                        options[ 'upnp' ] = None
+                        
+                        c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
+                        
                     
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
@@ -2796,5 +2810,46 @@ def DAEMONGenerateUpdates():
             next_begin = biggest_end + 1
             next_end = biggest_end + HC.UPDATE_DURATION
             
+        
+    
+def DAEMONUPnP():
+    
+    local_ip = HydrusNATPunch.GetLocalIP()
+    
+    try: current_mappings = HydrusNATPunch.GetUPnPMappings()
+    except: return # UPnP COM is not working right now
+    
+    our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
+    
+    service_identifiers = HC.app.ReadDaemon( 'service_identifiers' )
+    
+    all_options = [ HC.app.ReadDaemon( 'options', service_identifier ) for service_identifier in service_identifiers ]
+    
+    for options in all_options:
+        
+        internal_port = options[ 'port' ]
+        upnp = options[ 'upnp' ]
+        
+        if ( local_ip, internal_port ) in our_mappings:
+            
+            current_external_port = our_mappings[ ( local_ip, internal_port ) ]
+            
+            if current_external_port != upnp: HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
+            
+        
+    
+    for options in all_options:
+        
+        internal_port = options[ 'port' ]
+        upnp = options[ 'upnp' ]
+        
+        if ( local_ip, internal_port ) not in our_mappings:
+            
+            external_port = our_mappings[ ( local_ip, internal_port ) ]
+            
+            HydrusNATPunch.AddUPnPMapping( external_port, 'TCP', internal_port, 'hydrus service at ' + local_ip + ':' + str( internal_port ) )
+            
+        
+        ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled )
         
     

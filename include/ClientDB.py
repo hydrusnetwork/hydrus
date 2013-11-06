@@ -2681,13 +2681,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( like, dislike ) = c.execute( 'SELECT like, dislike FROM ratings_like WHERE service_id = ?;', ( service_id, ) ).fetchone()
                 
-                service = CC.ServiceRemoteRestrictedRepositoryRatingLike( service_identifier, credentials, last_error, account, first_begin, next_begin, like, dislike )
+                service = CC.ServiceRemoteRestrictedRepository( service_identifier, credentials, last_error, account, first_begin, next_begin, ( like, dislike ) )
                 
             elif service_type == HC.RATING_NUMERICAL_REPOSITORY:
                 
                 ( lower, upper ) = c.execute( 'SELECT lower, upper FROM ratings_numerical WHERE service_id = ?;', ( service_id, ) ).fetchone()
                 
-                service = CC.ServiceRemoteRestrictedRepositoryRatingNumerical( service_identifier, credentials, last_error, account, first_begin, next_begin, lower, upper )
+                service = CC.ServiceRemoteRestrictedRepository( service_identifier, credentials, last_error, account, first_begin, next_begin, ( lower, upper ) )
                 
             else: service = CC.ServiceRemoteRestrictedRepository( service_identifier, credentials, last_error, account, first_begin, next_begin )
             
@@ -4404,28 +4404,6 @@ class DB( ServiceDB ):
         
         self._RebuildTagServicePrecedenceCache( c )
         
-        if not self._CheckPassword(): raise HydrusExceptions.PermissionException( 'No password!' )
-        
-    
-    def _CheckPassword( self ):
-        
-        if HC.options[ 'password' ] is not None:
-            
-            while True:
-                
-                with wx.PasswordEntryDialog( None, 'Enter your password', 'Enter password' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        if hashlib.sha256( dlg.GetValue() ).digest() == HC.options[ 'password' ]: return True
-                        else: continue
-                        
-                    else: return False
-                    
-                
-            
-        else: return True
-        
     
     def _GetDBCursor( self ):
         
@@ -4933,6 +4911,20 @@ class DB( ServiceDB ):
                 if version < 88:
                     
                     c.execute( 'CREATE TABLE namespace_blacklists ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, namespaces TEXT_YAML );' )
+                    
+                
+                if version < 91:
+                    
+                    ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    
+                    shortcuts = HC.options[ 'shortcuts' ]
+                    
+                    shortcuts[ wx.ACCEL_CTRL ][ ord( 'Z' ) ] = 'undo'
+                    shortcuts[ wx.ACCEL_CTRL ][ ord( 'Y' ) ] = 'redo'
+                    
+                    HC.options[ 'shortcuts' ] = shortcuts
+                    
+                    c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
                     
                 
                 unknown_account = HC.GetUnknownAccount()
@@ -7596,10 +7588,10 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                                 
                                 HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : downloading file' )
                                 
-                                if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
+                                if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
                                 else:
                                     
-                                    file = downloader.GetFile( *url_args )
+                                    temp_path = downloader.GetFile( *url_args )
                                     
                                     tags = []
                                     
@@ -7607,10 +7599,6 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                                 service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                                 
                                 HC.pubsub.pub( 'service_status', name + ': ' + x_out_of_y + ' : importing file' )
-                                
-                                temp_path = HC.GetTempPath()
-                                
-                                with open( temp_path, 'wb' ) as f: f.write( file )
                                 
                                 ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                 

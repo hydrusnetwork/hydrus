@@ -1799,19 +1799,15 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
                 
                 downloader.AddReportHook( hook )
                 
-                if do_tags: ( file, tags ) = downloader.GetFileAndTags( *url_args )
+                if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
                 else:
                     
-                    file = downloader.GetFile( *url_args )
+                    temp_path = downloader.GetFile( *url_args )
                     
                     tags = []
                     
                 
                 downloader.ClearReportHooks()
-                
-                temp_path = HC.GetTempPath()
-                
-                with open( temp_path, 'wb' ) as f: f.write( file )
                 
                 service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                 

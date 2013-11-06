@@ -9,6 +9,7 @@ import HydrusDocumentHandling
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusFlashHandling
+import HydrusNATPunch
 import HydrusImageHandling
 import HydrusVideoHandling
 import os
@@ -704,7 +705,9 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         account_identifier = HC.AccountIdentifier( access_key = access_key )
         
-        ( session_key, expiry ) = HC.app.AddSession( self._service_identifier, account_identifier )
+        session_manager = HC.app.GetSessionManager()
+        
+        ( session_key, expiry ) = session_manager.AddSession( self._service_identifier, account_identifier )
         
         now = HC.GetNow()
         
@@ -783,7 +786,9 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
             
         except: raise Exception( 'Problem parsing cookies!' )
         
-        account = HC.app.GetAccount( session_key, self._service_identifier )
+        session_manager = HC.app.GetSessionManager()
+        
+        account = session_manager.GetAccount( session_key, self._service_identifier )
         
         request.hydrus_account = account
         
@@ -837,6 +842,10 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         kwargs = request.hydrus_args # for things like expiry, title, and so on
         
         HC.app.Write( 'account', self._service_identifier, admin_account, action, subject_identifiers, kwargs )
+        
+        session_manager = HC.app.GetSessionManager()
+        
+        session_manager.RefreshAccounts( self._service_identifier, subject_identifiers )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -1021,6 +1030,7 @@ class HydrusResourceCommandRestrictedRegistrationKeys( HydrusResourceCommandRest
 class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted ):
     
     GET_PERMISSION = HC.GENERAL_ADMIN
+    POST_PERMISSION = HC.GENERAL_ADMIN
     
     def _threadDoGETJob( self, request ):
         

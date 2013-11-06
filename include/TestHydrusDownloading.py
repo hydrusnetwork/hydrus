@@ -8,6 +8,65 @@ import unittest
 
 class TestDownloaders( unittest.TestCase ):
     
+    @classmethod
+    def setUpClass( self ):
+        
+        HC.get_connection = TestConstants.fake_http_connection_manager.GetConnection
+        
+    
+    @classmethod
+    def tearDownClass( self ):
+        
+        HC.get_connection = HC.AdvancedHTTPConnection
+        
+    
+    def test_deviantart( self ):
+        
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_gallery.html' ) as f: da_gallery = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_page.html' ) as f: da_page = f.read()
+        
+        fake_connection = TestConstants.FakeHTTPConnection( host = 'sakimichan.deviantart.com' )
+        
+        fake_connection.SetResponse( 'GET', '/gallery/?catpath=/&offset=0', da_gallery )
+        fake_connection.SetResponse( 'GET', '/art/Thumbs-up-411079893', da_page )
+        
+        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'sakimichan.deviantart.com' )
+        
+        fake_connection = TestConstants.FakeHTTPConnection( host = 'fc04.deviantart.net' )
+        
+        fake_connection.SetResponse( 'GET', '/fs70/f/2013/306/1/5/thumbs_up_by_sakimichan-d6sqv9x.jpg', 'image file' )
+        
+        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'fc04.deviantart.net' )
+        
+        #
+        
+        downloader = HydrusDownloading.DownloaderDeviantArt( 'sakimichan' )
+        
+        #
+        
+        gallery_urls = downloader.GetAnotherPage()
+        
+        expected_gallery_urls = [('http://sakimichan.deviantart.com/art/Thumbs-up-411079893', ['title:Thumbs up', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Sci-Fi']), ('http://sakimichan.deviantart.com/art/The-Major-405852926', ['title:The Major', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/Little-mermaid-fearie-401197163', ['title:Little mermaid fearie', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Get-Em-Boy-or-not-399250537', ['title:Get Em Boy..or not', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Welcome-To-The-Gang-398381756', ['title:Welcome To The Gang', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Sci-Fi-Elf-398195577', ['title:Sci-Fi Elf', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Sci-Fi']), ('http://sakimichan.deviantart.com/art/Ahri-391295844', ['title:Ahri', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Games']), ('http://sakimichan.deviantart.com/art/Orphan-386257383', ['title:Orphan', 'creator:akimichan', 'Manga & Anime', 'Digital Media', 'Drawings']), ('http://sakimichan.deviantart.com/art/The-summon-385996679', ['title:The summon', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Rainbow2-377174679', ['title:Rainbow2', 'creator:akimichan', 'Manga & Anime', 'Digital Media', 'Drawings']), ('http://sakimichan.deviantart.com/art/Sword-Art-online-378517412', ['title:Sword Art online', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/Adventure-Time-Group-photo-371913392', ['title:Adventure Time Group photo', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/resurrection-353827147', ['title:resurrection', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/playful-Snow-Harpy-343275265', ['title:playful Snow Harpy', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Link-369553015', ['title:Link', 'creator:akimichan', 'Fan Art', 'Digital Art', 'Painting & Airbrushing', 'Games']), ('http://sakimichan.deviantart.com/art/Dc-girls-363385250', ['title:Dc girls', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Running-With-Spirits-337981944', ['title:Running With Spirits', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/FMA-358647977', ['title:FMA', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/Wonder-woman-347864644', ['title:Wonder woman', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/Ariel-found-Headphones-341927000', ['title:Ariel found Headphones', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/Jack-Frost-340925669', ['title:Jack Frost', 'creator:akimichan', 'Fan Art', 'Cartoons & Comics', 'Digital', 'Movies & TV']), ('http://sakimichan.deviantart.com/art/Musics-blooming-336308163', ['title:Musics blooming', 'creator:akimichan', 'Digital Art', 'Drawings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Yin-Yang-Goddess-327641961', ['title:Yin Yang Goddess', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy']), ('http://sakimichan.deviantart.com/art/Angelof-Justice-322844340', ['title:Angelof Justice', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Fantasy'])]
+        
+        self.assertEqual( gallery_urls, expected_gallery_urls )
+        
+        #
+        
+        tags = ['title:Thumbs up', 'creator:akimichan', 'Digital Art', 'Drawings & Paintings', 'Sci-Fi']
+        
+        info = downloader.GetFileAndTags( 'http://sakimichan.deviantart.com/art/Thumbs-up-411079893', tags )
+        
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
+        expected_info = ('image file', tags)
+        
+        self.assertEqual( info, expected_info )
+        
+    
     def test_newgrounds( self ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
@@ -19,8 +78,6 @@ class TestDownloaders( unittest.TestCase ):
         fake_connection.SetResponse( 'GET', '/movies/', newgrounds_gallery_movies )
         
         TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'warlord-of-noodles.newgrounds.com' )
-        
-        HC.get_connection = TestConstants.fake_http_connection_manager.GetConnection
         
         #
         
@@ -52,13 +109,15 @@ class TestDownloaders( unittest.TestCase ):
         
         info = downloader.GetFileAndTags( 'http://www.newgrounds.com/portal/view/583715' )
         
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
         expected_info = ('swf file', set([u'chores', u'laser', u'silent', u'title:Cat Dust', u'creator:warlord-of-noodles', u'pointer']))
         
         self.assertEqual( info, expected_info )
-        
-        #
-        
-        HC.get_connection = HC.AdvancedHTTPConnection
         
     
     def test_booru_e621( self ):
@@ -72,8 +131,6 @@ class TestDownloaders( unittest.TestCase ):
         fake_connection.SetResponse( 'GET', '/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia', e621_page )
         
         TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'e621.net' )
-        
-        HC.get_connection = TestConstants.fake_http_connection_manager.GetConnection
         
         #
         
@@ -99,13 +156,15 @@ class TestDownloaders( unittest.TestCase ):
         
         info = downloader.GetFileAndTags( 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia' )
         
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
         expected_info = ('swf file', [u'creator:jasonafex', u'creator:kabier', u'2013', u'3 toes', u'anal', u'anal penetration', u'animated', u'balls', u'barefoot', u'bed', u'bedroom', u'biceps', u'blue skin', u'butt', u'claws', u'clock', u'collaboration', u'couple', u'cum', u'cum in ass', u'cum inside', u'cyan skin', u'erection', u'flash', u'gay', u'green eyes', u'hairless', u'hand holding', u'happy sex', u'hi res', u'horn', u'humanoid penis', u'lamp', u'licking', u'lying', u'male', u'missionary position', u'muscles', u'night', u'on back', u'open mouth', u'paws', u'penetration', u'penis', u'raised leg', u'red penis', u'red skin', u'room', u'saliva', u'sharp teeth', u'side view', u'stripes', u'teeth', u'thick thighs', u'tongue', u'video games', u'wood', u'yellow sclera', u'series:the elder scrolls', u'species:argonian', u'species:dragon', u'species:scalie', u'character:spyke'])
         
         self.assertEqual( info, expected_info )
-        
-        #
-        
-        HC.get_connection = HC.AdvancedHTTPConnection
         
     
     def test_hentai_foundry( self ):
@@ -125,8 +184,6 @@ class TestDownloaders( unittest.TestCase ):
         fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
         
         TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'www.hentai-foundry.com' )
-        
-        HC.get_connection = TestConstants.fake_http_connection_manager.GetConnection
         
         cookies = { 'YII_CSRF_TOKEN' : '19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B' }
         
@@ -190,18 +247,26 @@ class TestDownloaders( unittest.TestCase ):
         
         info = pictures_downloader.GetFileAndTags( 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae' )
         
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
         expected_info = ('picture', [u'creator:Sparrow', u'title:Ashantae!', u'Shantae', u'Asha', u'Monster_World', u'cosplay', u'nips'])
         
         self.assertEqual( info, expected_info )
         
         info = scraps_downloader.GetFileAndTags( 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027' )
         
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
         expected_info = ('scrap', [u'creator:Sparrow', u'title:Swegabe Sketches \u2013 Gabrielle 027', u'bukkake', u'horsecock', u'gokkun', u'prom_night'])
         
         self.assertEqual( info, expected_info )
-        
-        #
-        
-        HC.get_connection = HC.AdvancedHTTPConnection
         
     

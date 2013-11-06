@@ -2,6 +2,8 @@ import os
 import socket
 import win32com.client
 
+def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
+
 def GetStaticPortMappingCollection():
     
     try:
@@ -45,7 +47,7 @@ def GetUPnPMappings():
     
 def AddUPnPMapping( external_port, protocol, internal_port, description ):
     
-    internal_client = socket.gethostbyname( socket.gethostname() )
+    internal_client = GetLocalIP()
     
     enabled = True
     

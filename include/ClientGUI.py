@@ -1198,6 +1198,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
             elif command == 'petitions': self._NewPagePetitions( data )
             elif command == 'post_news': self._PostNews( data )
+            elif command == 'redo': HC.pubsub.pub( 'redo' )
             elif command == 'refresh':
                 
                 page = self._notebook.GetCurrentPage()
@@ -1222,6 +1223,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'tumblr': webbrowser.open( 'http://hydrus.tumblr.com/' )
             elif command == 'twitter': webbrowser.open( 'http://twitter.com/#!/hydrusnetwork' )
             elif command == 'unclose_page': self._UnclosePage( data )
+            elif command == 'undo': HC.pubsub.pub( 'undo' )
             elif command == 'upload_pending': self._UploadPending( data )
             elif command == 'vacuum_db': self._VacuumDatabase()
             else: event.Skip()
@@ -1309,7 +1311,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshAcceleratorTable( self ):
         
-        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch' ]
+        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'undo', 'redo' ]
         
         entries = []
         
@@ -1359,11 +1361,37 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         menu.Append( file, p( '&File' ) )
         
-        if len( self._closed_pages ) > 0:
+        have_closed_pages = len( self._closed_pages ) > 0
+        
+        undo_manager = HC.app.GetUndoManager()
+        
+        ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
+        
+        have_undo_stuff = undo_string is not None or redo_string is not None
+        
+        if have_closed_pages or have_undo_stuff:
             
             undo = wx.Menu()
             
-            if len( self._closed_pages ) > 0:
+            did_undo_stuff = False
+            
+            if undo_string is not None:
+                
+                did_undo_stuff = True
+                
+                undo.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undo' ), undo_string )
+                
+            
+            if redo_string is not None:
+                
+                did_undo_stuff = True
+                
+                undo.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'redo' ), redo_string )
+                
+            
+            if have_closed_pages:
+                
+                if did_undo_stuff: undo.AppendSeparator()
                 
                 undo_pages = wx.Menu()
                 

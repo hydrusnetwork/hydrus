@@ -233,15 +233,15 @@ class Downloader():
         
         connection = self._GetConnection( url )
         
-        return self._DownloadFile( connection, url )
+        return self._DownloadFile( connection, url, response_to_path = True )
         
     
     def GetFileAndTags( self, url, *args ):
         
-        file = self.GetFile( url, *args )
+        temp_path = self.GetFile( url, *args )
         tags = self.GetTags( url, *args )
         
-        return ( file, tags )
+        return ( temp_path, tags )
         
     
     def GetTags( self, url ): pass
@@ -387,7 +387,7 @@ class DownloaderBooru( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return self._DownloadFile( connection, file_url )
+        return self._DownloadFile( connection, file_url, response_to_path = True )
         
     
     def GetFileAndTags( self, url ):
@@ -396,9 +396,9 @@ class DownloaderBooru( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        file = self._DownloadFile( connection, file_url )
+        temp_path = self._DownloadFile( connection, file_url, response_to_path = True )
         
-        return ( file, tags )
+        return ( temp_path, tags )
         
     
     def GetTags( self, url ):
@@ -433,42 +433,46 @@ class DownloaderDeviantArt( Downloader ):
         
         for link in links:
             
-            page_url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
-            
-            raw_title = link[ 'title' ] # sweet dolls by ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
-            
-            raw_title_reversed = raw_title[::-1] # yrleweJ ;tg& serutainiM ;tg& stfarC nasitrA ni 2102 ,92 beF ,CainegnA~ yb sllod teews
-            
-            ( creator_and_date_and_tags_reversed, title_reversed ) = raw_title_reversed.split( ' yb ', 1 )
-            
-            creator_and_date_and_tags = creator_and_date_and_tags_reversed[::-1] # ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
-            
-            ( creator_with_username_char, date_and_tags ) = creator_and_date_and_tags.split( ',', 1 )
-            
-            creator = creator_with_username_char[1:] # AngeniaC
-            
-            title = title_reversed[::-1] # sweet dolls
-            
-            try:
+            try: # starts_with_thumb picks up some false positives, but they break
                 
-                ( date_gumpf, raw_category_tags ) = date_and_tags.split( ' in ', 1 )
+                page_url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
                 
-                category_tags = raw_category_tags.split( ' > ' )
+                raw_title = link[ 'title' ] # sweet dolls by ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
                 
-            except Exception as e:
+                raw_title_reversed = raw_title[::-1] # yrleweJ ;tg& serutainiM ;tg& stfarC nasitrA ni 2102 ,92 beF ,CainegnA~ yb sllod teews
                 
-                HC.ShowException( e )
+                ( creator_and_date_and_tags_reversed, title_reversed ) = raw_title_reversed.split( ' yb ', 1 )
                 
-                category_tags = []
+                creator_and_date_and_tags = creator_and_date_and_tags_reversed[::-1] # ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
                 
-            
-            tags = []
-            
-            tags.append( 'title:' + title )
-            tags.append( 'creator:' + creator )
-            tags.extend( category_tags )
-            
-            results.append( ( page_url, tags ) )
+                ( creator_with_username_char, date_and_tags ) = creator_and_date_and_tags.split( ',', 1 )
+                
+                creator = creator_with_username_char[1:] # AngeniaC
+                
+                title = title_reversed[::-1] # sweet dolls
+                
+                try:
+                    
+                    ( date_gumpf, raw_category_tags ) = date_and_tags.split( ' in ', 1 )
+                    
+                    category_tags = raw_category_tags.split( ' > ' )
+                    
+                except Exception as e:
+                    
+                    HC.ShowException( e )
+                    
+                    category_tags = []
+                    
+                
+                tags = []
+                
+                tags.append( 'title:' + title )
+                tags.append( 'creator:' + creator )
+                tags.extend( category_tags )
+                
+                results.append( ( page_url, tags ) )
+                
+            except: pass
             
         
         return results
@@ -485,7 +489,7 @@ class DownloaderDeviantArt( Downloader ):
             
         else:
             
-            img = soup.find( id = 'gmi-ResViewSizer_fullimg' )
+            img = soup.find( class_ = 'dev-content-full' )
             
             src = img[ 'src' ]
             
@@ -508,7 +512,7 @@ class DownloaderDeviantArt( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return self._DownloadFile( connection, file_url )
+        return self._DownloadFile( connection, file_url, response_to_path = True )
         
     
     def GetTags( self, url, tags ): return tags
@@ -715,7 +719,7 @@ class DownloaderHentaiFoundry( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return self._DownloadFile( connection, file_url )
+        return self._DownloadFile( connection, file_url, response_to_path = True )
         
     
     def GetFileAndTags( self, url ):
@@ -724,9 +728,9 @@ class DownloaderHentaiFoundry( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        file = self._DownloadFile( connection, file_url )
+        temp_path = self._DownloadFile( connection, file_url, response_to_path = True )
         
-        return ( file, tags )
+        return ( temp_path, tags )
         
     
     def GetTags( self, url ):
@@ -900,7 +904,7 @@ class DownloaderNewgrounds( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        return self._DownloadFile( connection, file_url )
+        return self._DownloadFile( connection, file_url, response_to_path = True )
         
     
     def GetFileAndTags( self, url ):
@@ -909,9 +913,9 @@ class DownloaderNewgrounds( Downloader ):
         
         connection = self._GetConnection( file_url )
         
-        file = self._DownloadFile( connection, file_url )
+        temp_path = self._DownloadFile( connection, file_url, response_to_path = True )
         
-        return ( file, tags )
+        return ( temp_path, tags )
         
     
     def GetTags( self, url ):
@@ -1035,7 +1039,7 @@ class DownloaderPixiv( Downloader ):
         
         headers = { 'Referer' : referral_url }
         
-        return self._DownloadFile( connection, image_url, headers = headers )
+        return self._DownloadFile( connection, image_url, headers = headers, response_to_path = True )
         
     
     def GetFileAndTags( self, url ):
@@ -1046,9 +1050,9 @@ class DownloaderPixiv( Downloader ):
         
         headers = { 'Referer' : referral_url }
         
-        file = self._DownloadFile( connection, image_url, headers = headers )
+        temp_path = self._DownloadFile( connection, image_url, headers = headers, response_to_path = True )
         
-        return ( file, tags )
+        return ( temp_path, tags )
         
     
     def GetTags( self, url ):

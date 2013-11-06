@@ -44,7 +44,7 @@ class FakeHTTPConnection():
     
     def GetCookies( self ): return self._cookies
     
-    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True ):
+    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True, response_to_path = False ):
         
         parse_result = urlparse.urlparse( url )
         
@@ -54,15 +54,29 @@ class FakeHTTPConnection():
         
         if query != '': request += '?' + query
         
-        return self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects )
+        response = self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects, response_to_path = response_to_path )
+        
+        return response
         
     
-    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True ):
+    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True, response_to_path = False ):
         
         response = self._responses[ ( request_type, request ) ]
         
         if issubclass( type( response ), Exception ): raise response
-        else: return response
+        else:
+            
+            if response_to_path:
+                
+                temp_path = HC.GetTempPath()
+                
+                with open( temp_path, 'wb' ) as f: f.write( response )
+                
+                response = temp_path
+                
+            
+            return response
+            
         
     
     def SetCookie( self, key, value ): self._cookies[ key ] = value

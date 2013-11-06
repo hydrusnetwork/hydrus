@@ -44,3 +44,57 @@ class TestFunctions( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+class TestManagers( unittest.TestCase ):
+    
+    def test_undo( self ):
+        
+        hash_1 = os.urandom( 32 )
+        hash_2 = os.urandom( 32 )
+        hash_3 = os.urandom( 32 )
+        
+        command_1 = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
+        command_2 = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
+        command_3 = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
+        
+        command_1_inverted = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
+        command_2_inverted = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
+        
+        undo_manager = CC.UndoManager()
+        
+        #
+        
+        undo_manager.AddCommand( 'content_updates', command_1 )
+        
+        self.assertEqual( ( u'undo local files->archive 1 files', None ), undo_manager.GetUndoRedoStrings() )
+        
+        undo_manager.AddCommand( 'content_updates', command_2 )
+        
+        self.assertEqual( ( u'undo local files->inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
+        
+        undo_manager.Undo()
+        
+        self.assertEqual( ( u'undo local files->archive 1 files', u'redo local files->inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
+        
+        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        
+        undo_manager.Redo()
+        
+        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
+        
+        self.assertEqual( ( u'undo local files->inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
+        
+        undo_manager.Undo()
+        
+        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        
+        undo_manager.Undo()
+        
+        self.assertEqual( HC.app.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
+        
+        self.assertEqual( ( None, u'redo local files->archive 1 files' ), undo_manager.GetUndoRedoStrings() )
+        
+        undo_manager.AddCommand( 'content_updates', command_3 )
+        
+        self.assertEqual( ( u'undo local files->archive 2 files', None ), undo_manager.GetUndoRedoStrings() )
+        
+    

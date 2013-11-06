@@ -34,9 +34,7 @@ class Controller( wx.App ):
     
     def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
-    def AddSession( self, service_identifier, account_identifier ): return self._session_manager.AddSession( service_identifier, account_identifier )
-    
-    def GetAccount( self, session_key, service_identifier ): return self._session_manager.GetAccount( session_key, service_identifier )
+    def GetSessionManager( self ): return self._session_manager
     
     def EventExit( self, event ): self._tbicon.Destroy()
     
@@ -197,6 +195,7 @@ class Controller( wx.App ):
         HC.DAEMONWorker( 'DeleteOrphans', ServerDB.DAEMONDeleteOrphans, period = 86400 )
         HC.DAEMONWorker( 'GenerateUpdates', ServerDB.DAEMONGenerateUpdates, period = 1200 )
         HC.DAEMONWorker( 'CheckDataUsage', ServerDB.DAEMONCheckDataUsage, period = 86400 )
+        HC.DAEMONWorker( 'UPnP', ServerDB.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 )
         
     
     def Write( self, action, *args, **kwargs ):

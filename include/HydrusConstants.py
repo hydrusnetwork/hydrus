@@ -39,7 +39,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 11
-SOFTWARE_VERSION = 90
+SOFTWARE_VERSION = 91
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -78,6 +78,22 @@ CONTENT_UPDATE_RATING = 9
 CONTENT_UPDATE_RATINGS_FILTER = 10
 CONTENT_UPDATE_DENY_PEND = 11
 CONTENT_UPDATE_DENY_PETITION = 12
+
+content_update_string_lookup = {}
+
+content_update_string_lookup[ CONTENT_UPDATE_ADD ] = 'add'
+content_update_string_lookup[ CONTENT_UPDATE_DELETE ] = 'delete'
+content_update_string_lookup[ CONTENT_UPDATE_PENDING ] = 'pending'
+content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PENDING ] = 'rescind pending'
+content_update_string_lookup[ CONTENT_UPDATE_PETITION ] = 'petition'
+content_update_string_lookup[ CONTENT_UPDATE_RESCIND_PETITION ] = 'rescind petition'
+content_update_string_lookup[ CONTENT_UPDATE_EDIT_LOG ] = 'edit log'
+content_update_string_lookup[ CONTENT_UPDATE_ARCHIVE ] = 'archive'
+content_update_string_lookup[ CONTENT_UPDATE_INBOX ] = 'inbox'
+content_update_string_lookup[ CONTENT_UPDATE_RATING ] = 'rating'
+content_update_string_lookup[ CONTENT_UPDATE_RATINGS_FILTER ] = 'incomplete ratings'
+content_update_string_lookup[ CONTENT_UPDATE_DENY_PEND ] = 'deny pend'
+content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
 
 IMPORT_FOLDER_TYPE_DELETE = 0
 IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
@@ -518,21 +534,25 @@ DEFAULT_OPTIONS[ SERVER_ADMIN ] = {}
 DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'max_monthly_data' ] = None
 DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'max_storage' ] = None
 DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'message' ] = 'hydrus server administration service'
+DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'upnp' ] = None
 
 DEFAULT_OPTIONS[ FILE_REPOSITORY ] = {}
 DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'max_monthly_data' ] = None
 DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'max_storage' ] = None
 DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'log_uploader_ips' ] = False
 DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'message' ] = 'hydrus file repository'
+DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'upnp' ] = None
 
 DEFAULT_OPTIONS[ TAG_REPOSITORY ] = {}
 DEFAULT_OPTIONS[ TAG_REPOSITORY ][ 'max_monthly_data' ] = None
 DEFAULT_OPTIONS[ TAG_REPOSITORY ][ 'message' ] = 'hydrus tag repository'
+DEFAULT_OPTIONS[ TAG_REPOSITORY ][ 'upnp' ] = None
 
 DEFAULT_OPTIONS[ MESSAGE_DEPOT ] = {}
 DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'max_monthly_data' ] = None
 DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'max_storage' ] = None
 DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'message' ] = 'hydrus message depot'
+DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'upnp' ] = None
 
 # Hydrus pubsub
 
@@ -697,6 +717,30 @@ def ConvertPortablePathToAbsPath( portable_path ):
     
     if os.path.exists( abs_path ): return abs_path
     else: return None
+    
+def ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers_to_content_updates ):
+    
+    num_files = 0
+    actions = set()
+    locations = set()
+    
+    for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+        
+        locations.add( service_identifier.GetName() )
+        
+        for content_update in content_updates:
+            
+            ( data_type, action, row ) = content_update.ToTuple()
+            
+            actions.add( content_update_string_lookup[ action ] )
+            
+            num_files += len( content_update.GetHashes() )
+            
+        
+    
+    s = ', '.join( locations ) + '->' + ', '.join( actions ) + ' ' + ConvertIntToPrettyString( num_files ) + ' files'
+    
+    return s
     
 def ConvertShortcutToPrettyShortcut( modifier, key, action ):
     
@@ -1501,7 +1545,7 @@ class Account( HydrusYAMLBase ):
     
     def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._created ) + os.linesep + self._account_type.ConvertToString( self._used_data ) + os.linesep + 'which '+ ConvertTimestampToPrettyExpires( self._expires )
     
-    def GetAccountIdentifier( self ): return AccountIdentifier( account_id = account_id )
+    def GetAccountIdentifier( self ): return AccountIdentifier( account_id = self._account_id )
     
     def GetAccountType( self ): return self._account_type
     
@@ -1596,7 +1640,7 @@ class AccountIdentifier( HydrusYAMLBase ):
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
     
-    def __hash__( self ): return ( self._hash, self._tag, self._account_id ).__hash__()
+    def __hash__( self ): return ( self._access_key, self._hash, self._tag, self._account_id ).__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
@@ -2108,7 +2152,7 @@ class Predicate():
     
     def GetPredicateType( self ): return self._predicate_type
     
-    def GetUnicode( self ):
+    def GetUnicode( self, with_count = True ):
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM:
             
@@ -2243,7 +2287,7 @@ class Predicate():
                     
                 
             
-            if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            if with_count and self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
             
         elif self._predicate_type == PREDICATE_TYPE_TAG:
             
@@ -2270,7 +2314,7 @@ class Predicate():
             
             base += tag
             
-            if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            if with_count and self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
             
         elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
             

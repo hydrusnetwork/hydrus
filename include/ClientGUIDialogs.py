@@ -2340,7 +2340,7 @@ class DialogInputShortcut( Dialog ):
             
             self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
             
-            self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last' ] )
+            self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo' ] )
             
             self._ok = wx.Button( self, label='Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )

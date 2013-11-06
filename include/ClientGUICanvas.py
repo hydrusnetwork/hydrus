@@ -142,6 +142,8 @@ class AnimationBar( wx.Window ):
     
     def EventMouse( self, event ):
         
+        CC.CAN_HIDE_MOUSE = False
+        
         ( my_width, my_height ) = self.GetClientSize()
         
         if event.Dragging() or event.ButtonDown():
@@ -164,19 +166,6 @@ class AnimationBar( wx.Window ):
             self._media_window.GotoFrame( self._current_frame_index )
             
             if not should_pause: self._media_window.Play()
-            
-            self.GetParent().GetParent().KeepCursorAlive()
-            
-        else:
-            
-            screen_position = self.ClientToScreen( event.GetPosition() )
-            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-            
-            event.SetX( x )
-            event.SetY( y )
-            
-            event.ResumePropagation( 1 )
-            event.Skip()
             
         
     
@@ -666,8 +655,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         self._just_started = True
         
-        self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
-        
         self.Show( True )
         
         if self.IsMaximized() and HC.options[ 'fullscreen_borderless' ]:
@@ -1029,6 +1016,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
     def EventDrag( self, event ):
         
+        CC.CAN_HIDE_MOUSE = True
+        
         self._focus_holder.SetFocus()
         
         if event.Dragging() and self._last_drag_coordinates is not None:
@@ -1096,6 +1085,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
     
     def EventTimerCursorHide( self, event ):
+        
+        if not CC.CAN_HIDE_MOUSE: return
         
         if self._menu_open: self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
         else: self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
@@ -1216,17 +1207,17 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
             
-            if event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Delete()
-            elif event.KeyCode in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): self._PausePlaySlideshow()
-            elif event.KeyCode in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
-            elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
-            elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
-            elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
-            elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+            ( modifier, key ) = HC.GetShortcutFromEvent( event )
+            
+            if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self._Delete()
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): self._PausePlaySlideshow()
+            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
+            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
+            elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
                 with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
             else:
-                
-                ( modifier, key ) = HC.GetShortcutFromEvent( event )
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
@@ -1591,13 +1582,24 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                 
             else:
                 
-                if event.KeyCode in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
-                elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
-                elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
-                elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
-                elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+                if modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
+                elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
+                elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
+                elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+                elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
                     with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
-                else: event.Skip()
+                else:
+                    
+                    key_dict = HC.options[ 'shortcuts' ][ modifier ]
+                    
+                    if key in key_dict:
+                        
+                        action = key_dict[ key ]
+                        
+                        self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                        
+                    else: event.Skip()
+                    
                 
             
         
@@ -1834,20 +1836,20 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
         
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
+        
+            ( modifier, key ) = HC.GetShortcutFromEvent( event )
             
-            if event.KeyCode == wx.WXK_SPACE: self._Keep()
-            elif event.KeyCode in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
-            elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
-            elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
-            elif event.KeyCode == wx.WXK_BACK: self.EventBack( event )
-            elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
-            elif event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
-            elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+            if modifier == wx.ACCEL_NORMAL and key == wx.WXK_SPACE: self._Keep()
+            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
+            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
+            elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
+            elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self.EventBack( event )
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
+            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
                 with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
-            elif not event.ShiftDown() and event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
+            elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
-                
-                ( modifier, key ) = HC.GetShortcutFromEvent( event )
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
@@ -2049,6 +2051,8 @@ class FullscreenPopout( wx.Frame ):
         
     
     def EventDrag( self, event ):
+        
+        CC.CAN_HIDE_MOUSE = True
         
         if event.Dragging() and self._last_drag_coordinates is not None:
             
@@ -2983,15 +2987,28 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     def EventCharHook( self, event ):
         
-        if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
-        elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._ProcessAction( 'equal' )
-        elif event.KeyCode in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT ): self._ProcessAction( 'left' )
-        elif event.KeyCode in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ): self._ProcessAction( 'right' )
-        elif event.KeyCode == wx.WXK_BACK: self._GoBack()
-        elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
-        elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+        ( modifier, key ) = HC.GetShortcutFromEvent( event )
+        
+        if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Skip()
+        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._ProcessAction( 'equal' )
+        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT ): self._ProcessAction( 'left' )
+        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ): self._ProcessAction( 'right' )
+        elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self._GoBack()
+        elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+        elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
             with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
-        else: event.Skip()
+        else:
+            
+            key_dict = HC.options[ 'shortcuts' ][ modifier ]
+            
+            if key in key_dict:
+                
+                action = key_dict[ key ]
+                
+                self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                
+            else: event.Skip()
+            
         
     
     def EventMenu( self, event ):
@@ -3225,6 +3242,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         def EventDrag( self, event ):
             
+            CC.CAN_HIDE_MOUSE = True
+            
             if wx.Window.FindFocus() != self: self.SetFocus()
             
             if event.Dragging() and self._last_drag_coordinates is not None:
@@ -3302,7 +3321,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
                 
-                if event.KeyCode not in keys_i_want_to_bump_up_regardless and key in key_dict:
+                if key not in keys_i_want_to_bump_up_regardless and key in key_dict:
                     
                     action = key_dict[ key ]
                     
@@ -3310,10 +3329,10 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     
                 else:
                     
-                    if event.KeyCode in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
-                    elif event.KeyCode in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
-                    elif event.KeyCode == ord( 'Z' ): self._ZoomSwitch()
-                    elif event.KeyCode == ord( 'C' ) and event.CmdDown():
+                    if modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
+                    elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
+                    elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
+                    elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
                         with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
                     else: self.GetParent().ProcessEvent( event )
                     
@@ -3354,7 +3373,12 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
             
         
-        def EventTimerCursorHide( self, event ): self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+        def EventTimerCursorHide( self, event ):
+            
+            if not CC.CAN_HIDE_MOUSE: return
+            
+            self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+            
         
         def RefreshBackground( self ): self._DrawBackgroundBitmap()
         
