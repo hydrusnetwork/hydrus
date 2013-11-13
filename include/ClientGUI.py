@@ -113,7 +113,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self.Show( True )
         
-        wx.CallAfter( self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        # as we are in oninit, callafter and calllater( 0 ) are different
+        # later waits until the mainloop is running, I think.
+        # after seems to execute synchronously
+        wx.CallLater( 0, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         
     
     def _THREADUploadPending( self, service_identifier ):

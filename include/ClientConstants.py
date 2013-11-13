@@ -190,7 +190,7 @@ CLIENT_DEFAULT_OPTIONS[ 'preview_cache_size' ] = 25 * 1048576
 CLIENT_DEFAULT_OPTIONS[ 'fullscreen_cache_size' ] = 200 * 1048576
 CLIENT_DEFAULT_OPTIONS[ 'thumbnail_dimensions' ] = [ 150, 125 ]
 CLIENT_DEFAULT_OPTIONS[ 'password' ] = None
-CLIENT_DEFAULT_OPTIONS[ 'num_autocomplete_chars' ] = 1
+CLIENT_DEFAULT_OPTIONS[ 'num_autocomplete_chars' ] = 2
 CLIENT_DEFAULT_OPTIONS[ 'gui_capitalisation' ] = False
 
 system_predicates = {}

@@ -38,18 +38,7 @@ class Controller( wx.App ):
     
     def EventExit( self, event ): self._tbicon.Destroy()
     
-    def EventPubSub( self, event ):
-        
-        pubsubs_queue = HC.pubsub.GetQueue()
-        
-        ( callable, args, kwargs ) = pubsubs_queue.get()
-        
-        try: callable( *args, **kwargs )
-        except TypeError: pass
-        except Exception as e: HC.ShowException( e )
-        
-        pubsubs_queue.task_done()
-        
+    def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
     
     def OnInit( self ):
         

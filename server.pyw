@@ -49,4 +49,4 @@ HC.shutdown = True
 
 reactor.callFromThread( reactor.stop )
 
-HC.pubsub.pubimmediate( 'shutdown' )
+HC.pubsub.WXpubimmediate( 'shutdown' )

@@ -609,46 +609,63 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 half_complete_tag = search_text
                 
             
-            if len( half_complete_tag ) >= num_first_letters:
+            if half_complete_tag == '': matches = [] # a query like 'namespace:'
+            else:
                 
-                if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
+                media = self._media_callable()
+                
+                # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
+                if media is None or not self._synchronised.IsOn():
                     
-                    self._first_letters = half_complete_tag
-                    
-                    media = self._media_callable()
-                    
-                    # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
-                    if media is None or not self._synchronised.IsOn(): self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                    if len( search_text ) < num_first_letters:
+                        
+                        results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                        
+                        matches = results.GetMatches( half_complete_tag )
+                        
                     else:
                         
-                        tags_managers = []
-                        
-                        for m in media:
+                        if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
                             
-                            if m.IsCollection(): tags_managers.extend( m.GetSingletonsTagsManagers() )
-                            else: tags_managers.append( m.GetTagsManager() )
+                            self._first_letters = half_complete_tag
+                            
+                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                             
                         
-                        lists_of_tags = []
-                        
-                        if self._include_current: lists_of_tags += [ list( tags_manager.GetCurrent( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
-                        if self._include_pending: lists_of_tags += [ list( tags_manager.GetPending( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
-                        
-                        all_tags_flat_iterable = itertools.chain.from_iterable( lists_of_tags )
-                        
-                        all_tags_flat = [ tag for tag in all_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
-                        
-                        if self._current_namespace != '': all_tags_flat = [ tag for tag in all_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
-                        
-                        tags_to_count = collections.Counter( all_tags_flat )
-                        
-                        self._cached_results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
+                        matches = self._cached_results.GetMatches( half_complete_tag )
                         
                     
+                else:
+                    
+                    # it is possible that media will change between calls to this, so don't cache it
+                    # it's also quick as hell, so who cares
+                    
+                    tags_managers = []
+                    
+                    for m in media:
+                        
+                        if m.IsCollection(): tags_managers.extend( m.GetSingletonsTagsManagers() )
+                        else: tags_managers.append( m.GetTagsManager() )
+                        
+                    
+                    lists_of_tags = []
+                    
+                    if self._include_current: lists_of_tags += [ list( tags_manager.GetCurrent( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
+                    if self._include_pending: lists_of_tags += [ list( tags_manager.GetPending( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
+                    
+                    all_tags_flat_iterable = itertools.chain.from_iterable( lists_of_tags )
+                    
+                    all_tags_flat = [ tag for tag in all_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
+                    
+                    if self._current_namespace != '': all_tags_flat = [ tag for tag in all_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
+                    
+                    tags_to_count = collections.Counter( all_tags_flat )
+                    
+                    results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
+                    
+                    matches = results.GetMatches( half_complete_tag )
+                    
                 
-                matches = self._cached_results.GetMatches( half_complete_tag )
-                
-            else: matches = []
             
             if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ), None ) )
             
@@ -782,7 +799,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 half_complete_tag = search_text
                 
             
-            if len( half_complete_tag ) >= num_first_letters:
+            if len( search_text ) < num_first_letters:
+                
+                results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, tag = search_text, collapse = False )
+                
+                matches = results.GetMatches( half_complete_tag )
+                
+            else:
                 
                 if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
                     
@@ -793,7 +816,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
                 
-            else: matches = []
             
             # do the 'put whatever they typed in at the top, whether it has count or not'
             # now with sibling support!
@@ -2356,7 +2378,7 @@ class PopupMessageGauge( PopupMessage ):
         
     
     def SetInfo( self, job_key, range, value, message ):
-        
+        print( value )
         if job_key == self._job_key:
             
             if value is None:

@@ -9,6 +9,7 @@ from include import TestDialogs
 from include import TestDB
 from include import TestFunctions
 from include import TestHydrusDownloading
+from include import TestHydrusEncryption
 from include import TestHydrusSessions
 from include import TestHydrusTags
 from include import TestServer
@@ -58,6 +59,7 @@ class App( wx.App ):
         if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
         if run_all or only_run == 'dialogs': suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
         if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
+        if run_all or only_run == 'encryption': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusEncryption ) )
         if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
         if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusDownloading ) )
         if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
@@ -136,4 +138,4 @@ if __name__ == '__main__':
     
     HC.shutdown = True
     
-    HC.pubsub.pubimmediate( 'shutdown' )
+    HC.pubsub.WXpubimmediate( 'shutdown' )

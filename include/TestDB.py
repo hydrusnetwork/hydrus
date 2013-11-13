@@ -155,6 +155,26 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( pred, read_pred )
         
+        #
+        
+        result = self._read( 'autocomplete_tags', tag = 'car' )
+        
+        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'car' ), 1 )
+        
+        ( read_pred, ) = result.GetMatches( 'car' )
+        
+        self.assertEqual( read_pred.GetCount(), 1 )
+        
+        self.assertEqual( pred, read_pred )
+        
+        #
+        
+        result = self._read( 'autocomplete_tags', tag = 'c' )
+        
+        read_preds = result.GetMatches( 'c' )
+        
+        self.assertEqual( read_preds, [] )
+        
     
     def test_booru( self ):
         

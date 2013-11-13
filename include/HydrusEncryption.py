@@ -6,6 +6,7 @@ import Crypto.PublicKey.RSA
 import hashlib
 import HydrusConstants as HC
 import os
+import potr
 import time
 import traceback
 import wx
@@ -208,3 +209,48 @@ def UnpadAES( message ):
     
     return message[:index_of_correct_end + 1]
     
+# I based this on the excellent article by Darrik L Mazey, here:
+# https://blog.darmasoft.net/2013/06/30/using-pure-python-otr.html
+
+DEFAULT_POLICY_FLAGS = {}
+
+DEFAULT_POLICY_FLAGS[ 'ALLOW_V1' ] = False
+DEFAULT_POLICY_FLAGS[ 'ALLOW_V2' ] = True
+DEFAULT_POLICY_FLAGS[ 'REQUIRE_ENCRYPTION' ] = True
+
+GenerateOTRKey = potr.compatcrypto.generateDefaultKey
+def LoadOTRKey( stream ): return potr.crypt.PK.parsePrivateKey( stream )[0]
+def DumpOTRKey( key ): return key.serializePrivateKey()
+
+class HydrusOTRContext( potr.context.Context ):
+    
+    def getPolicy( self, key ):
+        
+        if key in DEFAULT_POLICY_FLAGS: return DEFAULT_POLICY_FLAGS[ key ]
+        else: return False
+        
+    
+    def inject( self, msg, appdata = None ):
+        
+        inject_catcher = appdata
+        
+        inject_catcher.write( msg )
+        
+    
+class HydrusOTRAccount( potr.context.Account ):
+    
+    def __init__( self, name, privkey, trusts ):
+        
+        potr.context.Account.__init__( self, name, 'hydrus network otr', 1024, privkey )
+        
+        self.trusts = trusts
+        
+    
+    def saveTrusts( self ):
+        
+        HC.app.Write( 'otr_trusts', self.name, self.trusts )
+        
+    
+    # I need an accounts manager so there is only ever one copy of an account
+    # it should fetch name, privkey and trusts from db on bootup
+    # savettrusts should just spam to the db because it ain't needed that much.

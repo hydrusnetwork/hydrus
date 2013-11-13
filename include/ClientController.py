@@ -109,24 +109,10 @@ class Controller( wx.App ):
     
     def EventPubSub( self, event ):
         
-        pubsubs_queue = HC.pubsub.GetQueue()
-        
-        ( callable, args, kwargs ) = pubsubs_queue.get()
-        
         HC.busy_doing_pubsub = True
         
-        try: callable( *args, **kwargs )
-        except wx._core.PyDeadObjectError: pass
-        except TypeError as e:
-            
-            if '_wxPyDeadObject' not in str( e ): raise
-            
-        finally:
-            
-            pubsubs_queue.task_done()
-            
-            HC.busy_doing_pubsub = False
-            
+        try: HC.pubsub.WXProcessQueueItem()
+        finally: HC.busy_doing_pubsub = False
         
     
     def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
@@ -169,7 +155,7 @@ class Controller( wx.App ):
         
     
     def OnInit( self ):
-        
+    
         HC.app = self
         
         self._local_service = None
@@ -289,7 +275,7 @@ class Controller( wx.App ):
             self.SetSplashText( 'starting daemons' )
             
             if HC.is_first_start: self._gui.DoFirstStart()
-            if HC.is_db_updated: wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
+            if HC.is_db_updated: wx.CallLater( 0, HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
             
             self.RestartServer()
             self._db.StartDaemons()
@@ -471,12 +457,10 @@ class Controller( wx.App ):
     
     def WaitUntilGoodTimeToUseGUIThread( self ):
         
-        pubsubs_queue = HC.pubsub.GetQueue()
-        
         while True:
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
-            elif pubsubs_queue.qsize() == 0 and not HC.busy_doing_pubsub: return
+            elif HC.pubsub.NotBusy() and not HC.busy_doing_pubsub: return
             else: time.sleep( 0.0001 )
             
         

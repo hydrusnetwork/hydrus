@@ -1601,7 +1601,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         else: return result
         
     
-    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
+    def _GetAutocompleteTags( self, c, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, tag = '', half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
         
         tag_service_id = self._GetServiceId( c, tag_service_identifier )
         file_service_id = self._GetServiceId( c, file_service_identifier )
@@ -1676,6 +1676,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 predicates_phrase = 'tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
                 
             
+        elif len( tag ) > 0:
+            
+            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+            
+            predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id = ' + HC.u( tag_id )
+            
         else:
             
             predicates_phrase = '1 = 1'
@@ -1689,7 +1695,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             siblings_manager = HC.app.GetTagSiblingsManager()
             
-            all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
+            if len( half_complete_tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
+            elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
+            else: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( '' )
             
             sibling_results = [ self._GetNamespaceIdTagId( c, sibling_tag ) for sibling_tag in all_associated_sibling_tags ]
             
@@ -1700,7 +1708,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         cache_results = []
         
-        if len( half_complete_tag ) > 0:
+        if len( half_complete_tag ) > 0 or len( tag ) > 0:
             
             for ( namespace_id, tag_ids ) in HC.BuildKeyToListDict( results ).items(): cache_results.extend( c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ';', ( tag_service_id, file_service_id, namespace_id ) ).fetchall() )
             
@@ -4923,6 +4931,15 @@ class DB( ServiceDB ):
                     shortcuts[ wx.ACCEL_CTRL ][ ord( 'Y' ) ] = 'redo'
                     
                     HC.options[ 'shortcuts' ] = shortcuts
+                    
+                    c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+                    
+                
+                if version < 92:
+                    
+                    ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+                    
+                    HC.options[ 'num_autocomplete_chars' ] = 2
                     
                     c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
                     
