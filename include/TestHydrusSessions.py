@@ -11,6 +11,8 @@ class TestSessions( unittest.TestCase ):
     
     def test_server( self ):
         
+        discard = HC.app.GetWrite( 'session' ) # just to discard gumph from testserver
+        
         session_key_1 = os.urandom( 32 )
         service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
         

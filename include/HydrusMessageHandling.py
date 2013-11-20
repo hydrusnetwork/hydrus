@@ -3,12 +3,16 @@ import Crypto.Signature.PKCS1_v1_5
 import hashlib
 import HydrusConstants as HC
 import HydrusEncryption
+import HydrusServer
 import os
+import potr
 import time
 import traceback
 import wx
 import yaml
 import zlib
+from twisted.internet import reactor
+from twisted.internet.protocol import ClientCreator
 
 def PackageStatusForDelivery( status, public_key_text ):
     
@@ -155,5 +159,162 @@ class Message( HC.HydrusYAMLBase ):
         verifier = Crypto.Signature.PKCS1_v1_5.new( public_key )
         
         return verifier.verify( hash_object, self._signature )
+        
+    
+class IMManager():
+    
+    def __init__( self ):
+        
+        self._accounts = {}
+        self._contexts = {}
+        self._persistent_connections = {}
+        self._temporary_connections = {}
+        
+        # go fetch all accounts from the db
+        
+        # set up many pubsubs
+        
+        # start up some sort of daemon to keep our accounts logged in
+        
+        pass
+        
+    
+    def _GetContext( self, identifier_local, name_local, identifier_remote, name_remote ):
+        
+        if ( identifier_remote, name_remote ) not in self._contexts[ identifier_local ]:
+            
+            account = self._accounts[ ( identifier_local, name_local ) ]
+            
+            context = HydrusEncryption.HydrusOTRContext( account, identifier_remote, name_remote )
+            
+            self._contexts[ ( identifier_local, name_local, identifier_remote, name_remote ) ] = context
+            
+        
+        context = self._contexts[ identifier_local ][ ( identifier_remote, name_remote ) ]
+        
+        return context
+        
+    
+    def LoginPersistentConnections( self ):
+        
+        # this is on a daemon thread, so move to twisted
+        
+        for ( identifier, name ) in self._accounts.keys():
+            
+            if ( identifier, name ) not in self._persistent_connections:
+                
+                # get host, port for that identity
+                
+                creator = ClientCreator( reactor, HydrusServer.MessagingClientProtocol )
+                
+                deferred = creator.connectTCP( host, port )
+                
+                # deferred is called with the connection, or an error
+                # callRemote to register with session key and whatnot
+                
+                self._persistent_connections[ ( identifier, name ) ] = connection
+                
+            
+        
+    
+    def ReceiveMessage( self, identifier_from, name_from, identifier_to, name_to, message ):
+        
+        # currently on wx loop
+        # move it to the twisted loop
+        
+        if ( identifier_from, name_from, identifier_to, name_to ) not in self._temporary_connections:
+            
+            self._temporary_connections[ ( identifier_from, name_from, identifier_to, name_to ) ] = self._persistent_connections[ ( identifier_to, name_to ) ]
+            # this should have a better error, if the _to doesn't exist
+            # we should really just disregard it, and any other weirdness
+            
+        
+        context = self._GetContext( identifier_to, name_to, identifier_from, name_from )
+        
+        response = context.receiveMessage( message )
+        
+        if response is not None:
+            
+            ( decrypted_message, gumpf ) = response
+            
+            message_object = yaml.safe_load( decrypted_message )
+            
+            # do the pubsub
+            
+        
+    
+    def RemovePersistentConnection( self, identifier, name ):
+        
+        # if it is still alive, loseConnection or whatever.
+        # remove it
+        # pubsub the login daemon
+        
+        pass
+        
+    
+    def RemoveTemporaryConnection( self, identifier_from, name_from, identifier_to, name_to ):
+        
+        # if it is still alive, loseConnection or whatever.
+        # remove it
+        
+        pass
+        
+    
+    def SendMessage( self, identifier_from, name_from, identifier_to, name_to, message ):
+        
+        context = self._GetContext( identifier_from, name_from, identifier_to, name_to )
+        
+        context.sendMessage( potr.context.FRAGMENT_SEND_ALL, message )
+        
+    
+    def SendEncryptedMessage( self, identifier_from, name_from, identifier_to, name_to, message ):
+        
+        # currently on wx loop
+        # move it to the twisted loop
+        
+        connection = self._temporary_connections[ ( identifier_from, name_from, identifier_to, name_to ) ]
+        
+        connection.callRemote( HydrusServerAMP.IMMessageServer, identifier_to = identifier_to, name_to = name_to, message = message )
+        
+        # if it breaks, we should pubsub that it broke
+        
+    
+    def StartTalking( self, identifier_from, name_from, identifier_to, name_to ):
+        
+        # currently on wx loop
+        # move it to the twisted loop
+        
+        # fetch host and port for that id
+        
+        creator = ClientCreator( reactor, HydrusServer.MessagingClientProtocol )
+        
+        deferred = creator.connectTCP( host, port )
+        
+        # deferred is called with the connection, or an error
+        # callRemote to register identifier_from and name_from as temp login
+        # then add to temp_connections
+        
+        self._temporary_connections[ ( identifier_from, name_from, identifier_to, name_to ) ] = connection
+        
+        message = '' # this is just to get the OTR handshake going; it'll never be sent
+        
+        connection.callRemote( HydrusServerAMP.IMMessageServer, identifier_to = identifier_to, name_to = name_to, message = message )
+        
+        # how do I detect when we are ready to do encrypted comms?
+        # I can check periodically context.status, but that is a _little_ bleh
+        # I can write a pubsub in the setStatus thing in context
+        # check that article again, or the code, on the exact name
+        
+        # do a pubsub to say we are ready to do encrypted comms
+        
+        # if it fails, we should pubsub that it broke
+        
+    
+    def StopTalking( self, identifier, name ):
+        
+        # close temp connection
+        # 
+        
+        pass
         
     

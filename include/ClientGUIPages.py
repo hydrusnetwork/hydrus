@@ -138,6 +138,7 @@ class PageLog( PageBase, wx.Panel ):
             
             ( message_string, hashes ) = info
             
+        else: return # gauge
         
         self._AddEntry( message_type_string, message_string, timestamp )
         

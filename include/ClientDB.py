@@ -3321,26 +3321,49 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     if data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
                         
-                        if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
-                        else: ( tag, hashes ) = row
-                        
-                        if tag == '': continue
-                        
-                        ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-                        
-                        hash_ids = self._GetHashIds( c, hashes )
-                        
-                        if action == HC.CONTENT_UPDATE_ADD: mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                        elif action == HC.CONTENT_UPDATE_DELETE: deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                        elif action == HC.CONTENT_UPDATE_PENDING: pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                        elif action == HC.CONTENT_UPDATE_PETITION:
+                        if action == HC.CONTENT_UPDATE_ADVANCED:
                             
-                            reason_id = self._GetReasonId( c, reason )
+                            ( sub_action, sub_row ) = row
                             
-                            petitioned_mappings_ids.append( ( namespace_id, tag_id, hash_ids, reason_id ) )
+                            if sub_action == 'copy':
+                                
+                                ( tag, hashes, service_identifier_target ) = sub_row
+                                
+                                pass
+                                
+                            elif sub_action == 'delete':
+                                
+                                ( tag, hashes ) = sub_row
+                                
+                                # do a raw query to get [ ( namespace_id, tag_id, hash_ids ) ]
+                                # depending on 
+                                
+                                pass
+                                
                             
-                        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                        else:
+                            
+                            if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
+                            else: ( tag, hashes ) = row
+                            
+                            if tag == '': continue
+                            
+                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                            
+                            hash_ids = self._GetHashIds( c, hashes )
+                            
+                            if action == HC.CONTENT_UPDATE_ADD: mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_DELETE: deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_PENDING: pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_PETITION:
+                                
+                                reason_id = self._GetReasonId( c, reason )
+                                
+                                petitioned_mappings_ids.append( ( namespace_id, tag_id, hash_ids, reason_id ) )
+                                
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            
                         
                     elif data_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS:
                         
@@ -4944,11 +4967,12 @@ class DB( ServiceDB ):
                     c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
                     
                 
-                unknown_account = HC.GetUnknownAccount()
-                
-                unknown_account.MakeStale()
-                
-                c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
+                for ( service_id, account ) in c.execute( 'SELECT service_id, account FROM accounts;' ).fetchall():
+                    
+                    account.MakeStale()
+                    
+                    c.execute( 'UPDATE accounts SET account = ? WHERE service_id = ?;', ( account, service_id ) )
+                    
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
                 

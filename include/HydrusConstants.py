@@ -39,7 +39,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 11
-SOFTWARE_VERSION = 92
+SOFTWARE_VERSION = 93
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -78,6 +78,7 @@ CONTENT_UPDATE_RATING = 9
 CONTENT_UPDATE_RATINGS_FILTER = 10
 CONTENT_UPDATE_DENY_PEND = 11
 CONTENT_UPDATE_DENY_PETITION = 12
+CONTENT_UPDATE_ADVANCED = 13
 
 content_update_string_lookup = {}
 
@@ -724,13 +725,17 @@ def ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers
     actions = set()
     locations = set()
     
+    extra_words = ''
+    
     for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
         
-        locations.add( service_identifier.GetName() )
+        if len( content_updates ) > 0: locations.add( service_identifier.GetName() )
         
         for content_update in content_updates:
             
             ( data_type, action, row ) = content_update.ToTuple()
+            
+            if data_type == CONTENT_DATA_TYPE_MAPPINGS: extra_words = ' tags for'
             
             actions.add( content_update_string_lookup[ action ] )
             
@@ -738,7 +743,7 @@ def ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers
             
         
     
-    s = ', '.join( locations ) + '->' + ', '.join( actions ) + ' ' + ConvertIntToPrettyString( num_files ) + ' files'
+    s = ', '.join( locations ) + '->' + ', '.join( actions ) + extra_words + ' ' + ConvertIntToPrettyString( num_files ) + ' files'
     
     return s
     
@@ -1225,9 +1230,9 @@ class AdvancedHTTPConnection():
         
         service_type = self._service_identifier.GetType()
         
-        server_header = response.getheader( 'Server' )
-        
         service_string = service_string_lookup[ service_type ]
+        
+        server_header = response.getheader( 'Server' )
         
         if server_header is None or service_string not in server_header:
             

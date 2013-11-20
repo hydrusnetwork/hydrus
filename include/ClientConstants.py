@@ -2710,14 +2710,20 @@ class UndoManager():
                 
                 ( data_type, action, row ) = content_update.ToTuple()
                 
-                if action not in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX ): continue
+                if data_type == HC.CONTENT_DATA_TYPE_FILES:
+                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_RESCIND_PETITION ): continue
+                elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                    
+                    if action == HC.CONTENT_UPDATE_RESCIND_PETITION: continue
+                    
+                else: continue
                 
                 filtered_content_update = HC.ContentUpdate( data_type, action, row )
                 
                 filtered_content_updates.append( filtered_content_update )
                 
             
-            if len( content_updates ) > 0:
+            if len( filtered_content_updates ) > 0:
                 
                 filtered_service_identifiers_to_content_updates[ service_identifier ] = filtered_content_updates
                 
@@ -2738,10 +2744,40 @@ class UndoManager():
                 
                 ( data_type, action, row ) = content_update.ToTuple()
                 
-                if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
-                elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
+                inverted_row = row
                 
-                inverted_content_update = HC.ContentUpdate( data_type, inverted_action, row )
+                if data_type == HC.CONTENT_DATA_TYPE_FILES:
+                    
+                    if action == HC.CONTENT_UPDATE_ARCHIVE: inverted_action = HC.CONTENT_UPDATE_INBOX
+                    elif action == HC.CONTENT_UPDATE_INBOX: inverted_action = HC.CONTENT_UPDATE_ARCHIVE
+                    elif action == HC.CONTENT_UPDATE_PENDING: inverted_action = HC.CONTENT_UPDATE_RESCIND_PENDING
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: inverted_action = HC.CONTENT_UPDATE_PENDING
+                    elif action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
+                        
+                        ( hashes, reason ) = row
+                        
+                        inverted_row = hashes
+                        
+                    
+                elif data_type == HC.CONTENT_DATA_TYPE_MAPPINGS:
+                    
+                    if action == HC.CONTENT_UPDATE_ADD: inverted_action = HC.CONTENT_UPDATE_DELETE
+                    elif action == HC.CONTENT_UPDATE_DELETE: inverted_action = HC.CONTENT_UPDATE_ADD
+                    elif action == HC.CONTENT_UPDATE_PENDING: inverted_action = HC.CONTENT_UPDATE_RESCIND_PENDING
+                    elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: inverted_action = HC.CONTENT_UPDATE_PENDING
+                    elif action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        inverted_action = HC.CONTENT_UPDATE_RESCIND_PETITION
+                        
+                        ( tag, hashes, reason ) = row
+                        
+                        inverted_row = ( tag, hashes )
+                        
+                    
+                
+                inverted_content_update = HC.ContentUpdate( data_type, inverted_action, inverted_row )
                 
                 inverted_content_updates.append( inverted_content_update )
                 
@@ -2767,6 +2803,8 @@ class UndoManager():
             if len( service_identifiers_to_content_updates ) == 0: return
             
             inverted_service_identifiers_to_content_updates = self._InvertServiceIdentifiersToContentUpdates( service_identifiers_to_content_updates )
+            
+            if len( inverted_service_identifiers_to_content_updates ) == 0: return
             
             inverted_args = ( inverted_service_identifiers_to_content_updates, )
             

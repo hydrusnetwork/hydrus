@@ -546,9 +546,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             if len( self._edit_log ) > 0: HC.app.Write( 'update_boorus', self._edit_log )
             
-        except Exception as e: wx.MessageBox( 'Saving boorus to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventRemove( self, event ):
@@ -1172,9 +1170,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             if len( self._edit_log ) > 0: HC.app.Write( 'update_contacts', self._edit_log )
             
-        except Exception as e: wx.MessageBox( 'Saving contacts to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     # this isn't used yet!
@@ -1567,9 +1563,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             if len( self._edit_log ) > 0: HC.app.Write( 'update_imageboards', self._edit_log )
             
-        except Exception as e: wx.MessageBox( 'Saving imageboards to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventRemove( self, event ):
@@ -2512,9 +2506,7 @@ class DialogManageNamespaceBlacklists( ClientGUIDialogs.Dialog ):
             
             HC.app.Write( 'namespace_blacklists', info )
             
-        except Exception as e: wx.MessageBox( 'Saving namespace blacklists to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventServiceChanged( self, event ):
@@ -3707,9 +3699,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
-        except Exception as e: wx.MessageBox( 'Saving ratings changes to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def RefreshAcceleratorTable( self ):
@@ -4175,9 +4165,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 HC.app.Write( 'update_server_services', self._service_identifier, self._edit_log )
                 
             
-        except Exception as e: wx.MessageBox( 'Saving boorus to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventRemove( self, event ):
@@ -4635,9 +4623,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if len( self._edit_log ) > 0: HC.app.Write( 'update_services', self._edit_log )
             
-        except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventPageChanging( self, event ):
@@ -5261,9 +5247,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         subscriptions = [ page.GetInfo() for page in all_pages ]
         
         try: HC.app.Write( 'subscriptions', subscriptions )
-        except Exception as e: wx.MessageBox( 'Saving services to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventPageChanging( self, event ):
@@ -5704,9 +5688,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
-        except Exception as e: wx.MessageBox( 'Saving tag parent changes to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventServiceChanged( self, event ):
@@ -6167,9 +6149,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
-        except Exception as e: wx.MessageBox( 'Saving tag sibling changes to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventServiceChanged( self, event ):
@@ -6822,9 +6802,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if len( service_identifiers_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
             
-        except Exception as e: wx.MessageBox( 'Saving mapping changes to DB raised this error: ' + HC.u( e ) )
-        
-        self.EndModal( wx.ID_OK )
+        finally: self.EndModal( wx.ID_OK )
         
     
     def EventServiceChanged( self, event ):

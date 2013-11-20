@@ -2047,7 +2047,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
                     
-                    self._account_type = wx.StaticText( self._permissions_panel )
+                    self._account_type = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER )
                     
                     self._age = ClientGUICommon.Gauge( self._permissions_panel )
                     
@@ -2112,19 +2112,25 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     
                 
+                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                    
+                    self._service_wide_update = wx.Button( self, label = 'perform a service-wide update' )
+                    self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
+                    
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    self._reset = wx.Button( self, label='reset cache' )
+                    self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
+                    
+                
+                if service_type == HC.SERVER_ADMIN:
+                    
+                    self._init = wx.Button( self, label='initialise server' )
+                    self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
+                    
+                
                 if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    if service_type in HC.REPOSITORIES:
-                        
-                        self._reset = wx.Button( self, label='reset cache' )
-                        self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
-                        
-                    
-                    if service_type == HC.SERVER_ADMIN:
-                        
-                        self._init = wx.Button( self, label='initialise server' )
-                        self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
-                        
                     
                     self._refresh = wx.Button( self, label='refresh account' )
                     self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
@@ -2193,15 +2199,29 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     vbox.AddF( self._info_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
-                if service_type in HC.RESTRICTED_SERVICES:
+                if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ]:
                     
                     repo_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                    if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                        
+                        repo_buttons_hbox.AddF( self._service_wide_update, FLAGS_MIXED )
+                        
                     
-                    if service_type in HC.REPOSITORIES: repo_buttons_hbox.AddF( self._reset, FLAGS_MIXED )
+                    if service_type in HC.REPOSITORIES:
+                        
+                        repo_buttons_hbox.AddF( self._reset, FLAGS_MIXED )
+                        
                     
-                    if service_type == HC.SERVER_ADMIN: repo_buttons_hbox.AddF( self._init, FLAGS_MIXED )
+                    if service_type == HC.SERVER_ADMIN:
+                        
+                        repo_buttons_hbox.AddF( self._init, FLAGS_MIXED )
+                        
                     
-                    repo_buttons_hbox.AddF( self._refresh, FLAGS_MIXED )
+                    if service_type in HC.RESTRICTED_SERVICES:
+                        
+                        repo_buttons_hbox.AddF( self._refresh, FLAGS_MIXED )
+                        
                     
                     vbox.AddF( repo_buttons_hbox, FLAGS_BUTTON_SIZERS )
                     
@@ -2262,6 +2282,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 account_type = account.GetAccountType()
                 
                 self._account_type.SetLabel( account_type.ConvertToString() )
+                self._account_type.Wrap( 400 )
                 
                 if service_type in HC.REPOSITORIES:
                     
@@ -2415,6 +2436,18 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._num_local_thumbs += count
                 
                 self._DisplayNumThumbs()
+                
+            
+        
+        def EventServiceWideUpdate( self, event ):
+            
+            wx.MessageBox( 'This feature is not yet ready!' )
+            
+            return
+            
+            with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_identifier ) as dlg:
+                
+                dlg.ShowModal()
                 
             
         

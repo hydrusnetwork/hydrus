@@ -11,6 +11,7 @@ import os
 import random
 import re
 import shutil
+import stat
 import string
 import subprocess
 import threading
@@ -116,6 +117,207 @@ class Dialog( wx.Dialog ):
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
+    
+class DialogAdvancedContentUpdate( Dialog ):
+    
+    def __init__( self, parent, service_identifier, hashes = None ):
+        
+        def InitialiseControls():
+            
+            # show the service info
+            
+            # show what we are affecting (i.e. some tags or whole service)
+            
+            # let's start with just tags, so:
+            
+            self._copy_all_mappings_dropdown = ClientGUICommon.BetterChoice( self )
+            
+            self._copy_all_mappings = wx.Button( self, label = 'Go!' )
+            self._copy_all_mappings.Bind( wx.EVT_BUTTON, self.EventCopyAll )
+            
+            self._copy_some_mappings_tag = wx.StaticText( self, label = '' )
+            
+            self._copy_some_mappings_dropdown = ClientGUICommon.BetterChoice( self )
+            
+            self._copy_some_mappings = wx.Button( self, label = 'Go!' )
+            self._copy_some_mappings.Bind( wx.EVT_BUTTON, self.EventCopySome )
+            
+            self._delete_all_mappings_dropdown = ClientGUICommon.BetterChoice( self )
+            
+            self._delete_all_mappings = wx.Button( self, label = 'Go!' )
+            self._delete_all_mappings.Bind( wx.EVT_BUTTON, self.EventDeleteAll )
+            
+            self._delete_some_mappings_tag = wx.StaticText( self, label = '' )
+            
+            self._delete_some_mappings_dropdown = ClientGUICommon.BetterChoice( self )
+            
+            self._delete_some_mappings = wx.Button( self, label = 'Go!' )
+            self._delete_some_mappings.Bind( wx.EVT_BUTTON, self.EventDeleteSome )
+            
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_IDENTIFIER, self._service_identifier )
+            
+            # clear deleted tags
+            
+            # clear all deleted instances of [tag]
+            
+            self._done = wx.Button( self, label = 'done' )
+            
+        
+        def PopulateControls():
+            
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            
+            service_identifiers = [ service_identifier for service_identifier in service_identifiers if service_identifier != self._service_identifier ]
+            
+            #
+            
+            for service_identifier in service_identifiers:
+                
+                self._copy_all_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
+                self._copy_some_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
+                
+                self._delete_all_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
+                self._delete_some_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
+                
+            
+        
+        def ArrangeControls():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            # add service info statictext
+            
+            gridbox = wx.FlexGridSizer( 0, 5 )
+            
+            gridbox.AddGrowableCol( 2, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'copy' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'all mappings' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
+            gridbox.AddF( self._copy_all_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._copy_all_mappings, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'copy' ), FLAGS_MIXED )
+            gridbox.AddF( self._copy_some_mappings_tag, FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
+            gridbox.AddF( self._copy_some_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._copy_some_mappings, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'delete' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'all mappings' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
+            gridbox.AddF( self._delete_all_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._delete_all_mappings, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'delete' ), FLAGS_MIXED )
+            gridbox.AddF( self._delete_some_mappings_tag, FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
+            gridbox.AddF( self._delete_some_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._delete_some_mappings, FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self, label = 'Set tag: ' ), FLAGS_MIXED )
+            hbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.AddF( self._done, FLAGS_LONE_BUTTON )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            if x < 360: x = 360
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'Advanced Content Update' )
+        
+        self._service_identifier = service_identifier
+        self._tag = ''
+        self._hashes = hashes
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+    
+    def EventCopyAll( self, event ):
+        
+        selection = self._copy_all_mappings_dropdown.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            service_identifier_target = self._copy_all_mappings_dropdown.GetChoice()
+            
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', None, self._hashes, service_identifier_target ) )
+            
+            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
+            
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            
+        
+    
+    def EventCopySome( self, event ):
+        
+        selection = self._copy_some_mappings_dropdown.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            service_identifier_target = self._copy_some_mappings_dropdown.GetChoice()
+            
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', self._tag, self._hashes, service_identifier_target ) )
+            
+            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
+            
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            
+        
+    
+    def EventDeleteAll( self, event ):
+        
+        selection = self._delete_all_mappings_dropdown.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            service_identifier_target = self._delete_all_mappings_dropdown.GetChoice()
+            
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', None, self._hashes, service_identifier_target ) )
+            
+            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
+            
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            
+        
+    
+    def EventDeleteSome( self, event ):
+        
+        selection = self._delete_some_mappings_dropdown.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            service_identifier_target = self._delete_some_mappings_dropdown.GetChoice()
+            
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', self._tag, self._hashes, service_identifier_target ) )
+            
+            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
+            
+            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            
+        
+    
+    def SetSomeTag( self, tag, parents = [] ):
+        
+        self._tag = tag
+        
+        self._copy_some_mappings_tag.SetLabel( tag )
+        
     
 class DialogChooseNewServiceMethod( Dialog ):
     
@@ -2970,18 +3172,14 @@ class DialogPathsToTagsRegex( Dialog ):
         
         paths_to_tags = collections.defaultdict( dict )
         
-        try:
+        for page in self._tag_repositories.GetNameToPageDict().values():
             
-            for page in self._tag_repositories.GetNameToPageDict().values():
-                
-                page_of_paths_to_tags = page.GetInfo()
-                
-                service_identifier = page.GetServiceIdentifier()
-                
-                for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_identifier ] = tags
-                
+            page_of_paths_to_tags = page.GetInfo()
             
-        except Exception as e: wx.MessageBox( 'Saving regex tags to DB raised this error: ' + HC.u( e ) )
+            service_identifier = page.GetServiceIdentifier()
+            
+            for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_identifier ] = tags
+            
         
         return paths_to_tags
         
@@ -4714,6 +4912,8 @@ class DialogSetupExport( Dialog ):
                     hash = media.GetHash()
                     
                     source_path = CC.GetFilePath( hash, mime )
+                    
+                    if os.path.exists( path ): os.chmod( path, stat.S_IWRITE )
                     
                     shutil.copy( source_path, path )
                     
