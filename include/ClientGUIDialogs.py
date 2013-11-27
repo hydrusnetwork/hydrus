@@ -545,6 +545,110 @@ class DialogFirstStart( Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
+class DialogGenerateNewAccounts( Dialog ):
+    
+    def __init__( self, parent, service_identifier ):
+        
+        def InitialiseControls():
+            
+            self._num = wx.SpinCtrl( self, min=1, max=10000 )
+            
+            self._account_types = wx.Choice( self, size = ( 400, -1 ) )
+            
+            self._expiration = wx.Choice( self )
+            
+            self._ok = wx.Button( self, label='Ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            self._num.SetValue( 1 )
+            
+            service = HC.app.Read( 'service', service_identifier )
+            
+            connection = service.GetConnection()
+            
+            response = connection.Get( 'account_types' )
+            
+            account_types = response[ 'account_types' ]
+            
+            for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
+            self._account_types.SetSelection( 0 ) # admin
+            
+            for ( str, value ) in HC.expirations: self._expiration.Append( str, value )
+            self._expiration.SetSelection( 3 ) # one year
+            
+        
+        def ArrangeControls():
+            
+            ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
+            ctrl_box.AddF( self._num, FLAGS_SMALL_INDENT )
+            ctrl_box.AddF( self._account_types, FLAGS_SMALL_INDENT )
+            ctrl_box.AddF( self._expiration, FLAGS_SMALL_INDENT )
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( ctrl_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'configure new accounts' )
+        
+        self._service_identifier = service_identifier
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventOK( self, event ):
+        
+        num = self._num.GetValue()
+        
+        account_type = self._account_types.GetClientData( self._account_types.GetSelection() )
+        
+        title = account_type.GetTitle()
+        
+        expiration = self._expiration.GetClientData( self._expiration.GetSelection() )
+        
+        service = HC.app.Read( 'service', self._service_identifier )
+        
+        try:
+            
+            connection = service.GetConnection()
+            
+            if expiration is None: response = connection.Get( 'registration_keys', num = num, title = title )
+            else: response = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
+            
+            registration_keys = response[ 'registration_keys' ]
+            
+            ClientGUICommon.ShowKeys( 'registration', registration_keys )
+            
+        finally: self.EndModal( wx.ID_OK )
+        
+    
 class DialogInputCustomFilterAction( Dialog ):
     
     def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_identifier = None, action = 'archive' ):
@@ -2103,6 +2207,8 @@ class DialogInputNamespaceRegex( Dialog ):
             
             self._shortcuts = ClientGUICommon.RegexButton( self )
             
+            self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+            
             self._ok = wx.Button( self, label='Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -2134,6 +2240,7 @@ class DialogInputNamespaceRegex( Dialog ):
             
             vbox.AddF( control_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._shortcuts, FLAGS_LONE_BUTTON )
+            vbox.AddF( self._regex_link, FLAGS_LONE_BUTTON )
             vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -2165,120 +2272,6 @@ class DialogInputNamespaceRegex( Dialog ):
         regex = self._regex.GetValue()
         
         return ( namespace, regex )
-        
-    
-class DialogInputNewAccounts( Dialog ):
-    
-    def __init__( self, parent, service_identifier ):
-        
-        def InitialiseControls():
-            
-            self._num = wx.SpinCtrl( self, min=1, max=10000 )
-            
-            self._account_types = wx.Choice( self, size = ( 400, -1 ) )
-            
-            self._expiration = wx.Choice( self )
-            
-            self._ok = wx.Button( self, label='Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            self._num.SetValue( 1 )
-            
-            service = HC.app.Read( 'service', service_identifier )
-            
-            connection = service.GetConnection()
-            
-            response = connection.Get( 'account_types' )
-            
-            account_types = response[ 'account_types' ]
-            
-            for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
-            self._account_types.SetSelection( 0 ) # admin
-            
-            for ( str, value ) in HC.expirations: self._expiration.Append( str, value )
-            self._expiration.SetSelection( 3 ) # one year
-            
-        
-        def ArrangeControls():
-            
-            ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
-            ctrl_box.AddF( self._num, FLAGS_SMALL_INDENT )
-            ctrl_box.AddF( self._account_types, FLAGS_SMALL_INDENT )
-            ctrl_box.AddF( self._expiration, FLAGS_SMALL_INDENT )
-            
-            b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( ctrl_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
-        Dialog.__init__( self, parent, 'configure new accounts' )
-        
-        self._service_identifier = service_identifier
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ):
-        
-        num = self._num.GetValue()
-        
-        account_type = self._account_types.GetClientData( self._account_types.GetSelection() )
-        
-        title = account_type.GetTitle()
-        
-        expiration = self._expiration.GetClientData( self._expiration.GetSelection() )
-        
-        service = HC.app.Read( 'service', self._service_identifier )
-        
-        try:
-            
-            connection = service.GetConnection()
-            
-            if expiration is None: response = connection.Get( 'registration_keys', num = num, title = title )
-            else: response = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
-            
-            registration_keys = response[ 'registration_keys' ]
-            
-            filename = 'registration keys.txt'
-            
-            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    body = os.linesep.join( [ 'r' + key.encode( 'hex' ) for key in registration_keys ] )
-                    
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
-                    
-                
-            
-        finally: self.EndModal( wx.ID_OK )
         
     
 class DialogInputNewAccountType( Dialog ):
@@ -3210,10 +3203,6 @@ class DialogPathsToTagsRegex( Dialog ):
                 self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
                 self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
                 
-                self._regex_shortcuts = ClientGUICommon.RegexButton( self._quick_namespaces_panel )
-                
-                self._regex_link = wx.HyperlinkCtrl( self._quick_namespaces_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-                
                 #
                 
                 self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
@@ -3223,6 +3212,10 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._regex_box = wx.TextCtrl( self._regexes_panel, style=wx.TE_PROCESS_ENTER )
                 self._regex_box.Bind( wx.EVT_TEXT_ENTER, self.EventAddRegex )
+                
+                self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
+                
+                self._regex_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
                 
                 #
                 
@@ -3274,15 +3267,17 @@ class DialogPathsToTagsRegex( Dialog ):
                 button_box.AddF( self._edit_quick_namespace_button, FLAGS_MIXED )
                 button_box.AddF( self._delete_quick_namespace_button, FLAGS_MIXED )
                 
-                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, FLAGS_EXPAND_PERPENDICULAR )
+                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, FLAGS_EXPAND_BOTH_WAYS )
                 self._quick_namespaces_panel.AddF( button_box, FLAGS_BUTTON_SIZERS )
-                self._quick_namespaces_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
-                self._quick_namespaces_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
                 
                 #
                 
                 self._regexes_panel.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
                 self._regexes_panel.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
+                self._regexes_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
+                self._regexes_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
+                
+                #
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 

@@ -116,7 +116,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         # as we are in oninit, callafter and calllater( 0 ) are different
         # later waits until the mainloop is running, I think.
         # after seems to execute synchronously
-        wx.CallLater( 0, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        
+        if HC.options[ 'default_gui_session' ] == 'just a blank page':
+            
+            wx.CallLater( 0, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+            
+        else:
+            
+            name = HC.options[ 'default_gui_session' ]
+            
+            wx.CallLater( 0, self._LoadGUISession, name )
+            
         
     
     def _THREADUploadPending( self, service_identifier ):
@@ -333,134 +343,126 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 try:
                     
+                    connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
+                    
+                    connection.connect()
+                    
+                    connection.close()
+                    
+                    already_running = True
+                    
+                except:
+                    
+                    already_running = False
+                    
+                
+                if already_running:
+                    
+                    message = 'The server appears to be already running. Either that, or something else is using port ' + HC.u( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' + os.linesep + 'Would you like to try to initialise the server that is already running?'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() != wx.ID_YES: return
+                        
+                    
+                else:
+                    
                     try:
                         
-                        connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
+                        my_scriptname = sys.argv[0]
                         
-                        connection.connect()
+                        if my_scriptname.endswith( 'pyw' ): subprocess.Popen( [ 'pythonw', HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
+                        else:
+                            
+                            # The problem here is that, for mystical reasons, a PyInstaller exe can't launch another using subprocess, so we do it via explorer.
+                            
+                            subprocess.Popen( [ 'explorer', HC.BASE_DIR + os.path.sep + 'server.exe' ] )
+                            
                         
-                        connection.close()
-                        
-                        already_running = True
+                        time.sleep( 10 ) # give it time to init its db
                         
                     except:
                         
-                        already_running = False
+                        wx.MessageBox( 'I tried to start the server, but something failed!' )
+                        wx.MessageBox( traceback.format_exc() )
+                        
+                        return
                         
                     
-                    if already_running:
-                        
-                        message = 'The server appears to be already running. Either that, or something else is using port ' + HC.u( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' + os.linesep + 'Would you like to try to initialise the server that is already running?'
-                        
-                        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                            
-                            if dlg.ShowModal() != wx.ID_YES: return
-                            
-                        
-                    else:
-                        
-                        try:
-                            
-                            my_scriptname = sys.argv[0]
-                            
-                            if my_scriptname.endswith( 'pyw' ): subprocess.Popen( [ 'pythonw', HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
-                            else:
-                                
-                                # The problem here is that, for mystical reasons, a PyInstaller exe can't launch another using subprocess, so we do it via explorer.
-                                
-                                subprocess.Popen( [ 'explorer', HC.BASE_DIR + os.path.sep + 'server.exe' ] )
-                                
-                            
-                            time.sleep( 10 ) # give it time to init its db
-                            
-                        except:
-                            
-                            wx.MessageBox( 'I tried to start the server, but something failed!' )
-                            wx.MessageBox( traceback.format_exc() )
-                            
-                            return
-                            
-                        
+                
+                edit_log = []
+                
+                admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
+                admin_service_credentials = CC.Credentials( host, port, '' )
+                
+                edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_credentials, None ) ) )
+                
+                HC.app.Write( 'update_services', edit_log )
+                
+                i = 0
+                
+                while True:
                     
-                    edit_log = []
+                    time.sleep( i + 1 )
                     
-                    admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
-                    admin_service_credentials = CC.Credentials( host, port, '' )
-                    
-                    edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_credentials, None ) ) )
-                    
-                    HC.app.Write( 'update_services', edit_log )
-                    
-                    i = 0
-                    
-                    while True:
+                    try:
                         
-                        time.sleep( i + 1 )
+                        service = HC.app.Read( 'service', admin_service_identifier )
                         
-                        try:
-                            
-                            service = HC.app.Read( 'service', admin_service_identifier )
-                            
-                            break
-                            
-                        except: pass
+                        break
                         
-                        i += 1
+                    except: pass
+                    
+                    i += 1
+                    
+                    if i > 5:
                         
-                        if i > 5:
-                            
-                            wx.MessageBox( 'For some reason, I could not add the new server to the db! Perhaps it is very busy. Please contact the administrator, or sort it out yourself!' )
-                            
-                            return
-                            
+                        wx.MessageBox( 'For some reason, I could not add the new server to the db! Perhaps it is very busy. Please contact the administrator, or sort it out yourself!' )
+                        
+                        return
                         
                     
-                    connection = service.GetConnection()
-                    
-                    response = connection.Get( 'init' )
-                    
-                    filename = 'admin access key.txt'
-                    
-                    access_key = response[ 'access_key' ]
-                    
-                    body = access_key.encode( 'hex' )
-                    
-                    credentials = CC.Credentials( host, port, access_key )
-                    
-                    edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, credentials, None ) ) ) ]
-                    
-                    HC.app.Write( 'update_services', edit_log )
-                    
-                    with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
-                            
-                        
-                    
-                    tag_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
-                    
-                    tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
-                    tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
-                    
-                    file_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY )
-                    
-                    file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
-                    file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
-                    
-                    edit_log = []
-                    
-                    edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
-                    edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
-                    
-                    connection.Post( 'services', edit_log = edit_log )
-                    
-                    HC.app.Write( 'update_server_services', admin_service_identifier, edit_log )
-                    
-                    wx.MessageBox( 'Done! Check services->review services to see your new server and its services.' )
-                    
-                except: wx.MessageBox( traceback.format_exc() )
+                
+                #
+                
+                connection = service.GetConnection()
+                
+                response = connection.Get( 'init' )
+                
+                access_key = response[ 'access_key' ]
+                
+                credentials = CC.Credentials( host, port, access_key )
+                
+                edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, credentials, None ) ) ) ]
+                
+                HC.app.Write( 'update_services', edit_log )
+                
+                ClientGUICommon.ShowKeys( 'access', ( access_key, ) )
+                
+                #
+                
+                tag_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
+                
+                tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
+                tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
+                
+                file_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY )
+                
+                file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
+                file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
+                
+                edit_log = []
+                
+                edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
+                edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
+                
+                result = connection.Post( 'services', edit_log = edit_log )
+                
+                service_identifiers_to_access_keys = dict( result[ 'service_identifiers_to_access_keys' ] )
+                
+                HC.app.Write( 'update_server_services', admin_service_identifier, edit_log, service_identifiers_to_access_keys )
+                
+                wx.MessageBox( 'Done! Check services->review services to see your new server and its services.' )
                 
             
         
@@ -484,19 +486,30 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _CloseCurrentPage( self ):
+    def _CloseAllPages( self ):
+        
+        while self._notebook.GetPageCount() > 0:
+            
+            self._CloseCurrentPage( polite = False )
+            
+        
+    
+    def _CloseCurrentPage( self, polite = True ):
         
         selection = self._notebook.GetSelection()
         
-        if selection != wx.NOT_FOUND: self._ClosePage( selection )
+        if selection != wx.NOT_FOUND: self._ClosePage( selection, polite = True )
         
     
-    def _ClosePage( self, selection ):
+    def _ClosePage( self, selection, polite = True ):
         
         page = self._notebook.GetPage( selection )
         
-        try: page.TryToClose()
-        except: return
+        if polite:
+            
+            try: page.TryToClose()
+            except: return
+            
         
         page.Pause()
         
@@ -576,9 +589,46 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
+    def _GenerateNewAccounts( self, service_identifier ):
+        
+        with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_identifier ) as dlg: dlg.ShowModal()
+        
+    
     def _ImportFiles( self, paths = [] ):
         
         with ClientGUIDialogs.DialogSelectLocalFiles( self, paths ) as dlg: dlg.ShowModal()
+        
+    
+    def _LoadGUISession( self, name ):
+        
+        name_to_info = { name : info for ( name, info ) in HC.app.Read( 'gui_sessions' ) }
+        
+        if name not in name_to_info: self._NewPageQuery( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        else:
+            
+            info = name_to_info[ name ]
+            
+            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
+                
+                try: page.TryToClose()
+                except: return
+                
+            
+            self._CloseAllPages()
+            
+            for ( name, c_text, args, kwargs ) in info:
+                
+                c = ClientGUIPages.text_to_class[ c_text ]
+                
+                new_page = c( self._notebook, *args, **kwargs )
+                
+                self._notebook.AddPage( new_page, name, select = True )
+                
+                self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
+                
+                new_page.SetSearchFocus()
+                
+            
         
     
     def _Manage4chanPass( self ):
@@ -698,11 +748,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 with ClientGUIDialogs.DialogModifyAccounts( self, service_identifier, subject_identifiers ) as dlg2: dlg2.ShowModal()
                 
             
-        
-    
-    def _NewAccounts( self, service_identifier ):
-        
-        with ClientGUIDialogs.DialogInputNewAccounts( self, service_identifier ) as dlg: dlg.ShowModal()
         
     
     def _NewPageImportBooru( self ):
@@ -946,6 +991,50 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         except: wx.MessageBox( traceback.format_exc() )
         
     
+    def _SaveGUISession( self, name = None ):
+        
+        if name is None:
+            
+            while True:
+                
+                with wx.TextEntryDialog( self, 'enter a name for the new session', 'name session' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        name = dlg.GetValue()
+                        
+                        if name in ( 'just a blank page', 'last session' ):
+                            
+                            wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
+                            
+                        else: break
+                        
+                    else: return
+                    
+                
+            
+        
+        info = []
+        
+        for i in range( self._notebook.GetPageCount() ):
+            
+            page = self._notebook.GetPage( i )
+            
+            page_name = self._notebook.GetPageText( i )
+            
+            c = type( page )
+            
+            c_text = ClientGUIPages.class_to_text[ c ]
+            
+            try: ( args, kwargs ) = page.GetSessionArgs()
+            except: continue
+            
+            info.append( ( page_name, c_text, args, kwargs ) )
+            
+        
+        HC.app.Write( 'gui_session', name, info )
+        
+    
     def _SetPassword( self ):
         
         message = '''You can set a password to be asked for whenever the client starts.
@@ -1067,11 +1156,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if HC.options[ 'confirm_client_exit' ]:
             
-            message = 'Are you sure you want to exit the client?'
+            message = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_NO: return
+                call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
+                
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    call_later.Stop()
+                    
+                    return
+                    
+                
+                call_later.Stop()
                 
             
         
@@ -1083,6 +1181,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         HC.app.Write( 'save_options' )
+        
+        self._SaveGUISession( 'last session' )
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
@@ -1162,6 +1262,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 print( 'garbage: ' + HC.u( gc.garbage ) )
                 
             elif command == 'delete_all_pages': self._DeleteAllPages()
+            elif command == 'delete_gui_session': HC.app.Write( 'gui_session', data, None )
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
@@ -1170,6 +1271,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
             elif command == 'import': self._ImportFiles()
+            elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'manage_4chan_pass': self._Manage4chanPass()
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
@@ -1186,7 +1288,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_tag_siblings': self._ManageTagSiblings()
             elif command == 'manage_upnp': self._ManageUPnP( data )
             elif command == 'modify_account': self._ModifyAccount( data )
-            elif command == 'new_accounts': self._NewAccounts( data )
+            elif command == 'new_accounts': self._GenerateNewAccounts( data )
             elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
@@ -1210,15 +1312,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
             elif command == 'review_services': self._ReviewServices()
+            elif command == 'save_gui_session': self._SaveGUISession()
+            elif command == 'set_password': self._SetPassword()
+            elif command == 'set_media_focus': self._SetMediaFocus()
+            elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'show_hide_splitters':
                 
                 page = self._notebook.GetCurrentPage()
                 
                 if page is not None: page.ShowHideSplit()
                 
-            elif command == 'set_password': self._SetPassword()
-            elif command == 'set_media_focus': self._SetMediaFocus()
-            elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
@@ -1353,10 +1456,49 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         menu = wx.MenuBar()
         
+        # sessions
+          # load -> (all sessions in db)
+          # save current (loads name dialog
+          # delete ->
+        
         file = wx.Menu()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
+        file.AppendSeparator()
+        
+        gui_session_names = HC.app.Read( 'gui_sessions', name_only = True )
+        
+        sessions = wx.Menu()
+        
+        if len( gui_session_names ) > 0:
+            
+            load = wx.Menu()
+            
+            for name in gui_session_names:
+                
+                load.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'load_gui_session', name ), name )
+                
+            
+            sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
+            
+        
+        sessions.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'save_gui_session' ), p( 'Save Current' ) )
+        
+        if len( gui_session_names ) > 0:
+            
+            delete = wx.Menu()
+            
+            for name in gui_session_names:
+                
+                delete.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_gui_session', name ), name )
+                
+            
+            sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
+            
+        
+        file.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
+        
         file.AppendSeparator()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options' ), p( '&Options' ) )
         file.AppendSeparator()
@@ -1366,7 +1508,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         have_closed_pages = len( self._closed_pages ) > 0
         
-        undo_manager = HC.app.GetUndoManager()
+        undo_manager = HC.app.GetManager( 'undo' )
         
         ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
         
@@ -2461,8 +2603,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             access_key = response[ 'access_key' ]
             
-            body = access_key.encode( 'hex' )
-            
             ( host, port ) = service.GetCredentials().GetAddress()
             
             credentials = CC.Credentials( host, port, access_key )
@@ -2471,15 +2611,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             HC.app.Write( 'update_services', edit_log )
             
-            filename = 'admin access key.txt'
-            
-            with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    with open( dlg.GetPath(), 'wb' ) as f: f.write( body )
-                    
-                
+            ClientGUICommon.ShowKeys( 'access', ( access_key, ) )
             
         
         def EventServiceRefreshAccount( self, event ):

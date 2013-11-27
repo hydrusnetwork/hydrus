@@ -34,11 +34,11 @@ class Controller( wx.App ):
     
     def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
-    def GetSessionManager( self ): return self._session_manager
-    
     def EventExit( self, event ): self._tbicon.Destroy()
     
     def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
+    
+    def GetManager( self, type ): return self._managers[ type ]
     
     def OnInit( self ):
         
@@ -52,7 +52,10 @@ class Controller( wx.App ):
             
             self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
             
-            self._session_manager = HydrusSessions.HydrusSessionManagerServer()
+            self._managers = {}
+            
+            self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
+            self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
             
             HC.pubsub.sub( self, 'RestartService', 'restart_service' )
             

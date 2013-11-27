@@ -192,6 +192,7 @@ CLIENT_DEFAULT_OPTIONS[ 'thumbnail_dimensions' ] = [ 150, 125 ]
 CLIENT_DEFAULT_OPTIONS[ 'password' ] = None
 CLIENT_DEFAULT_OPTIONS[ 'num_autocomplete_chars' ] = 2
 CLIENT_DEFAULT_OPTIONS[ 'gui_capitalisation' ] = False
+CLIENT_DEFAULT_OPTIONS[ 'default_gui_session' ] = 'just a blank page'
 
 system_predicates = {}
 
@@ -841,7 +842,7 @@ class AutocompleteMatchesPredicates():
         
         if self._collapse:
             
-            siblings_manager = HC.app.GetTagSiblingsManager()
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             self._predicates = siblings_manager.CollapsePredicates( self._predicates )
             
@@ -857,7 +858,7 @@ class AutocompleteMatchesPredicates():
         
         if not self._collapse:
             
-            parents_manager = HC.app.GetTagParentsManager()
+            parents_manager = HC.app.GetManager( 'tag_parents' )
             
             matches = parents_manager.ExpandPredicates( self._service_identifier, matches )
             
@@ -1164,7 +1165,9 @@ class ConnectionToService():
             
         elif self._service_identifier.GetType() in HC.RESTRICTED_SERVICES:
             
-            session_key = HC.app.GetSessionKey( self._service_identifier )
+            session_manager = HC.app.GetManager( 'hydrus_sessions' )
+            
+            session_key = session_manager.GetSessionKey( self._service_identifier )
             
             headers[ 'Cookie' ] = 'session_key=' + session_key.encode( 'hex' )
             
@@ -1255,7 +1258,9 @@ class ConnectionToService():
             
             if HC.u( e ) == 'Session not found!':
                 
-                HC.app.DeleteSessionKey( self._service_identifier )
+                session_manager = HC.app.GetManager( 'hydrus_sessions' )
+                
+                session_manager.DeleteSessionKey( self._service_identifier )
                 
                 response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
                 
@@ -1275,7 +1280,7 @@ class ConnectionToService():
     
     def GetCookies( self ): return self._connection.GetCookies()
     
-    def Post( self, request, **kwargs ): response = self._SendRequest( HC.POST, request, kwargs )
+    def Post( self, request, **kwargs ): return self._SendRequest( HC.POST, request, kwargs )
     
 class CPRemoteRatingsServiceIdentifiers():
     

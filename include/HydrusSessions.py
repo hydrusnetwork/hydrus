@@ -1,4 +1,5 @@
 import collections
+import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusExceptions
@@ -15,6 +16,63 @@ import yaml
 
 HYDRUS_SESSION_EXPIRY_TIME = 30 * 86400
 
+class HydrusMessagingSessionManagerServer():
+    
+    def __init__( self ):
+        
+        existing_sessions = HC.app.Read( 'messaging_sessions' )
+        
+        self._sessions = collections.defaultdict( dict )
+        
+        for ( service_identifier, session_tuples ) in existing_sessions:
+            
+            self._sessions[ service_identifier ] = { session_key : ( account, identifier, name, expiry ) for ( session_Key, account, identifier, name, expiry ) in session_tuples }
+            
+        
+    
+    def GetIdentityAndName( self, service_identifier, session_key ):
+        
+        if session_key not in self._sessions[ service_identifier ]: raise HydrusExceptions.SessionException( 'Did not find that session!' )
+        else:
+            
+            ( account, identity, name, expiry ) = self._sessions[ service_identifier ][ session_key ]
+            
+            now = HC.GetNow()
+            
+            if now > expiry:
+                
+                del self._sessions[ service_identifier ][ session_key ]
+                
+                raise HydrusExceptions.SessionException( 'Session expired!' )
+                
+            
+            return ( identity, name )
+            
+        
+    
+    def AddSession( self, service_identifier, access_key, name ):
+        
+        session_key = os.urandom( 32 )
+        
+        account_identifier = HC.AccountIdentifier( access_key = access_key )
+        
+        account = HC.app.Read( 'account', service_identifier, account_identifier )
+        
+        account_identifier = account.GetAccountIdentifier() # for better account_id based identifier
+        
+        identity = hashlib.sha256( access_key ).digest()
+        
+        now = HC.GetNow()
+        
+        expiry = now + HYDRUS_SESSION_EXPIRY_TIME
+        
+        self._sessions[ service_identifier ][ session_key ] = ( account, identity, name, expiry )
+        
+        HC.app.Write( 'messaging_session', service_identifier, session_key, account, identity, name, expiry )
+        
+        return session_key
+        
+    
 class HydrusSessionManagerClient():
     
     def __init__( self ):

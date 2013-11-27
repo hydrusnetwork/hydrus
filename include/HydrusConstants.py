@@ -39,7 +39,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 11
-SOFTWARE_VERSION = 93
+SOFTWARE_VERSION = 94
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1140,7 +1140,7 @@ def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
     
     if search_siblings:
         
-        sibling_manager = app.GetTagSiblingsManager()
+        sibling_manager = app.GetManager( 'tag_siblings' )
         
         tags = sibling_manager.GetAllSiblings( tag )
         
@@ -2128,7 +2128,9 @@ class Message():
     
     def GetType( self ): return self._message_type
     
-class Predicate():
+class Predicate( HydrusYAMLBase ):
+    
+    yaml_tag = u'!Predicate'
     
     def __init__( self, predicate_type, value, count ):
         
@@ -2305,7 +2307,7 @@ class Predicate():
             
             if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
             
-            siblings_manager = app.GetTagSiblingsManager()
+            siblings_manager = app.GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( tag )
             
@@ -2722,7 +2724,15 @@ class SortedList():
         
         self._DirtyIndices()
         
-    
+
+# adding tuple to yaml
+
+def construct_python_tuple( self, node ): return tuple( self.construct_sequence( node ) )
+def represent_python_tuple( self, data ): return self.represent_sequence( u'tag:yaml.org,2002:python/tuple', data )
+
+yaml.SafeLoader.add_constructor( u'tag:yaml.org,2002:python/tuple', construct_python_tuple )
+yaml.SafeDumper.add_representer( tuple, represent_python_tuple)
+
 # sqlite mod
 
 sqlite3.register_adapter( dict, yaml.safe_dump )

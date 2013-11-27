@@ -2,6 +2,7 @@ import ClientConstants as CC
 import httplib
 import HydrusConstants as HC
 import HydrusServer
+import HydrusServerAMP
 import HydrusServerResources
 import itertools
 import os
@@ -13,13 +14,13 @@ import time
 import threading
 import unittest
 from twisted.internet import reactor
+from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
+from twisted.internet.defer import deferredGenerator, waitForDeferred
 
 class TestServer( unittest.TestCase ):
     
     @classmethod
     def setUpClass( self ):
-        
-        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         services = []
         
@@ -51,12 +52,6 @@ class TestServer( unittest.TestCase ):
         reactor.callFromThread( TWISTEDSetup )
         
         time.sleep( 1 )
-        
-    
-    @classmethod
-    def tearDownClass( self ):
-        
-        reactor.callFromThread( reactor.stop )
         
     
     def _test_basics( self, host, port ):
@@ -425,7 +420,7 @@ class TestServer( unittest.TestCase ):
         
         edit_log = 'blah'
         
-        connection.Post( 'services', edit_log = edit_log )
+        registration_keys = connection.Post( 'services', edit_log = edit_log )
         
         written = HC.app.GetWrite( 'services' )
         
@@ -490,36 +485,100 @@ class TestAMP( unittest.TestCase ):
         self._alice = os.urandom( 32 )
         self._bob = os.urandom( 32 )
         
-        # boot up service
+        self._server_port = HC.DEFAULT_SERVICE_PORT + 10
         
-        pass
+        self._service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.MESSAGE_DEPOT )
         
-    
-    @classmethod
-    def tearDownClass( self ):
+        def TWISTEDSetup():
+            
+            self._factory = HydrusServer.MessagingServiceFactory( self._service_identifier )
+            
+            reactor.listenTCP( self._server_port, self._factory )
+            
         
-        # quit service
+        reactor.callFromThread( TWISTEDSetup )
         
-        pass
-        
-    
-    def _make_persistent_connection( self, access_key, identifier, name ):
-        
-        # make it, get session_key, login, return it
-        
-        pass
+        time.sleep( 1 )
         
     
-    def _make_temporary_connection( self, identifier, name ):
+    def _get_deferred_result( self, deferred ):
         
-        # make it, return it
+        def err( failure ):
+            
+            failure.trap( Exception )
+            
+            return failure.type( failure.value )
+            
         
-        pass
+        deferred.addErrback( err )
+        
+        while not deferred.called: time.sleep( 0.1 )
+        
+        result = deferred.result
+        
+        if issubclass( type( result ), Exception ): raise result
+        
+        return result
+        
+    
+    def _get_client_protocol( self ):
+        
+        point = TCP4ClientEndpoint( reactor, '127.0.0.1', self._server_port )
+        
+        deferred = connectProtocol( point, HydrusServer.MessagingClientProtocol() )
+        
+        protocol = self._get_deferred_result( deferred )
+        
+        return protocol
+        
+    
+    def _make_persistent_connection( self, protocol, identifier, name ):
+        
+        access_key = os.urandom( 32 )
+        
+        HC.app.SetRead( 'im_identifier', identifier )
+        
+        deferred = protocol.callRemote( HydrusServerAMP.IMSessionKey, access_key = access_key, name = name )
+        
+        result = self._get_deferred_result( deferred )
+        
+        session_key = result[ 'session_key' ]
+        
+        deferred = protocol.callRemote( HydrusServerAMP.IMLoginPersistent, session_key = session_key )
+        
+        result = self._get_deferred_result( deferred )
+        
+        self.assertEqual( result, {} )
+        
+        self.assertIn( identifier, self._factory._persistent_connections )
+        self.assertIn( name, self._factory._persistent_connections[ identifier ] )
+        
+    
+    def _make_temporary_connection( self, protocol, identifier, name ):
+        
+        deferred = protocol.callRemote( HydrusServerAMP.IMLoginTemporary, identifier = identifier, name = name )
+        
+        result = self._get_deferred_result( deferred )
+        
+        self.assertEqual( result, {} )
+        
+        self.assertIn( identifier, self._factory._temporary_connections )
+        self.assertIn( name, self._factory._temporary_connections[ identifier ] )
         
     
     def test_connections( self ):
         
-        # test persistent connection
+        persistent_protocol = self._get_client_protocol()
+        persistent_identifier = os.urandom( 32 )
+        persistent_name = 'persistent'
+        
+        self._make_persistent_connection( persistent_protocol, persistent_identifier, persistent_name )
+        
+        temp_protocol = self._get_client_protocol()
+        temp_identifier = os.urandom( 32 )
+        temp_name = 'temp'
+        
+        self._make_temporary_connection( temp_protocol, temp_identifier, temp_name )
         # test temporary connection
         
         # test making more connections under different names
@@ -547,6 +606,12 @@ class TestAMP( unittest.TestCase ):
         
     
     def test_message( self ):
+        
+        # make a persistent connection
+        # make a temp connection
+        
+        # send a message to p from t
+        # send a message back
         
         pass
         

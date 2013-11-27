@@ -83,8 +83,6 @@ class Controller( wx.App ):
             
         
     
-    def DeleteSessionKey( self, service_identifier ): self._session_manager.DeleteSessionKey( service_identifier )
-    
     def EventAnimatedTimer( self, event ):
         
         del gc.garbage[:]
@@ -121,19 +119,11 @@ class Controller( wx.App ):
     
     def GetLog( self ): return self._log
     
-    def GetNamespaceBlacklistsManager( self ): return self._namespace_blacklists_manager
+    def GetManager( self, type ): return self._managers[ type ]
     
     def GetPreviewImageCache( self ): return self._preview_image_cache
     
-    def GetSessionKey( self, service_identifier ): return self._session_manager.GetSessionKey( service_identifier )
-    
-    def GetTagParentsManager( self ): return self._tag_parents_manager
-    
-    def GetTagSiblingsManager( self ): return self._tag_siblings_manager
-    
     def GetThumbnailCache( self ): return self._thumbnail_cache
-    
-    def GetUndoManager( self ): return self._undo_manager
     
     def GetWebCookies( self, name ): return self._web_session_manager.GetCookies( name )
     
@@ -238,14 +228,16 @@ class Controller( wx.App ):
                     
                 
             
-            self.SetSplashText( 'caches' )
+            self.SetSplashText( 'caches and managers' )
             
-            self._session_manager = HydrusSessions.HydrusSessionManagerClient()
-            self._web_session_manager = HydrusSessions.WebSessionManagerClient()
-            self._namespace_blacklists_manager = HydrusTags.NamespaceBlacklistsManager()
-            self._tag_parents_manager = HydrusTags.TagParentsManager()
-            self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
-            self._undo_manager = CC.UndoManager()
+            self._managers = {}
+            
+            self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
+            self._managers[ 'namespace_blacklists' ] = HydrusTags.NamespaceBlacklistsManager()
+            self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
+            self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
+            self._managers[ 'undo' ] = CC.UndoManager()
+            self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
             
             self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
             self._preview_image_cache = CC.RenderedImageCache( 'preview' )

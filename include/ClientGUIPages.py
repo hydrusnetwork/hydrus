@@ -6,7 +6,9 @@ import ClientGUIManagement
 import ClientGUIMedia
 import ClientGUIMessages
 import ClientGUICanvas
+import inspect
 import os
+import sys
 import time
 import traceback
 import wx
@@ -398,7 +400,12 @@ class PagePetitions( PageWithMedia ):
     
 class PageQuery( PageWithMedia ):
     
-    def __init__( self, parent, file_service_identifier, initial_media_results = [], initial_predicates = [] ):
+    def __init__( self, parent, file_service_identifier, initial_hashes = [], initial_media_results = [], initial_predicates = [] ):
+        
+        if len( initial_hashes ) > 0:
+            
+            initial_media_results = HC.app.Read( 'media_results', file_service_identifier, initial_hashes )
+            
         
         self._initial_media_results = initial_media_results
         self._initial_predicates = initial_predicates
@@ -408,7 +415,7 @@ class PageQuery( PageWithMedia ):
     
     def _InitManagementPanel( self ):
         
-        show_search = self._initial_media_results == []
+        show_search = len( self._initial_predicates ) > 0 or len( self._initial_media_results ) == 0
         
         self._management_panel = ClientGUIManagement.ManagementPanelQuery( self._search_preview_split, self, self._page_key, self._file_service_identifier, show_search = show_search, initial_predicates = self._initial_predicates )
         
@@ -417,6 +424,17 @@ class PageQuery( PageWithMedia ):
         
         if len( self._initial_media_results ) == 0: self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
         else: self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_predicates, self._initial_media_results )
+        
+    
+    def GetSessionArgs( self ):
+        
+        hashes = [ media.GetHash() for media in self._media_panel.GetFlatMedia() ]
+        predicates = self._management_panel.GetPredicates()
+        
+        args = ( self._file_service_identifier, )
+        kwargs = { 'initial_hashes' : hashes, 'initial_predicates' : predicates }
+        
+        return ( args, kwargs )
         
     
 class PageThreadDumper( PageWithMedia ):
@@ -439,4 +457,17 @@ class PageThreadDumper( PageWithMedia ):
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results )
     
     def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], self._media_results )
+    
+class_to_text = {}
+text_to_class = {}
+
+current_module = sys.modules[ __name__ ]
+
+for ( name, c ) in inspect.getmembers( current_module ):
+    
+    if inspect.isclass( c ):
+        
+        class_to_text[ c ] = name
+        text_to_class[ name ] = c
+        
     

@@ -903,6 +903,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, now ) )
         
     
+    def _AddMessagingSession( self, c, service_identifier, session_key, account, identifier, name, expiry ):
+        
+        service_id = self._GetServiceId( c, service_identifier )
+        
+        account_id = account.GetAccountId()
+        
+        c.execute( 'INSERT INTO sessions ( service_id, session_key, account_id, identifier, name, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), account_id, sqlite3.Binary( identifier ), name, expiry ) )
+        
+    
     def _AddSession( self, c, session_key, service_identifier, account, expiry ):
         
         service_id = self._GetServiceId( c, service_identifier )
@@ -1335,6 +1344,37 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetDirtyUpdates( self, c ): return c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE dirty = ?;', ( True, ) ).fetchall()
     
+    def _GetMessagingSessions( self, c ):
+        
+        now = HC.GetNow()
+        
+        c.execute( 'DELETE FROM messaging_sessions WHERE ? > expiry;', ( now, ) )
+        
+        existing_session_ids = HC.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expiry ) ) for ( service_id, identifier, name, expiry ) in c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
+        
+        existing_sessions = {}
+        
+        for ( service_id, tuples ) in existing_session_ids.items():
+            
+            service_identifier = self._GetServiceIdentifier( c, service_id )
+            
+            processed_tuples = []
+            
+            for ( account_id, identifier, name, expiry ) in tuples:
+                
+                account_identifier = HC.AccountIdentifier( account_id = account_id )
+                
+                account = self._GetAccount( c, service_identifier, account_identifier )
+                
+                processed_tuples.append( ( account, identifier, name, expiry ) )
+                
+            
+            existing_sessions[ service_identifier ] = processed_tuples
+            
+        
+        return existing_sessions
+        
+    
     def _GetNumPetitions( self, c, service_identifier ):
         
         service_id = self._GetServiceId( c, service_identifier )
@@ -1645,6 +1685,8 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         account_id = account.GetAccountId()
         
+        service_identifiers_to_access_keys = []
+        
         modified_services = {}
         
         now = HC.GetNow()
@@ -1670,7 +1712,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
                 
-                c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, service_admin_account_type_id, now, None, 0, 0 ) )
+                [ registration_key ] = self._GenerateRegistrationKeys( c, service_identifier, 1, 'service admin', None )
+                
+                access_key = self._GetAccessKey( c, registration_key )
+                
+                service_identifiers_to_access_keys.append( ( service_identifier, access_key ) )
                 
                 if service_type in HC.REPOSITORIES:
                     
@@ -1705,6 +1751,8 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
         for ( service_identifier, options ) in modified_services.items(): self.pub( 'restart_service', service_identifier, options )
+        
+        return service_identifiers_to_access_keys
         
     
     def _ProcessUpdate( self, c, service_identifier, account, update ):
@@ -2043,6 +2091,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX message_statuses_service_id_account_id_index ON message_statuses ( service_id, account_id );' )
             c.execute( 'CREATE INDEX message_statuses_timestamp_index ON message_statuses ( timestamp );' )
             
+            c.execute( 'CREATE TABLE messaging_sessions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, account_id INTEGER, identifier BLOB_BYTES, name TEXT, expiry INTEGER );' )
+            
             c.execute( 'CREATE TABLE news ( service_id INTEGER REFERENCES services ON DELETE CASCADE, news TEXT, timestamp INTEGER );' )
             c.execute( 'CREATE INDEX news_timestamp_index ON news ( timestamp );' )
             
@@ -2320,6 +2370,11 @@ class DB( ServiceDB ):
                         
                         c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
                         
+                    
+                
+                if version < 94:
+                    
+                    c.execute( 'CREATE TABLE messaging_sessions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, account_id INTEGER, identifier BLOB_BYTES, name TEXT, expiry INTEGER );' )
                     
                 
                 c.execute( 'UPDATE version SET version = ?;', ( HC.SOFTWARE_VERSION, ) )
@@ -2626,6 +2681,7 @@ class DB( ServiceDB ):
                 elif action == 'dirty_updates': result = self._GetDirtyUpdates( c, *args, **kwargs  )
                 elif action == 'init': result = self._InitAdmin( c, *args, **kwargs  )
                 elif action == 'ip': result = self._GetIPTimestamp( c, *args, **kwargs )
+                elif action == 'messaging_sessions': result = self._GetMessagingSessions( c, *args, **kwargs )
                 elif action == 'num_petitions': result = self._GetNumPetitions( c, *args, **kwargs )
                 elif action == 'petition': result = self._GetPetition( c, *args, **kwargs )
                 elif action == 'registration_keys': result = self._GenerateRegistrationKeys( c, *args, **kwargs )
@@ -2652,6 +2708,7 @@ class DB( ServiceDB ):
                 elif action == 'delete_orphans': result = self._DeleteOrphans( c, *args, **kwargs )
                 elif action == 'file': result = self._AddFile( c, *args, **kwargs )
                 elif action == 'flush_requests_made': result = self._FlushRequestsMade( c, *args, **kwargs )
+                elif action == 'messaging_session': result = self._AddMessagingSession( c, *args, **kwargs )
                 elif action == 'news': result = self._AddNews( c, *args, **kwargs )
                 elif action == 'options': result = self._SetOptions( c, *args, **kwargs )
                 elif action == 'services': result = self._ModifyServices( c, *args, **kwargs )

@@ -745,13 +745,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             ( operator, tag ) = predicate.GetValue()
             
-            namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+            namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
             
             result = namespace_blacklists_manager.FilterTags( self._tag_service_identifier, ( tag, ) )
             
             if len( result ) > 0:
                 
-                tag_parents_manager = HC.app.GetTagParentsManager()
+                tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                 
                 parents = tag_parents_manager.GetParents( self._tag_service_identifier, tag )
                 
@@ -826,7 +826,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ), 0 ) )
             
-            siblings_manager = HC.app.GetTagSiblingsManager()
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( search_text )
             
@@ -859,7 +859,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         tag = predicate.GetTag()
                         
-                        parents_manager = HC.app.GetTagParentsManager()
+                        parents_manager = HC.app.GetManager( 'tag_parents' )
                         
                         raw_parents = parents_manager.GetParents( self._tag_service_identifier, tag )
                         
@@ -3510,6 +3510,85 @@ class RadioBox( StaticBox ):
     
     def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabel( text )
     
+class ShowKeys( Frame ):
+    
+    def __init__( self, key_type, keys ):
+        
+        def InitialiseControls():
+            
+            self._text_ctrl = wx.TextCtrl( self, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_DONTWRAP )
+            
+            self._save_to_file = wx.Button( self, label = 'save to file' )
+            self._save_to_file.Bind( wx.EVT_BUTTON, self.EventSaveToFile )
+            
+            self._done = wx.Button( self, id = wx.ID_OK, label = 'done' )
+            self._done.Bind( wx.EVT_BUTTON, self.EventDone )
+            
+        
+        def PopulateControls():
+            
+            if key_type == 'registration': prepend = 'r'
+            else: prepend = ''
+            
+            self._text = os.linesep.join( [ prepend + key.encode( 'hex' ) for key in self._keys ] )
+            
+            self._text_ctrl.SetValue( self._text )
+            
+        
+        def ArrangeControls():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._text_ctrl, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._save_to_file, FLAGS_LONE_BUTTON )
+            vbox.AddF( self._done, FLAGS_LONE_BUTTON )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            if x < 500: x = 500
+            if y < 200: y = 200
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        if key_type == 'registration': title = 'Registration Keys'
+        elif key_type == 'access': title = 'Access Keys'
+        
+        # give it no parent, so this doesn't close when the dialog is closed!
+        Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( title ) )
+        
+        self._key_type = key_type
+        self._keys = keys
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        self.Show( True )
+        
+    
+    def EventDone( self, event ):
+        
+        self.Destroy()
+        
+    
+    def EventSaveToFile( self, event ):
+        
+        filename = 'keys.txt'
+        
+        with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                with open( dlg.GetPath(), 'wb' ) as f: f.write( self._text )
+                
+            
+        
+    
 class TagsBox( ListBox ):
     
     has_counts = False
@@ -3835,7 +3914,7 @@ class TagsBoxCPP( TagsBox ):
     
     def _RecalcStrings( self ):
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         all_current = ( tag for tag in self._current_tags_to_count if self._current_tags_to_count[ tag ] > 0 )
         all_pending = ( tag for tag in self._pending_tags_to_count if self._pending_tags_to_count[ tag ] > 0 )
@@ -3904,7 +3983,7 @@ class TagsBoxCPP( TagsBox ):
     
     def SetTags( self, current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ):
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
         
@@ -3936,7 +4015,7 @@ class TagsBoxCPP( TagsBox ):
                     adds = media.difference( self._last_media )
                     
                 
-                siblings_manager = HC.app.GetTagSiblingsManager()
+                siblings_manager = HC.app.GetManager( 'tag_siblings' )
                 
                 ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_identifier )
                 
@@ -4022,7 +4101,7 @@ class TagsBoxFlat( TagsBox ):
         
         self._strings_to_terms = {}
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         for tag in self._tags:
             
@@ -4107,7 +4186,7 @@ class TagsBoxManage( TagsBox ):
     
     def _RebuildTagStrings( self ):
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
         

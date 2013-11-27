@@ -1693,7 +1693,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # now fetch siblings, add to results set
             
-            siblings_manager = HC.app.GetTagSiblingsManager()
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             if len( half_complete_tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
             elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
@@ -1753,7 +1753,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         tags = { tag for ( tag, num_tags ) in tag_info }
         
-        namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+        namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
         
         filtered_tags = namespace_blacklists_manager.FilterTags( tag_service_identifier, tags )
         
@@ -1920,7 +1920,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if num_tags_zero or num_tags_nonzero or len( tag_predicates ) > 0:
             
-            namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+            namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
             
             ( blacklist, namespaces ) = namespace_blacklists_manager.GetInfo( tag_service_identifier )
             
@@ -2137,6 +2137,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return predicates
         
     
+    def _GetGUISessions( self, c, name_only = False ):
+        
+        if name_only: result = [ name for ( name, ) in c.execute( 'SELECT name FROM gui_sessions;' ) ]
+        else: result = c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
+        
+        return result
+        
+    
     def _GetHashIdsFromNamespace( self, c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ):
         
         statuses = []
@@ -2175,11 +2183,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         file_service_id = self._GetServiceId( c, file_service_identifier )
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         tags = siblings_manager.GetAllSiblings( tag )
         
-        namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+        namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
         
         tags = namespace_blacklists_manager.FilterTags( tag_service_identifier, tags )
         
@@ -3728,6 +3736,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT INTO favourite_custom_filter_actions ( name, actions ) VALUES ( ?, ? );', [ ( name, actions ) for ( name, actions ) in favourites.items() ] )
         
     
+    def _SetGUISession( self, c, name, info ):
+        
+        c.execute( 'DELETE FROM gui_sessions WHERE name = ?;', ( name, ) )
+        
+        if info is not None: sessions = c.execute( 'INSERT INTO gui_sessions ( name, info ) VALUES ( ?, ? );', ( name, info ) )
+        
+        self.pub( 'refresh_menu_bar' )
+        
+    
     def _SetNamespaceBlacklists( self, c, info ):
         
         c.execute( 'DELETE FROM namespace_blacklists;' )
@@ -4173,15 +4190,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if len( service_info_updates ) > 0: c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         
     
-    def _UpdateServerServices( self, c, server_admin_service_identifier, edit_log ):
+    def _UpdateServerServices( self, c, server_admin_service_identifier, edit_log, service_identifiers_to_access_keys ):
         
         server_admin_service_id = self._GetServiceId( c, server_admin_service_identifier )
         
         server_admin = self._GetService( c, server_admin_service_id )
         
         server_admin_credentials = server_admin.GetCredentials()
-        
-        access_key = server_admin_credentials.GetAccessKey()
         
         ( host, server_admin_port ) = server_admin_credentials.GetAddress()
         
@@ -4201,6 +4216,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 service_name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( port )
                 
                 client_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, service_name )
+                
+                access_key = service_identifiers_to_access_keys[ server_service_identifier ]
                 
                 credentials = CC.Credentials( host, port, access_key )
                 
@@ -4595,6 +4612,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ), FOREIGN KEY( service_id, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
             c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
             
+            c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
+            
             c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
             c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
             
@@ -4965,6 +4984,11 @@ class DB( ServiceDB ):
                     HC.options[ 'num_autocomplete_chars' ] = 2
                     
                     c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+                    
+                
+                if version < 94:
+                    
+                    c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
                     
                 
                 for ( service_id, account ) in c.execute( 'SELECT service_id, account FROM accounts;' ).fetchall():
@@ -6566,6 +6590,7 @@ class DB( ServiceDB ):
                 elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
                 elif action == 'file_query_ids': result = self._GetFileQueryIds( c, *args, **kwargs )
                 elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
+                elif action == 'gui_sessions': result = self._GetGUISessions( c, *args, **kwargs )
                 elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
                 elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
                 elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
@@ -6623,6 +6648,7 @@ class DB( ServiceDB ):
                 elif action == 'favourite_custom_filter_actions': result = self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
                 elif action == 'flush_message_statuses': result = self._FlushMessageStatuses( c, *args, **kwargs )
                 elif action == 'generate_tag_ids': result = self._GenerateTagIdsEfficiently( c, *args, **kwargs )
+                elif action == 'gui_session': result = self._SetGUISession( c, *args, **kwargs )
                 elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
                 elif action == 'import_file': result = self._ImportFile( c, *args, **kwargs )
                 elif action == 'import_file_from_page': result = self._ImportFilePage( c, *args, **kwargs )
@@ -7424,7 +7450,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                 
             except Exception as e:
                 
-                message = 'Failed to update ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
+                message = 'Failed to update ' + name + ':' + os.linesep + os.linesep + HC.u( e )
                 
                 HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
                 

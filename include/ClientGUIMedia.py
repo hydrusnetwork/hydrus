@@ -203,6 +203,8 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
+                        self.SetFocussedMedia( self._page_key, None )
+                        
                         try: HC.app.Write( 'content_updates', { file_service_identifier : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
                         except: wx.MessageBox( traceback.format_exc() )
                         
@@ -2248,7 +2250,7 @@ class Thumbnail( Selectable ):
             dc.DrawText( collections_string, top_left_x, top_left_y )
             
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         upper_info_string = ''
         

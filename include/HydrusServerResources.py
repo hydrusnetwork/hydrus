@@ -705,7 +705,7 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         account_identifier = HC.AccountIdentifier( access_key = access_key )
         
-        session_manager = HC.app.GetSessionManager()
+        session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
         ( session_key, expiry ) = session_manager.AddSession( self._service_identifier, account_identifier )
         
@@ -786,7 +786,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
             
         except: raise Exception( 'Problem parsing cookies!' )
         
-        session_manager = HC.app.GetSessionManager()
+        session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
         account = session_manager.GetAccount( session_key, self._service_identifier )
         
@@ -843,7 +843,7 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         HC.app.Write( 'account', self._service_identifier, admin_account, action, subject_identifiers, kwargs )
         
-        session_manager = HC.app.GetSessionManager()
+        session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
         session_manager.RefreshAccounts( self._service_identifier, subject_identifiers )
         
@@ -1049,9 +1049,11 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        HC.app.Write( 'services', account, edit_log )
+        service_identifiers_to_access_keys = HC.app.Write( 'services', account, edit_log )
         
-        response_context = HC.ResponseContext( 200 )
+        body = yaml.safe_dump( { 'service_identifiers_to_access_keys' : service_identifiers_to_access_keys } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
         
         return response_context
         

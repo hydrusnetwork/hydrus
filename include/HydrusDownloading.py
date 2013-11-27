@@ -46,8 +46,8 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
     
     service_identifiers_to_tags = {}
     
-    siblings_manager = HC.app.GetTagSiblingsManager()
-    parents_manager = HC.app.GetTagParentsManager()
+    siblings_manager = HC.app.GetManager( 'tag_siblings' )
+    parents_manager = HC.app.GetManager( 'tag_parents' )
     
     for ( service_identifier, namespaces ) in advanced_tag_options.items():
         

@@ -16,8 +16,10 @@ from include import TestHydrusTags
 import collections
 import os
 import sys
+import threading
 import unittest
 import wx
+from twisted.internet import reactor
 
 only_run = None
 
@@ -29,24 +31,31 @@ class App( wx.App ):
         
         self._reads = {}
         
-        self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
+        self._reads[ 'hydrus_sessions' ] = []
+        self._reads[ 'messaging_sessions' ] = []
         self._reads[ 'namespace_blacklists' ] = []
+        self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
+        self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_service_precedence' ] = []
         self._reads[ 'tag_siblings' ] = {}
-        self._reads[ 'hydrus_sessions' ] = []
-        self._reads[ 'sessions' ] = []
+        self._reads[ 'web_sessions' ] = {}
         
         HC.options = CC.CLIENT_DEFAULT_OPTIONS
         
         self._writes = collections.defaultdict( list )
         
-        self._namespace_blacklists_manager = HydrusTags.NamespaceBlacklistsManager()
-        self._tag_parents_manager = HydrusTags.TagParentsManager()
-        self._tag_siblings_manager = HydrusTags.TagSiblingsManager()
+        self._managers = {}
         
-        self._client_session_manager = HydrusSessions.HydrusSessionManagerClient()
-        self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
+        self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
+        self._managers[ 'namespace_blacklists' ] = HydrusTags.NamespaceBlacklistsManager()
+        self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
+        self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
+        self._managers[ 'undo' ] = CC.UndoManager()
+        self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
+        
+        self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
+        self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
         
         self._cookies = {}
         
@@ -68,21 +77,24 @@ class App( wx.App ):
         
         suite = unittest.TestSuite( suites )
         
+        if run_all or only_run == 'server':
+            
+            threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+            
+        
         runner = unittest.TextTestRunner( verbosity = 1 )
         
         runner.run( suite )
         
+        if run_all or only_run == 'server':
+            
+            reactor.callFromThread( reactor.stop )
+            
+        
         return True
         
     
-    def GetNamespaceBlacklistsManager( self ): return self._namespace_blacklists_manager
-    
-    def GetSessionKey( self, service_identifier ): return self._client_session_manager.GetSessionKey( service_identifier )
-    
-    def GetSessionManager( self ): return self._server_session_manager
-    
-    def GetTagParentsManager( self ): return self._tag_parents_manager
-    def GetTagSiblingsManager( self ): return self._tag_siblings_manager
+    def GetManager( self, type ): return self._managers[ type ]
     
     def GetWebCookies( self, name ): return self._cookies[ name ]
     

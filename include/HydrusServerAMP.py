@@ -38,8 +38,9 @@ class HydrusAMPCommand( amp.Command ):
 # file_transfer_id (so we can match up the correct aes key)
 # file (this is complicated -- AMP should be little things, right? I need to check max packet size.)
   # so, this should be blocks. a block_id and a block
+# MMessageReceivedPing -- server to persistent client, saying someone just now sent you a message
 class IMLoginPersistent( HydrusAMPCommand ):
-    arguments = [ ( 'session_key', amp.String() ), ( 'name', amp.String() ) ]
+    arguments = [ ( 'session_key', amp.String() ) ]
     
 class IMLoginTemporary( HydrusAMPCommand ):
     arguments = [ ( 'identifier', amp.String() ), ( 'name', amp.String() ) ]
@@ -51,7 +52,7 @@ class IMMessageServer( HydrusAMPCommand ):
     arguments = [ ( 'identifier_to', amp.String() ), ( 'name_to', amp.String() ), ( 'message', amp.String() ) ]
     
 class IMSessionKey( HydrusAMPCommand ):
-    arguments = [ ( 'access_key', amp.String() ) ]
+    arguments = [ ( 'access_key', amp.String() ), ( 'name', amp.String() ) ]
     response = [ ( 'session_key', amp.String() ) ]
     
 class MPublicKey( HydrusAMPCommand ):

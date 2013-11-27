@@ -2644,6 +2644,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._gui_page = wx.Panel( self._listbook )
             self._gui_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
+            self._default_gui_session = wx.Choice( self._gui_page )
+            
             self._confirm_client_exit = wx.CheckBox( self._gui_page )
             
             self._gui_capitalisation = wx.CheckBox( self._gui_page )
@@ -2831,6 +2833,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
+            gui_session_names = HC.app.Read( 'gui_sessions', name_only = True )
+            
+            if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
+            
+            self._default_gui_session.Append( 'just a blank page', None )
+            
+            for name in gui_session_names: self._default_gui_session.Append( name, name )
+            
+            try: self._default_gui_session.SetStringSelection( HC.options[ 'default_gui_session' ] )
+            except: self._default_gui_session.SetSelection( 0 )
+            
             self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
             
             self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
@@ -2999,6 +3012,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Default session on startup:' ), FLAGS_MIXED )
+            gridbox.AddF( self._default_gui_session, FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self._gui_page, label = 'Confirm client exit:' ), FLAGS_MIXED )
             gridbox.AddF( self._confirm_client_exit, FLAGS_MIXED )
@@ -3351,6 +3367,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         HC.options[ 'play_dumper_noises' ] = self._play_dumper_noises.GetValue()
         
+        HC.options[ 'default_gui_session' ] = self._default_gui_session.GetStringSelection()
         HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
         HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
         HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
@@ -4160,9 +4177,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 connection = self._service.GetConnection()
                 
-                connection.Post( 'services', edit_log = self._edit_log )
+                result = connection.Post( 'services', edit_log = self._edit_log )
                 
-                HC.app.Write( 'update_server_services', self._service_identifier, self._edit_log )
+                service_identifiers_to_access_keys = dict( result[ 'service_identifiers_to_access_keys' ] )
+                
+                HC.app.Write( 'update_server_services', self._service_identifier, self._edit_log, service_identifiers_to_access_keys )
                 
             
         finally: self.EndModal( wx.ID_OK )

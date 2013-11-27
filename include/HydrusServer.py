@@ -1,5 +1,6 @@
 import BaseHTTPServer
 import ClientConstants as CC
+import collections
 import Cookie
 import hashlib
 import httplib
@@ -404,7 +405,7 @@ class MessagingServiceProtocol( amp.AMP ):
     
     def __init__( self ):
         
-        amp.AMP.__init__()
+        amp.AMP.__init__( self )
         
         self._identifier = None
         self._name = None
@@ -412,7 +413,9 @@ class MessagingServiceProtocol( amp.AMP ):
     
     def im_login_persistent( self, session_key ):
         
-        ( identifier, name ) = session_manager.GetIdentity( session_key )
+        session_manager = HC.app.GetManager( 'messaging_sessions' )
+        
+        ( identifier, name ) = session_manager.GetIdentityAndName( self.factory.service_identifier, session_key )
         
         self._identifier = identifier
         self._name = name
@@ -430,6 +433,8 @@ class MessagingServiceProtocol( amp.AMP ):
         
         self.factory.AddConnection( False, self._identifier, self._name, self )
         
+        return {}
+        
     HydrusServerAMP.IMLoginTemporary.responder( im_login_temporary )
     
     def im_message( self, identifier_to, name_to, message ):
@@ -444,7 +449,7 @@ class MessagingServiceProtocol( amp.AMP ):
         # get connection for identifier_to from larger, failing appropriately
         # if we fail, we should probably log the _to out, right?
         
-        connection.callRemote( IMMessageClient, identifier_from = self._identifier, name_from = self._name, identifier_to = identifier_to, name_to = name_to, message = message )
+        deferred = connection.callRemote( IMMessageClient, identifier_from = self._identifier, name_from = self._name, identifier_to = identifier_to, name_to = name_to, message = message )
         # this returns a deferred, so set up a 'return {}' deferred.
         
         return {}
@@ -453,10 +458,9 @@ class MessagingServiceProtocol( amp.AMP ):
     
     def im_session_key( self, access_key, name ):
         
-        # verify access_key
-        # access_key should give identifier
+        session_manager = HC.app.GetManager( 'messaging_sessions' )
         
-        session_key = session_manager.AddSession( identifier, name )
+        session_key = session_manager.AddSession( self.factory.service_identifier, access_key, name )
         # this'll save to db, so make it deferred
         
         return { 'session_key' : session_key }
@@ -484,7 +488,7 @@ class MessagingServiceFactory( ServerFactory ):
     
     def __init__( self, service_identifier ):
         
-        self._service_identifier = service_identifier
+        self.service_identifier = service_identifier
         
         self._persistent_connections = collections.defaultdict( dict )
         self._temporary_connections = collections.defaultdict( dict )

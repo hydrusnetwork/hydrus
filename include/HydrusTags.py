@@ -328,7 +328,7 @@ class TagsManagerSimple():
     
     def __init__( self, service_identifiers_to_statuses_to_tags ):
         
-        namespace_blacklists_manager = HC.app.GetNamespaceBlacklistsManager()
+        namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
         
         service_identifiers_to_statuses_to_tags = namespace_blacklists_manager.FilterServiceidentifiersToStatusesToTags( service_identifiers_to_statuses_to_tags )
         
@@ -382,7 +382,7 @@ class TagsManagerSimple():
         
         combined = combined_current.union( combined_pending )
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         slice = []
         
@@ -416,7 +416,7 @@ class TagsManagerSimple():
         
         if collapse:
             
-            siblings_manager = HC.app.GetTagSiblingsManager()
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             slice = siblings_manager.CollapseTags( slice )
             

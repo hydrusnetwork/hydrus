@@ -263,7 +263,7 @@ class Canvas():
             
             tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
             
-            siblings_manager = HC.app.GetTagSiblingsManager()
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             current = siblings_manager.CollapseTags( tags_manager.GetCurrent() )
             pending = siblings_manager.CollapseTags( tags_manager.GetPending() )
@@ -696,7 +696,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         collections_string = ''
         
-        siblings_manager = HC.app.GetTagSiblingsManager()
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         namespaces = self._current_media.GetDisplayMedia().GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
         
@@ -1515,7 +1515,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                             if tag in current: content_update_action = HC.CONTENT_UPDATE_DELETE
                             else: content_update_action = HC.CONTENT_UPDATE_ADD
                             
-                            tag_parents_manager = HC.app.GetTagParentsManager()
+                            tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                             
                             parents = tag_parents_manager.GetParents( service_identifier, tag )
                             
@@ -1551,7 +1551,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                 if tag in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PENDING
                                 else: content_update_action = HC.CONTENT_UPDATE_PENDING
                                 
-                                tag_parents_manager = HC.app.GetTagParentsManager()
+                                tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                                 
                                 parents = tag_parents_manager.GetParents( service_identifier, tag )
                                 

@@ -2819,6 +2819,8 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
+    def GetPredicates( self ): return self._current_predicates_box.GetPredicates()
+    
     def IncludeCurrent( self, page_key, value ):
         
         if page_key == self._page_key:
