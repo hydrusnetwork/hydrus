@@ -52,7 +52,7 @@ class App( wx.App ):
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'undo' ] = CC.UndoManager()
-        self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
+        self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         
         self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
@@ -95,8 +95,6 @@ class App( wx.App ):
         
     
     def GetManager( self, type ): return self._managers[ type ]
-    
-    def GetWebCookies( self, name ): return self._cookies[ name ]
     
     def GetWrite( self, name ):
         

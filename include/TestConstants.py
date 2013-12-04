@@ -105,3 +105,8 @@ class FakeHTTPConnectionManager():
         
     
 fake_http_connection_manager = FakeHTTPConnectionManager()
+
+class FakeWebSessionManager():
+    
+    def GetCookies( self, *args, **kwargs ): return { 'session_cookie' : 'blah' }
+    

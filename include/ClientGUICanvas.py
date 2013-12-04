@@ -643,11 +643,11 @@ class CanvasPanel( Canvas, wx.Window ):
     
 class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, ClientGUICommon.FrameThatResizes ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results ):
+    def __init__( self, my_parent, page_key, file_service_identifier, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
         Canvas.__init__( self, file_service_identifier, HC.app.GetFullscreenImageCache() )
-        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, predicates, media_results )
+        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, media_results )
         
         self._page_key = page_key
         
@@ -1114,9 +1114,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
 class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results, first_hash ):
+    def __init__( self, my_parent, page_key, file_service_identifier, media_results, first_hash ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, predicates, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, media_results )
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
         
@@ -1388,9 +1388,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results, actions ):
+    def __init__( self, my_parent, page_key, file_service_identifier, media_results, actions ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, predicates, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, media_results )
         
         self._actions = actions
         
@@ -1724,9 +1724,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results ):
+    def __init__( self, my_parent, page_key, file_service_identifier, media_results ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, predicates, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, media_results )
         
         self._kept = set()
         self._deleted = set()
@@ -1942,9 +1942,9 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, predicates, media_results ):
+    def __init__( self, my_parent, page_key, file_service_identifier, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_identifier, predicates, media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_identifier, media_results )
         
         FullscreenPopoutFilterInbox( self )
         

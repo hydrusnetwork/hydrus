@@ -21,10 +21,10 @@ class TestSessions( unittest.TestCase ):
         account_id = 1
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
-        expires = None
+        expiry = None
         used_data = ( 0, 0 )
         
-        account = HC.Account( account_id, account_type, created, expires, used_data )
+        account = HC.Account( account_id, account_type, created, expiry, used_data )
         
         expiry = HC.GetNow() - 10
         
@@ -34,7 +34,7 @@ class TestSessions( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.SessionException ):
             
-            session_manager.GetAccount( session_key_1, service_identifier )
+            session_manager.GetAccount( service_identifier, session_key_1 )
         
         #
         
@@ -44,13 +44,15 @@ class TestSessions( unittest.TestCase ):
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
-        read_account = session_manager.GetAccount( session_key_1, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_1 )
         
         self.assertIs( read_account, account )
         
         #
         
-        account_2 = HC.Account( 2, account_type, created, expires, used_data )
+        expiry = None
+        
+        account_2 = HC.Account( 2, account_type, created, expiry, used_data )
         
         HC.app.SetRead( 'account', account_2 )
         
@@ -64,7 +66,7 @@ class TestSessions( unittest.TestCase ):
         
         self.assertEqual( ( session_key_2, service_identifier, account_2, expiry_2 ), ( written_session_key, written_service_identifier, written_account, written_expiry ) )
         
-        read_account = session_manager.GetAccount( session_key_2, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_2 )
         
         self.assertIs( read_account, account_2 )
         
@@ -82,13 +84,15 @@ class TestSessions( unittest.TestCase ):
         
         self.assertEqual( ( session_key_3, service_identifier, account, expiry_3 ), ( written_session_key, written_service_identifier, written_account, written_expiry ) )
         
-        read_account = session_manager.GetAccount( session_key_3, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_3 )
         
         self.assertIs( read_account, account )
         
         #
         
-        updated_account = HC.Account( 1, account_type, created, expires, ( 1, 1 ) )
+        expiry = None
+        
+        updated_account = HC.Account( 1, account_type, created, expiry, ( 1, 1 ) )
         
         HC.app.SetRead( 'account', updated_account )
         
@@ -96,31 +100,33 @@ class TestSessions( unittest.TestCase ):
         
         session_manager.RefreshAccounts( service_identifier, [ account_identifier ] )
         
-        read_account = session_manager.GetAccount( session_key_1, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_1 )
         
         self.assertIs( read_account, updated_account )
         
-        read_account = session_manager.GetAccount( session_key_3, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_3 )
         
         self.assertIs( read_account, updated_account )
         
         #
         
-        updated_account_2 = HC.Account( 1, account_type, created, expires, ( 2, 2 ) )
+        expiry = None
+        
+        updated_account_2 = HC.Account( 1, account_type, created, expiry, ( 2, 2 ) )
         
         HC.app.SetRead( 'sessions', [ ( session_key_1, service_identifier, updated_account_2, expiry ), ( session_key_2, service_identifier, account_2, expiry ), ( session_key_3, service_identifier, updated_account_2, expiry ) ] )
         
         session_manager.RefreshAllAccounts()
         
-        read_account = session_manager.GetAccount( session_key_1, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_1 )
         
         self.assertIs( read_account, updated_account_2 )
         
-        read_account = session_manager.GetAccount( session_key_2, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_2 )
         
         self.assertIs( read_account, account_2 )
         
-        read_account = session_manager.GetAccount( session_key_3, service_identifier )
+        read_account = session_manager.GetAccount( service_identifier, session_key_3 )
         
         self.assertIs( read_account, updated_account_2 )
         

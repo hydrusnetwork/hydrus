@@ -316,7 +316,7 @@ class HydrusResourceCommand( Resource ):
             
             value = values[0]
             
-            if name in ( 'begin', 'num', 'expiration', 'subject_account_id', 'service_type', 'service_port', 'since' ):
+            if name in ( 'begin', 'expiry', 'lifetime', 'num', 'subject_account_id', 'service_type', 'service_port', 'since', 'timespan' ):
                 
                 try: hydrus_args[ name ] = int( value )
                 except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
@@ -518,31 +518,31 @@ class HydrusResourceCommand( Resource ):
                 
                 user_agents = user_agent_text.split( ' ' )
                 
-                for user_agent in user_agents:
+            except: return # crazy user agent string, so just assume not a hydrus client
+            
+            for user_agent in user_agents:
+                
+                if '/' in user_agent:
                     
-                    if '/' in user_agent:
+                    ( client, network_version ) = user_agent.split( '/', 1 )
+                    
+                    if client == 'hydrus':
                         
-                        ( client, network_version ) = user_agent.split( '/', 1 )
+                        request.is_hydrus_user_agent = True
                         
-                        if client == 'hydrus':
+                        network_version = int( network_version )
+                        
+                        if network_version == HC.NETWORK_VERSION: return
+                        else:
                             
-                            request.is_hydrus_user_agent = True
+                            if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
+                            else: message = 'This server is out of date; please ask its admin to update to the latest release.'
                             
-                            network_version = int( network_version )
-                            
-                            if network_version == HC.NETWORK_VERSION: return
-                            else:
-                                
-                                if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
-                                else: message = 'This server is out of date; please ask its admin to update to the latest release.'
-                                
-                                raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HC.u( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HC.u( network_version ) + '! ' + message )
-                                
+                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + HC.u( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + HC.u( network_version ) + '! ' + message )
                             
                         
                     
                 
-            except: pass # crazy user agent string, so just assume not a hydrus client
             
         
     
@@ -788,7 +788,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
         
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        account = session_manager.GetAccount( session_key, self._service_identifier )
+        account = session_manager.GetAccount( self._service_identifier, session_key )
         
         request.hydrus_account = account
         
@@ -1015,10 +1015,10 @@ class HydrusResourceCommandRestrictedRegistrationKeys( HydrusResourceCommandRest
         num = request.hydrus_args[ 'num' ]
         title = request.hydrus_args[ 'title' ]
         
-        if 'expiration' in request.hydrus_args: expiration = request.hydrus_args[ 'expiration' ]
-        else: expiration = None
+        if 'lifetime' in request.hydrus_args: lifetime = request.hydrus_args[ 'lifetime' ]
+        else: lifetime = None
         
-        registration_keys = HC.app.Read( 'registration_keys', self._service_identifier, num, title, expiration )
+        registration_keys = HC.app.Read( 'registration_keys', self._service_identifier, num, title, lifetime )
         
         body = yaml.safe_dump( { 'registration_keys' : registration_keys } )
         

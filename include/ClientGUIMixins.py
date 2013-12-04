@@ -24,10 +24,9 @@ class Media():
     
 class MediaList():
     
-    def __init__( self, file_service_identifier, predicates, media_results ):
+    def __init__( self, file_service_identifier, media_results ):
         
         self._file_service_identifier = file_service_identifier
-        self._predicates = predicates
         
         self._sort_by = CC.SORT_BY_SMALLEST
         self._collect_by = None
@@ -76,7 +75,7 @@ class MediaList():
         return keys_to_medias
         
     
-    def _GenerateMediaCollection( self, media_results ): return MediaCollection( self._file_service_identifier, self._predicates, media_results )
+    def _GenerateMediaCollection( self, media_results ): return MediaCollection( self._file_service_identifier, media_results )
     
     def _GenerateMediaSingleton( self, media_result ): return MediaSingleton( media_result )
     
@@ -350,9 +349,9 @@ class MediaList():
     
 class ListeningMediaList( MediaList ):
     
-    def __init__( self, file_service_identifier, predicates, media_results ):
+    def __init__( self, file_service_identifier, media_results ):
         
-        MediaList.__init__( self, file_service_identifier, predicates, media_results )
+        MediaList.__init__( self, file_service_identifier, media_results )
         
         self._file_query_result = CC.FileQueryResult( media_results )
         
@@ -453,10 +452,10 @@ class ListeningMediaList( MediaList ):
     
 class MediaCollection( MediaList, Media ):
     
-    def __init__( self, file_service_identifier, predicates, media_results ):
+    def __init__( self, file_service_identifier, media_results ):
         
         Media.__init__( self )
-        MediaList.__init__( self, file_service_identifier, predicates, media_results )
+        MediaList.__init__( self, file_service_identifier, media_results )
         
         self._hashes = set()
         

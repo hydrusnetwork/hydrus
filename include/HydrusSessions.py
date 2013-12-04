@@ -13,8 +13,9 @@ import time
 import traceback
 import wx
 import yaml
+from twisted.internet.threads import deferToThread
 
-HYDRUS_SESSION_EXPIRY_TIME = 30 * 86400
+HYDRUS_SESSION_LIFETIME = 30 * 86400
 
 class HydrusMessagingSessionManagerServer():
     
@@ -29,24 +30,29 @@ class HydrusMessagingSessionManagerServer():
             self._sessions[ service_identifier ] = { session_key : ( account, identifier, name, expiry ) for ( session_Key, account, identifier, name, expiry ) in session_tuples }
             
         
+        self._lock = threading.Lock()
+        
     
     def GetIdentityAndName( self, service_identifier, session_key ):
         
-        if session_key not in self._sessions[ service_identifier ]: raise HydrusExceptions.SessionException( 'Did not find that session!' )
-        else:
+        with self._lock:
             
-            ( account, identity, name, expiry ) = self._sessions[ service_identifier ][ session_key ]
-            
-            now = HC.GetNow()
-            
-            if now > expiry:
+            if session_key not in self._sessions[ service_identifier ]: raise HydrusExceptions.SessionException( 'Did not find that session!' )
+            else:
                 
-                del self._sessions[ service_identifier ][ session_key ]
+                ( account, identity, name, expiry ) = self._sessions[ service_identifier ][ session_key ]
                 
-                raise HydrusExceptions.SessionException( 'Session expired!' )
+                now = HC.GetNow()
                 
-            
-            return ( identity, name )
+                if now > expiry:
+                    
+                    del self._sessions[ service_identifier ][ session_key ]
+                    
+                    raise HydrusExceptions.SessionException( 'Session expired!' )
+                    
+                
+                return ( identity, name )
+                
             
         
     
@@ -64,9 +70,12 @@ class HydrusMessagingSessionManagerServer():
         
         now = HC.GetNow()
         
-        expiry = now + HYDRUS_SESSION_EXPIRY_TIME
+        expiry = now + HYDRUS_SESSION_LIFETIME
         
-        self._sessions[ service_identifier ][ session_key ] = ( account, identity, name, expiry )
+        with self._lock:
+            
+            self._sessions[ service_identifier ][ session_key ] = ( account, identity, name, expiry )
+            
         
         HC.app.Write( 'messaging_session', service_identifier, session_key, account, identity, name, expiry )
         
@@ -121,7 +130,7 @@ class HydrusSessionManagerClient():
             try: session_key = cookies[ 'session_key' ].decode( 'hex' )
             except: raise Exception( 'Service did not return a session key!' )
             
-            expiry = now + HYDRUS_SESSION_EXPIRY_TIME
+            expiry = now + HYDRUS_SESSION_LIFETIME
             
             self._sessions[ service_identifier ] = ( session_key, expiry )
             
@@ -181,7 +190,7 @@ class HydrusSessionManagerServer():
             
             now = HC.GetNow()
             
-            expiry = now + HYDRUS_SESSION_EXPIRY_TIME
+            expiry = now + HYDRUS_SESSION_LIFETIME
             
             HC.app.Write( 'session', session_key, service_identifier, account, expiry )
         
@@ -191,7 +200,7 @@ class HydrusSessionManagerServer():
         return ( session_key, expiry )
         
     
-    def GetAccount( self, session_key, service_identifier ):
+    def GetAccount( self, service_identifier, session_key ):
         
         now = HC.GetNow()
         
@@ -201,7 +210,7 @@ class HydrusSessionManagerServer():
                 
                 ( account, expiry ) = self._sessions[ service_identifier ][ session_key ]
                 
-                if now > expiry: del self._sessions[ service_identifier ][ session_key ]
+                if expiry is not None and now > expiry: del self._sessions[ service_identifier ][ session_key ]
                 else: return account
                 
             

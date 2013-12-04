@@ -132,7 +132,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         if self._timeout == 0: label = 'not authenticated'
         elif self._timeout < HC.GetNow(): label = 'timed out'
-        else: label = 'authenticated - ' + HC.ConvertTimestampToPrettyExpires( self._timeout )
+        else: label = 'authenticated - ' + HC.ConvertTimestampToPrettyExpiry( self._timeout )
         
         self._status.SetLabel( label )
         
@@ -1963,18 +1963,15 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 flood_time = self._flood_time.GetValue()
                 
-                # list instead of tumple cause of yaml comparisons
                 form_fields = self._form_fields.GetClientData()
                 
                 restrictions = {}
                 
-                # yaml list again
                 value = self._min_resolution.GetValue()
-                if value is not None: restrictions[ CC.RESTRICTION_MIN_RESOLUTION ] = list( value )
+                if value is not None: restrictions[ CC.RESTRICTION_MIN_RESOLUTION ] = value
                 
-                # yaml list again
                 value = self._max_resolution.GetValue()
-                if value is not None: restrictions[ CC.RESTRICTION_MAX_RESOLUTION ] = list( value )
+                if value is not None: restrictions[ CC.RESTRICTION_MAX_RESOLUTION ] = value
                 
                 value = self._max_file_size.GetValue()
                 if value is not None: restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ] = value

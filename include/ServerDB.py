@@ -921,18 +921,19 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expiry ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expiry ) )
         
     
-    def _AddToExpires( self, c, service_id, account_ids, increase ): c.execute( 'UPDATE account_map SET expires = expires + ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( increase, service_id ) )
+    def _AddToExpiry( self, c, service_id, account_ids, timespan ): c.execute( 'UPDATE account_map SET expires = expires + ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( timespan, service_id ) )
     
-    def _Ban( self, c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiration = None ):
+    def _Ban( self, c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiry = None, lifetime = None ):
         
         splayed_subject_account_ids = HC.SplayListForDB( subject_account_ids )
         
         now = HC.GetNow()
         
-        if expiration is not None: expires = expiration + now
-        else: expires = None
+        if expiry is not None: pass
+        elif lifetime is not None: expiry = now + lifetime
+        else: expiry = None
         
-        c.executemany( 'INSERT OR IGNORE INTO bans ( service_id, account_id, admin_account_id, reason_id, created, expires ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, subject_account_id, admin_account_id, reason_id, now, expires ) for subject_account_id in subject_account_ids ] )
+        c.executemany( 'INSERT OR IGNORE INTO bans ( service_id, account_id, admin_account_id, reason_id, created, expires ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, subject_account_id, admin_account_id, reason_id, now, expiry ) for subject_account_id in subject_account_ids ] )
         
         c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
@@ -1116,7 +1117,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _GenerateRegistrationKeys( self, c, service_identifier, num, title, expiration ):
+    def _GenerateRegistrationKeys( self, c, service_identifier, num, title, lifetime = None ):
         
         service_id = self._GetServiceId( c, service_identifier )
         
@@ -1124,7 +1125,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         now = HC.GetNow()
         
-        if expiration is not None: expiry = now + expiration
+        if lifetime is not None: expiry = now + lifetime
         else: expiry = None
         
         keys = [ ( os.urandom( HC.HYDRUS_KEY_LENGTH ), os.urandom( HC.HYDRUS_KEY_LENGTH ) ) for i in range( num ) ]
@@ -1150,7 +1151,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             access_key = account_identifier.GetAccessKey()
             
-            try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
+            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
             except:
                 
                 # we do not delete the registration_key (and hence the raw access_key)
@@ -1170,12 +1171,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 now = HC.GetNow()
                 
-                if expiry is not None: expires = now + expiry
-                else: expires = None
-                
                 c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, account_type_id, now, expiry, 0, 0 ) )
                 
-                ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
+                ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
                 
             
         elif account_identifier.HasMapping():
@@ -1189,7 +1187,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that mapping in its database.' )
             
-            try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, mappings USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND tag_id = ? AND hash_id = ?;', ( service_id, tag_id, hash_id ) ).fetchone()
+            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, mappings USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND tag_id = ? AND hash_id = ?;', ( service_id, tag_id, hash_id ) ).fetchone()
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         elif account_identifier.HasHash():
@@ -1203,13 +1201,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 if result is None: result = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, file_petitions USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND hash_id = ? AND status = ?;', ( service_id, hash_id, HC.DELETED ) ).fetchone()
                 
-                ( account_id, account_type, created, expires, used_bytes, used_requests ) = result
+                ( account_id, account_type, created, expiry, used_bytes, used_requests ) = result
                 
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         elif account_identifier.HasAccountId():
             
-            try: ( account_id, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, account_map USING ( account_type_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_identifier.GetAccountId() ) ).fetchone()
+            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, account_map USING ( account_type_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_identifier.GetAccountId() ) ).fetchone()
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         
@@ -1217,7 +1215,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         banned_info = c.execute( 'SELECT reason, created, expires FROM bans, reasons USING ( reason_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
         
-        return HC.Account( account_id, account_type, created, expires, used_data, banned_info = banned_info )
+        return HC.Account( account_id, account_type, created, expiry, used_data, banned_info = banned_info )
         
     
     def _GetAccountFileInfo( self, c, service_id, account_id ):
@@ -1574,9 +1572,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         title = 'server admin'
         
-        expiration = None
-        
-        ( registration_key, ) = self._GenerateRegistrationKeys( c, HC.SERVER_ADMIN_IDENTIFIER, num, title, expiration )
+        ( registration_key, ) = self._GenerateRegistrationKeys( c, HC.SERVER_ADMIN_IDENTIFIER, num, title )
         
         access_key = self._GetAccessKey( c, registration_key )
         
@@ -1599,10 +1595,10 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             reason_id = self._GetReasonId( c, reason )
             
-            if expiration in request_args: expiration = kwargs[ 'expiration' ]
-            else: expiration = None
+            if lifetime in request_args: lifetime = kwargs[ 'lifetime' ]
+            else: lifetime = None
             
-            self._Ban( c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiration ) # fold ban and superban together, yo
+            self._Ban( c, service_id, action, admin_account_id, subject_account_ids, reason_id, lifetime ) # fold ban and superban together, yo
             
         else:
             
@@ -1616,17 +1612,17 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 self._ChangeAccountType( c, service_id, subject_account_ids, account_type_id )
                 
-            elif action == HC.ADD_TO_EXPIRES:
+            elif action == HC.ADD_TO_EXPIRY:
                 
-                expiration = kwargs[ 'expiration' ]
+                timespan = kwargs[ 'timespan' ]
                 
-                self._AddToExpires( c, service_id, subject_account_ids, expiration )
+                self._AddToExpiry( c, service_id, subject_account_ids, timespan )
                 
-            elif action == HC.SET_EXPIRES:
+            elif action == HC.SET_EXPIRY:
                 
-                expires = kwargs[ 'expiry' ]
+                expiry = kwargs[ 'expiry' ]
                 
-                self._SetExpires( c, service_id, subject_account_ids, expires )
+                self._SetExpiry( c, service_id, subject_account_ids, expiry )
                 
             
         
@@ -1957,7 +1953,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.executemany( 'UPDATE account_scores SET score = score + ? WHERE service_id = ? AND account_id = ? and score_type = ?;', [ ( score, service_id, account_id, score_type ) for ( account_id, score ) in scores ] )
         
     
-    def _SetExpires( self, c, service_id, account_ids, expires ): c.execute( 'UPDATE account_map SET expires = ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expires, service_id ) )
+    def _SetExpiry( self, c, service_id, account_ids, expiry ): c.execute( 'UPDATE account_map SET expires = ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expiry, service_id ) )
     
     def _SetOptions( self, c, service_identifier, options ):
         

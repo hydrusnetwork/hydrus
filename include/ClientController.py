@@ -125,8 +125,6 @@ class Controller( wx.App ):
     
     def GetThumbnailCache( self ): return self._thumbnail_cache
     
-    def GetWebCookies( self, name ): return self._web_session_manager.GetCookies( name )
-    
     def MaintainDB( self ):
         
         sys.stdout.flush()
@@ -461,7 +459,7 @@ class Controller( wx.App ):
         
         self._last_idle_time = HC.GetNow()
         
-        if action == 'content_updates': self._undo_manager.AddCommand( 'content_updates', *args, **kwargs )
+        if action == 'content_updates': self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
         
         return self._Write( action, HC.HIGH_PRIORITY, False, *args, **kwargs )
         

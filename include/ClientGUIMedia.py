@@ -64,10 +64,10 @@ def AddFileServiceIdentifiersToMenu( menu, file_service_identifiers, phrase, act
     
 class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
-    def __init__( self, parent, page_key, file_service_identifier, predicates, media_results ):
+    def __init__( self, parent, page_key, file_service_identifier, media_results ):
         
         wx.ScrolledWindow.__init__( self, parent, size = ( 0, 0 ), style = wx.BORDER_SUNKEN )
-        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, predicates, media_results )
+        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, media_results )
         
         self.SetBackgroundColour( wx.WHITE )
         
@@ -179,7 +179,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if len( media_results ) > 0:
                     
-                    try: ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, media_results, actions )
+                    try: ClientGUICanvas.CanvasFullscreenMediaListCustomFilter( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, media_results, actions )
                     except: wx.MessageBox( traceback.format_exc() )
                     
                 
@@ -257,7 +257,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             if first_media is not None and first_media.GetFileServiceIdentifiersCDPP().HasLocal(): first_hash = first_media.GetDisplayMedia().GetHash()
             else: first_hash = None
             
-            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, media_results, first_hash )
+            ClientGUICanvas.CanvasFullscreenMediaListBrowser( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, media_results, first_hash )
             
         
     
@@ -267,7 +267,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( media_results ) > 0:
             
-            try: ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, self._predicates, media_results )
+            try: ClientGUICanvas.CanvasFullscreenMediaListFilterInbox( self.GetTopLevelParent(), self._page_key, self._file_service_identifier, media_results )
             except: wx.MessageBox( traceback.format_exc() )
             
         
@@ -815,7 +815,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
 class MediaPanelNoQuery( MediaPanel ):
     
-    def __init__( self, parent, page_key, file_service_identifier ): MediaPanel.__init__( self, parent, page_key, file_service_identifier, [], [] )
+    def __init__( self, parent, page_key, file_service_identifier ): MediaPanel.__init__( self, parent, page_key, file_service_identifier, [] )
     
     def _GetPrettyStatus( self ): return 'No query'
     
@@ -828,7 +828,7 @@ class MediaPanelLoading( MediaPanel ):
         self._current = None
         self._max = None
         
-        MediaPanel.__init__( self, parent, page_key, file_service_identifier, [], [] )
+        MediaPanel.__init__( self, parent, page_key, file_service_identifier, [] )
         
         HC.pubsub.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         
@@ -863,9 +863,9 @@ class MediaPanelLoading( MediaPanel ):
     
 class MediaPanelThumbnails( MediaPanel ):
     
-    def __init__( self, parent, page_key, file_service_identifier, predicates, media_results ):
+    def __init__( self, parent, page_key, file_service_identifier, media_results ):
         
-        MediaPanel.__init__( self, parent, page_key, file_service_identifier, predicates, media_results )
+        MediaPanel.__init__( self, parent, page_key, file_service_identifier, media_results )
         
         self._num_columns = 1
         self._num_rows_in_client_height = 0
@@ -1162,7 +1162,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         
     
-    def _GenerateMediaCollection( self, media_results ): return ThumbnailMediaCollection( self._file_service_identifier, self._predicates, media_results )
+    def _GenerateMediaCollection( self, media_results ): return ThumbnailMediaCollection( self._file_service_identifier, media_results )
     
     def _GenerateMediaSingleton( self, media_result ): return ThumbnailMediaSingleton( self._file_service_identifier, media_result )
     
@@ -2376,9 +2376,9 @@ class Thumbnail( Selectable ):
     
 class ThumbnailMediaCollection( Thumbnail, ClientGUIMixins.MediaCollection ):
     
-    def __init__( self, file_service_identifier, predicates, media_results ):
+    def __init__( self, file_service_identifier, media_results ):
         
-        ClientGUIMixins.MediaCollection.__init__( self, file_service_identifier, predicates, media_results )
+        ClientGUIMixins.MediaCollection.__init__( self, file_service_identifier, media_results )
         Thumbnail.__init__( self, file_service_identifier )
         
     

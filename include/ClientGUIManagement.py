@@ -166,7 +166,7 @@ class CaptchaControl( wx.Panel ):
             self._refresh_button.SetLabel( 'get new captcha' )
             self._refresh_button.Enable()
             
-            self._captcha_time_left.SetLabel( HC.ConvertTimestampToPrettyExpires( self._captcha_runs_out ) )
+            self._captcha_time_left.SetLabel( HC.ConvertTimestampToPrettyExpiry( self._captcha_runs_out ) )
             
         
         del dc
@@ -356,7 +356,7 @@ class Comment( wx.Panel ):
     
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER ):
+    def __init__( self, parent, page, page_key, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, starting_from_session = False ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
@@ -369,6 +369,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page_key = page_key
         self._file_service_identifier = file_service_identifier
         self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+        self._starting_from_session = starting_from_session
         
         self._paused = False
         
@@ -414,9 +415,9 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
 class ManagementPanelDumper( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, imageboard, media_results ):
+    def __init__( self, parent, page, page_key, imageboard, media_results, starting_from_session = False ):
         
-        ManagementPanel.__init__( self, parent, page, page_key )
+        ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         ( self._4chan_token, pin, timeout ) = HC.app.Read( '4chan_pass' )
         
@@ -1154,9 +1155,9 @@ class ManagementPanelDumper( ManagementPanel ):
     
 class ManagementPanelImport( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanel.__init__( self, parent, page, page_key )
+        ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._successful = 0
         self._failed = 0
@@ -1384,13 +1385,13 @@ class ManagementPanelImport( ManagementPanel ):
     
 class ManagementPanelImportHDD( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False ):
+    def __init__( self, parent, page, page_key, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False, starting_from_session = False ):
         
         self._advanced_import_options = advanced_import_options
         self._paths_to_tags = paths_to_tags
         self._delete_after_success = delete_after_success
         
-        ManagementPanelImport.__init__( self, parent, page, page_key )
+        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1477,9 +1478,9 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
     
 class ManagementPanelImportWithQueue( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImport.__init__( self, parent, page, page_key )
+        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._download_progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
         
@@ -1663,9 +1664,9 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
     
 class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
     
-    def __init__( self, parent, page, page_key, name, namespaces ):
+    def __init__( self, parent, page, page_key, name, namespaces, starting_from_session = False ):
         
-        ManagementPanelImportWithQueue.__init__( self, parent, page, page_key )
+        ManagementPanelImportWithQueue.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send ' + name + ' tags to ', namespaces )
         
@@ -1903,14 +1904,14 @@ class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
     
 class ManagementPanelImportWithQueueAdvancedBooru( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key, booru ):
+    def __init__( self, parent, page, page_key, booru, starting_from_session = False ):
         
         self._booru = booru
         
         name = self._booru.GetName()
         namespaces = booru.GetNamespaces()
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
     
     def _GetDownloaders( self, raw_tags ):
@@ -1922,12 +1923,12 @@ class ManagementPanelImportWithQueueAdvancedBooru( ManagementPanelImportWithQueu
     
 class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         name = 'deviant art'
         namespaces = [ 'creator', 'title', '' ]
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'artist username' )
         
@@ -1936,12 +1937,12 @@ class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWit
     
 class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         name = 'giphy'
         namespaces = [ '' ]
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'tag' )
         
@@ -1950,12 +1951,12 @@ class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueu
     
 class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         name = 'hentai foundry'
         namespaces = [ 'creator', 'title', '' ]
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
     
     def _InitExtraVboxElements( self, vbox ):
@@ -1967,9 +1968,9 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImport
     
 class ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( ManagementPanelImportWithQueueAdvancedHentaiFoundry ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImportWithQueueAdvancedHentaiFoundry.__init__( self, parent, page, page_key )
+        ManagementPanelImportWithQueueAdvancedHentaiFoundry.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'artist username' )
         
@@ -1984,9 +1985,9 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( ManagementPanel
     
 class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelImportWithQueueAdvancedHentaiFoundry ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImportWithQueueAdvancedHentaiFoundry.__init__( self, parent, page, page_key )
+        ManagementPanelImportWithQueueAdvancedHentaiFoundry.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'search tags' )
         
@@ -2000,12 +2001,12 @@ class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelIm
     
 class ManagementPanelImportWithQueueAdvancedNewgrounds( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         name = 'newgrounds'
         namespaces = [ 'creator', 'title', '' ]
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'artist' )
         
@@ -2014,19 +2015,19 @@ class ManagementPanelImportWithQueueAdvancedNewgrounds( ManagementPanelImportWit
     
 class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         name = 'pixiv'
         namespaces = [ 'creator', 'title', '' ]
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
     
 class ManagementPanelImportWithQueueAdvancedPixivArtist( ManagementPanelImportWithQueueAdvancedPixiv ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key )
+        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'artist id number' )
         
@@ -2035,9 +2036,9 @@ class ManagementPanelImportWithQueueAdvancedPixivArtist( ManagementPanelImportWi
     
 class ManagementPanelImportWithQueueAdvancedPixivTag( ManagementPanelImportWithQueueAdvancedPixiv ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key )
+        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'search tag' )
         
@@ -2046,12 +2047,12 @@ class ManagementPanelImportWithQueueAdvancedPixivTag( ManagementPanelImportWithQ
     
 class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQueueAdvanced ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
         name = 'tumblr'
         namespaces = [ '' ]
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces )
+        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
         
         self._new_queue_input.SetValue( 'username' )
         
@@ -2060,9 +2061,9 @@ class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQue
     
 class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImportWithQueue.__init__( self, parent, page, page_key )
+        ManagementPanelImportWithQueue.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._connections = {}
         
@@ -2185,9 +2186,9 @@ class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
     
 class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key ):
+    def __init__( self, parent, page, page_key, starting_from_session = False ):
         
-        ManagementPanelImport.__init__( self, parent, page, page_key )
+        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
         self._download_progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
         
@@ -2485,11 +2486,11 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
 class ManagementPanelPetitions( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier, petition_service_identifier ):
+    def __init__( self, parent, page, page_key, file_service_identifier, petition_service_identifier, starting_from_session = False ):
         
         self._petition_service_identifier = petition_service_identifier
         
-        ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
+        ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier, starting_from_session = starting_from_session )
         
         self._service = HC.app.Read( 'service', self._petition_service_identifier )
         self._can_ban = self._service.GetAccount().HasPermission( HC.MANAGE_USERS )
@@ -2583,7 +2584,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             with wx.BusyCursor(): media_results = HC.app.Read( 'media_results', self._file_service_identifier, self._current_petition.GetHashes() )
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, [], media_results )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, media_results )
             
             panel.Collect( self._page_key, self._collect_by.GetChoice() )
             
@@ -2686,9 +2687,9 @@ class ManagementPanelPetitions( ManagementPanel ):
     
 class ManagementPanelQuery( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier, show_search = True, initial_predicates = [] ):
+    def __init__( self, parent, page, page_key, file_service_identifier, show_search = True, initial_predicates = [], starting_from_session = False ):
         
-        ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier )
+        ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier, starting_from_session = starting_from_session )
         
         self._query_key = HC.JobKey()
         self._synchronised = True
@@ -2718,7 +2719,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        if len( initial_predicates ) > 0: wx.CallAfter( self._DoQuery )
+        if len( initial_predicates ) > 0 and not starting_from_session: wx.CallAfter( self._DoQuery )
         
         HC.pubsub.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         HC.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
@@ -2886,7 +2887,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, current_predicates, media_results )
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, media_results )
                 
                 panel.Collect( self._page_key, self._collect_by.GetChoice() )
                 
@@ -2900,7 +2901,7 @@ class ManagementPanelQuery( ManagementPanel ):
     
 class ManagementPanelMessages( wx.ScrolledWindow ):
     
-    def __init__( self, parent, page_key, identity ):
+    def __init__( self, parent, page_key, identity, starting_from_session = False ):
         
         wx.ScrolledWindow.__init__( self, parent, style = wx.BORDER_NONE | wx.HSCROLL | wx.VSCROLL )
         
@@ -2908,6 +2909,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         
         self._page_key = page_key
         self._identity = identity
+        self._starting_from_session = starting_from_session
         
         self._query_key = HC.JobKey()
         

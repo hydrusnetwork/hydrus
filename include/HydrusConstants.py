@@ -38,8 +38,8 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 
 # Misc
 
-NETWORK_VERSION = 11
-SOFTWARE_VERSION = 94
+NETWORK_VERSION = 12
+SOFTWARE_VERSION = 95
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -47,7 +47,7 @@ HYDRUS_KEY_LENGTH = 32
 
 UPDATE_DURATION = 100000
 
-expirations = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), ( 'six months', 6 * 31 * 86400 ), ( 'one year', 12 * 31 * 86400 ), ( 'two years', 24 * 31 * 86400 ), ( 'five years', 60 * 31 * 86400 ), ( 'does not expire', None ) ]
+lifetimes = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), ( 'six months', 6 * 31 * 86400 ), ( 'one year', 12 * 31 * 86400 ), ( 'two years', 24 * 31 * 86400 ), ( 'five years', 60 * 31 * 86400 ), ( 'does not expire', None ) ]
 
 app = None
 shutdown = False
@@ -169,8 +169,8 @@ DELETE_TAG_PETITION = 1
 BAN = 0
 SUPERBAN = 1
 CHANGE_ACCOUNT_TYPE = 2
-ADD_TO_EXPIRES = 3
-SET_EXPIRES = 4
+ADD_TO_EXPIRY = 3
+SET_EXPIRY = 4
 
 CURRENT = 0
 PENDING = 1
@@ -848,46 +848,46 @@ def ConvertTimestampToPrettyAgo( timestamp ):
     elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
     else: return ' '.join( ( m, s ) ) + ' ago'
     
-def ConvertTimestampToPrettyExpires( timestamp ):
+def ConvertTimestampToPrettyExpiry( timestamp ):
     
     if timestamp is None: return 'does not expire'
-    if timestamp == 0: return 'unknown expiry'
+    if timestamp == 0: return 'unknown expiration'
     
-    expires = GetNow() - timestamp
+    expiry = GetNow() - timestamp
     
-    if expires >= 0: already_happend = True
+    if expiry >= 0: already_happend = True
     else:
         
-        expires *= -1
+        expiry *= -1
         
         already_happend = False
         
     
-    seconds = expires % 60
+    seconds = expiry % 60
     if seconds == 1: s = '1 second'
     else: s = u( seconds ) + ' seconds'
     
-    expires = expires / 60
-    minutes = expires % 60
+    expiry = expiry / 60
+    minutes = expiry % 60
     if minutes == 1: m = '1 minute'
     else: m = u( minutes ) + ' minutes'
     
-    expires = expires / 60
-    hours = expires % 24
+    expiry = expiry / 60
+    hours = expiry % 24
     if hours == 1: h = '1 hour'
     else: h = u( hours ) + ' hours'
     
-    expires = expires / 24
-    days = expires % 30
+    expiry = expiry / 24
+    days = expiry % 30
     if days == 1: d = '1 day'
     else: d = u( days ) + ' days'
     
-    expires = expires / 30
-    months = expires % 12
+    expiry = expiry / 30
+    months = expiry % 12
     if months == 1: mo = '1 month'
     else: mo = u( months ) + ' months'
     
-    years = expires / 12
+    years = expiry / 12
     if years == 1: y = '1 year'
     else: y = u( years ) + ' years'
     
@@ -1226,7 +1226,7 @@ class AdvancedHTTPConnection():
             
         
     
-    def _DoHydrusBusiness( self, request, response, size_of_request, size_of_response ):
+    def _CheckHydrusVersion( self, response ):
         
         service_type = self._service_identifier.GetType()
         
@@ -1240,6 +1240,23 @@ class AdvancedHTTPConnection():
             
             raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
             
+        
+        ( service_string_gumpf, network_version ) = server_header.split( '/' )
+        
+        network_version = int( network_version )
+        
+        if network_version != NETWORK_VERSION:
+            
+            if network_version > NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
+            else: message = 'The server is out of date; please ask its admin to update to the latest release.'
+            
+            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version was ' + u( network_version ) + ', whereas your client\'s is ' + u( NETWORK_VERSION ) + '! ' + message )
+            
+        
+    
+    def _DoHydrusBandwidth( self, request, response, size_of_request, size_of_response ):
+        
+        service_type = self._service_identifier.GetType()
         
         if '?' in request: request_command = request.split( '?' )[0]
         else: request_command = request
@@ -1272,6 +1289,8 @@ class AdvancedHTTPConnection():
             
             response = self._connection.getresponse()
             
+        
+        self._CheckHydrusVersion( response )
         
         content_length = response.getheader( 'Content-Length' )
         
@@ -1413,7 +1432,7 @@ class AdvancedHTTPConnection():
         
         if self._accept_cookies: self._AcceptCookies( response )
         
-        if self._service_identifier is not None: self._DoHydrusBusiness( request, response, size_of_request, size_of_response )
+        if self._service_identifier is not None: self._DoHydrusBandwidth( request, response, size_of_request, size_of_response )
         
         if response.status == 200: return parsed_response
         elif response.status == 205: return
@@ -1495,14 +1514,14 @@ class Account( HydrusYAMLBase ):
     
     yaml_tag = u'!Account'
     
-    def __init__( self, account_id, account_type, created, expires, used_data, banned_info = None ):
+    def __init__( self, account_id, account_type, created, expiry, used_data, banned_info = None ):
         
         HydrusYAMLBase.__init__( self )
         
         self._account_id = account_id
         self._account_type = account_type
         self._created = created
-        self._expires = expires
+        self._expiry = expiry
         self._used_data = used_data
         self._banned_info = banned_info
         
@@ -1518,17 +1537,17 @@ class Account( HydrusYAMLBase ):
         if self._banned_info is None: return False
         else:
             
-            ( reason, created, expires ) = self._banned_info
+            ( reason, created, expiry ) = self._banned_info
             
-            if expires is None: return True
-            else: return GetNow() > expires
+            if expiry is None: return True
+            else: return GetNow() > expiry
             
         
     
     def _IsExpired( self ):
         
-        if self._expires is None: return False
-        else: return GetNow() > self._expires
+        if self._expiry is None: return False
+        else: return GetNow() > self._expiry
         
     
     def CheckPermission( self, permission ):
@@ -1548,7 +1567,7 @@ class Account( HydrusYAMLBase ):
         if not self._account_type.HasPermission( permission ): raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
         
     
-    def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._created ) + os.linesep + self._account_type.ConvertToString( self._used_data ) + os.linesep + 'which '+ ConvertTimestampToPrettyExpires( self._expires )
+    def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._created ) + os.linesep + self._account_type.ConvertToString( self._used_data ) + os.linesep + 'which '+ ConvertTimestampToPrettyExpiry( self._expiry )
     
     def GetAccountIdentifier( self ): return AccountIdentifier( account_id = self._account_id )
     
@@ -1558,17 +1577,17 @@ class Account( HydrusYAMLBase ):
     
     def GetCreated( self ): return self._created
     
-    def GetExpires( self ): return self._expires
+    def GetExpiry( self ): return self._expiry
     
-    def GetExpiresString( self ):
+    def GetExpiryString( self ):
         
         if self._IsBanned():
             
-            ( reason, created, expires ) = self._banned_info
+            ( reason, created, expiry ) = self._banned_info
             
-            return 'banned ' + ConvertTimestampToPrettyAge( created ) + ', ' + ConvertTimestampToPrettyExpires( expires ) + ' because: ' + reason
+            return 'banned ' + ConvertTimestampToPrettyAge( created ) + ', ' + ConvertTimestampToPrettyExpiry( expiry ) + ' because: ' + reason
             
-        else: return ConvertTimestampToPrettyAge( self._created ) + ' and ' + ConvertTimestampToPrettyExpires( self._expires )
+        else: return ConvertTimestampToPrettyAge( self._created ) + ' and ' + ConvertTimestampToPrettyExpiry( self._expiry )
         
     
     def GetAccountId( self ): return self._account_id

@@ -4,6 +4,7 @@ import hashlib
 import HydrusConstants as HC
 import HydrusEncryption
 import HydrusServer
+import HydrusServerAMP
 import os
 import potr
 import time
@@ -205,7 +206,7 @@ class IMManager():
                 
                 # get host, port for that identity
                 
-                creator = ClientCreator( reactor, HydrusServer.MessagingClientProtocol )
+                creator = ClientCreator( reactor, HydrusServerAMP.MessagingClientProtocol )
                 
                 deferred = creator.connectTCP( host, port )
                 
@@ -286,7 +287,7 @@ class IMManager():
         
         # fetch host and port for that id
         
-        creator = ClientCreator( reactor, HydrusServer.MessagingClientProtocol )
+        creator = ClientCreator( reactor, HydrusServerAMP.MessagingClientProtocol )
         
         deferred = creator.connectTCP( host, port )
         
@@ -317,4 +318,65 @@ class IMManager():
         
         pass
         
+    
+class IMMessage( HC.HydrusYAMLBase ):
+    
+    yaml_tag = u'!IMMessage'
+    
+class IMMessageQuestion( IMMessage ):
+    
+    yaml_tag = u'!IMMessageQuestion'
+    
+    def __init__( self, job_key = None ):
+        
+        if job_key is None: job_key = os.urandom( 32 )
+        
+        self._job_key = job_key
+        
+    
+    def GenerateAnswer( self, answer ):
+        
+        return IMMessageQuestionAnswer( self._job_key, answer )
+        
+    
+    def GetJobKey( self ): return self._job_key
+    
+class IMMessageQuestionAnswer( IMMessageQuestion ):
+    
+    yaml_tag = u'!IMMessageQuestionAnswer'
+    
+    def __init__( self, job_key, answer ):
+        
+        IMMessageQuestion.__init__( self, job_key )
+        
+        self._answer = answer
+        
+    
+    def GetAnswer( self ): return self._answer
+    
+class IMMessageQuestionFiles( IMMessageQuestion ):
+    
+    yaml_tag = u'!IMMessageFiles'
+    
+    def __init__( self, media_results ):
+        
+        IMMessageQuestion.__init__( self )
+        
+        self._text = text
+        
+    
+IM_MESSAGE_TYPE_CONVO = 0
+IM_MESSAGE_TYPE_STATUS = 1
+
+class IMMessageText( IMMessage ):
+    
+    yaml_tag = u'!IMMessageText'
+    
+    def __init__( self, type, text ):
+        
+        self._type = type
+        self._text = text
+        
+    
+    def ToTuple( self ): return ( self._type, self._text )
     

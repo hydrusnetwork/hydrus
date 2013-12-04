@@ -3331,23 +3331,93 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         if action == HC.CONTENT_UPDATE_ADVANCED:
                             
-                            ( sub_action, sub_row ) = row
+                            c.execute( 'CREATE TABLE temp_operation ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER );' )
                             
+                            predicates = [ 'service_id = ' + str( service_id ) ]
+                            
+                            ( sub_action, sub_row ) = row
+                            print( sub_action )
                             if sub_action == 'copy':
                                 
                                 ( tag, hashes, service_identifier_target ) = sub_row
                                 
-                                pass
+                                service_id_target = self._GetServiceId( c, service_identifier_target )
+                                
+                                predicates.append( 'status = ' + str( HC.CURRENT ) )
                                 
                             elif sub_action == 'delete':
                                 
                                 ( tag, hashes ) = sub_row
                                 
-                                # do a raw query to get [ ( namespace_id, tag_id, hash_ids ) ]
-                                # depending on 
+                                predicates.append( 'status = ' + str( HC.CURRENT ) )
                                 
-                                pass
+                            elif sub_action == 'delete_deleted':
                                 
+                                ( tag, hashes ) = sub_row
+                                
+                                predicates.append( 'status = ' + str( HC.DELETED ) )
+                                
+                            
+                            if tag is not None:
+                                
+                                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                                
+                                predicates.append( 'namespace_id = ' + str( namespace_id ) )
+                                predicates.append( 'tag_id = ' + str( tag_id ) )
+                                
+                            
+                            if hashes is not None:
+                                
+                                hash_ids = self._GetHashIds( c, hashes )
+                                
+                                predicates.append( 'hash_id IN ' + HC.SplayListForDB( hash_ids ) )
+                                
+                            
+                            c.execute( 'INSERT INTO temp_operation ( namespace_id, tag_id, hash_id ) SELECT namespace_id, tag_id, hash_id FROM mappings WHERE ' + ' AND '.join( predicates ) + ';' )
+                            
+                            num_to_do = self._GetRowCount( c )
+                            
+                            i = 0
+                            
+                            block_size = 1000
+                            
+                            while i < num_to_do:
+                                
+                                advanced_mappings_ids = c.execute( 'SELECT namespace_id, tag_id, hash_id FROM temp_operation WHERE job_id BETWEEN ? AND ?;', ( i, i + block_size - 1 ) )
+                                
+                                advanced_mappings_ids = HC.BuildKeyToListDict( ( ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in advanced_mappings_ids ) )
+                                
+                                advanced_mappings_ids = [ ( namespace_id, tag_id, hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in advanced_mappings_ids.items() ]
+                                
+                                if sub_action == 'copy':
+                                    
+                                    if service_identifier_target.GetType() == HC.LOCAL_TAG: kwarg = 'mappings_ids'
+                                    else: kwarg = 'pending_mappings_ids'
+                                    
+                                    kwargs = { kwarg : advanced_mappings_ids }
+                                    
+                                    self._UpdateMappings( c, service_id_target, **kwargs )
+                                    
+                                elif sub_action == 'delete':
+                                    
+                                    self._UpdateMappings( c, service_id, deleted_mappings_ids = advanced_mappings_ids )
+                                    
+                                elif sub_action == 'delete_deleted':
+                                    
+                                    for ( namespace_id, tag_id, hash_ids ) in advanced_mappings_ids:
+                                        
+                                        c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
+                                        
+                                    
+                                    c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+                                    
+                                
+                                i += block_size
+                                
+                            
+                            c.execute( 'DROP TABLE temp_operation;' )
+                            
+                            self.pub( 'notify_new_pending' )
                             
                         else:
                             
@@ -3448,9 +3518,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 existing_hashes = self._GetHashes( c, existing_hash_ids )
                                 
-                                mapping_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
+                                mappings_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
                                 
-                                self._UpdateMappings( c, service_id, mappings_ids = mapping_ids )
+                                self._UpdateMappings( c, service_id, mappings_ids = mappings_ids )
                                 
                                 special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, existing_hashes ) )
                                 
@@ -3480,9 +3550,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 existing_hashes = self._GetHashes( c, existing_hash_ids )
                                 
-                                mapping_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
+                                mappings_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
                                 
-                                self._UpdateMappings( c, service_id, pending_mappings_ids = mapping_ids )
+                                self._UpdateMappings( c, service_id, pending_mappings_ids = mappings_ids )
                                 
                                 special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( parent_tag, existing_hashes ) )
                                 
@@ -4989,6 +5059,25 @@ class DB( ServiceDB ):
                 if version < 94:
                     
                     c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
+                    
+                
+                if version < 95:
+                    
+                    # I changed a variable name in account, so old yaml dumps need to be refreshed
+                    
+                    unknown_account = HC.GetUnknownAccount()
+                    
+                    c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
+                    
+                    for ( name, info ) in c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall():
+                        
+                        for ( page_name, c_text, args, kwargs ) in info:
+                            
+                            if 'do_query' in kwargs: del kwargs[ 'do_query' ]
+                            
+                        
+                        c.execute( 'UPDATE gui_sessions SET info = ? WHERE name = ?;', ( info, name ) )
+                        
                     
                 
                 for ( service_id, account ) in c.execute( 'SELECT service_id, account FROM accounts;' ).fetchall():

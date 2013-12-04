@@ -947,6 +947,10 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         self.SetPopupControl( popup )
         
+        ( collect_types, collect_type_strings ) = popup.GetControl().GetValue()
+        
+        self.SetCollectTypes( collect_types, collect_type_strings )
+        
     
     def GetChoice( self ): return self._collect_by
     
@@ -1020,8 +1024,6 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 
                 self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
                 
-                self.EventChanged( None )
-                
             
             # as inspired by http://trac.wxwidgets.org/attachment/ticket/14413/test_clb_workaround.py
             # what a clusterfuck
@@ -1042,13 +1044,20 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             
             def EventChanged( self, event ):
                 
+                ( collect_types, collect_type_strings ) = self.GeValue()
+                
+                self._special_parent.SetCollectTypes( collect_types, collect_type_strings )
+                
+            
+            def GetValue( self ):
+                
                 collect_types = []
                 
                 for i in self.GetChecked(): collect_types.append( self.GetClientData( i ) )
                 
                 collect_type_strings = self.GetCheckedStrings()
                 
-                self._special_parent.SetCollectTypes( collect_types, collect_type_strings )
+                return ( collect_types, collect_type_strings )
                 
             
         

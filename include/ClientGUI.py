@@ -545,24 +545,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _News( self, service_identifier ):
-        
-        with ClientGUIDialogs.DialogNews( self, service_identifier ) as dlg: dlg.ShowModal()
-        
-    
-    def _Stats( self, service_identifier ):
-        
-        service = HC.app.Read( 'service', service_identifier )
-        
-        connection = service.GetConnection()
-        
-        response = connection.Get( 'stats' )
-        
-        stats = response[ 'stats' ]
-        
-        wx.MessageBox( HC.u( stats ) )
-        
-    
     def _FetchIP( self, service_identifier ):
         
         with wx.TextEntryDialog( self, 'File Hash' ) as dlg:
@@ -616,13 +598,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             self._CloseAllPages()
             
-            for ( name, c_text, args, kwargs ) in info:
+            for ( page_name, c_text, args, kwargs ) in info:
                 
                 c = ClientGUIPages.text_to_class[ c_text ]
                 
+                kwargs[ 'starting_from_session' ] = True
+                
                 new_page = c( self._notebook, *args, **kwargs )
                 
-                self._notebook.AddPage( new_page, name, select = True )
+                self._notebook.AddPage( new_page, page_name, select = True )
                 
                 self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
                 
@@ -846,6 +830,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             wx.CallAfter( new_page.SetSearchFocus )
             
+        
+    
+    def _News( self, service_identifier ):
+        
+        with ClientGUIDialogs.DialogNews( self, service_identifier ) as dlg: dlg.ShowModal()
         
     
     def _OpenExportFolder( self ):
@@ -1094,6 +1083,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 with ClientGUIDialogs.DialogSelectYoutubeURL( self, info ) as select_dlg: select_dlg.ShowModal()
                 
             
+        
+    
+    def _Stats( self, service_identifier ):
+        
+        service = HC.app.Read( 'service', service_identifier )
+        
+        connection = service.GetConnection()
+        
+        response = connection.Get( 'stats' )
+        
+        stats = response[ 'stats' ]
+        
+        wx.MessageBox( HC.u( stats ) )
         
     
     def _UnclosePage( self, closed_page_index ):
@@ -1379,9 +1381,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPageImportGallery( self, name ): self._NewPageImportGallery( name )
     
-    def NewPageImportHDD( self, paths_info, **kwargs ):
+    def NewPageImportHDD( self, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False ):
         
-        new_page = ClientGUIPages.PageImportHDD( self._notebook, paths_info, **kwargs )
+        new_page = ClientGUIPages.PageImportHDD( self._notebook, paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
         
         self._notebook.AddPage( new_page, 'import', select = True )
         
@@ -2206,7 +2208,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
                     if max_num_bytes is None: self._bytes.Hide()
-                    if expires is None: self._age.Hide()
+                    if expiry is None: self._age.Hide()
                     if max_num_requests is None: self._requests.Hide()
                     
                 
@@ -2387,7 +2389,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 account_type = account.GetAccountType()
                 
-                expires = account.GetExpires()
+                expiry = account.GetExpiry()
                 
             
             InitialiseControls()
@@ -2431,18 +2433,18 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     if not account.IsBanned():
                         
                         created = account.GetCreated()
-                        expires = account.GetExpires()
+                        expiry = account.GetExpiry()
                         
-                        if expires is None: self._age.Hide()
+                        if expiry is None: self._age.Hide()
                         else:
                             
                             self._age.Show()
                             
-                            self._age.SetRange( expires - created )
-                            self._age.SetValue( min( now - created, expires - created ) )
+                            self._age.SetRange( expiry - created )
+                            self._age.SetValue( min( now - created, expiry - created ) )
                             
                         
-                        self._age_text.SetLabel( account.GetExpiresString() )
+                        self._age_text.SetLabel( account.GetExpiryString() )
                         
                         first_begin = self._service.GetFirstBegin()
                         next_begin = self._service.GetNextBegin()
@@ -2582,10 +2584,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
         
         def EventServiceWideUpdate( self, event ):
-            
-            wx.MessageBox( 'This feature is not yet ready!' )
-            
-            return
             
             with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_identifier ) as dlg:
                 

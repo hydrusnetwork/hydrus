@@ -120,110 +120,90 @@ class Dialog( wx.Dialog ):
     
 class DialogAdvancedContentUpdate( Dialog ):
     
+    COPY = 0
+    DELETE = 1
+    DELETE_DELETED = 2
+    
+    ALL_MAPPINGS = 0
+    SPECIFIC_MAPPINGS = 1
+    
     def __init__( self, parent, service_identifier, hashes = None ):
         
         def InitialiseControls():
             
-            # show the service info
+            self._action_dropdown = ClientGUICommon.BetterChoice( self )
+            self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
+            self._tag_type_dropdown = ClientGUICommon.BetterChoice( self )
+            self._service_identifier_dropdown = ClientGUICommon.BetterChoice( self )
             
-            # show what we are affecting (i.e. some tags or whole service)
-            
-            # let's start with just tags, so:
-            
-            self._copy_all_mappings_dropdown = ClientGUICommon.BetterChoice( self )
-            
-            self._copy_all_mappings = wx.Button( self, label = 'Go!' )
-            self._copy_all_mappings.Bind( wx.EVT_BUTTON, self.EventCopyAll )
-            
-            self._copy_some_mappings_tag = wx.StaticText( self, label = '' )
-            
-            self._copy_some_mappings_dropdown = ClientGUICommon.BetterChoice( self )
-            
-            self._copy_some_mappings = wx.Button( self, label = 'Go!' )
-            self._copy_some_mappings.Bind( wx.EVT_BUTTON, self.EventCopySome )
-            
-            self._delete_all_mappings_dropdown = ClientGUICommon.BetterChoice( self )
-            
-            self._delete_all_mappings = wx.Button( self, label = 'Go!' )
-            self._delete_all_mappings.Bind( wx.EVT_BUTTON, self.EventDeleteAll )
-            
-            self._delete_some_mappings_tag = wx.StaticText( self, label = '' )
-            
-            self._delete_some_mappings_dropdown = ClientGUICommon.BetterChoice( self )
-            
-            self._delete_some_mappings = wx.Button( self, label = 'Go!' )
-            self._delete_some_mappings.Bind( wx.EVT_BUTTON, self.EventDeleteSome )
+            self._go = wx.Button( self, label = 'Go!' )
+            self._go.Bind( wx.EVT_BUTTON, self.EventGo )
             
             self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_IDENTIFIER, self._service_identifier )
-            
-            # clear deleted tags
-            
-            # clear all deleted instances of [tag]
+            self._specific_tag = wx.StaticText( self, label = '', size = ( 100, -1 ) )
             
             self._done = wx.Button( self, label = 'done' )
             
         
         def PopulateControls():
             
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            self._action_dropdown.Append( 'copy', self.COPY )
+            if self._service_identifier.GetType() == HC.LOCAL_TAG:
+                
+                self._action_dropdown.Append( 'delete', self.DELETE )
+                self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
+                
             
-            service_identifiers = [ service_identifier for service_identifier in service_identifiers if service_identifier != self._service_identifier ]
+            self._action_dropdown.Select( 0 )
             
             #
             
+            self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
+            self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
+            
+            self._tag_type_dropdown.Select( 0 )
+            
+            #
+            
+            service_identifiers = [ service_identifier for service_identifier in HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service_identifier != self._service_identifier ]
+            
             for service_identifier in service_identifiers:
                 
-                self._copy_all_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
-                self._copy_some_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
+                self._service_identifier_dropdown.Append( service_identifier.GetName(), service_identifier )
                 
-                self._delete_all_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
-                self._delete_some_mappings_dropdown.Append( service_identifier.GetName(), service_identifier )
-                
+            
+            self._service_identifier_dropdown.Select( 0 )
             
         
         def ArrangeControls():
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            # add service info statictext
+            message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time. They are not currently undoable. You may need to refresh your existing searches to see their effect.' 
             
-            gridbox = wx.FlexGridSizer( 0, 5 )
+            st = wx.StaticText( self, label = message )
             
-            gridbox.AddGrowableCol( 2, 1 )
+            st.Wrap( 360 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'copy' ), FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'all mappings' ), FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
-            gridbox.AddF( self._copy_all_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._copy_all_mappings, FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'copy' ), FLAGS_MIXED )
-            gridbox.AddF( self._copy_some_mappings_tag, FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
-            gridbox.AddF( self._copy_some_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._copy_some_mappings, FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'delete' ), FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'all mappings' ), FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
-            gridbox.AddF( self._delete_all_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._delete_all_mappings, FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self, label = 'delete' ), FLAGS_MIXED )
-            gridbox.AddF( self._delete_some_mappings_tag, FLAGS_MIXED )
-            gridbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
-            gridbox.AddF( self._delete_some_mappings_dropdown, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._delete_some_mappings, FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( st, FLAGS_EXPAND_BOTH_WAYS )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = 'Set tag: ' ), FLAGS_MIXED )
+            hbox.AddF( self._action_dropdown, FLAGS_MIXED )
+            hbox.AddF( self._tag_type_dropdown, FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
+            hbox.AddF( self._service_identifier_dropdown, FLAGS_MIXED )
+            hbox.AddF( self._go, FLAGS_MIXED )
+            
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self, label = 'set tag: ' ), FLAGS_MIXED )
             hbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._specific_tag, FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
-            
+            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._done, FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
@@ -248,75 +228,50 @@ class DialogAdvancedContentUpdate( Dialog ):
         ArrangeControls()
         
     
-    def EventCopyAll( self, event ):
+    def EventChoice( self, event ):
         
-        selection = self._copy_all_mappings_dropdown.GetSelection()
+        data = self._action_dropdown.GetChoice()
         
-        if selection != wx.NOT_FOUND:
-            
-            service_identifier_target = self._copy_all_mappings_dropdown.GetChoice()
-            
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', None, self._hashes, service_identifier_target ) )
-            
-            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
-            
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
-            
+        if data in ( self.DELETE, self.DELETE_DELETED ): self._service_identifier_dropdown.Disable()
+        else: self._service_identifier_dropdown.Enable()
         
     
-    def EventCopySome( self, event ):
+    def EventGo( self, event ):
         
-        selection = self._copy_some_mappings_dropdown.GetSelection()
+        action = self._action_dropdown.GetChoice()
         
-        if selection != wx.NOT_FOUND:
-            
-            service_identifier_target = self._copy_some_mappings_dropdown.GetChoice()
-            
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', self._tag, self._hashes, service_identifier_target ) )
-            
-            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
-            
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
-            
+        tag_type = self._tag_type_dropdown.GetChoice()
         
-    
-    def EventDeleteAll( self, event ):
+        if tag_type == self.ALL_MAPPINGS: tag = None
+        else: tag = self._tag
         
-        selection = self._delete_all_mappings_dropdown.GetSelection()
+        if tag == '': return
         
-        if selection != wx.NOT_FOUND:
+        service_identifier_target = self._service_identifier_dropdown.GetChoice()
+        
+        if action == self.COPY:
             
-            service_identifier_target = self._delete_all_mappings_dropdown.GetChoice()
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_identifier_target ) ) )
             
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', None, self._hashes, service_identifier_target ) )
+        elif action == self.DELETE:
             
-            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
             
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+        elif action == self.DELETE_DELETED:
+            
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
             
         
-    
-    def EventDeleteSome( self, event ):
+        service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
         
-        selection = self._delete_some_mappings_dropdown.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            service_identifier_target = self._delete_some_mappings_dropdown.GetChoice()
-            
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', self._tag, self._hashes, service_identifier_target ) )
-            
-            service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
-            
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
-            
+        HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
         
     
     def SetSomeTag( self, tag, parents = [] ):
         
         self._tag = tag
         
-        self._copy_some_mappings_tag.SetLabel( tag )
+        self._specific_tag.SetLabel( tag )
         
     
 class DialogChooseNewServiceMethod( Dialog ):
@@ -555,7 +510,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._account_types = wx.Choice( self, size = ( 400, -1 ) )
             
-            self._expiration = wx.Choice( self )
+            self._lifetime = wx.Choice( self )
             
             self._ok = wx.Button( self, label='Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -581,8 +536,8 @@ class DialogGenerateNewAccounts( Dialog ):
             for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
             self._account_types.SetSelection( 0 ) # admin
             
-            for ( str, value ) in HC.expirations: self._expiration.Append( str, value )
-            self._expiration.SetSelection( 3 ) # one year
+            for ( str, value ) in HC.lifetimes: self._lifetime.Append( str, value )
+            self._lifetime.SetSelection( 3 ) # one year
             
         
         def ArrangeControls():
@@ -590,7 +545,7 @@ class DialogGenerateNewAccounts( Dialog ):
             ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
             ctrl_box.AddF( self._num, FLAGS_SMALL_INDENT )
             ctrl_box.AddF( self._account_types, FLAGS_SMALL_INDENT )
-            ctrl_box.AddF( self._expiration, FLAGS_SMALL_INDENT )
+            ctrl_box.AddF( self._lifetime, FLAGS_SMALL_INDENT )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             b_box.AddF( self._ok, FLAGS_MIXED )
@@ -631,7 +586,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         title = account_type.GetTitle()
         
-        expiration = self._expiration.GetClientData( self._expiration.GetSelection() )
+        lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
         
         service = HC.app.Read( 'service', self._service_identifier )
         
@@ -639,8 +594,8 @@ class DialogGenerateNewAccounts( Dialog ):
             
             connection = service.GetConnection()
             
-            if expiration is None: response = connection.Get( 'registration_keys', num = num, title = title )
-            else: response = connection.Get( 'registration_keys', num = num, title = title, expiration = expiration )
+            if lifetime is None: response = connection.Get( 'registration_keys', num = num, title = title )
+            else: response = connection.Get( 'registration_keys', num = num, title = title, lifetime = lifetime )
             
             registration_keys = response[ 'registration_keys' ]
             
@@ -2757,15 +2712,15 @@ class DialogModifyAccounts( Dialog ):
             
             self._expiration_panel = ClientGUICommon.StaticBox( self, 'change expiration' )
             
-            self._add_to_expires = wx.Choice( self._expiration_panel )
+            self._add_to_expiry = wx.Choice( self._expiration_panel )
             
-            self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
-            self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
+            self._add_to_expiry_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+            self._add_to_expiry_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpiry )
             
-            self._set_expires = wx.Choice( self._expiration_panel )
+            self._set_expiry = wx.Choice( self._expiration_panel )
             
-            self._set_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
-            self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
+            self._set_expiry_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+            self._set_expiry_ok.Bind( wx.EVT_BUTTON, self.EventSetExpiry )
             
             #
             
@@ -2813,23 +2768,23 @@ class DialogModifyAccounts( Dialog ):
             
             #
             
-            for ( string, value ) in HC.expirations:
+            for ( string, value ) in HC.lifetimes:
                 
-                if value is not None: self._add_to_expires.Append( string, value ) # don't want 'add no limit'
+                if value is not None: self._add_to_expiry.Append( string, value ) # don't want 'add no limit'
                 
             
-            self._add_to_expires.SetSelection( 1 ) # three months
+            self._add_to_expiry.SetSelection( 1 ) # three months
             
-            for ( string, value ) in HC.expirations: self._set_expires.Append( string, value )
-            self._set_expires.SetSelection( 1 ) # three months
+            for ( string, value ) in HC.lifetimes: self._set_expiry.Append( string, value )
+            self._set_expiry.SetSelection( 1 ) # three months
             
             #
             
             if not self._service.GetAccount().HasPermission( HC.GENERAL_ADMIN ):
                 
                 self._account_types_ok.Disable()
-                self._add_to_expires_ok.Disable()
-                self._set_expires_ok.Disable()
+                self._add_to_expiry_ok.Disable()
+                self._set_expiry_ok.Disable()
                 
             
         
@@ -2844,20 +2799,20 @@ class DialogModifyAccounts( Dialog ):
             
             self._account_types_panel.AddF( account_types_hbox, FLAGS_EXPAND_PERPENDICULAR )
             
-            add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
+            add_to_expiry_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), FLAGS_MIXED )
-            add_to_expires_box.AddF( self._add_to_expires, FLAGS_EXPAND_BOTH_WAYS )
-            add_to_expires_box.AddF( self._add_to_expires_ok, FLAGS_MIXED )
+            add_to_expiry_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), FLAGS_MIXED )
+            add_to_expiry_box.AddF( self._add_to_expiry, FLAGS_EXPAND_BOTH_WAYS )
+            add_to_expiry_box.AddF( self._add_to_expiry_ok, FLAGS_MIXED )
             
-            set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
+            set_expiry_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), FLAGS_MIXED )
-            set_expires_box.AddF( self._set_expires, FLAGS_EXPAND_BOTH_WAYS )
-            set_expires_box.AddF( self._set_expires_ok, FLAGS_MIXED )
+            set_expiry_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), FLAGS_MIXED )
+            set_expiry_box.AddF( self._set_expiry, FLAGS_EXPAND_BOTH_WAYS )
+            set_expiry_box.AddF( self._set_expiry_ok, FLAGS_MIXED )
             
-            self._expiration_panel.AddF( add_to_expires_box, FLAGS_EXPAND_PERPENDICULAR )
-            self._expiration_panel.AddF( set_expires_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( add_to_expiry_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( set_expiry_box, FLAGS_EXPAND_PERPENDICULAR )
             
             self._ban_panel.AddF( self._ban, FLAGS_EXPAND_PERPENDICULAR )
             self._ban_panel.AddF( self._superban, FLAGS_EXPAND_PERPENDICULAR )
@@ -2894,7 +2849,7 @@ class DialogModifyAccounts( Dialog ):
         
         connection = self._service.GetConnection()
         
-        kwargs[ 'subject_identifiers' ] = list( self._subject_identifiers )
+        kwargs[ 'subject_identifiers' ] = self._subject_identifiers
         kwargs[ 'action' ] = action
         
         connection.Post( 'account', **kwargs )
@@ -2913,7 +2868,7 @@ class DialogModifyAccounts( Dialog ):
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
         
     
-    def EventAddToExpires( self, event ): self._DoModification( HC.ADD_TO_EXPIRES, expiration = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
+    def EventAddToExpiry( self, event ): self._DoModification( HC.ADD_TO_EXPIRY, timespan = self._add_to_expiry.GetClientData( self._add_to_expiry.GetSelection() ) )
     
     def EventBan( self, event ):
         
@@ -2925,13 +2880,13 @@ class DialogModifyAccounts( Dialog ):
     
     def EventChangeAccountType( self, event ): self._DoModification( HC.CHANGE_ACCOUNT_TYPE, title = self._account_types.GetClientData( self._account_types.GetSelection() ).GetTitle() )
     
-    def EventSetExpires( self, event ):
+    def EventSetExpiry( self, event ):
         
-        expires = self._set_expires.GetClientData( self._set_expires.GetSelection() )
+        expiry = self._set_expiry.GetClientData( self._set_expiry.GetSelection() )
         
-        if expires is not None: expires += HC.GetNow()
+        if expiry is not None: expiry += HC.GetNow()
         
-        self._DoModification( HC.SET_EXPIRES, expiry = expires )
+        self._DoModification( HC.SET_EXPIRY, expiry = expiry )
         
     
     def EventSuperban( self, event ):

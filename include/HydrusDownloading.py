@@ -580,7 +580,9 @@ class DownloaderHentaiFoundry( Downloader ):
     
     def _EstablishSession( self, connection ):
         
-        cookies = HC.app.GetWebCookies( 'hentai foundry' )
+        manager = HC.app.GetManager( 'web_sessions' )
+        
+        cookies = manager.GetCookies( 'hentai foundry' )
         
         for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
         
@@ -937,7 +939,9 @@ class DownloaderPixiv( Downloader ):
     
     def _EstablishSession( self, connection ):
         
-        cookies = HC.app.GetWebCookies( 'pixiv' )
+        manager = HC.app.GetManager( 'web_sessions' )
+        
+        cookies = manager.GetCookies( 'pixiv' )
         
         for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
         

@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusServer
@@ -33,10 +34,10 @@ class TestServer( unittest.TestCase ):
         account_id = 1
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
-        expires = None
+        expiry = None
         used_data = ( 0, 0 )
         
-        self._account = HC.Account( account_id, account_type, created, expires, used_data )
+        self._account = HC.Account( account_id, account_type, created, expiry, used_data )
         
         self._access_key = os.urandom( 32 )
         self._file_hash = os.urandom( 32 )
@@ -364,7 +365,7 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         
-        response = connection.Get( 'registration_keys', num = 1, title = 'blah', expiration = 100 )
+        response = connection.Get( 'registration_keys', num = 1, title = 'blah', lifetime = 100 )
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         
@@ -525,18 +526,30 @@ class TestAMP( unittest.TestCase ):
         
         point = TCP4ClientEndpoint( reactor, '127.0.0.1', self._server_port )
         
-        deferred = connectProtocol( point, HydrusServer.MessagingClientProtocol() )
+        deferred = connectProtocol( point, HydrusServerAMP.MessagingClientProtocol() )
         
         protocol = self._get_deferred_result( deferred )
         
         return protocol
         
     
-    def _make_persistent_connection( self, protocol, identifier, name ):
+    def _make_persistent_connection( self, protocol, access_key, name ):
         
-        access_key = os.urandom( 32 )
+        identifier = hashlib.sha256( access_key ).digest()
         
         HC.app.SetRead( 'im_identifier', identifier )
+        
+        permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
+        
+        account_id = 1
+        account_type = HC.AccountType( 'account', permissions, ( None, None ) )
+        created = HC.GetNow() - 100000
+        expiry = None
+        used_data = ( 0, 0 )
+        
+        account = HC.Account( account_id, account_type, created, expiry, used_data )
+        
+        HC.app.SetRead( 'account', account )
         
         deferred = protocol.callRemote( HydrusServerAMP.IMSessionKey, access_key = access_key, name = name )
         
@@ -544,7 +557,7 @@ class TestAMP( unittest.TestCase ):
         
         session_key = result[ 'session_key' ]
         
-        deferred = protocol.callRemote( HydrusServerAMP.IMLoginPersistent, session_key = session_key )
+        deferred = protocol.callRemote( HydrusServerAMP.IMLoginPersistent, network_version = HC.NETWORK_VERSION, session_key = session_key )
         
         result = self._get_deferred_result( deferred )
         
@@ -556,7 +569,7 @@ class TestAMP( unittest.TestCase ):
     
     def _make_temporary_connection( self, protocol, identifier, name ):
         
-        deferred = protocol.callRemote( HydrusServerAMP.IMLoginTemporary, identifier = identifier, name = name )
+        deferred = protocol.callRemote( HydrusServerAMP.IMLoginTemporary, network_version = HC.NETWORK_VERSION, identifier = identifier, name = name )
         
         result = self._get_deferred_result( deferred )
         
@@ -569,10 +582,10 @@ class TestAMP( unittest.TestCase ):
     def test_connections( self ):
         
         persistent_protocol = self._get_client_protocol()
-        persistent_identifier = os.urandom( 32 )
+        persistent_access_key = os.urandom( 32 )
         persistent_name = 'persistent'
         
-        self._make_persistent_connection( persistent_protocol, persistent_identifier, persistent_name )
+        self._make_persistent_connection( persistent_protocol, persistent_access_key, persistent_name )
         
         temp_protocol = self._get_client_protocol()
         temp_identifier = os.urandom( 32 )
@@ -582,8 +595,6 @@ class TestAMP( unittest.TestCase ):
         # test temporary connection
         
         # test making more connections under different names
-        
-        pass
         
     
     def test_status( self ):
