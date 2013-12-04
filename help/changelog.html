@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 95</h3></li>
+				<ul>
+					<li>pages launched from a session will no longer run their query on startup; they will remember their thumbnails</li>
+					<li>import pages added to gui sessions, although they do not yet remember their progress</li>
+					<li>the way session pages are started is improved</li>
+					<li>advanced content update dialog simplified and rearranged</li>
+					<li>advanced content update db code written for copy operation</li>
+					<li>advanced content update db code written for delete operation (local service only)</li>
+					<li>advanced content update db code written for delete deleted operation ( local service only)</li>
+					<li>made first version of IMMessage objects</li>
+					<li>added network version checking to hydrus's AMP</li>
+					<li>better AMP error catching and reporting added</li>
+					<li>AMP tests moved further forward</li>
+					<li>tightened up AMP network code, fixed last bugs</li>
+					<li>cleaned up a huge pile of 'expiry/expires/expiration' semantic mess</li>
+					<li>same for some mapping_ids/mappings_ids stuff</li>
+					<li>removed predicate knowledge from media display classes, which was just a mess, really</li>
+					<li>corrected a weird param order in sessions</li>
+					<li>general code cleanup</li>
+					<li>several old instances of tuple-list yaml compromise removed</li>
+					<li>fixed a session bug in the testing code because of last week's manager management change</li>
+					<li>fixed a hydrus session bug for accounts with no expiry</li>
+					<li>fixed a very important server-side network version checking bug</li>
+					<li>added client-side network version checking</li>
+				</ul>
 				<li><h3>version 94</h3></li>
 				<ul>
 					<li>reorganised the 'add tags from path' dialogs so the regex buttons made a little more sense</li>
