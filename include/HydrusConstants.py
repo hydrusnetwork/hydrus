@@ -1250,7 +1250,7 @@ class AdvancedHTTPConnection():
             if network_version > NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
             else: message = 'The server is out of date; please ask its admin to update to the latest release.'
             
-            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version was ' + u( network_version ) + ', whereas your client\'s is ' + u( NETWORK_VERSION ) + '! ' + message )
+            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + u( network_version ) + ', whereas your client\'s is ' + u( NETWORK_VERSION ) + '! ' + message )
             
         
     
@@ -1290,7 +1290,7 @@ class AdvancedHTTPConnection():
             response = self._connection.getresponse()
             
         
-        self._CheckHydrusVersion( response )
+        if self._service_identifier is not None: self._CheckHydrusVersion( response )
         
         content_length = response.getheader( 'Content-Length' )
         
