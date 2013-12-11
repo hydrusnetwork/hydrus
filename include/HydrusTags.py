@@ -395,6 +395,16 @@ class TagsManagerSimple():
                 tags = list( siblings_manager.CollapseTags( tags ) )
                 
             
+            tags = [ tag.split( ':', 1 )[1] for tag in tags ]
+            
+            def process_tag( t ):
+                
+                try: return int( t )
+                except: return t
+                
+            
+            tags = [ process_tag( tag ) for tag in tags ]
+            
             tags.sort()
             
             tags = tuple( tags )
@@ -587,6 +597,26 @@ class TagParentsManager():
     def _RefreshParents( self ):
         
         service_identifiers_to_statuses_to_pairs = HC.app.Read( 'tag_parents' )
+        
+        #
+        
+        sibling_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        result = collections.defaultdict( HC.default_dict_set )
+        
+        for ( service_identifier, statuses_to_pairs ) in service_identifiers_to_statuses_to_pairs.items():
+            
+            for ( status, pairs ) in statuses_to_pairs.items():
+                
+                pairs = sibling_manager.CollapsePairs( pairs )
+                
+                result[ service_identifier ][ status ] = pairs
+                
+            
+        
+        service_identifiers_to_statuses_to_pairs = result
+        
+        #
         
         t_s_p = list( self._tag_service_precedence )
         
@@ -816,6 +846,24 @@ class TagSiblingsManager():
             results.extend( [ tags_to_predicates[ tag ] for tag in tags_to_include_in_results ] )
             
             return results
+            
+        
+    
+    def CollapsePairs( self, pairs ):
+        
+        with self._lock:
+            
+            result = set()
+            
+            for ( a, b ) in pairs:
+                
+                if a in self._siblings: a = self._siblings[ a ]
+                if b in self._siblings: b = self._siblings[ b ]
+                
+                result.add( ( a, b ) )
+                
+            
+            return result
             
         
     

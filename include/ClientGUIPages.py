@@ -181,7 +181,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
         wx.CallAfter( self._search_preview_split.SplitHorizontally, self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelMessages( self._search_preview_split, self._page_key, self._identity )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelMessages( self._search_preview_split, self._page_key, self._identity, starting_from_session = self._starting_from_session )
     
     def _InitMessagesPanel( self ): self._messages_panel = ClientGUIMessages.ConversationSplitter( self, self._page_key, self._identity )
     
@@ -316,7 +316,7 @@ class PageImportBooru( PageImport ):
         PageImport.__init__( self, parent, initial_hashes = initial_hashes, starting_from_session = starting_from_session )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedBooru( self._search_preview_split, self, self._page_key, self._booru )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedBooru( self._search_preview_split, self, self._page_key, self._booru, starting_from_session = self._starting_from_session )
     
     def GetSessionArgs( self ):
         
@@ -328,13 +328,38 @@ class PageImportBooru( PageImport ):
         return ( args, kwargs )
         
     
-class PageImportDeviantArt( PageImport ):
+class PageImportGallery( PageImport ):
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedDeviantArt( self._search_preview_split, self, self._page_key )
+    def __init__( self, parent, name, initial_hashes = [], starting_from_session = False ):
+        
+        self._name = name
+        
+        PageImport.__init__( self, parent, initial_hashes = initial_hashes, starting_from_session = starting_from_session )
+        
     
-class PageImportGiphy( PageImport ):
+    def _InitManagementPanel( self ):
+        
+        if self._name == 'deviant art by artist': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedDeviantArt
+        elif self._name == 'hentai foundry by artist': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist
+        elif self._name == 'hentai foundry by tags': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedHentaiFoundryTags
+        elif self._name == 'giphy': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedGiphy
+        elif self._name == 'newgrounds': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedNewgrounds
+        elif self._name == 'pixiv by artist': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivArtist
+        elif self._name == 'pixiv by tag': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivTag
+        elif self._name == 'tumblr': c = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedTumblr
+        
+        self._management_panel = c( self._search_preview_split, self, self._page_key, starting_from_session = self._starting_from_session )
+        
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedGiphy( self._search_preview_split, self, self._page_key )
+    def GetSessionArgs( self ):
+        
+        hashes = [ media.GetHash() for media in self._media_panel.GetFlatMedia() ]
+        
+        args = ( self._name, )
+        kwargs = { 'initial_hashes' : hashes }
+        
+        return ( args, kwargs )
+        
     
 class PageImportHDD( PageImport ):
     
@@ -348,7 +373,7 @@ class PageImportHDD( PageImport ):
         PageImport.__init__( self, parent, initial_hashes = initial_hashes, starting_from_session = starting_from_session )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportHDD( self._search_preview_split, self, self._page_key, self._paths_info, advanced_import_options = self._advanced_import_options, paths_to_tags = self._paths_to_tags, delete_after_success = self._delete_after_success )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportHDD( self._search_preview_split, self, self._page_key, self._paths_info, advanced_import_options = self._advanced_import_options, paths_to_tags = self._paths_to_tags, delete_after_success = self._delete_after_success, starting_from_session = self._starting_from_session )
     
     def GetSessionArgs( self ):
         
@@ -360,37 +385,13 @@ class PageImportHDD( PageImport ):
         return ( args, kwargs )
         
     
-class PageImportHentaiFoundryArtist( PageImport ):
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( self._search_preview_split, self, self._page_key )
-    
-class PageImportHentaiFoundryTags( PageImport ):
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( self._search_preview_split, self, self._page_key )
-    
-class PageImportNewgrounds( PageImport ):
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedNewgrounds( self._search_preview_split, self, self._page_key )
-    
-class PageImportPixivArtist( PageImport ):
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivArtist( self._search_preview_split, self, self._page_key )
-    
-class PageImportPixivTag( PageImport ):
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedPixivTag( self._search_preview_split, self, self._page_key )
-    
 class PageImportThreadWatcher( PageImport ):
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportThreadWatcher( self._search_preview_split, self, self._page_key )
-    
-class PageImportTumblr( PageImport ):
-    
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueAdvancedTumblr( self._search_preview_split, self, self._page_key )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportThreadWatcher( self._search_preview_split, self, self._page_key, starting_from_session = self._starting_from_session )
     
 class PageImportURL( PageImport ):
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueURL( self._search_preview_split, self, self._page_key )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelImportWithQueueURL( self._search_preview_split, self, self._page_key, starting_from_session = self._starting_from_session )
     
 class PagePetitions( PageWithMedia ):
     
@@ -406,7 +407,7 @@ class PagePetitions( PageWithMedia ):
         PageWithMedia.__init__( self, parent, self._file_service_identifier, starting_from_session = starting_from_session )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelPetitions( self._search_preview_split, self, self._page_key, self._file_service_identifier, self._petition_service_identifier )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelPetitions( self._search_preview_split, self, self._page_key, self._file_service_identifier, self._petition_service_identifier, starting_from_session = self._starting_from_session )
     
     def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
     
@@ -460,7 +461,7 @@ class PageThreadDumper( PageWithMedia ):
         PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, starting_from_session = starting_from_session )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results, starting_from_session = self._starting_from_session )
     
     def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._media_results )
     

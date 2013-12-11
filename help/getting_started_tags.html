@@ -8,17 +8,36 @@
 		<div class="content">
 			<p><a href="getting_started_files.html"><--- Back to files</a></p>
 			<h3>how do we find files?</h3>
-			<p>So, we have stored our images and .swfs in a large database. Everything is hashed and cached. We can sort by inbox and resolution and size and a bunch of other quantitative metadata, but if we want to differentiate qualitatively, we shall have to use tags.</p>
+			<p>So, we have stored some media in our database. Everything is hashed and cached. We can search by inbox and resolution and size and so on, but if we really want to find what we are looking for, we shall have to use <i>tags</i>.</p>
 			<p><a href="faq.html#tags">FAQ: hold up, what is a tag?</a></p>
 			<p class="warning">The client starts with a 'local tags' service, which stores tags only on your client's database, where only you can see them. This is useful, and you should keep it in mind for specific jobs as you read the rest of this page, but please do not try to tag everything you own by yourself; unless you have a tiny collection, it will take you hundreds of hours, and your time is better spent helping build tag collections with other people.</p>
-			<p>In order to share tags with others, you must connect to at least one tag repository. You can create your own, if you like, and share access with whoever you like. I run a public tag repository, which you are very welcome to access and contribute to:</p>
+			<p>In order to share tags with others, you must connect to at least one tag repository. You can create your own, if you like, and share access with whoever you like. I run a public tag repository, which you are very welcome to access and contribute to. To add its details, go <i>services->add, remove or edit services</i>, select 'tags' on the left, and hit the 'add' button. You'll be asked if you have a registration key or an access key; you have an access key.</p>
 			<p><img src="edit_repos_public_tag_repo.png" /></p>
+			<p>Here's the info so you can copy it:</p>
 			<ul><li>4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f@hydrus.no-ip.org:45871</li></ul>
-			<p><b>Tags are rich, cpu-intensive metadata, so it will take a few minutes for the repository to synchronise completely.</b> The client will lag a little as it processes each update. You can watch its progress in the <i>services->review services</i> dialog as usual.</p>
+			<p><b>Tags are rich, cpu-intensive metadata. My repository has millions of mappings (about 70MB of network data, at last count), so expect your computer to take <i>hours</i> to synchronise fully. You can close the client at any time, and it will continue where it left off when it next boots. If it is slowing your normal browsing, you can pause it at <i>services->pause->repositories synchronisation</i>.</b></p>
+			<p>The client will report its current update processing status in the middle of the status bar, at the bottom of the screen. You can watch more detailed progress in the <i>services->review services</i> dialog as usual.</p>
+			<p><img src="tag_repo_review.png" /></p>
+			<h3>adding tags</h3>
+			<p>If you connect to a repository that has a lot of tags, you'll probably see them appearing in your client in any normal search. But if you want tags for your rarer files, or you don't connect to any big repositories, you'll have to add some tags yourself.</p>
+			<p>Select some files. Right click on them and select <i>manage->tags</i>, or hit F3. This will boot the very important <i>manage tags dialog</i>.</p>
+			<p><a href="manage_tags.png"><img src="manage_tags.png" width="683" height="384" /></a></p>
+			<p>This shows the <b>intersection</b> of the current selection's tags (it only shows the tags that <i>every</i> file in the selection has), and will equally add/remove tags to/from the entire selection. There's another autocomplete dropdown, just like when you search, that throws what you input at the box above. Submitting a tag that already exists will attempt to remove it, or you can just double click it. You may be prompted to give a reason for removing a tag from a remote repository, creating a petition that an administrator will review.</p>
+			<p>The tag box will prepend certain identifiers to show the changes that'll occur or pend when you hit <i>apply</i>:</p>
+			<ul class="bulletpoints">
+				<li><b>Nothing</b> - Existing tag.</li>
+				<li><b>(+)</b> - Will be applied/pended.</li>
+				<li><b>(-)</b> - Will be removed/petitioned.</li>
+				<li><b>(X)</b> - Has already been applied and deleted; you may or may not have authority to re-apply.</li>
+			</ul>
+			<p>If you edit tags for the local tags service, they will be applied instantly; otherwise, they will be pended, waiting until you are ready to upload. When you are ready to upload all your pending tag changes, use the <i>pending</i> menu in the main interface.</p>
+			<p>Please do not upload tags to my public tag repo until you get a rough feel for the <a href="tagging_schema.html">tag schema</a>, or just lurk until you get the idea. I am only interested in objective tags. If you don't like my guidelines, feel free to start your own tag repo!</p>
+			<p>You can synchronise with more than one tag repository. Press the up or down arrow keys on an empty autocomplete input to quickly jump between your repositories. Each repo's beliefs about which tags go with which files will be applied according to a certain precedence that you can edit in <i>services->manage tag service precedence</i>.</p>
+			<p><a href="faq.html#delays">FAQ: why can my friend not see what I just uploaded?</a></p>
 			<h3>now let's find some files</h3>
-			<p>Once you are all set up, you start to type in a tag, and the autocomplete dropdown will offer suggestions for you:</p>
+			<p>Once you are all set up, start to type in a tag, and the autocomplete dropdown will offer suggestions for you:</p>
 			<p><a href="hidamari_ac.png"><img src="hidamari_ac.png" width="683" height="384" /></a></p>
-			<p>Press up/down and enter to select, or double click with your mouse. Play with the buttons to see how they change your queries.</p>
+			<p>Becomes:</p>
 			<p><a href="hidamari.png"><img src="hidamari.png" width="683" height="384" /></a></p>
 			<p>More tags will narrow a search:</p>
 			<p><a href="hidamari_miyako.png"><img src="hidamari_miyako.png" width="683" height="384" /></a></p>
@@ -26,13 +45,6 @@
 			<p><a href="hidamari_exclude.png"><img src="hidamari_exclude.png" width="683" height="384" /></a></p>
 			<p>When you are more familiar with namespaces, sorting and collections, you can easily find and display whole books with just a few keystrokes:</p>
 			<p><a href="gunnerkrigg_chapter.png"><img src="gunnerkrigg_chapter.png" width="683" height="384" /></a></p>
-			<h3>creating tags</h3>
-			<p>Hit F3 on a selection of files to open up the tagging dialog.</p>
-			<p><a href="manage_tags.png"><img src="manage_tags.png" width="683" height="384" /></a></p>
-			<p>The dialog shows the <b>intersection</b> of the current selection's tags, and will add tags to/remove tags from the entire selection. Type a new tag and press enter to add it, double click an existing tag to remove it. You may be prompted to give a reason for removing a tag, which an administrator will review. Hit <i>Apply</i> and the changes will be pended for upload, just like with files. Use the <i>pending</i> menu when you are ready.</p>
-			<p>Please do not upload tags to my public tag repo until you get a rough feel for the <a href="tagging_schema.html">tag schema</a>, or just lurk until you get the idea. I am only interested in objective tags. If you don't like my guidelines, start your own tag repo!</p>
-			<p>You can be connected to more than one tag repository. Press the up or down arrow keys on an empty input to quickly jump between your repositories. Each repo's beliefs about which tags go with which files will be applied according to a certain precedence that you can edit in <i>services->manage tag service precedence</i>.</p>
-			<p><a href="faq.html#delays">FAQ: why can my friend not see what I just uploaded?</a></p>
 			<h3>typical usage</h3>
 			<p>I find the following import-cycle works well for me:</p>
 			<ul>

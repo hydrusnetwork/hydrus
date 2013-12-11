@@ -7,68 +7,45 @@
 	<body>
 		<div class="content">
 			<a name="repositories"><h3>hold up, what is a repository?</h3></a>
-			<p>A <i>repository</i> is a special kind of server in the hydrus network that stores a certain kind of information—files or tag mappings, for instance—as submitted by users all over the internet. Those users periodically synchronise with the repository so they know what it stores. Hydrus network clients never send queries to repositories; they download and cache <i>all</i> of a repository's searchable metadata and perform queries over that cache, locally, on the client's computer.</p>
+			<p>A <i>repository</i> is a service in the hydrus network that stores a certain kind of information—files or tag mappings, for instance—as submitted by users all over the internet. Those users periodically synchronise with the repository so they know what it stores. Hydrus network clients never send queries to repositories; they download and cache <i>all</i> of a repository's searchable metadata and perform queries over that cache, locally, on the client's computer.</p>
 			<a name="tags"><h3>hold up, what is a tag?</h3></a>
 			<p><a href="http://en.wikipedia.org/wiki/Tag_(metadata)">wiki</a></p>
-			<p>A <i>tag</i> is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. [ 'tiger woods', 'sports illustrated', '2008' ] or [ 'cosplay', 'the legend of zelda' ] ), a huge image collection is reduced to a tiny and easy-to-digest sample, usually in less than a second.</p>
+			<p>A <i>tag</i> is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. [ 'tiger woods', 'sports illustrated', '2008' ] or [ 'cosplay', 'the legend of zelda' ] ), a huge image collection is reduced to a tiny and easy-to-digest sample.</p>
 			<p>A good word for the connection of a particular tag to a particular file is <i>mapping</i>.</p>
 			<p>In the hydrus network, all tags are automatically converted to lower case. 'Sunset Drive' becomes 'sunset drive'. Why?</p>
 			<ol>
-				<li>Although it may at first seem preferable to have proper capitalised titles, like 'The Lord of the Rings' rather than 'the lord of the rings', there are many, many special cases where style guides differ. There is no definitive correct capitalisation schema, so the simplest compromise is to not have any.</li>
+				<li>Although it may at first seem preferable to have 'The Lord of the Rings' rather than 'the lord of the rings', there are many, many special cases where style guides differ. There is no definitive correct capitalisation schema, so the simplest compromise is to not have any.</li>
 				<li>Searches become far easier when case is not matched. And when case does not matter, what point is there in recording it?</li>
 			</ol>
 			<p>Secondly, leading and trailing whitespace is removed, and multiple whitespace is collapsed to a single character. <pre>'  yellow   dress '</pre> becomes <pre>'yellow dress'</pre></p>
-			<p><a href="asolutionthatmaximisesutility.gif">Does this unjust censorship frustrate you?</a></p>
+			<p><a href="asolutionthatmaximisesutility.gif">Does lower case frustrate you?</a></p>
 			<a name="filenames"><h3>why not use filenames and folders?</h3></a>
-			<p>As a retrieval method, filenames and folders become worse and worse as the number of files increases. Why?</p>
+			<p>As a retrieval method, filenames and folders are less and less useful as the number of files increases. Why?</p>
 			<ul>
-				<li>A filename is not unique; did you mean this "04.jpg" or <i>this</i> "04.jpg"? Perhaps "04 (3).jpg"?</li>
-				<li>A filename is not guaranteed to describe the file correctly, nor is it proofed against trolling, e.g. hello.jpg</li>
-				<li>A filename is not guaranteed to stay the same, meaning other programs cannot rely on the filename address being valid or even returning the same data every time. This is the cause of a ton of behind-the-scenes and often redundant reindexing that slows nearly all other media management programs.</li>
+				<li>A filename is not unique; did you mean this "04.jpg" or <i>this</i> "04.jpg" in another folder? Perhaps "04 (3).jpg"?</li>
+				<li>A filename is not guaranteed to describe the file correctly, e.g. hello.jpg</li>
+				<li>A filename is not guaranteed to stay the same, meaning other programs cannot rely on the filename address being valid or even returning the same data every time. This is the cause of a ton of behind-the-scenes and often redundant reindexing that slows many other media management programs.</li>
 				<li>A filename is often—for <i>ridiculous</i> reasons—limited to a certain prohibitive character set; even when utf-8 is supported, some arbitrary ascii characters are usually not, and different localisations, operating systems and formatting conventions only make it worse.</p>
 				<li>Folders can offer context, but they are clunky and time-consuming to change. If you put each chapter of a comic in a different folder, for instance, reading several volumes in one sitting can be a pain. Nesting many folders adds navigation-latency and tends to induce less informative "04.jpg"-type filenames.</li>
 			</ul>
 			<p>So, the client tracks files by their <i>hash</i>.</p>
-			<p><i>BTW: when exporting files, the client names them by their hexadecimalised hash, like so: f099b5823f4e36a4bd6562812582f60e49e818cf445902b504b5533c6a5dad94.jpg. This will probably change to tag-munged in future.</i></p>
 			<p>Please do not tag your files with their exact original 'filename.jpg' on my public tag repo. <a href="http://www.youtube.com/watch?v=_yYS0ZZdsnA">Shed the concept of filenames as you would chains.</a></p>
 			<a name="hashes"><h3>hold up, what is a hash?</h3></a>
 			<p><a href="http://en.wikipedia.org/wiki/Hash_function">wiki</a></p>
-			<p>Hashes are a subject one usually has to be a software engineer to find interesting. If you don't care to digest the wiki page, the simple answer is that hashes are guaranteed unique names for things. It can be proven that f099b5823f4e36a4bd6562812582f60e49e818cf445902b504b5533c6a5dad94 refers to one particular file and no other. Hashes make excellent—if ugly—identifiers. In the client's normal operation, you will never encounter a file's hash; if you like a thumbnail, double-click it; the software handles the mathematics.</p>
-			<p><i>For those who </i>are<i> interested: hydrus uses SHA-256, which spits out 32-byte (256-bit) hashes. The software stores and searches over the hash densely, as 32 bytes, only encoding it to 64 hex characters when the user views it or copies to clipboard. SHA-256 is not perfect, but it is a great compromise candidate; it is secure for now, it is reasonably fast, it is available for most programming languages, and newer CPUs perform it more efficiently all the time. Maybe when NIST decides on the SHA-3 winner we will have a grand switch over.</i></p>
+			<p>Hashes are a subject one usually has to be a software engineer to find interesting. If you don't care to digest the wiki page, the simple answer is that hashes are unique names for things. It can be proven that f099b5823f4e36a4bd6562812582f60e49e818cf445902b504b5533c6a5dad94 refers to one particular file and no other. Hashes make excellent—if ugly—identifiers. In the client's normal operation, you will never encounter a file's hash; if you want to see a thumbnail bigger, double-click it; the software handles the mathematics.</p>
+			<p><i>For those who </i>are<i> interested: hydrus uses SHA-256, which spits out 32-byte (256-bit) hashes. The software stores the hash densely, as 32 bytes, only encoding it to 64 hex characters when the user views it or copies to clipboard. SHA-256 is not perfect, but it is a great compromise candidate; it is secure for now, it is reasonably fast, it is available for most programming languages, and newer CPUs perform it more efficiently all the time.</i></p>
 			<a name="access_keys"><h3>hold up, what is an access key?</h3></a>
-			<p>The hydrus network's repositories do not use username/password, but instead a single combination identifier-password like this: <i>7ce4dbf18f7af8b420ee942bae42030aab344e91dc0e839260fcd71a4c9879e3</i></p>
-			<p>These hex numbers give you access to a particular account on a particular repository. They are long enough to be impossible to guess, and also randomly generated, so they reveal nothing personally identifying about you. Many people can use the same access key (and hence the same account) on a repository without consequence, although they will have to share bandwidth limits, and if one person screws around and gets the account banned, they will all lose access.</p>
+			<p>The hydrus network's repositories do not use username/password, but instead a single combination identifier-password like this:</p>
+			<p><i>7ce4dbf18f7af8b420ee942bae42030aab344e91dc0e839260fcd71a4c9879e3</i></p>
+			<p>These hex numbers give you access to a particular account on a particular repository, and are often combined like so:</p>
+			<p><i>7ce4dbf18f7af8b420ee942bae42030aab344e91dc0e839260fcd71a4c9879e3@hostname.com:45871</i></p>
+			<p>They are long enough to be impossible to guess, and also randomly generated, so they reveal nothing personally identifying about you. Many people can use the same access key (and hence the same account) on a repository without consequence, although they will have to share bandwidth limits, and if one person screws around and gets the account banned, everyone will lose access.</p>
+			<p>The access key is the account.</p>
 			<h3>why aren't my swfs showing?</h3>
 			<p>If an Internet Explorer "Navigation Cancelled" page appears whenever you click on a swf thumbnail, try installing Flash Player for Internet Explorer. Just having it installed for Firefox/Opera is not enough; you need the ActiveX component that comes with the specific IE version. Just boot IE and download/run the installer from Adobe's site.</p>
-			<a name="other_platforms"><h3>why shouldn't I use a more mature platform?</h3></a>
-			<p>Some applications like ACDSee try to make finding files easier than browsing explorer, but they are all-too-often:</p>
-			<p>
-				<ul>
-					<li>weighed down by noob-friendly 'features'</li>
-					<li>lacking any easy and open method of sharing files or tags</li>
-					<li>proprietary, untrustworthy, and expensive</li>
-					<li>good at one specific job, but only that</li>
-					<li>cluttered with inefficient database code, and perpetual reindexing</li>
-					<li>designed by people who think the internet is AOL.com</li>
-				</ul>
-			</p>
-			<p>Some websites like flickr and danbooru have crowd-sourced tags and offer fairly effective retrieval, but then <i>they</i> all-too-often have:</p>
-			<p>
-				<ul>
-					<li>choked bandwidth/server CPU</li>
-					<li>high search latency</li>
-					<li>degraded image quality</li>
-					<li>small results sets (e.g. 12 results to a page)</li>
-					<li>arbitrary obscenity rules</li>
-					<li>intrusive advertisement</li>
-					<li>unreliable access</li>
-					<li>uncertain privacy</li>
-				</ul>
-			</p>
-			<p>The hydrus network attempts to combine the privacy and low latency of local searching with the efficiency of crowd-sourcing.</p>
 			<a name="delays"><h3>why can my friend not see what I just uploaded?</h3></a>
 			<p>The repositories do not work like conventional search engines; it takes a short but predictable while for changes to propagate to other users.</p>
-			<p>Remember that the client's searches only ever happen over its local cache of what is on the repository. Those caches are updated about once a day, so any changes you make will be delayed for others until their next update occurs. At the moment, the update period is 100,000 seconds, which is about 1 day and 4 hours.</p>
+			<p>Remember that the client's searches only ever happen over its local cache of what is on the repository. Any changes you make will be delayed for others until their next update occurs. At the moment, the update period is 100,000 seconds, which is about 1 day and 4 hours.</p>
 		</div>
 	</body>
 </html>

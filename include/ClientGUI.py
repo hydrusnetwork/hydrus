@@ -314,14 +314,24 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 edit_log = []
                 
                 tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
-                tag_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45871, '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' ) )
                 
-                edit_log.append( ( HC.ADD, ( tag_repo_identifier, tag_repo_credentials, None ) ) )
+                tag_repo_info = {}
+                
+                tag_repo_info[ 'host' ] = 'hydrus.no-ip.org'
+                tag_repo_info[ 'port' ] = 45871
+                tag_repo_info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
+                
+                edit_log.append( ( HC.ADD, ( tag_repo_identifier, tag_repo_info ) ) )
                 
                 file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
-                file_repo_credentials = CC.Credentials( 'hydrus.no-ip.org', 45872, '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' ) )
                 
-                edit_log.append( ( HC.ADD, ( file_repo_identifier, file_repo_credentials, None ) ) )
+                file_repo_info = {}
+                
+                file_repo_info[ 'host' ] = 'hydrus.no-ip.org'
+                file_repo_info[ 'port' ] = 45872
+                file_repo_info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
+                
+                edit_log.append( ( HC.ADD, ( file_repo_identifier, file_repo_info ) ) )
                 
                 HC.app.Write( 'update_services', edit_log )
                 
@@ -393,9 +403,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 edit_log = []
                 
                 admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
-                admin_service_credentials = CC.Credentials( host, port, '' )
                 
-                edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_credentials, None ) ) )
+                admin_service_info = {}
+                
+                admin_service_info[ 'host' ] = host
+                admin_service_info[ 'port' ] = port
+                admin_service_info[ 'access_key' ] = ''
+                
+                edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_info ) ) )
                 
                 HC.app.Write( 'update_services', edit_log )
                 
@@ -431,9 +446,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 access_key = response[ 'access_key' ]
                 
-                credentials = CC.Credentials( host, port, access_key )
+                update = { 'access_key' : access_key }
                 
-                edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, credentials, None ) ) ) ]
+                edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, update ) ) ) ]
                 
                 HC.app.Write( 'update_services', edit_log )
                 
@@ -600,17 +615,21 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             for ( page_name, c_text, args, kwargs ) in info:
                 
-                c = ClientGUIPages.text_to_class[ c_text ]
-                
-                kwargs[ 'starting_from_session' ] = True
-                
-                new_page = c( self._notebook, *args, **kwargs )
-                
-                self._notebook.AddPage( new_page, page_name, select = True )
-                
-                self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-                
-                new_page.SetSearchFocus()
+                try:
+                    
+                    c = ClientGUIPages.text_to_class[ c_text ]
+                    
+                    kwargs[ 'starting_from_session' ] = True
+                    
+                    new_page = c( self._notebook, *args, **kwargs )
+                    
+                    self._notebook.AddPage( new_page, page_name, select = True )
+                    
+                    self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
+                    
+                    new_page.SetSearchFocus()
+                    
+                except: pass
                 
             
         
@@ -755,14 +774,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _NewPageImportGallery( self, name ):
         
-        if name == 'deviant art by artist': new_page = ClientGUIPages.PageImportDeviantArt( self._notebook )
-        elif name == 'hentai foundry by artist': new_page = ClientGUIPages.PageImportHentaiFoundryArtist( self._notebook )
-        elif name == 'hentai foundry by tags': new_page = ClientGUIPages.PageImportHentaiFoundryTags( self._notebook )
-        elif name == 'giphy': new_page = ClientGUIPages.PageImportGiphy( self._notebook )
-        elif name == 'newgrounds': new_page = ClientGUIPages.PageImportNewgrounds( self._notebook )
-        elif name == 'pixiv by artist': new_page = ClientGUIPages.PageImportPixivArtist( self._notebook )
-        elif name == 'pixiv by tag': new_page = ClientGUIPages.PageImportPixivTag( self._notebook )
-        elif name == 'tumblr': new_page = ClientGUIPages.PageImportTumblr( self._notebook )
+        new_page = ClientGUIPages.PageImportGallery( self._notebook, name )
         
         self._notebook.AddPage( new_page, name, select = True )
         
@@ -2601,11 +2613,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             access_key = response[ 'access_key' ]
             
-            ( host, port ) = service.GetCredentials().GetAddress()
+            update = { 'access_key' : access_key }
             
-            credentials = CC.Credentials( host, port, access_key )
-            
-            edit_log = [ ( HC.EDIT, ( self._service_identifier, ( self._service_identifier, credentials, None ) ) ) ]
+            edit_log = [ ( HC.EDIT, ( self._service_identifier, ( self._service_identifier, update ) ) ) ]
             
             HC.app.Write( 'update_services', edit_log )
             

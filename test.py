@@ -42,6 +42,7 @@ class App( wx.App ):
         self._reads[ 'web_sessions' ] = {}
         
         HC.options = CC.CLIENT_DEFAULT_OPTIONS
+        HC.pubsub = TestConstants.FakePubSub()
         
         self._writes = collections.defaultdict( list )
         
@@ -49,8 +50,8 @@ class App( wx.App ):
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'namespace_blacklists' ] = HydrusTags.NamespaceBlacklistsManager()
-        self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
+        self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
         self._managers[ 'undo' ] = CC.UndoManager()
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         

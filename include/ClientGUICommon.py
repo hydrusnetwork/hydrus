@@ -2387,7 +2387,7 @@ class PopupMessageGauge( PopupMessage ):
         
     
     def SetInfo( self, job_key, range, value, message ):
-        print( value )
+        
         if job_key == self._job_key:
             
             if value is None:

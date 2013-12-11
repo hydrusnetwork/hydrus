@@ -1,0 +1,37 @@
+<html>
+	<head>
+		<title>getting started - installing and updating</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<p><a href="introduction.html"><--- Back to the introduction</a></p>
+			<h3>downloading</h3>
+			<p>You can get the latest release at <a href="http://www.mediafire.com/hydrus">my mediafire page</a>.</p>
+			<p>I release a new version every Wednesday at 8pm EST and write an accompanying post on <a href="http://hydrus.tumblr.com/">my tumblr</a>. If you have an rss client, you can use <a href="http://hydrus.tumblr.com/rss">this</a> to keep up.</p>
+			<h3>installing</h3>
+			<p>If you want the easy solution, download the .exe installer. Run it, hit ok several times.</p>
+			<p>If you want a little more control, get the .zip and extract it.</p>
+			<p>Hydrus stores all its data&#x2014;options, files, subscriptions, <i>everything</i>&#x2014;entirely inside its own directory. This means it needs access to itself, so don't put it in Program Files unless you are willing to run it as administrator every time. I usually go for something like D:\hydrus.</p>
+			<p>Also, make sure your hard drive will have enough space. If you plan to store 100GB of stuff in your client, your C drive might not be appropriate.</p>
+			<p>Because hydrus stores everything inside itself, it is entirely portable. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer will write some unavoidable uninstall registry stuff to windows that'll mess with this, but the client itself will run fine in a different location.</p>
+			<h3>updating</h3>
+			<p>You don't <i>have</i> to update every week, but I generally recommend it. The different versions can talk with each other until I increment the private <i>network protocol version</i> (which happens every couple of months), at which point you will get polite error messages if you try to connect to a newer server with an older client or <i>vice versa</i>. Read my tumblr posts and judge for yourself what you want to do.</p>
+			<p>All your files and settings and synchronisation progress will be remembered after the update. Unless the update specifically disables something, nothing will be deleted or lost.</p>
+			<p>Whenever you start the client, it checks the version of its database. If the database is old, it makes the appropriate changes, in sequential order (i.e. to do v70->v75, the client would first apply v70->v71, then v71->v72 and so on), until the database is caught up.</p>
+			<p>If the client you want to update is running, remember to close it first!</p>
+			<p>If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.</p>
+			<p>If you extract, then just extract right on top of your current install and overwrite manually. Then run client.exe as normal.</p>
+			<h3>backing up</h3>
+			<p>You <i>do</i> backup, right? <i>Right</i>?</p>
+			<p>I run a backup every week so that if my computer blows up, I'll at worst have lost a few days' work. Before I had a backup regime, I once lost an entire drive with tens of thousands of files, and it didn't feel great at all. I only push backups so hard so you might avoid what I felt. ;_;</p>
+			<p>I use <a href="http://www.abstractspoon.com/tdl_resources.html">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive.</p>
+			<p>If you want to backup hydrus, shut the client down and copy the entire install directory somewhere.</p>
+			<p>I recommend you do it before you update, just in case there is a problem with my code that breaks your database. If that happens, please <a href="contact.html">contact me</a>, describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.</p>
+			<h3>linux and os x</h3>
+			<p>I hope to be making weekly builds for Linux and OS X in the next few months.</p>
+			<p class="right"><a href="getting_started_files.html">Let's import some files! ----></a></p>
+		</div>
+	</body>
+</html>

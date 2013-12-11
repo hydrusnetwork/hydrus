@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 96</h3></li>
+				<ul>
+					<li>went over _all_ my help (about 200KB of text!), cutting down waffly paragraphs, rewritting bits that were stiff or unclear, updating screenshots, and adding several new sections people suggested</li>
+					<li>did a complete rewrite of how the client stores services in its database, streamlining everything</li>
+					<li>several bugs exposed by the services rewrite fixed</li>
+					<li>several moments of weirdness exposed by the services rewrite made more sane</li>
+					<li>new version of sqlite (3.8.2)</li>
+					<li>new version of python (2.7.6)</li>
+					<li>cleaned up a debug print statement that was spamming gauge numbers to the log</li>
+					<li>when loaded from a session, hdd import pages will now hide their processing panel</li>
+					<li>fixed namespace sorting to manage numbers again</li>
+					<li>collapsed the many different download gallery page classes to a single one</li>
+					<li>started an important rewrite of how downloaders are going to work in future</li>
+					<li>improved testing framework's pubsub testing support</li>
+					<li>subs sync daemon now restarts correctly after a dialog-driven pause</li>
+					<li>parents now obey siblings!</li>
+					<li>siblings and parents are updated on forget pending</li>
+					<li>got AMP message between persistent and temporary peers working</li>
+				</ul>
 				<li><h3>version 95</h3></li>
 				<ul>
 					<li>pages launched from a session will no longer run their query on startup; they will remember their thumbnails</li>

@@ -3736,8 +3736,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             self._service_identifier = service_identifier
             self._service = HC.app.Read( 'service', service_identifier )
             
-            extra_info = self._service.GetExtraInfo()
-            
             self._media = media
             
             service_type = service_identifier.GetType()
@@ -3757,7 +3755,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 if service_type in ( HC.LOCAL_RATING_LIKE, HC.RATING_LIKE_REPOSITORY ):
                     
-                    ( like, dislike ) = extra_info
+                    ( like, dislike ) = self._service.GetLikeDislike()
                     
                     if service_type == HC.LOCAL_RATING_LIKE:
                         
@@ -3836,7 +3834,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                     
                     if service_type == HC.LOCAL_RATING_NUMERICAL:
                         
-                        ( min, max ) = extra_info
+                        ( min, max ) = self._service.GetLowerUpper()
                         
                         self._slider = wx.Slider( self._ratings_panel, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
                         self._slider.Bind( wx.EVT_SLIDER, self.EventSlider )
@@ -3973,7 +3971,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
-                    ( like, dislike ) = self._service.GetExtraInfo()
+                    ( like, dislike ) = self._service.GetLikeDislike()
                     
                     if choice_text == like: rating = 1
                     elif choice_text == dislike: rating = 0
@@ -4395,10 +4393,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 service_type = service_identifier.GetType()
                 name = service_identifier.GetName()
                 
-                if service_type in HC.REMOTE_SERVICES: credentials = service.GetCredentials()
-                else: credentials = None
-                
-                extra_info = service.GetExtraInfo()
+                info = service.GetInfo()
                 
                 if service_type == HC.LOCAL_RATING_LIKE: listbook = self._local_ratings_like
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: listbook = self._local_ratings_numerical
@@ -4408,7 +4403,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 elif service_type == HC.SERVER_ADMIN: listbook = self._servers_admin
                 else: continue
                 
-                page_info = ( self._Panel, ( listbook, service_identifier, credentials, extra_info ), {} )
+                page_info = ( self._Panel, ( listbook, service_identifier, info ), {} )
                 
                 listbook.AddPage( page_info, name )
                 
@@ -4470,7 +4465,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_panel is not None:
                 
-                ( service_identifier, credentials, extra_info ) = service_panel.GetInfo()
+                ( service_identifier, info ) = service_panel.GetInfo()
                 
                 old_name = services_listbook.GetCurrentName()
                 name = service_identifier.GetName()
@@ -4510,9 +4505,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, name )
                     
+                    info = {}
+                    
                     if service_type in HC.REMOTE_SERVICES:
                         
-                        if service_type == HC.SERVER_ADMIN: credentials = CC.Credentials( 'hostname', 45870, '' )
+                        if service_type == HC.SERVER_ADMIN: ( host, port ) = ( 'hostname', 45870 )
                         elif service_type in HC.RESTRICTED_SERVICES:
                             
                             with ClientGUIDialogs.DialogChooseNewServiceMethod( self ) as dlg:
@@ -4529,30 +4526,40 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                         
                                         credentials = dlg.GetCredentials()
                                         
+                                        ( host, port ) = credentials.GetAddress()
+                                        
+                                        if credentials.HasAccessKey(): info[ 'access_key' ] = credentials.GetAccessKey()
+                                        
                                     
-                                else: credentials = CC.Credentials( 'hostname', 45871, '' )
+                                else: ( host, port ) = ( 'hostname', 45871 )
                                 
                             
-                        else: credentials = CC.Credentials( 'hostname', 45871 )
+                            account = HC.GetUnknownAccount()
+                            
+                            account.MakeStale()
+                            
+                            info[ 'account' ] = account
+                            
+                        else: ( host, port ) = ( 'hostname', 45871 )
                         
-                    else: credentials = None
+                        info[ 'host' ] = host
+                        info[ 'port' ] = port
+                        
                     
-                    if service_type == HC.MESSAGE_DEPOT:
+                    if service_type == HC.LOCAL_RATING_LIKE:
                         
-                        identity_name = 'identity@' + name
-                        check_period = 180
-                        private_key = HydrusEncryption.GenerateNewPrivateKey()
-                        receive_anon = True
+                        info[ 'like' ] = 'like'
+                        info[ 'dislike' ] = 'dislike'
                         
-                        extra_info = ( identity_name, check_period, private_key, receive_anon )
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+
+                        info[ 'lower' ] = 0
+                        info[ 'upper' ] = 5
                         
-                    elif service_type == HC.LOCAL_RATING_LIKE: extra_info = ( 'like', 'dislike' )
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL: extra_info = ( 0, 5 )
-                    else: extra_info = None
                     
-                    self._edit_log.append( ( HC.ADD, ( service_identifier, credentials, extra_info ) ) )
+                    self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
                     
-                    page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
+                    page = self._Panel( services_listbook, service_identifier, info )
                     
                     services_listbook.AddPage( page, name, select = True )
                     
@@ -4584,7 +4591,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             service_panel = services_listbook.GetCurrentPage()
             
-            ( service_identifier, credentials, extra_info ) = service_panel.GetInfo()
+            ( service_identifier, info ) = service_panel.GetInfo()
             
             name = service_identifier.GetName()
             
@@ -4594,7 +4601,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, credentials, extra_info ) ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
                         
                     
                 
@@ -4604,7 +4611,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, credentials, extra_info ) ) )
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
                         
                     
                 
@@ -4616,7 +4623,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
-            wx.MessageBox( HC.u( e ) )
+            HC.ShowException( e )
             
             return
             
@@ -4647,7 +4654,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
-            wx.MessageBox( HC.u( e ) )
+            HC.ShowException( e )
             
             event.Veto()
             
@@ -4674,7 +4681,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
-            wx.MessageBox( HC.u( e ) )
+            HC.ShowException( e )
             
             event.Veto()
             
@@ -4682,7 +4689,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def Import( self, paths ):
         
-        try: self._CheckCurrentSubscriptionIsValid()
+        try: self._CheckCurrentServiceIsValid()
         except Exception as e:
             
             wx.MessageBox( HC.u( e ) )
@@ -4696,7 +4703,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 with open( path, 'rb' ) as f: file = f.read()
                 
-                ( service_identifier, credentials, extra_info ) = yaml.safe_load( file )
+                ( service_identifier, info ) = yaml.safe_load( file )
                 
                 name = service_identifier.GetName()
                 
@@ -4719,15 +4726,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                             
                             page = services_listbook.GetNameToPageDict()[ name ]
                             
-                            page.Update( service_identifier, credentials, extra_info )
+                            page.Update( service_identifier, info )
                             
                         
                     
                 else:
                     
-                    self._edit_log.append( ( HC.ADD, ( service_identifier, credentials, extra_info ) ) )
+                    self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
                     
-                    page = self._Panel( services_listbook, service_identifier, credentials, extra_info )
+                    page = self._Panel( services_listbook, service_identifier, info )
                     
                     services_listbook.AddPage( page, name, select = True )
                     
@@ -4741,13 +4748,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, credentials, extra_info ):
+        def __init__( self, parent, service_identifier, info ):
             
             wx.Panel.__init__( self, parent )
             
             self._service_identifier = service_identifier
-            self._credentials = credentials
-            self._extra_info = extra_info
+            self._info = info
             
             service_type = service_identifier.GetType()
             
@@ -4757,32 +4763,31 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 self._service_name = wx.TextCtrl( self._service_panel )
                 
-                if service_type in HC.REMOTE_SERVICES: self._service_credentials = wx.TextCtrl( self._service_panel, value = self._credentials.GetConnectionString() )
+                if service_type in HC.REMOTE_SERVICES:
+                    
+                    host = self._info[ 'host' ]
+                    port = self._info[ 'port' ]
+                    
+                    if 'access_key' in self._info: access_key = self._info[ 'access_key' ]
+                    else: access_key = None
+                    
+                    credentials = CC.Credentials( host, port, access_key )
+                    
+                    self._service_credentials = wx.TextCtrl( self._service_panel, value = credentials.GetConnectionString() )
+                    
                 
-                if service_type == HC.MESSAGE_DEPOT:
+                if service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
                     
-                    ( identity_name, check_period, private_key, receive_anon ) = self._extra_info
-                    
-                    self._identity_name = wx.TextCtrl( self._service_panel, value = identity_name )
-                    
-                    self._check_period = wx.SpinCtrl( self._service_panel, min = 60, max = 86400 * 7 )
-                    self._check_period.SetValue( check_period )
-                    
-                    self._private_key = wx.TextCtrl( self._service_panel, value = private_key, style = wx.TE_MULTILINE )
-                    
-                    self._receive_anon = wx.CheckBox( self._service_panel )
-                    self._receive_anon.SetValue( receive_anon )
-                    
-                elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
-                    
-                    ( like, dislike ) = self._extra_info
+                    like = self._info[ 'like' ]
+                    dislike = self._info[ 'dislike' ]
                     
                     self._like = wx.TextCtrl( self._service_panel, value = like )
                     self._dislike = wx.TextCtrl( self._service_panel, value = dislike )
                     
                 elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
                     
-                    ( lower, upper ) = self._extra_info
+                    lower = self._info[ 'lower' ]
+                    upper = self._info[ 'upper' ]
                     
                     self._lower = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
                     self._lower.SetValue( lower )
@@ -4814,21 +4819,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
                     
                 
-                if service_type == HC.MESSAGE_DEPOT:
-                    
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='identity name' ), FLAGS_MIXED )
-                    gridbox.AddF( self._identity_name, FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='update period' ), FLAGS_MIXED )
-                    gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='private key' ), FLAGS_MIXED )
-                    gridbox.AddF( self._private_key, FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='receive messages from Anonymous?' ), FLAGS_MIXED )
-                    gridbox.AddF( self._receive_anon, FLAGS_EXPAND_BOTH_WAYS )
-                    
-                elif service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
+                if service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
                     
                     gridbox.AddF( wx.StaticText( self._service_panel, label='like' ), FLAGS_MIXED )
                     gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
@@ -4871,6 +4862,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
             
+            info = {}
+            
             if service_type in HC.REMOTE_SERVICES:
                 
                 connection_string = self._service_credentials.GetValue()
@@ -4885,90 +4878,83 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     try: access_key = access_key.decode( 'hex' )
                     except: raise Exception( 'Could not parse those credentials - could not understand access key!' )
                     
-                    try: ( host, port ) = address.split( ':' )
-                    except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
+                    info[ 'access_key' ] = access_key
                     
-                    try: port = int( port )
-                    except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
-                    
-                    credentials = CC.Credentials( host, port, access_key )
-                    
-                else:
-                    
-                    try: ( host, port ) = connection_string.split( ':' )
-                    except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
-                    
-                    try: port = int( port )
-                    except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
-                    
-                    credentials = CC.Credentials( host, port )
+                    connection_string = address
                     
                 
-            else: credentials = None
+                try: ( host, port ) = connection_string.split( ':' )
+                except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
+                
+                try: port = int( port )
+                except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
+                
+                info[ 'host' ] = host
+                info[ 'port' ] = port
+                
             
-            if service_type == HC.MESSAGE_DEPOT: extra_info = ( self._identity_name.GetValue(), self._check_period.GetValue(), self._private_key.GetValue(), self._receive_anon.GetValue() )
-            elif service_type == HC.LOCAL_RATING_LIKE: extra_info = ( self._like.GetValue(), self._dislike.GetValue() )
+            if service_type == HC.LOCAL_RATING_LIKE:
+                
+                info[ 'like' ] = self._like.GetValue()
+                info[ 'dislike' ] = self._dislike.GetValue()
+                
             elif service_type == HC.LOCAL_RATING_NUMERICAL:
                 
                 ( lower, upper ) = ( self._lower.GetValue(), self._upper.GetValue() )
                 
                 if upper < lower: upper = lower + 1
                 
-                extra_info = ( lower, upper )
+                info[ 'lower' ] = lower
+                info[ 'upper' ] = upper
                 
-            else: extra_info = None
             
-            return ( service_identifier, credentials, extra_info )
+            return ( service_identifier, info )
             
         
         def HasChanges( self ):
             
-            ( service_identifier, credentials, extra_info ) = self.GetInfo()
+            ( service_identifier, info ) = self.GetInfo()
             
             if service_identifier != self._service_identifier: return True
             
-            if credentials != self._credentials: return True
-            
-            if extra_info != self._extra_info: return True
+            if info != self._info: return True
             
             return False
             
         
         def GetOriginalServiceIdentifier( self ): return self._service_identifier
         
-        def Update( self, service_identifier, credentials, extra_info ):
+        def Update( self, service_identifier, info ):
             
             service_type = service_identifier.GetType()
             
             self._service_name.SetValue( service_identifier.GetName() )
             
-            if service_type in HC.REMOTE_SERVICES: self._service_credentials.SetValue( credentials.GetConnectionString() )
+            if service_type in HC.REMOTE_SERVICES:
+                
+                host = info[ 'host' ]
+                port = info[ 'port' ]
+                
+                if service_type in HC.RESTRICTED_SERVICES: access_key = info[ 'access_key' ]
+                else: access_key = None
+                
+                credentials = CC.Credentials( host, port, access_key )
+                
+                self._service_credentials.SetValue( credentials.GetConnectionString() )
+                
             
-            if service_type == HC.MESSAGE_DEPOT:
+            if service_type == HC.LOCAL_RATING_LIKE:
                 
-                if len( extra_info ) == 3:
-                    ( identity_name, check_period, private_key ) = extra_info
-                    receive_anon = True
-                else: ( identity_name, check_period, private_key, receive_anon ) = extra_info
-                
-                self._identity_name.SetValue( identity_name )
-                
-                self._check_period.SetValue( check_period )
-                
-                self._private_key.SetValue( private_key )
-                
-                self._receive_anon.SetValue( receive_anon )
-                
-            elif service_type == HC.LOCAL_RATING_LIKE:
-                
-                ( like, dislike ) = extra_info
+                like = info[ 'like' ]
+                dislike = info[ 'dislike' ]
                 
                 self._like.SetValue( like )
                 self._dislike.SetValue( dislike )
                 
             elif service_type == HC.LOCAL_RATING_NUMERICAL:
                 
-                ( lower, upper ) = extra_info
+                lower = info[ 'lower' ]
+                upper = info[ 'upper' ]
                 
                 self._lower.SetValue( lower )
                 self._upper.SetValue( upper )

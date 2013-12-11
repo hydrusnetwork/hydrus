@@ -356,14 +356,14 @@ class Canvas():
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
-                    ( like, dislike ) = service.GetExtraInfo()
+                    ( like, dislike ) = service.GetLikeDislike()
                     
                     if rating == 1: s = like
                     elif rating == 0: s = dislike
                     
                 elif service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    ( lower, upper ) = service.GetExtraInfo()
+                    ( lower, upper ) = service.GetLowerUpper()
                     
                     s = HC.ConvertNumericalRatingToPrettyString( lower, upper, rating )
                     
@@ -2371,7 +2371,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
             
             if len( self._kept ) > 0 or len( self._deleted ) > 0:
                 
-                ( like, dislike ) = self._service.GetExtraInfo()
+                ( like, dislike ) = self._service.GetLikeDislike()
                 
                 with ClientGUIDialogs.DialogFinishFiltering( self, len( self._kept ), len( self._deleted ), keep = like, delete = dislike ) as dlg:
                     
@@ -2434,7 +2434,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             
             self._service = HC.app.Read( 'service', service_identifier )
             
-            ( self._lower, self._upper ) = self._service.GetExtraInfo()
+            ( self._lower, self._upper ) = self._service.GetLowerUpper()
             
             self._score_gap = 1.0 / ( self._upper - self._lower )
             

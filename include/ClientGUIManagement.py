@@ -1408,6 +1408,8 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
         
         self.SetSizer( vbox )
         
+        if self._starting_from_session: self._processing_panel.Hide()
+        
         self.CALLBACKAddToImportQueue( paths_info )
         
     

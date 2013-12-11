@@ -5,6 +5,7 @@ import HydrusConstants as HC
 import json
 import lxml
 import pafy
+import threading
 import traceback
 import urllib
 import urlparse
@@ -1117,4 +1118,116 @@ class DownloaderTumblr( Downloader ):
         
     
     def GetTags( self, url, tags ): return tags
+    
+class DownloaderEngine(): # rename this to something more import related
+    
+    # this should be a yamlable thing
+    
+    def __init__( self, page_key, import_queue_generator ):
+        
+        self._page_key = page_key
+        self._import_queue_generator = import_queue_generator
+        
+        self._current_queue_processor = None
+        
+        self._pending_queue_jobs = []
+        
+    
+    def GetCurrentQueueProcessor( self ): return self._current_queue_processor
+    
+    def ToTuple( self ): return ( self._pending_queue_jobs, )
+    
+    def PendQueueJob( self, job ):
+        
+        self._pending_queue_jobs.append( job )
+        
+    
+    def THREADProcessJobs( self ):
+        
+        while True:
+            
+            if len( self._pending_queue_jobs ) > 0:
+                
+                job = self._pending_queue_jobs.pop( 0 )
+                
+                self._current_queue_processor = self._import_queue_generator( job )
+                
+                self._current_queue_processor.ProcessQueue()
+                
+            
+            # if there are any pending jobs:
+            
+                # get it
+                # process it
+            
+            
+            pass
+            
+        
+    
+class ImportQueueProcessor():
+    
+    def __init__( self, page_key, import_args_generator ):
+        
+        self._page_key = page_key
+        self._import_args_generator = import_args_generator
+        
+        self._queue_is_done = False
+        
+        self._queue = []
+        
+        self._paused = False
+        
+        self._current_position = 0
+        
+        self._lock = threading.Lock()
+        
+        HC.pubsub.sub( self, 'SetPaused', 'pause_import_queue_processor' )
+        
+    
+    def AddToQueue( self, queue_objects ):
+        
+        with self._lock: self._queue.extend( queue_objects )
+        
+    
+    def QueueIsDone( self ): self._queue_is_done = True
+    
+    def SetPaused( self, status ): self._paused = status
+    
+    def ToTuple( self ):
+        
+        with self._lock: return ( self._current_position, len( self._queue ) )
+        
+    
+    def ProcessQueue( self ):
+        
+        while not self._queue_is_done:
+            
+            with self._lock: queue_length = len( self._queue )
+            
+            if not self._paused and self._current_position < queue_length:
+                
+                with self._lock: queue_object = self._queue[ self._current_position ]
+                
+                # reorder these params as is best
+                ( temp_path, url, tags, anything_else ) = self._path_generator( self._page_key, queue_object )
+                
+                # synchronously write import to db
+                
+                self._current_position += 1
+                
+            
+            time.sleep( 1 )
+            
+        
+    
+def PathGeneratorBooru( self, page_key, queue_object ):
+    
+    # unpack queue_object
+    # test url or whatever as appropriate
+    # fetch file, possibly with help of downloader or whatever!
+    # downloader should write file to path, returning temp_path
+    # we should return temp_path
+    
+    pass
     

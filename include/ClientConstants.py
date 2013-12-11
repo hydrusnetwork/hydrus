@@ -2271,70 +2271,86 @@ class Service( HC.HydrusYAMLBase ):
     
     yaml_tag = u'!Service'
     
-    def __init__( self, service_identifier ):
+    def __init__( self, service_identifier, info ):
         
         HC.HydrusYAMLBase.__init__( self )
         
         self._service_identifier = service_identifier
-        
-    
-    def __hash__( self ): return self._service_identifier.__hash__()
-    
-    def GetExtraInfo( self ): return None
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
-    
-class ServiceLocalRatingLike( Service ):
-    
-    yaml_tag = u'!ServiceLocalRatingLike'
-    
-    def __init__( self, service_identifier, like, dislike ):
-        
-        Service.__init__( self, service_identifier )
-        
-        self._like = like
-        self._dislike = dislike
-        
-    
-    def GetExtraInfo( self ): return ( self._like, self._dislike )
-    
-class ServiceLocalRatingNumerical( Service ):
-    
-    yaml_tag = u'!ServiceLocalRatingNumerical'
-    
-    def __init__( self, service_identifier, lower, upper ):
-        
-        Service.__init__( self, service_identifier )
-        
-        self._lower = lower
-        self._upper = upper
-        
-    
-    def GetExtraInfo( self ): return ( self._lower, self._upper )
-    
-class ServiceRemote( Service ):
-    
-    yaml_tag = u'!ServiceRemote'
-    
-    def __init__( self, service_identifier, credentials, last_error ):
-        
-        Service.__init__( self, service_identifier )
-        
-        self._credentials = credentials
-        self._last_error = last_error
+        self._info = info
         
         HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
-    def GetConnection( self ): return ConnectionToService( self._service_identifier, self._credentials )
+    def __hash__( self ): return self._service_identifier.__hash__()
     
-    def GetCredentials( self ): return self._credentials
+    def CanDownload( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
     
-    def GetRecentErrorPending( self ): return HC.ConvertTimestampToPrettyPending( self._last_error + 600 )
+    def CanUpdate( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError() and self.HasUpdateDue()
     
-    def HasRecentError( self ): return self._last_error + 600 > HC.GetNow()
+    def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
     
-    def SetCredentials( self, credentials ): self._credentials = credentials
+    def GetAccount( self ): return self._info[ 'account' ]
+    
+    def GetConnection( self ): return ConnectionToService( self._service_identifier, self.GetCredentials() )
+    
+    def GetCredentials( self ):
+        
+        host = self._info[ 'host' ]
+        port = self._info[ 'port' ]
+        access_key = self._info[ 'access_key' ]
+        
+        credentials = Credentials( host, port, access_key )
+        
+        return credentials
+        
+    
+    def GetFirstBegin( self ): return self._info[ 'first_begin' ]
+    
+    def GetInfo( self ): return self._info
+    
+    def GetLikeDislike( self ): return ( self._info[ 'like' ], self._info[ 'dislike' ] )
+    
+    def GetLowerUpper( self ): return ( self._info[ 'lower' ], self._info[ 'upper' ] )
+    
+    def GetNextBegin( self ): return self._info[ 'next_begin' ]
+    
+    def GetServiceIdentifier( self ): return self._service_identifier
+    
+    def GetRecentErrorPending( self ):
+        
+        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 600 )
+        else: return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
+        
+    
+    def GetUpdateStatus( self ):
+        
+        if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): return 'updates on hold'
+        else:
+            
+            if self.CanUpdate(): return HC.ConvertTimestampToPrettySync( self._info[ 'next_begin' ] )
+            else:
+                
+                if self.HasRecentError(): return 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
+                else: return 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._info[ 'next_begin' ] + HC.UPDATE_DURATION + 1800 )
+                
+            
+        
+    
+    def HasRecentError( self ):
+        
+        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return self._info[ 'last_error' ] + 600 > HC.GetNow()
+        else: return self._info[ 'last_error' ] + 3600 * 4 > HC.GetNow()
+        
+    
+    def HasUpdateDue( self ): return self._info[ 'next_begin' ] + HC.UPDATE_DURATION + 1800 < HC.GetNow()
+    
+    def IsInitialised( self ):
+        
+        service_type = self._service_identifier.GetType()
+        
+        if service_type == HC.SERVER_ADMIN: return 'access_key' in self._info
+        else: return True
+        
     
     def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
@@ -2346,145 +2362,30 @@ class ServiceRemote( Service ):
                     
                     ( action, row ) = service_update.ToTuple()
                     
-                    if action == HC.SERVICE_UPDATE_ERROR: self._last_error = HC.GetNow()
+                    if action == HC.SERVICE_UPDATE_ERROR: self._info[ 'last_error' ] = HC.GetNow()
                     elif action == HC.SERVICE_UPDATE_RESET:
                         
                         self._service_identifier = row
                         
-                        self._last_error = 0
+                        self._info[ 'last_error' ] = 0
                         
-                    
-                
-            
-        
-    
-class ServiceRemoteRestricted( ServiceRemote ):
-    
-    yaml_tag = u'!ServiceRemoteRestricted'
-    
-    def __init__( self, service_identifier, credentials, last_error, account ):
-        
-        ServiceRemote.__init__( self, service_identifier, credentials, last_error )
-        
-        self._account = account
-        
-    
-    def CanDownload( self ): return self._account.HasPermission( HC.GET_DATA ) and not self.HasRecentError()
-    
-    def CanUpload( self ): return self._account.HasPermission( HC.POST_DATA ) and not self.HasRecentError()
-    
-    def GetAccount( self ): return self._account
-    
-    def GetRecentErrorPending( self ):
-        
-        if self._account.HasPermission( HC.GENERAL_ADMIN ): return HC.ConvertTimestampToPrettyPending( self._last_error + 600 )
-        else: return HC.ConvertTimestampToPrettyPending( self._last_error + 3600 * 4 )
-        
-    
-    def HasRecentError( self ):
-        
-        if self._account.HasPermission( HC.GENERAL_ADMIN ): return self._last_error + 600 > HC.GetNow()
-        else: return self._last_error + 3600 * 4 > HC.GetNow()
-        
-    
-    def IsInitialised( self ):
-        
-        service_type = self._service_identifier.GetType()
-        
-        if service_type == HC.SERVER_ADMIN: return self._credentials.HasAccessKey()
-        else: return True
-        
-    
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
-        
-        ServiceRemote.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
-        
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
-            
-            for service_update in service_updates:
-                
-                if service_identifier == self.GetServiceIdentifier():
-                    
-                    ( action, row ) = service_update.ToTuple()
-                    
-                    if action == HC.SERVICE_UPDATE_ACCOUNT:
+                        if 'first_begin' in self._info: self._info[ 'first_begin' ] = 0
+                        if 'next_begin' in self._info: self._info[ 'next_begin' ] = 0
+                        
+                    elif action == HC.SERVICE_UPDATE_ACCOUNT:
                         
                         account = row
                         
-                        self._account = account
-                        self._last_error = 0
+                        self._info[ 'account' ] = account
+                        self._info[ 'last_error' ] = 0
                         
                     elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
                         
                         num_bytes = row
                         
-                        self._account.RequestMade( num_bytes )
+                        self._info[ 'account' ].RequestMade( num_bytes )
                         
-                    
-                
-            
-        
-    
-class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
-    
-    yaml_tag = u'!ServiceRemoteRestrictedRepository'
-    
-    def __init__( self, service_identifier, credentials, last_error, account, first_begin, next_begin, extra_info = None ):
-        
-        ServiceRemoteRestricted.__init__( self, service_identifier, credentials, last_error, account )
-        
-        self._first_begin = first_begin
-        self._next_begin = next_begin
-        self._extra_info = extra_info
-        
-    
-    def CanUpdate( self ): return self._account.HasPermission( HC.GET_DATA ) and not self.HasRecentError() and self.HasUpdateDue()
-    
-    def GetExtraInfo( self ): return self._extra_info
-    
-    def GetFirstBegin( self ): return self._first_begin
-    
-    def GetNextBegin( self ): return self._next_begin
-    
-    def GetUpdateStatus( self ):
-        
-        if not self._account.HasPermission( HC.GET_DATA ): return 'updates on hold'
-        else:
-            
-            if self.CanUpdate(): return HC.ConvertTimestampToPrettySync( self._next_begin )
-            else:
-                
-                if self.HasRecentError(): return 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
-                else: return 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._next_begin + HC.UPDATE_DURATION + 1800 )
-                
-            
-        
-    
-    def HasUpdateDue( self ): return self._next_begin + HC.UPDATE_DURATION + 1800 < HC.GetNow()
-    
-    def SetNextBegin( self, next_begin ):
-        
-        if next_begin > self._next_begin:
-            
-            if self._first_begin == 0: self._first_begin = next_begin
-            
-            self._next_begin = next_begin
-            
-        
-    
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
-        
-        ServiceRemoteRestricted.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
-        
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
-            
-            for service_update in service_updates:
-                
-                if service_identifier == self.GetServiceIdentifier():
-                    
-                    ( action, row ) = service_update.ToTuple()
-                    
-                    if action == HC.SERVICE_UPDATE_NEXT_BEGIN:
+                    elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
                         
                         ( begin, end ) = row
                         
@@ -2492,101 +2393,30 @@ class ServiceRemoteRestrictedRepository( ServiceRemoteRestricted ):
                         
                         self.SetNextBegin( next_begin )
                         
-                    elif action == HC.SERVICE_UPDATE_RESET:
-                        
-                        self._service_identifier = row
-                        
-                        self._first_begin = 0
-                        self._next_begin = 0
-                        
                     
                 
             
         
     
-class ServiceRemoteRestrictedDepot( ServiceRemoteRestricted ):
-    
-    yaml_tag = u'!ServiceRemoteRestrictedDepot'
-    
-    def __init__( self, service_identifier, credentials, last_error, account, last_check, check_period ):
+    def SetCredentials( self, credentials ):
         
-        ServiceRemoteRestricted.__init__( self, service_identifier, credentials, last_error, account )
+        ( host, port ) = credentials.GetAddress()
         
-        self._last_check = last_check
-        self._check_period = check_period
+        self._info[ 'host' ] = host
+        self._info[ 'port' ] = port
+        
+        if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
         
     
-    def CanCheck( self ): return self._account.HasPermission( HC.GET_DATA ) and not self.HasRecentError() and self.HasCheckDue()
-    
-    def GetExtraInfo( self ): return self._check_period
-    
-    def GetLastCheck( self ): return self._last_check
-    
-    def GetCheckStatus( self ):
+    def SetNextBegin( self, next_begin ):
         
-        if not self._account.HasPermission( HC.GET_DATA ): return 'checks on hold'
-        else:
+        if next_begin > self._info[ 'next_begin' ]:
             
-            if self.CanCheck(): return HC.ConvertTimestampToPrettySync( self._last_check + self._check_period )
-            else:
-                
-                if self.HasRecentError(): return 'due to a previous error, check is delayed - next attempt ' + self.GetRecentErrorPending()
-                else: return 'next check ' + HC.ConvertTimestampToPrettyPending( self._last_check + self._check_period )
-                
+            if self._info[ 'first_begin' ] == 0: self._info[ 'first_begin' ] = next_begin
+            
+            self._info[ 'next_begin' ] = next_begin
             
         
-    
-    def HasCheckDue( self ): return self._last_check + self._check_period + 5 < HC.GetNow()
-    
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
-        
-        ServiceRemoteRestricted.ProcessServiceUpdates( self, service_identifiers_to_service_updates )
-        
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
-            
-            for service_update in service_updates:
-                
-                if service_identifier == self.GetServiceIdentifier():
-                    
-                    ( action, row ) = service_update.ToTuple()
-                    
-                    if action == HC.SERVICE_UPDATE_LAST_CHECK:
-                        
-                        last_check = row
-                        
-                        self._last_check = last_check
-                        
-                    elif action == HC.SERVICE_UPDATE_RESET:
-                        
-                        self._service_identifier = row
-                        
-                        self._last_check = 0
-                        
-                    
-                
-    
-class ServiceRemoteRestrictedDepotMessage( ServiceRemoteRestrictedDepot ):
-    
-    yaml_tag = u'!ServiceRemoteRestrictedDepotMessage'
-    
-    def __init__( self, service_identifier, credentials, last_error, account, last_check, check_period, contact, private_key, receive_anon ):
-        
-        ServiceRemoteRestrictedDepot.__init__( self, service_identifier, credentials, last_error, account, last_check, check_period )
-        
-        self._contact = contact
-        self._private_key = private_key
-        self._receive_anon = receive_anon
-        
-    
-    def GetContact( self ): return self._contact
-    
-    def GetExtraInfo( self ): return ( self._contact.GetName(), self._check_period, self._private_key, self._receive_anon )
-    
-    def GetPrivateKey( self ): return self._private_key
-    
-    def ReceivesAnon( self ): return self._receive_anon
-    
-    def Decrypt( self, encrypted_message ): return HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, self._private_key )
     
 class ThumbnailCache():
     

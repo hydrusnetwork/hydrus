@@ -6,41 +6,42 @@
 	</head>
 	<body>
 		<div class="content">
-			<p><a href="introduction.html"><--- Back to the introduction</a></p>
+			<p><a href="getting_started_installing.html"><--- Back to the installing and updating</a></p>
 			<h3 class="warning">a warning</h3>
-			<p class="warning">This is the real internet, not babby AOL. The hydrus client gives you the power to screw up your life. If you want to do private sexy slideshows of your shy wife that's fine, but don't upload the pictures anywhere you don't absolutely trust and don't give them public tags that'll identify anyone. It is <b>impossible</b> to contain leaks of private information.</p>
+			<p class="warning">This is the real internet, not babby AOL. The hydrus client gives you the power to screw up your life. If you want to do private sexy slideshows of your shy wife that's fine, but don't upload the pictures anywhere you don't absolutely trust and don't upload public tags that'll identify anyone. It is <b>impossible</b> to contain leaks of private information.</p>
 			<h3>the problem</h3>
 			<p>If you have ever seen something like this—</p>
 			<p><img src="pictures.png" title="After a while, I started just dropping everything in here unsorted. It would only grow, hungry and untouchable." /></p>
 			<p>—then you already know the problem: using a filesystem to manage a lot of images sucks.</p>
-			<p>Finding the right picture within a minute can be difficult. Finding all those by a particular artist or of a particular resolution within any reasonable time limit can be impossible. Adding new files into the whole mess is a further pain, and most operating systems bug out displaying folders with > 10,000 images.</p>
+			<p>Finding the right picture quickly can be difficult. Finding all those by a particular artist or of a particular resolution can be impossible. Adding new files into the whole nested-folder mess is a further pain, and most operating systems bug out when displaying 10,000+ thumbnails.</p>
 			<h3>so, what does the hydrus client do?</h3>
-			<p>Let's first focus on storing and sharing files.</p>
-			<p>On booting the client for the first time, you will be faced with a blank screen and little idea of what to do next. I advise you simply drag-and-drop a folder with a hundred or so images onto the main window. After a little parsing, a dialog will appear affirming what you want to import. Ok that and a new page will open. Thumbnails will stream in as the software processes each file.</p>
+			<p>Let's first focus on <i>importing</i> files.</p>
+			<p>On first booting the client, you will be faced with a blank page. I advise you simply drag-and-drop a folder with a hundred or so images onto the main window. After a little parsing, a dialog will appear affirming what you want to import. Ok that, and a new page will open. Thumbnails will stream in as the software processes each file.</p>
 			<p><a href="import.png"><img src="import.png" width="683" height="384" /></a></p>
 			<p>The files are being imported into the client's database. <a href="faq.html#filenames">The client discards their filenames.</a></p>
 			<p>Notice your original folder and its files are untouched. You can move the originals somewhere else, delete them, and the client will still return searches fine. In the same way, you can delete from the client, and the original files will remain unchanged; import is a <b>copy</b>, not a move, operation. The client performs all its operations on its internal database. If you find yourself enjoying using the client and decide to completely switch over, you may delete the original files you import without worry. You can always export them back again later.</p>
 			<p>Now:</p>
 			<ul class="bulletpoint">
-				<li>Click on a thumbnail; see what happens.</li>
-				<li>Now double- or middle-click it to go fullscreen. You can hit 'f' to switch between giving the fullcreen a frame or not. You can mouse-scroll or page up and down to scroll through the media, and double/middle-clicking again closes fullscreen. Hitting Enter/Return works just like double/middle click, as long as you have a thumbnail already focussed.</li>
-				<li>Try shift- or ctrl- selecting several files, and notice how the status bar at the bottom of the screen changes. Right click your selection.</li>
+				<li>Click on a thumbnail; it'll show in the preview screen, bottom left.</li>
+				<li>Now double- or middle-click the thumbnail to go fullscreen. You can hit 'f' to switch between giving the fullscreen a frame or not. You can mouse-scroll or page up and down to browse the media, and double/middle-clicking again closes fullscreen. Hitting Enter/Return works just like double/middle click, as long as you have a thumbnail focussed.</li>
+				<li>Try shift- or ctrl- selecting several files, and notice how the status bar at the bottom of the screen updates with the number selected and their total size. Right clicking your selection will present another summary and many actions.</li>
 				<li>Hit F9 to bring up a new page chooser. It won't show much right now, because you are just started. You can navigate it with the arrow keys, your numpad, or your mouse.</li>
 				<li>
-					<p>On the left of a normal 'file search' page is a text box with a large pop-up dropdown. It looks like this:</p>
+					<p>On the left of a normal search page is a text box with a large pop-up dropdown. It looks like this:</p>
 					<p><img src="autocomplete_dropdown_overlay.png" /></p>
-					<p>This is the autocomplete tag entry. It is where you put in the predicates to do a search. The dropdown window only appears when the text box is focussed. If the text box is empty, it will show a number of 'system' tags that let you search by non-tag metadata such as file size or animation duration. Typing in the text box will, when you have some tags in your database, show the tags that begin with whatever you type. The following (number) shows how many files have that tag, and hence how large the search result will be if you select that tag. You can scroll the dropdown list with the arrow keys or ctrl + scrollwheel, and then hit enter or just double click on a tag to enter it into the current search.</p>
+					<p>This is the autocomplete tag entry, where you put in the predicates to do a search. The dropdown window only appears when the text box is focussed. If the text box is empty, the dropdown will show a number of 'system' tags that let you search by non-tag metadata such as file size or animation duration.</p>
+					<p>When you have some tags in your database, typing in the text box will show whatever begins with whatever you type. The following (number) shows how many files have that tag, and hence how large the search result will be if you select that tag. You can scroll the dropdown list with the arrow keys or ctrl + scrollwheel, and then hit enter or just double click to enter that tag/predicate into the current search.</p>
 					<p>There are also several buttons to play with:</p>
 					<ul class="bulletpoint">
 						<li><b>include current/pending tags</b> - will determine whether the autocomplete results (and their counts) will be harvested from tags that currently exist, and/or the tags that are waiting to be sent to a service (more on this in <i>getting started with tags</i>).</li>
-						<li><b>searching immediately</b> - determines whether new searches will be performed as soon as you add or remove a search predicate, or whether the client will wait until you hit the button again. This is useful if you have a complicated query and don't want to wait for the search with every step.</li>
-						<li><b>file repository/tag repository</b> - determines the search domain for the autocomplete tags. Selecting 'all known files/tags' will union all known file or tag services together. Be careful selecting both 'all known files' and 'all known tags', as queries (and even just the dropdown!) will be delayed!</li>
+						<li><b>searching immediately</b> - determines whether new searches will be performed as soon as you add or remove a search predicate, or whether the client will wait until you hit the button again. This is useful if you have a complicated query and don't want the simpler searches chuntering in the background as you enter every step.</li>
+						<li><b>file repository/tag repository</b> - determines the search domain. Selecting 'all known files/tags' will union all known file or tag services together. Be careful selecting both 'all known files' and 'all known tags', as queries (and even just the dropdown!) will be delayed!</li>
 					</ul>
 				</li>
 				<li>Once you are happy with the dropdown, try hitting 'system:size', and maybe change the resultant dialog's &lt; to &gt; or the 100KB to 1MB.</li>
 				<li>You can remove from the list of 'active tags' above with a double-click, or by entering the same tag again through the dropdown.</li>
-				<li>Play with the system tags more if you like, and the sort-by dropdown. The collect-by dropdown (which collects by certain tags) will only do things if your files have appropriate tags.</li>
-				<li>To close a page's tab, middle click it.</li>
+				<li>Play with the system tags more if you like, and the sort-by dropdown. The collect-by dropdown is advanced, so wait until you understand <i>namespaces</i> before expecting it to do anything.</li>
+				<li>To close a page, middle click its tab.</li>
 			</ul>
 			<p>The client currently supports the following mimetypes:</p>
 			<ul>
@@ -51,20 +52,25 @@
 				<li><b>application/x-shockwave-flash</b> (.swf)</li>
 				<li><b>application/pdf</b> (.pdf)</li>
 				<li><b>application/zip</b> (.zip - extracted on import)</li>
+				<li><b>audio/mp3</b> (.mp3)</li>
+				<li><b>audio/ogg</b> (.ogg)</li>
+				<li><b>audio/flac</b> (.flac)</li>
+				<li><b>audio/x-ms-wma</b> (.wma)</li>
 				<li><b>video/x-flv</b> (.flv)</li>
+				<li><b>video/mp4</b> (.mp4)</li>
+				<li><b>video/x-ms-wmv</b> (.wmv)</li>
 			</ul>
 			<p>The client can also download files from several websites, including 4chan, many boorus, and gallery sites like deviant art. The different options are under F9->download.</p>
 			<p><a href="downloads.png"><img src="downloads.png" width="683" height="384" /></a></p>
-			<p>Most of them have similar interfaces. Paste the url or type the query your are interested in, and press enter.</p>
-			<p><a href="faq.html#filenames">FAQ: why not use filenames and folders?</a></p>
+			<p>Most of them have similar interfaces. Paste the url or type the query you are interested in, and press enter.</p>
 			<h3>inbox and archiving</h3>
 			<p>the client sends newly imported/downloaded files to an <b>inbox</b> so you may more easily decide what to do with them. Inbox acts like a tag, matched by 'system:inbox'. A small envelope icon is drawn in the top corner of all inbox files.</p>
-			<p>If you are sure you want to keep a file long-term, you should <b>archive</b> it, which will remove it from the inbox. You can archive from your selected thumbnails' right-click menu, or by pressing F7.</p>
+			<p>If you are sure you want to keep a file long-term, you should <b>archive</b> it, which will remove it from the inbox. You can archive from your selected thumbnails' right-click menu, or by pressing F7. If you make a mistake, you can spam Ctrl-Z for undo or hit Shift-F7 on any set of files to return them to the inbox.</p>
 			<p>Anything you do not want to keep should be deleted.</p>
 			<p>A quick way of doing this is—</p>
 			<h3>filtering</h3>
 			<p>Lets say you just downloaded a good thread, or perhaps you just imported an old folder of miscellany. You now have a whole bunch of files in your inbox—some good, some awful. You probably want to quickly go through them, saying <i>yes, yes, yes, no, yes, no, no, yes</i>, where <i>yes</i> means 'keep and archive' and <i>no</i> means 'delete this trash'. <b>Filtering</b> is the solution.</p>
-			<p>Select some thumbnails, and either choose filter from their right-click menu or hit F12. You will see this selection in fullscreen, with the following controls:</p>
+			<p>Select some thumbnails, and either choose <i>filter->archive/delete</i> from their right-click menu or hit F12. You will see this selection in fullscreen, with the following controls:</p>
 			<ul>
 				<li>Left-click, space, or F7: <b>keep and archive the file, move on</b></li>
 				<li>Right-click or delete: <b>delete the file, move on</b></li>
@@ -73,62 +79,11 @@
 				<li>Escape, return, or F12: <b>stop filtering now</b></li>
 			</ul>
 			<p>When done, you will be asked whether you want to commit your choices, forget them, or go back to filtering the current file.</p>
-			<p>Filtering saves time.</p>
-			<p>I have plans to make a filtering-like system to speed up certain kinds of tagging. Your thoughts would be appreciated.</p>
-			<h3>exporting and uploading</h3>
-			<p>There are many ways to export files from the client:</p>
-			<ul>
-				<li>
-					<p><b>raw export</b></p>
-					<p>Right clicking some files and selecting 'export all' will open this dialog:</p>
-					<p><img src="export.png" /></p>
-					<p>Which lets you export (copy) the selected files wherever you like in your filesystem. The default export location is your export folder, which is set in <i>file->options</i>.</p>
-					<p>You can do a lot with this, so have a play with it. It'll start off trying to export by the files' hashes, which is fairly ugly, but once you learn about tags and namespaces, you'll be able to generate much cleverer and prettier filenames.</p>
-				</li>
-				<li>
-					<p><b>copy->copy all</b></p>
-					<p>Right clicking some files and selecting 'copy all' from the copy submenu will export the files to a temporary folder and copy their paths to your clipboard. You can then paste them wherever you like, just as with normal files. They will have their hashes for filenames.</p>
-					<p>This is a very quick operation, and can also be triggered by hitting Ctrl+C. It is best when you want to export just a few files somewhere for a temporary job.</p>
-				</li>
-				<li>
-					<p><b>copy->hash/hashes</b></p>
-					<p>Right clicking some files and selecting 'copy hash/hashes' will copy the files' unique identifiers to your clipboard.</p>
-					<p>You will not have to do this often. It is best when you want to tell someone else <i>about</i> a number of files without giving them the files.</p>
-				</li>
-				<li>
-					<p><b>copy->copy path/local url</b></p>
-					<p>Right clicking any file and selecting 'copy path' will copy the file's raw database path (install_path/db/client_files/[hash]) to your clipboard. 'copy local url' does the same, but with a localhost url in the form http://127.0.0.1:45865/file?hash=[hash].</p>
-					<p>These are most useful when you want to send a single file to another program. You can copy either of these addresses into a file open dialog like so:</p>
-					<p><a href="upload.png"><img src="upload.png" width="960" height="600" /></a></p>
-					<p>This works for file upload, opening a file in a graphics editor, or whatever. You can also paste into your browser's address bar, to check they are working.</p>
-					<p>The path method will always work, the url method will only work while the client is running.</p>
-					<p>The path method will send the file's hash as the filename, the url method will send something odd like file[7].</p>
-					<p>The path method will change your current working directory to your client's db directory (possibly annoying, if you have a lot of files), the url method will change your current working directory to temporary internet files.</p>
-					<p>I generally recommend you go with the url method.</p>
-					<p>If you use the path method to open a file inside an image editing program, try to remember to go 'save as' and give it a new filename! The client does not expect files inside its db directory to change.</p>
-				</li>
-				<li>
-					<p><b>dumping to imageboard</b></p>
-					<p>Right clicking some files and selecting 'dump all' will let you mass-dump them to an imageboard. You'll be asked which board you want to dump to and then taken to a new page:</p>
-					<p><a href="dumping.png"><img src="dumping.png" width="960" height="600" /></a></p>
-					<p>If you have a 4chan pass, you can authenticate the client in <i>services->manage 4chan pass</i>. Any new dump pages will no longer show the captcha window.</p>
-					<p>The client comes with all of 4chan's boards pre-configured. If you feel very brave and confident of your html-form-parsing skills, go <i>services->manage imageboards</i> and try to add some new sites.</p>
-				</li>
-			</ul>
-			<h3>sharing files</h3>
-			<p>The hydrus network has a service that lets clients share files anonymously, called a <i>file repository</i>.</p>
-			<p>It simply stores files in a big pool. Anyone who has an access key to the repository can see the pool's thumbnails and download anything they like. They may have permission to to upload to it as well. Admins can delete. I run a download-only file repository, which you are welcome to connect to to get a feel for the interface. Go <i>services->add, remove or edit services</i>.</p>
-			<p><img src="edit_repos_file_repo.png" /></p>
-			<ul><li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5@hydrus.no-ip.org:45872</li></ul>
-			<p>Then go <i>services->review services</i> to see your client synchronise with the repository's file list.</p>
-			<p><img src="review_services.png" /></p>
-			<p>Hit F9, and you'll see a new "files->" page. It works exactly like a local search, it just uses a different file list. Files you do not have will be drawn with a dark background, those you do will be drawn as normal:</p>
-			<p><a href="lib_rec.png"><img src="lib_rec.png" width="683" height="384" /></a></p>
-			<p>To download a file, double- or middle-click it, or select from the right click menu.</p>
-			<p>If you have permission to upload files to a particular repository, that option will appear in the right-click menu for any local files. Selecting this will pend them for batch uploading; just select from the new <i>pending</i> menu to effect the upload when you are ready.</p>
+			<p>This saves time.</p>
 			<h3>lastly</h3>
 			<p>The hydrus client is not an image-editing program, nor is it particularly intended for half-finished images. Think of it as a giant archive, a library, for everything excellent you have decided to store away.</p>
-			<p class="right"><a href="getting_started_tags.html">Now let's learn about tags! ----></a></p>
+			<p class="right"><a href="getting_started_more_files.html">I want to learn more about files! ----></a></p>
+			<p class="right"><a href="getting_started_tags.html">No, let's learn about tags! ----></a></p>
 		</div>
 	</body>
 </html>

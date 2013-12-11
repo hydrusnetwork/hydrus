@@ -289,6 +289,12 @@ class TestServer( unittest.TestCase ):
         
         service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, 'service' )
         
+        info = {}
+        
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        info[ 'access_key' ] = self._access_key
+        
         credentials = CC.Credentials( host, port, self._access_key )
         
         connection = CC.ConnectionToService( service_identifier, credentials )
@@ -299,7 +305,9 @@ class TestServer( unittest.TestCase ):
         
         account = self._account
         
-        service_for_session_manager = CC.ServiceRemoteRestricted( service_identifier, credentials, last_error, account )
+        service_for_session_manager = CC.Service( service_identifier, info )
+        
+        connection = service_for_session_manager.GetConnection()
         
         HC.app.SetRead( 'service', service_for_session_manager )
         
@@ -563,9 +571,6 @@ class TestAMP( unittest.TestCase ):
         
         self.assertEqual( result, {} )
         
-        self.assertIn( identifier, self._factory._persistent_connections )
-        self.assertIn( name, self._factory._persistent_connections[ identifier ] )
-        
     
     def _make_temporary_connection( self, protocol, identifier, name ):
         
@@ -575,26 +580,31 @@ class TestAMP( unittest.TestCase ):
         
         self.assertEqual( result, {} )
         
-        self.assertIn( identifier, self._factory._temporary_connections )
-        self.assertIn( name, self._factory._temporary_connections[ identifier ] )
-        
     
     def test_connections( self ):
         
         persistent_protocol = self._get_client_protocol()
         persistent_access_key = os.urandom( 32 )
+        persistent_identifier = hashlib.sha256( persistent_access_key ).digest()
         persistent_name = 'persistent'
         
         self._make_persistent_connection( persistent_protocol, persistent_access_key, persistent_name )
         
-        temp_protocol = self._get_client_protocol()
+        self.assertIn( persistent_identifier, self._factory._persistent_connections )
+        self.assertIn( persistent_name, self._factory._persistent_connections[ persistent_identifier ] )
+        
+        temp_protocol_1 = self._get_client_protocol()
+        temp_protocol_2 = self._get_client_protocol()
+        temp_name_1 = 'temp_1'
         temp_identifier = os.urandom( 32 )
-        temp_name = 'temp'
+        temp_name_2 = 'temp_2'
         
-        self._make_temporary_connection( temp_protocol, temp_identifier, temp_name )
-        # test temporary connection
+        self._make_temporary_connection( temp_protocol_1, temp_identifier, temp_name_1 )
+        self._make_temporary_connection( temp_protocol_2, temp_identifier, temp_name_2 )
         
-        # test making more connections under different names
+        self.assertIn( temp_identifier, self._factory._temporary_connections )
+        self.assertIn( temp_name_1, self._factory._temporary_connections[ temp_identifier ] )
+        self.assertIn( temp_name_2, self._factory._temporary_connections[ temp_identifier ] )
         
     
     def test_status( self ):
@@ -618,11 +628,52 @@ class TestAMP( unittest.TestCase ):
     
     def test_message( self ):
         
-        # make a persistent connection
-        # make a temp connection
+        persistent_protocol = self._get_client_protocol()
+        persistent_access_key = os.urandom( 32 )
+        persistent_identifier = hashlib.sha256( persistent_access_key ).digest()
+        persistent_name = 'persistent'
         
-        # send a message to p from t
-        # send a message back
+        self._make_persistent_connection( persistent_protocol, persistent_access_key, persistent_name )
         
-        pass
+        temp_protocol = self._get_client_protocol()
+        temp_identifier = os.urandom( 32 )
+        temp_name = 'temp'
+        
+        self._make_temporary_connection( temp_protocol, temp_identifier, temp_name )
+        
+        #
+        
+        HC.pubsub.ClearPubSubs()
+        
+        message = 'hello temp'
+        
+        deferred = persistent_protocol.callRemote( HydrusServerAMP.IMMessageServer, identifier_to = temp_identifier, name_to = temp_name, message = message )
+        
+        result = self._get_deferred_result( deferred )
+        
+        self.assertEqual( result, {} )
+        
+        result = HC.pubsub.GetPubSubs( 'im_message_received' )
+        
+        [ ( args, kwargs ) ] = result
+        
+        self.assertEqual( args, ( persistent_identifier, persistent_name, temp_identifier, temp_name, message ) )
+        
+        #
+        
+        HC.pubsub.ClearPubSubs()
+        
+        message = 'hello persistent'
+        
+        deferred = temp_protocol.callRemote( HydrusServerAMP.IMMessageServer, identifier_to = persistent_identifier, name_to = persistent_name, message = message )
+        
+        result = self._get_deferred_result( deferred )
+        
+        self.assertEqual( result, {} )
+        
+        result = HC.pubsub.GetPubSubs( 'im_message_received' )
+        
+        [ ( args, kwargs ) ] = result
+        
+        self.assertEqual( args, ( temp_identifier, temp_name, persistent_identifier, persistent_name, message ) )
         

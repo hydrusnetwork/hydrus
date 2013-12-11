@@ -704,7 +704,7 @@ class DialogInputCustomFilterAction( Dialog ):
                     if self._action is None: self._ratings_numerical_remove.SetValue( True )
                     else:
                         
-                        ( lower, upper ) = self._current_ratings_numerical_service.GetExtraInfo()
+                        ( lower, upper ) = self._current_ratings_numerical_service.GetLowerUpper()
                         
                         slider_value = int( self._action * ( upper - lower ) ) + lower
                         
@@ -813,7 +813,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._current_ratings_like_service = service
                 
-                ( like, dislike ) = service.GetExtraInfo()
+                ( like, dislike ) = service.GetLikeDislike()
                 
                 self._ratings_like_like.SetLabel( like )
                 self._ratings_like_dislike.SetLabel( dislike )
@@ -837,7 +837,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._current_ratings_numerical_service = service
                 
-                ( lower, upper ) = service.GetExtraInfo()
+                ( lower, upper ) = service.GetLowerUpper()
                 
                 self._ratings_numerical_slider.SetRange( lower, upper )
                 
@@ -862,7 +862,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._service_identifier = self._ratings_like_service_identifiers.GetClientData( selection )
             
-            ( like, dislike ) = self._current_ratings_like_service.GetExtraInfo()
+            ( like, dislike ) = self._current_ratings_like_service.GetLikeDislike()
             
             if self._ratings_like_like.GetValue():
                 
@@ -902,7 +902,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._pretty_action = HC.u( self._ratings_numerical_slider.GetValue() )
                 
-                ( lower, upper ) = self._current_ratings_numerical_service.GetExtraInfo()
+                ( lower, upper ) = self._current_ratings_numerical_service.GetLowerUpper()
                 
                 self._action = ( float( self._pretty_action ) - float( lower ) ) / ( upper - lower )
                 
@@ -1838,7 +1838,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                     
                 else:
                     
-                    ( lower, upper ) = service.GetExtraInfo()
+                    ( lower, upper ) = service.GetLowerUpper()
                     
                     value_raw = self._value_numerical.GetValue()
                     
@@ -1875,9 +1875,9 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
             
-            ( min, max ) = service.GetExtraInfo()
+            ( lower, upper ) = service.GetLowerUpper()
             
-            self._value_numerical.SetRange( min, max )
+            self._value_numerical.SetRange( lower, upper )
             
             service = self._service_like.GetClientData( self._service_like.GetSelection() )
             
@@ -1885,7 +1885,7 @@ class DialogInputFileSystemPredicate( Dialog ):
         
         try:
             
-            ( like, dislike ) = service.GetExtraInfo()
+            ( like, dislike ) = service.GetLikeDislike()
             
             selection = self._value_like.GetSelection()
             

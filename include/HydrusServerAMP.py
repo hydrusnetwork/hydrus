@@ -81,17 +81,9 @@ class MessagingClientProtocol( HydrusAMP ):
     
     def im_message( self, identifier_from, name_from, identifier_to, name_to, message ):
         
-        def do_it():
+        def do_it( gumpf ):
             
-            # spam this to the manager, do nothing else
-            
-            # send these args on to the messaging manager, which will:
-              # start a context, if needed
-              # spawn a gui prompt/window to start a convo, if needed
-              # queue the message through to the appropriate context
-              # maybe the context should spam up to the ui, prob in a pubsub; whatever.
-            
-            pass
+            HC.pubsub.pub( 'im_message_received', identifier_from, name_from, identifier_to, name_to, message )
             
             return {}
             
@@ -102,7 +94,7 @@ class MessagingClientProtocol( HydrusAMP ):
         
         d.addErrback( self._errbackHandleError )
         
-        reactor.callLater( 0, d.callback )
+        reactor.callLater( 0, d.callback, None )
         
         return d
         
@@ -204,9 +196,6 @@ class MessagingServiceProtocol( HydrusAMP ):
                 
             
             connection = self.factory.GetConnection( identifier_to, name_to )
-            
-            # get connection for identifier_to from larger, failing appropriately
-            # if we fail, we should probably log the _to out, right?
             
             d = connection.callRemote( IMMessageClient, identifier_from = self._identifier, name_from = self._name, identifier_to = identifier_to, name_to = name_to, message = message )
             

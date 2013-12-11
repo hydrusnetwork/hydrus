@@ -232,8 +232,8 @@ class Controller( wx.App ):
             
             self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
             self._managers[ 'namespace_blacklists' ] = HydrusTags.NamespaceBlacklistsManager()
-            self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
             self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
+            self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
             self._managers[ 'undo' ] = CC.UndoManager()
             self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
             

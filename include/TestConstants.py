@@ -1,8 +1,10 @@
 import ClientConstants
+import collections
 import HydrusConstants as HC
 import HydrusTags
 import os
 import random
+import threading
 import urlparse
 
 tinest_gif = '\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
@@ -109,4 +111,41 @@ fake_http_connection_manager = FakeHTTPConnectionManager()
 class FakeWebSessionManager():
     
     def GetCookies( self, *args, **kwargs ): return { 'session_cookie' : 'blah' }
+    
+class FakePubSub():
+    
+    def __init__( self ):
+        
+        self._pubsubs = collections.defaultdict( list )
+        
+        self._lock = threading.Lock()
+        
+    
+    def ClearPubSubs( self ): self._pubsubs = collections.defaultdict( list )
+    
+    def GetPubSubs( self, topic ): return self._pubsubs[ topic ]
+    
+    def NotBusy( self ): return True
+    
+    def WXProcessQueueItem( self ): pass
+    
+    def pub( self, topic, *args, **kwargs ):
+        
+        with self._lock:
+            
+            self._pubsubs[ topic ].append( ( args, kwargs ) )
+            
+        
+    
+    def sub( self, object, method_name, topic ): pass
+    
+    def WXpubimmediate( self, topic, *args, **kwargs ):
+        return
+        with self._lock:
+        
+            callables = self._GetCallables( topic )
+            
+            for callable in callables: callable( *args, **kwargs )
+            
+        
     
