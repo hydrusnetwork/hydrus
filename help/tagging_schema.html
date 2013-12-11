@@ -8,16 +8,15 @@
 		<div class="content">
 			<p class="warning">This is for the public tag repository only! You can run your own tag repositories and do your own thing additionally or instead!</p>
 			<h3>seriousness of schema</h3>
-			<p>Whenever many people contribute to a large whole, a rough schema is useful. But it is not the most important thing in the world for it to be upheld absolutely; it will just make searches easier if most of us can mostly agree to some guidelines.</p>
-			<p>The most important thing is: if your tag idea is opinion, don't add it to my repo. 'beautiful' is not a great tag since no one can agree on what it means. 'giant breasts' is an ok tag since many reasonable people can agree (within certain loose parameters) on what it means. 'f-cup' is a great tag (assuming it is accurate, and not a wild guess) since you can verify it; it is either true about a picture or not. If you think f-cup breasts are beautiful and you want to see something beautiful, you can add 'f-cup' to your query. When a particular search term becomes popular, I can alter the client to understand more intelligent queries, like '&gt;c-cup' or '&lt;=b-cup'.</p>
+			<p>Whenever many people contribute to a single project, a rough schema is useful to keep everyone on roughly the same track. It is not important for it to be upheld absolutely; it will just make searches easier if most of us can mostly agree to some guidelines.</p>
+			<p>The most important thing is: <b>if your tag idea is your opinion, don't add it to my repo</b>. I only want objective tags, not subjective. 'beautiful' is unhelpful since no one can agree on what it means. 'lingerie', 'blue eyes', and 'male' or 'female' are better since reasonable people can generally agree on what they mean. If someone thinks blue-eyed women are beautiful, they can search for that to find beautiful things. Other people can use different terms to find what they want.</p>
 			<p>As with all rulesets, it is very possible to go too far. We will never be able to easily and perfectly categorise every single image to everyone's satisfaction, so there is no point defining every possible rule for every possible situation. This is especially true for namespaces. So lower any autismal expectations you might have and just start tagging. Fixing mistakes is not difficult.</p>
-			<p>Just like JIT production flows, editing wikipedia articles, and the holy doctrine of self-flagellation, this is a process, not a destination.</p>
 			<h3>you can add pretty much whatever the hell you want, but don't screw around</h3>
 			<p>You can't prefix a tag with a '-' or 'system:' for obvious reasons, but tag repositories will accept anything else utf-8. You can start your own namespaces, categorisation systems, whatever. Just be aware that everyone else will see what you do.</p>
-			<p>If you don't know the difference between objective and subjective, here's a refresher:</p>
+			<p>If you are still unsure about the difference between objective and subjective, here's some more examples:</p>
 			<ul>
 				<li>
-					<p>objective tags:</p>
+					<p>objective tags: (add these!)</p>
 					<ul>
 						<li>firetruck</li>
 						<li>hors d'œuvre</li>
@@ -29,7 +28,7 @@
 					</ul>
 				</li>
 				<li>
-					<p>subjective tags:</p>
+					<p>subjective tags: (don't add these!)</p>
 					<ul>
 						<li>awesome</li>
 						<li>faggot level:super-gay<li>
@@ -39,31 +38,29 @@
 					</ul>
 				</li>
 			</ul>
+			<p>Of course, if you are tagging a picture of someone holding a sign that says 'beautiful', then you can go ahead and tag it that. Otherwise, please keep it to yourself!</p>
 			<h3>numbers</h3>
 			<p>Numbers should be written '22', '1457 ce', and 'page:3', unless as part of an official title like 'ocean's eleven'. When the client parses numbers, it does so intelligently, so just use '1' where you might before have done '01' or '001'. I know it looks ugly sometimes to have '2 girls' or '1 cup', but the rules for writing numbers out in full are hazy for special cases.</p>
-			<p>(Numbers as 123 are also readable by many different language-speakers, while 'tano', 'deux' and 'seven' are not.)</p>
+			<p>(Numbers written as 123 are also readable by many different language-speakers, while 'tano', 'deux' and 'seven' are not.)</p>
 			<h3>plurals</h3>
-			<p>Nouns should generally be singular, not plural. 'chair' instead of 'chairs', 'female' instead of 'females', 'cat' instead of 'cats', even if there are several of the thing in the image. If there really are <i>many</i> of the thing in the image, add a seperate 'multiple', 'comparison' or 'group' tag as apppropriate.</p>
-			<p>An exception is when the thing is normally said in its plural (usually paired) form. Say 'blue eyes', not 'blue eye'; 'breasts', not 'breast'; 'pants' instead of 'pant'.</p>
-			<h3>acronyms and synonyms and shortenings are a pain in the bum to keep track of</h3>
-			<p>At a later date, it is planned for the client to support general synonyms, so inputting 'lotr' could return 'series:the lord of the rings', 'marimite' might return 'series:maria-sama ga miteru', and 'brangelina' would of course return 'person:brad pitt'+'person:angelia jolie'. Until then, please enter whatever you feel most comfortable with and don't go crazy with the petitions. If we end up with many surplus tags, we will sort it out when synonyms come in.</p>
+			<p>Nouns should generally be singular, not plural. 'chair' instead of 'chairs', 'cat' instead of 'cats', even if there are several of the thing in the image. If there really are <i>many</i> of the thing in the image, add a seperate 'multiple', 'comparison' or 'group' tag as apppropriate.</p>
+			<p>Ignore this when the thing is normally said in its plural (usually paired) form. Say 'blue eyes', not 'blue eye'; 'breasts', not 'breast', even if only one is pictured.</p>
+			<h3>acronyms and synonyms</h3>
+			<p>I prefer the full 'series:the lord of the rings' rather than 'lotr'. If you are an advanced user, please help out with tag siblings to help induce this.</p>
 			<h3>namespaces</h3>
 			<p>A namespace is when you prefix a context: 'creator:range murata', 'series:futurama', 'title:what kind of day has it been', and so on.</p>
-			<p>The tags 'democratic', 'beck', and 'st. vincent' all have different meanings depending on context, so searches for these simple terms will often return unwanted results. Adding context also informs people who are ignorant of a work's author or title, especially when the tags are in a different language or cultural context. Anyone who has attempted to market (or just find!) a badly-named video game or movie through google has encountered these problems. Without namespaces, there can be confusion.</p>
-			<p>Prefixing a namespaced context <i><b>where appropriate</b></i> makes searching more powerful. I can also update the client to parse certain namespaces in different ways, to create clever search predicates, sort orders, collections, presentation rules, whatever. Our 'f-cup' example from above might be improved if it were 'bust:f-cup'.</p>
-			<p><i>BTW: All searches without a namespace will return all instances, namespaced or not, of that tag; a search for 'levar burton' will return everything with 'levar burton', 'creator:levar burton', 'person:levar burton', 'series:levar burton', 'offensive:levar burton', whatever. If you then want a specific version of 'levar burton' to narrow it down, use a namespace.</i></p>
-			<p><i>BTW Part 2, Electric Boogaloo: Nested namespaces do not work and will kill your dreams. Don't go with something crazy like 'militaries:united states:navy:marine corps:sgt. joe bloggs' as the client will parse that as (militaries):(united states:navy:marine corps:sgt. joe bloggs). Instead use a combination of 'nation:united states', 'usmc', 'person:joe bloggs', 'rank:sergeant' and so on.</i></p>
+			<p>Prefixing a namespaced context <i><b>where appropriate</b></i> makes searching more powerful. I can also update the client to parse certain namespaces in different ways, to create clever search predicates, sort orders, collections, presentation rules, whatever.</p>
+			<p><i>BTW: All searches without a namespace will return all instances, namespaced or not, of that tag; a search for 'levar burton' will return everything with 'levar burton', 'creator:levar burton', 'person:levar burton', 'series:levar burton', whatever. If you then want a specific version of 'levar burton' to narrow it down, use a namespace.</i></p>
+			<p><i>BTW Part 2, Electric Boogaloo: Nested namespaces do not work. Don't go with something crazy like 'militaries:united states:navy:marine corps:sgt. joe bloggs' as the client will parse that as (militaries):(united states:navy:marine corps:sgt. joe bloggs). Instead use a combination of 'nation:united states', 'usmc', 'person:joe bloggs', 'rank:sergeant' and so on. If this sort of thing appeals to you, you might want to check out <b>tag parents</b> when you are an advanced user.</i></p>
 			<p>Some basic namespaces:</p>
 			<ul>
 				<li>
 					<h3>series:</h3>
 					<p>'series:the wire', 'series:star trek' and so on. For canon or fanon.</p>
-					<p>The client parses this, and lets you sort and collect appropriately. (Although it doesn't sort/collect multiple-series-per-file very well yet, so be careful on superset-subset series names (e.g. adding something like 'series:star trek' and 'series:star trek the next generation' to the same file) for now.)</p>
 				</li>
 				<li>
 					<h3>creator:</h3>
-					<p>Artists, writers, designers, inkers, production studios, whoever. If they had a substantial hands-on contribution in creating the work, they should get this namespace.</p>
-					<p>Maybe we can go finer, and do 'director:name' or 'actor:name' here. I am not sure if that makes it harder or easier to search. Maybe we should do both, so you can validly say 'show me everything person x has acted in' or 'show me everything person x has contributed to', I don't know. I suppose 'creator:' could be inferred, if we made an agreed-upon list of creator titles.</p>
+					<p>Artists, writers, designers, inkers, production studios, whoever. If they had a substantial hands-on contribution in creating the work, they should get this namespace.</p>say 'show me everything person x has acted in' or 'show me everything person x has contributed to', I don't know. I suppose 'creator:' could be inferred, if we made an agreed-upon list of creator titles.</p>
 				</li>
 				<li>
 					<h3>character:</h3>
@@ -75,26 +72,26 @@
 				</li>
 				<li>
 					<h3>title:</h3>
-					<p>If the work has an <b>official</b> title, endorsed and promulgated by the creators, add it here. This namespace is not for a silly title you just thought of, nor is it for unofficial fan-art; your eagle!gandalfXvole!pippin/you self-insertion furry-vore-fanfic commision should get 'series:lord of the rings', not 'title:lord of the rings'. But if the 14-year-old DA artist you had vomit out the image named it 'the viscous ardour of the shire', it can and should get 'title:the viscous ardour of the shire'.</p>
-					<p>I figure this will be more useful when lib supports music, but w/e.</p>
+					<p>If the work has an <b>official</b> title, endorsed and promulgated by the creators, add it here.</p>
+					<p>Your eagle!gandalfXvole!pippin/you self-insertion furry-vore-fanfic commission should get 'series:lord of the rings', not 'title:lord of the rings'. But if the 14-year-old DA artist you paid to vomit out the image named it 'the viscous ardour of the shire', it can and should get 'title:the viscous ardour of the shire'.</p>
 				</li>
 				<li>
 					<h3>page:</h3>
 					<h3>chapter:</h3>
 					<h3>volume:</h3>
-					<p>Meant primarily for manga and comics. Numerical-only, please. If an image spans more than one page, give it separate tags e.g. 'page:17' and 'page:18', not 'page:17-18'.</p>
-					<p>the client parses these, and lets you sort and collect appropriately.</p>
+					<p>Meant primarily for manga and comics. Numerical-only works best. If an image spans more than one page, give it separate tags e.g. 'page:17' and 'page:18', not 'page:17-18'. If you want to specially label title pages, don't go 'page:title'; go 'page:0', 'title page', so it sorts correctly with the chapter's other pages.</p>
 				</li>
 			</ul>
 			<h3>siblings and parents</h3>
-			<p>Once you have lurked a little, and have some experience with the feel of the public tag repo, please do add siblings and parents! Use some common sense, and if it is something not obvious, please explain the relationship with a reason. If it <i>is</i> something obvious (e.g. 'wings' is a parent of 'angel wings'), don't bother to put a reason in; I'll just approve it.</p>
+			<p>Please do add <a href="advanced_siblings.html">siblings</a> and <a href="advanced_parents.html">parents</a>! Use some common sense, and if it is something not obvious, please explain the relationship in your submitted reason. If it <i>is</i> something obvious (e.g. 'wings' is a parent of 'angel wings'), don't bother to put a reason in; I'll just approve it.</p>
+			<p>My general thoughts:</p>
 			<ul>
 				<li>
 					<h3>siblings</h3>
-					<p>My general feeling on the correctness of a thing is in how it would describe itself or how its creator would describe it. As a result, I usually prefer japanese be written surname first and western names forename first. As in my siblings page, go 'character:rei ayanami'->'character:ayanami rei', please. Leave 'person:emma watson' and other western names as they are, obviously.</p>
-					<p>In general, if there is a more proper foreign name for something, correct any entirely anglicised version back to that, but stick to english letters. 'series:the melancholy of haruhi suzumiya'->'series:haruhi suzumiya no yuuutsu'</p>
+					<p>My general feeling on the correctness of a thing is in how it would describe itself, or how its creator would describe it. As a result, I usually prefer japanese names be written surname first and western names forename first. As I show in my siblings page, please go 'character:rei ayanami'->'character:ayanami rei'. Leave 'person:emma watson' and other western names as they are, obviously.</p>
+					<p>In general, if there is a more proper foreign name for something, correct any entirely anglicised version back to that, but stick to english letters. 'series:the melancholy of haruhi suzumiya'->'series:haruhi suzumiya no yuuutsu'.</p>
 					<p>Do correct for common plural mistakes. ear->ears, women->female, and so on.</p>
-					<p>Please <b>do not</b> go blah->character:blah. Character siblings are tempting, especially with all the web-harvested tags that give character names unnamespaced, but I just don't like it; siblings are <i>always</i>, and unless blah is utterly unique, it might sometimes be person:blah or series:blah or just a sign that says blah. If you really think one of these is good, please add a reason.</p>
+					<p>Please <b>do not</b> go 'blah'->'character:blah'. Character siblings are tempting, especially with all the web-harvested tags that give character names unnamespaced, but I just don't like it; siblings are <i>always</i>, and 'blah' might properly be 'person:blah' or 'series:blah' or just a sign that says 'blah'. If you really think one of these is good, please add a reason.</p>
 					<p>In general, but not <i>extremis</i>, swap out slang for proper terms. 'lube'->'lubricant', 'series:zelda'->'series:the legend of zelda'.</p>
 				</li>
 				<li>
@@ -118,7 +115,6 @@
 				</li>
 				<li>
 					<img src="tag_example_azura.jpg" />
-					<p>Not sure if 'skyrim' should really be 'series:skyrim', but whatever.</p>
 					<ul>
 						<li>creator:bethesda softworks</li>
 						<li>character:azura</li>
@@ -148,11 +144,6 @@
 						<li>printer</li>
 						<li>hewlett-packard</li>
 					</ul>
-				</li>
-				<li>
-					<p>I used to have an example from safebooru here, something obscure and japanese to show how helpful namespaces can be, but instead I'll put this:</p>
-					<a href="tag_example_five_star.png"><img src="tag_example_five_star_small.png" /></a>
-					<p>Which someone else did and uploaded to my beta file repo. That is a five star effort.</p>
 				</li>
 			</ul>
 		</div>

@@ -12,7 +12,7 @@
 			<h3>so, how does the client make sure it has what it needs to do its searches?</h3>
 			<p>When the client contacts a repository, it downloads every single change that has occured since the last time it checked. It keeps all this data, and searches over whatever is appropriate to its own circumstances. If its local circumstances change (e.g. you import a thousand new files), it doesn't need to download anything more. A repository does not know anything about any particular client's circumstances.</p>
 			<h3>tell me more! use diagrams!</h3>
-			<p>These diagrams are a little old! 'librarium' is the old name for the client, and now there are multiple tag update caches, which are combined into a new table called 'active mappings'. I'll update them sooooometime.</p>
+			<p>These diagrams are a little old! 'librarium' is the old name for the client, and the database looks a little different now, but they give the general idea.</p>
 			<p>tags:</p>
 			<p><a href="tag_sync_1.png"><img src="tag_sync_1.png" width="960" height="443" /></a></p>
 			<p><a href="tag_sync_2.png"><img src="tag_sync_2.png" width="960" height="443" /></a></p>
@@ -32,14 +32,6 @@
 			</ul>
 			<p>Which is a standard http query. 'begin' is a timestamp telling the repository "please give me the update which starts with this timestamp" (begin=0 initialises). The repository answers in YAML, which you can review in include/HydrusConstants.py.</p>
 			<p>The update duration is currently 100,000 seconds.</p>
-			<h3>headers</h3>
-			<p>The repository's requests need a user agent and a session key, which is just a cookie. You can fetch a new session key like so:</p>
-			<ul>
-				<li>GET /session_key HTTP/1.1</li>
-				<li>Authorization: hydrus_network 7ce4dbf18f7af8b420ee942bae42030aab344e91dc0e839260fcd71a4c9879e3</li>
-				<li>User-Agent: hydrus/NETWORK_VERSION</p>
-			</ul>
-			<p>Where NETWORK_VERSION is the current version, such as '9', and the authorisation is your access key. The user-agent doesn't have to be 'hydrus', but the network version afterwards has to match up with the server's, or you'll get a 426 error.</p>
 			<h3>what about the other requests?</h3>
 			<p>I suggest you review the code for information on the other requests. HydrusServer.py does the parsing, and ProcessRequest in the databases does most of the actual magic. ConnectionToService in ClientConstants.py does the client-side request-bundling and response parsing. If you have detailed questions, you can always email me!</p>
 			<p>YAML is very important in the hydrus network. I love it. Just do some googling if you want to learn more, and play around with yaml.safe_dump and yaml.safe_load in the python console to get some hands-on experience.</p>

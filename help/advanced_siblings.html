@@ -9,7 +9,7 @@
 			<h3>quick version</h3>
 			<p>Tag siblings let you replace a bad tag with a better tag.</p>
 			<h3>what's the problem?</h3>
-			<p>It is a common, in communal tagging, to encounter ambiguity when synonyms are applied non-uniformly.</p>
+			<p>Reasonable people often use different words for the same things.</p>
 			<p>A great example is in Japanese names, which are natively written surname first. <i>character:ayanami rei</i> and <i>character:rei ayanami</i> have the same meaning, but different users will use one, or the other, or even both.</p>
 			<p>Other examples are tiny syntactic changes, common misspellings, and unique acronyms:
 			<ul>
@@ -27,9 +27,9 @@
 			<p>Without continual intervention by janitors or other experienced users to make sure y&#x2287;x (i.e. making the yellow circle entirely overlap the blue by manually giving y to everything with x), searches can only return x (blue circle) or y (yellow circle) or x&#x2229;y (the lens-shaped overlap). What we really want is x&#x222a;y (both circles).</p>
 			<p>So, how do we fix this problem?</p>
 			<h3>tag siblings</h3>
-			<p>Let's define a relationship, <b>A->B</b>, that means that any time we would normally see or use tag A or tag B, we will instead get the union of tag A and tag B, and this union will be labelled as tag B. In short, we fold A into B, unioning the two tag spaces.</p>
-			<p>Note that this relationship implies that B is in some way 'better' than A. For instance, I might say that I prefer <i>character:ayanami rei</i>, as I think Japanese characters should probably get their names in the Japanese fashion. So, I would say <i>character:rei ayanami</i>-><i>character:ayanami rei</i>. This means that whenever I might see or type the Western arrangement of Rei's name, I'll automatically get the Japanese instead. Any search will return files with either tag as if they were all tagged <i>character:ayanami rei</i>.</p>
+			<p>Let's define a relationship, <b>A->B</b>, that means that any time we would normally see or use tag A or tag B, we will instead only get tag B:</p>
 			<p><img src="tag_siblings_venn_2.png" /></p>
+			<p>Note that this relationship implies that B is in some way 'better' than A.</p>
 			<h3>ok, I understand; now confuse me</h3>
 			<p>This relationship is transitive, which means as well as saying A->B, you can also say B->C, which implies A->C and B->C.</p>
 			<p><img src="tag_siblings_usa.png" /></p>
@@ -42,7 +42,7 @@
 			<h3>how you do it</h3>
 			<p>It is easy. Just open <i>services->manage tag siblings</i>, and add a few.</p>
 			<p><img src="tag_siblings_dialog.png" /></p>
-			<p>The client will automatically collapse the tagspace to whatever you set. It'll even work with autocomplete, so when you start to type in 'rei ayanami' in search, it will show <i>character:ayanami rei</i> instead:</p>
+			<p>The client will automatically collapse the tagspace to whatever you set. It'll even work with autocomplete, like so:</p>
 			<p><img src="tag_siblings_rei.png" /></p>
 			<p>Please note that siblings' autocomplete counts may be slightly inaccurate, as unioning the <i>count</i> is difficult to quickly estimate.</p>
 			<p>The client will not collapse siblings anywhere you 'write' tags, such as the manage tags dialog. You will be able to add or remove A as normal, but it will be written in some form of "A (B)" to let you know that, ultimately, the tag will end up displaying in the main gui as B:</p>

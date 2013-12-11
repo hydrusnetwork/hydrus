@@ -1,0 +1,65 @@
+<html>
+	<head>
+		<title>getting started - files</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<p><a href="getting_started_files.html"><--- Back to the files</a></p>
+			<h3>exporting and uploading</h3>
+			<p>There are many ways to export files from the client:</p>
+			<ul>
+				<li>
+					<p><b>raw export</b></p>
+					<p>Right clicking some files and selecting 'export all' will open this dialog:</p>
+					<p><img src="export.png" /></p>
+					<p>Which lets you export (copy) the selected files wherever you like in your filesystem. The default export location is your export folder, which is set in <i>file->options</i>.</p>
+					<p>You can do a lot with this. It'll start off trying to export by the files' hashes, which are fairly ugly, but once you are comfortable with tags, you'll be able to generate much cleverer and prettier filenames.</p>
+				</li>
+				<li>
+					<p><b>copy->copy all</b></p>
+					<p>Right clicking some files and selecting 'copy all' from the copy submenu will export the files to a temporary folder and copy their paths to your clipboard. You can then paste them wherever you like, just as with normal files. They will have their hashes for filenames.</p>
+					<p>This is a very quick operation, and can also be triggered by hitting Ctrl+C. It is best when you want to export just a few files somewhere for a temporary job.</p>
+				</li>
+				<li>
+					<p><b>copy->hash/hashes</b></p>
+					<p>Right clicking some files and selecting 'copy hash/hashes' will copy the files' unique identifiers to your clipboard.</p>
+					<p>You will not have to do this often. It is best when you want to tell someone else <i>about</i> a number of files without giving them the files.</p>
+				</li>
+				<li>
+					<p><b>copy->copy path/local url</b></p>
+					<p>Right clicking any file and selecting 'copy path' will copy the file's raw database path (install_path/db/client_files/[hash]) to your clipboard. 'copy local url' does the same, but with a localhost url in the form http://127.0.0.1:45865/file?hash=[hash].</p>
+					<p>These are most useful when you want to send a single file to another program. You can copy either of these addresses into a file open dialog like so:</p>
+					<p><a href="upload.png"><img src="upload.png" width="960" height="600" /></a></p>
+					<p>This works for file upload, opening a file in a graphics editor, or whatever. You can also paste into your browser's address bar, to check they are working.</p>
+					<p>The path method will always work, the url method will only work while the client is running.</p>
+					<p>The path method will send the file's hash as the filename, the url method will send something odd like file[7].</p>
+					<p>The path method will change your current working directory to your client's db directory (usually very annoying), the url method will usually not change you current working directory.</p>
+					<p>I generally recommend you go with the url method.</p>
+					<p>If you use the path method to open a file inside an image editing program, remember to go 'save as' and give it a new filename! The client does not expect files inside its db directory to change.</p>
+				</li>
+				<li>
+					<p><b>dumping to imageboard</b></p>
+					<p>Right clicking some files and selecting 'dump all' will let you mass-dump them to an imageboard. You'll be asked which board you want to dump to and then taken to a new page:</p>
+					<p><a href="dumping.png"><img src="dumping.png" width="960" height="600" /></a></p>
+					<p>If you have a 4chan pass, you can authenticate the client in <i>services->manage 4chan pass</i>. Any new dump pages will no longer show the captcha window.</p>
+					<p>The client comes with all of 4chan's boards pre-configured. If you feel very brave and confident of your html-form-parsing skills, go <i>services->manage imageboards</i> and try to add some new sites.</p>
+				</li>
+			</ul>
+			<h3>sharing files</h3>
+			<p>The hydrus network has a service that lets clients share files anonymously, called a <i>file repository</i>.</p>
+			<p>It simply stores files in a big pool. Anyone who has an access key to the repository can see the pool's thumbnails and download anything they like. They may also have permission to upload. Admins can delete. I run a download-only file repository, which you are welcome to connect to to get a feel for the interface. To add its details, go <i>services->add, remove or edit services</i>, select 'files' on the left, and hit the 'add' button. You'll be asked if you have a registration key or an access key; you have an access key.</p>
+			<p><img src="edit_repos_file_repo.png" /></p>
+			<p>Here's the info so you can copy it:</p>
+			<ul><li>8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5@hydrus.no-ip.org:45872</li></ul>
+			<p>Then go <i>services->review services</i> to see your client synchronise with the repository's file list.</p>
+			<p><img src="review_services.png" /></p>
+			<p>Hit F9, and you'll see a new "files->" page. It works exactly like a local search, it just uses a different file list. Files you do not have will be drawn with a dark background, those you do will be drawn as normal:</p>
+			<p><a href="lib_rec.png"><img src="lib_rec.png" width="683" height="384" /></a></p>
+			<p>To download a file, double- or middle-click it, or select from the right click menu.</p>
+			<p>If you have permission to upload files to a particular repository, that option will appear in the right-click menu for any local files. Selecting this will pend them for batch uploading; just select from the new <i>pending</i> menu to effect the upload when you are ready.</p>
+			<p class="right"><a href="getting_started_tags.html">Ok, I'm ready to learn about tags! ----></a></p>
+		</div>
+	</body>
+</html>
