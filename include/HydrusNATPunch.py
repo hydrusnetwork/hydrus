@@ -1,6 +1,8 @@
+import HydrusConstants as HC
 import os
 import socket
-import win32com.client
+
+if HC.PLATFORM_WINDOWS: import win32com.client
 
 def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
 

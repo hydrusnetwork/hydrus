@@ -126,6 +126,7 @@ class DialogAdvancedContentUpdate( Dialog ):
     
     ALL_MAPPINGS = 0
     SPECIFIC_MAPPINGS = 1
+    SPECIFIC_NAMESPACE = 2
     
     def __init__( self, parent, service_identifier, hashes = None ):
         
@@ -160,6 +161,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
             self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
+            self._tag_type_dropdown.Append( 'specific namespace\'s mappings', self.SPECIFIC_NAMESPACE )
             
             self._tag_type_dropdown.Select( 0 )
             
@@ -243,7 +245,15 @@ class DialogAdvancedContentUpdate( Dialog ):
         tag_type = self._tag_type_dropdown.GetChoice()
         
         if tag_type == self.ALL_MAPPINGS: tag = None
-        else: tag = self._tag
+        elif tag_type == self.SPECIFIC_MAPPINGS: tag = ( 'tag', self._tag )
+        elif tag_type == self.SPECIFIC_NAMESPACE:
+            
+            tag = self._tag
+            
+            if tag.endswith( ':' ): tag = tag[:-1]
+            
+            tag = ( 'namespace', tag )
+            
         
         if tag == '': return
         

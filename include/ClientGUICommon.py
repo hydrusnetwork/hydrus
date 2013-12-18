@@ -1044,7 +1044,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             
             def EventChanged( self, event ):
                 
-                ( collect_types, collect_type_strings ) = self.GeValue()
+                ( collect_types, collect_type_strings ) = self.GetValue()
                 
                 self._special_parent.SetCollectTypes( collect_types, collect_type_strings )
                 
@@ -1271,7 +1271,7 @@ class ListBook( wx.Panel ):
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
-        self._list_box = wx.ListBox( self, style = wx.LB_SINGLE | wx.LB_SORT )
+        self._list_box = self.LB( self, style = wx.LB_SINGLE | wx.LB_SORT )
         
         self._empty_panel = wx.Panel( self )
         
@@ -1295,6 +1295,23 @@ class ListBook( wx.Panel ):
         self.SetSizer( hbox )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    class LB( wx.ListBox ):
+        
+        def FindString( self, name ):
+            
+            if HC.PLATFORM_WINDOWS: return wx.ListBox.FindString( self, name )
+            else:
+                
+                for i in range( self.GetCount() ):
+                    
+                    if self.GetString( i ) == name: return i
+                    
+                
+                return wx.NOT_FOUND
+                
+            
         
     
     def _RecalcListBoxWidth( self ): self.Layout()
@@ -1502,39 +1519,6 @@ class ListBook( wx.Panel ):
             
             if selection != current_selection: self._Select( selection )
             
-        
-    
-class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
-    
-    def __init__( self, parent, height ):
-        
-        wx.ListCtrl.__init__( self, parent, size=( -1, height ), style=wx.LC_REPORT )
-        ListCtrlAutoWidthMixin.__init__( self )
-        
-    
-    def GetAllSelected( self ):
-        
-        indices = []
-        
-        i = self.GetFirstSelected()
-        
-        while i != -1:
-            
-            indices.append( i )
-            
-            i = self.GetNextSelected( i )
-            
-        
-        return indices
-        
-    
-    def RemoveAllSelected( self ):
-        
-        indices = self.GetAllSelected()
-        
-        indices.reverse() # so we don't screw with the indices of deletees below
-        
-        for index in indices: self.DeleteItem( index )
         
     
 class ListBox( wx.ScrolledWindow ):
@@ -2041,6 +2025,39 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
         del self._strings_to_terms[ predicate ]
         
         self._TextsHaveChanged()
+        
+    
+class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
+    
+    def __init__( self, parent, height ):
+        
+        wx.ListCtrl.__init__( self, parent, size=( -1, height ), style=wx.LC_REPORT )
+        ListCtrlAutoWidthMixin.__init__( self )
+        
+    
+    def GetAllSelected( self ):
+        
+        indices = []
+        
+        i = self.GetFirstSelected()
+        
+        while i != -1:
+            
+            indices.append( i )
+            
+            i = self.GetNextSelected( i )
+            
+        
+        return indices
+        
+    
+    def RemoveAllSelected( self ):
+        
+        indices = self.GetAllSelected()
+        
+        indices.reverse() # so we don't screw with the indices of deletees below
+        
+        for index in indices: self.DeleteItem( index )
         
     
 class NoneableSpinCtrl( wx.Panel ):

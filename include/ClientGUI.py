@@ -119,13 +119,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if HC.options[ 'default_gui_session' ] == 'just a blank page':
             
-            wx.CallLater( 0, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+            wx.CallLater( 1, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
             
         else:
             
             name = HC.options[ 'default_gui_session' ]
             
-            wx.CallLater( 0, self._LoadGUISession, name )
+            wx.CallLater( 1, self._LoadGUISession, name )
             
         
     

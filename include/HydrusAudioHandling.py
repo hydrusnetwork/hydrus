@@ -4,12 +4,13 @@ import hsaudiotag.flac
 import hsaudiotag.mpeg
 import hsaudiotag.ogg
 import HydrusConstants as HC
-import mp3play
 import os
 import threading
 import time
 import traceback
 import wx
+
+if HC.PLATFORM_WINDOWS: import mp3play
 
 parsed_noises = {}
 
@@ -62,6 +63,8 @@ def GetWMADuration( path ):
     return length_in_ms
     
 def PlayNoise( name ):
+    
+    if HC.PLATFORM_OSX: return
     
     if name not in parsed_noises:
         

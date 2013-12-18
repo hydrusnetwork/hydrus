@@ -265,7 +265,7 @@ class Controller( wx.App ):
             self.SetSplashText( 'starting daemons' )
             
             if HC.is_first_start: self._gui.DoFirstStart()
-            if HC.is_db_updated: wx.CallLater( 0, HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
+            if HC.is_db_updated: wx.CallLater( 1, HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
             
             self.RestartServer()
             self._db.StartDaemons()

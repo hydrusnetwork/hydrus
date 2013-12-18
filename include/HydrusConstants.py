@@ -19,6 +19,12 @@ import urlparse
 import wx
 import yaml
 
+PLATFORM_WINDOWS = False
+PLATFORM_OSX  = False
+
+if sys.platform == 'win32': PLATFORM_WINDOWS = True
+elif sys.platform == 'darwin': PLATFORM_OSX = True
+
 options = {}
 
 # dirs
@@ -39,7 +45,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 12
-SOFTWARE_VERSION = 96
+SOFTWARE_VERSION = 97
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

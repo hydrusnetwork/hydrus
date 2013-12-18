@@ -15,8 +15,9 @@ import time
 import traceback
 import urllib
 import wx
-import wx.lib.flashwin
 import wx.media
+
+if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
 
 ID_TIMER_ANIMATED = wx.NewId()
 ID_TIMER_FLASH = wx.NewId()
@@ -676,6 +677,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         HC.pubsub.pub( 'set_focus', self._page_key, None )
         
+        self.t = 0
+        
     
     def _DoManualPan( self, delta_x, delta_y ):
         
@@ -1017,7 +1020,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     def EventDrag( self, event ):
         
         CC.CAN_HIDE_MOUSE = True
-        
+        self.t += 1
+        print( self.t )
         self._focus_holder.SetFocus()
         
         if event.Dragging() and self._last_drag_coordinates is not None:
@@ -1028,7 +1032,12 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
-            try: self.WarpPointer( old_x, old_y )
+            try:
+                
+                if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
+                
+                self.WarpPointer( old_x, old_y )
+                
             except: self._last_drag_coordinates = ( x, y )
             
             ( old_delta_x, old_delta_y ) = self._total_drag_delta
@@ -1041,7 +1050,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-        
+        self.t-=1
     
     def EventDragBegin( self, event ):
         
@@ -1061,6 +1070,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 if x > client_x - 20: better_x = client_x - 20
                 if y > client_y - 20: better_y = client_y - 20
+                
+                if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
                 
                 self.WarpPointer( better_x, better_y )
                 
@@ -3254,7 +3265,12 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
                 ( delta_x, delta_y ) = ( x - old_x, y - old_y )
                 
-                try: self.WarpPointer( old_x, old_y )
+                try:
+                    
+                    if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
+                    
+                    self.WarpPointer( old_x, old_y )
+                    
                 except: self._last_drag_coordinates = ( x, y )
                 
                 ( old_delta_x, old_delta_y ) = self._total_drag_delta
@@ -3289,6 +3305,8 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                         
                         if x > client_x - 20: better_x = client_x - 20
                         if y > client_y - 20: better_y = client_y - 20
+                        
+                        if HC.PLATFORM_OSX: raise Exception() # can't warppointer in os x
                         
                         self.WarpPointer( better_x, better_y )
                         

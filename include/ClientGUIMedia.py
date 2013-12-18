@@ -1144,7 +1144,7 @@ class MediaPanelThumbnails( MediaPanel ):
             '''
             self._thumbnails_being_faded_in[ hash ] = ( bmp, None, canvas_bmp, x, y, 0 )
             
-            if not self._timer_animation.IsRunning(): self._timer_animation.Start( 0, wx.TIMER_ONE_SHOT )
+            if not self._timer_animation.IsRunning(): self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
             
         
     
@@ -1913,7 +1913,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 image = original_bmp.ConvertToImage()
                 
-                image.InitAlpha()
+                try: image.InitAlpha()
+                except: pass
                 
                 image = image.AdjustChannels( 1, 1, 1, 0.25 )
                 

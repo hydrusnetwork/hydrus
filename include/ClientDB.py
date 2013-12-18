@@ -3221,7 +3221,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             predicates = [ 'service_id = ' + str( service_id ) ]
                             
                             ( sub_action, sub_row ) = row
-                            print( sub_action )
+                            
                             if sub_action == 'copy':
                                 
                                 ( tag, hashes, service_identifier_target ) = sub_row
@@ -3245,10 +3245,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             if tag is not None:
                                 
-                                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                                ( tag_type, tag ) = tag
                                 
-                                predicates.append( 'namespace_id = ' + str( namespace_id ) )
-                                predicates.append( 'tag_id = ' + str( tag_id ) )
+                                if tag_type == 'tag':
+                                    
+                                    ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                                    
+                                    predicates.append( 'namespace_id = ' + str( namespace_id ) )
+                                    predicates.append( 'tag_id = ' + str( tag_id ) )
+                                    
+                                elif tag_type == 'namespace':
+                                    
+                                    namespace_id = self._GetNamespaceId( c, tag )
+                                    
+                                    predicates.append( 'namespace_id = ' + str( namespace_id ) )
+                                    
                                 
                             
                             if hashes is not None:

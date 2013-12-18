@@ -312,11 +312,27 @@ def AddPaddingToDimensions( dimensions, padding ):
     
 def CatchExceptionClient( etype, value, tb ):
     
-    trace_list = traceback.format_tb( tb )
-    
-    trace = ''.join( trace_list )
-    
-    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+    try:
+        
+        trace_list = traceback.format_tb( tb )
+        
+        trace = ''.join( trace_list )
+        
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+        
+    except:
+        
+        message = 'Encountered an error I could not parse:'
+        
+        message += os.linesep
+        
+        message += HC.u( ( etype, value, tb ) )
+        
+        try: message += traceback.format_exc()
+        except: pass
+        
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+        
     
 def GenerateCollectByChoices( sort_by_choices ):
     
