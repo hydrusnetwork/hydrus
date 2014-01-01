@@ -1149,7 +1149,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         if account_identifier.HasAccessKey():
             
-            access_key = account_identifier.GetAccessKey()
+            access_key = account_identifier.GetData()
             
             try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
             except:
@@ -1176,23 +1176,18 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
                 
             
-        elif account_identifier.HasMapping():
+        elif account_identifier.HasAccountId():
             
-            try:
-                
-                ( tag, hash ) = account_identifier.GetMapping()
-                
-                tag_id = self._GetTagId( c, tag )
-                hash_id = self._GetHashId( c, hash )
-                
-            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that mapping in its database.' )
+            account_id = account_identifier.GetData()
             
-            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, mappings USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND tag_id = ? AND hash_id = ?;', ( service_id, tag_id, hash_id ) ).fetchone()
+            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, account_map USING ( account_type_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         elif account_identifier.HasHash():
             
-            try: hash_id = self._GetHashId( c, account_identifier.GetHash() )
+            hash = account_identifier.GetData()
+            
+            try: hash_id = self._GetHashId( c, hash )
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.' )
             
             try:
@@ -1205,9 +1200,18 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
-        elif account_identifier.HasAccountId():
+        elif account_identifier.HasMapping():
             
-            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, account_map USING ( account_type_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_identifier.GetAccountId() ) ).fetchone()
+            try:
+                
+                ( hash, tag ) = account_identifier.GetData()
+                
+                hash_id = self._GetHashId( c, hash )
+                tag_id = self._GetTagId( c, tag )
+                
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that mapping in its database.' )
+            
+            try: ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, ( account_map, mappings USING ( service_id, account_id ) ) USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND tag_id = ? AND hash_id = ?;', ( service_id, tag_id, hash_id ) ).fetchone()
             except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
             
         

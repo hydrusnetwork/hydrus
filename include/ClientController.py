@@ -15,6 +15,7 @@ import os
 import random
 import shutil
 import sqlite3
+import stat
 import sys
 import threading
 import time
@@ -137,8 +138,6 @@ class Controller( wx.App ):
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > 86400 * 5: self.Write( 'vacuum' )
-        # try no fatten, since we made the recent A/C changes
-        #if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE ] > 50000: self.Write( 'fatten_autocomplete_cache' )
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > 86400 * 3: self.Write( 'delete_orphans' )
         
     

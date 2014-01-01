@@ -1421,13 +1421,21 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
             
             ( path_type, path_info ) = queue_object
             
+            service_identifiers_to_tags = {}
+            
             if path_type == 'path':
                 
                 path = path_info
                 
+                if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
+                
             elif path_type == 'zip':
                 
                 ( zip_path, name ) = path_info
+                
+                pretty_path = zip_path + os.path.sep + name
+                
+                if pretty_path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ pretty_path ]
                 
                 path = HC.GetTempPath()
                 
@@ -1436,9 +1444,6 @@ class ManagementPanelImportHDD( ManagementPanelImport ):
                     with zipfile.ZipFile( zip_path, 'r' ) as z: f.write( z.read( name ) )
                     
                 
-            
-            if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
-            else: service_identifiers_to_tags = {}
             
             wx.CallAfter( self.CALLBACKImportArgs, path, self._advanced_import_options, service_identifiers_to_tags )
             

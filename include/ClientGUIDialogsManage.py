@@ -1,6 +1,7 @@
 import Crypto.PublicKey.RSA
 import HydrusConstants as HC
 import HydrusEncryption
+import HydrusExceptions
 import HydrusTags
 import ClientConstants as CC
 import ClientConstantsMessages
@@ -69,11 +70,11 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             self._reauthenticate = wx.Button( self, label = 'reauthenticate' )
             self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -90,9 +91,9 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='token' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'token' ), FLAGS_MIXED )
             gridbox.AddF( self._token, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='pin' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'pin' ), FLAGS_MIXED )
             gridbox.AddF( self._pin, FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
@@ -700,13 +701,13 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._search_panel, label='search url' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._search_panel, label = 'search url' ), FLAGS_MIXED )
                 gridbox.AddF( self._search_url, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label='search tag separator' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._search_panel, label = 'search tag separator' ), FLAGS_MIXED )
                 gridbox.AddF( self._search_separator, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label='advance by page num' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._search_panel, label = 'advance by page num' ), FLAGS_MIXED )
                 gridbox.AddF( self._advance_by_page_num, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._search_panel, label='thumbnail classname' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._search_panel, label = 'thumbnail classname' ), FLAGS_MIXED )
                 gridbox.AddF( self._thumb_classname, FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._search_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -718,11 +719,11 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._image_panel, label='text' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._image_panel, label = 'text' ), FLAGS_MIXED )
                 gridbox.AddF( self._image_info, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._image_panel, label='id of <img>' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._image_panel, label = 'id of <img>' ), FLAGS_MIXED )
                 gridbox.AddF( self._image_id, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._image_panel, label='text of <a>' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._image_panel, label = 'text of <a>' ), FLAGS_MIXED )
                 gridbox.AddF( self._image_data, FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._image_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -891,26 +892,26 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             self._contacts.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventContactChanging )
             self._contacts.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventContactChanged )
             
-            self._add_contact_address = wx.Button( self, label='add by contact address' )
+            self._add_contact_address = wx.Button( self, label = 'add by contact address' )
             self._add_contact_address.Bind( wx.EVT_BUTTON, self.EventAddByContactAddress )
             self._add_contact_address.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._add_manually = wx.Button( self, label='add manually' )
+            self._add_manually = wx.Button( self, label = 'add manually' )
             self._add_manually.Bind( wx.EVT_BUTTON, self.EventAddManually )
             self._add_manually.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._remove = wx.Button( self, label='remove' )
+            self._remove = wx.Button( self, label = 'remove' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._export = wx.Button( self, label='export' )
+            self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -1315,9 +1316,9 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._contact_panel, label='name' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'name' ), FLAGS_MIXED )
                 gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._contact_panel, label='contact address' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'contact address' ), FLAGS_MIXED )
                 gridbox.AddF( self._contact_address, FLAGS_EXPAND_BOTH_WAYS )
                 gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), FLAGS_MIXED )
                 gridbox.AddF( self._public_key, FLAGS_EXPAND_BOTH_WAYS )
@@ -1903,9 +1904,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     gridbox.AddGrowableCol( 1, 1 )
                     
-                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label='POST URL' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'POST URL' ), FLAGS_MIXED )
                     gridbox.AddF( self._post_url, FLAGS_EXPAND_BOTH_WAYS )
-                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label='flood time' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'flood time' ), FLAGS_MIXED )
                     gridbox.AddF( self._flood_time, FLAGS_EXPAND_BOTH_WAYS )
                     
                     self._basic_info_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2366,13 +2367,13 @@ synchronise - try to import all new files in folder'''
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='path:' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'path:' ), FLAGS_MIXED )
             gridbox.AddF( self._path, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='type:' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'type:' ), FLAGS_MIXED )
             gridbox.AddF( self._type, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='check period (minutes):' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'check period (minutes):' ), FLAGS_MIXED )
             gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='local tag:' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'local tag:' ), FLAGS_MIXED )
             gridbox.AddF( self._local_tag, FLAGS_EXPAND_BOTH_WAYS )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
@@ -2608,7 +2609,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._export_location = wx.DirPickerCtrl( self._file_page, style = wx.DIRP_USE_TEXTCTRL )
             
-            self._exclude_deleted_files = wx.CheckBox( self._file_page, label='' )
+            self._exclude_deleted_files = wx.CheckBox( self._file_page, label = '' )
             
             self._thumbnail_cache_size = wx.SpinCtrl( self._file_page, min = 10, max = 3000 )
             self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
@@ -2794,11 +2795,11 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            self._ok = wx.Button( self, label='Save' )
+            self._ok = wx.Button( self, label = 'Save' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2978,28 +2979,28 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='Default export directory: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Default export directory: ' ), FLAGS_MIXED )
             gridbox.AddF( self._export_location, FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='Exclude deleted files from new imports and remote searches: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Exclude deleted files from new imports and remote searches: ' ), FLAGS_MIXED )
             gridbox.AddF( self._exclude_deleted_files, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='MB memory reserved for thumbnail cache: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'MB memory reserved for thumbnail cache: ' ), FLAGS_MIXED )
             gridbox.AddF( thumbnails_sizer, FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='MB memory reserved for preview cache: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'MB memory reserved for preview cache: ' ), FLAGS_MIXED )
             gridbox.AddF( previews_sizer, FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='MB memory reserved for fullscreen cache: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'MB memory reserved for fullscreen cache: ' ), FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='Thumbnail width: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail width: ' ), FLAGS_MIXED )
             gridbox.AddF( self._thumbnail_width, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='Thumbnail height: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail height: ' ), FLAGS_MIXED )
             gridbox.AddF( self._thumbnail_height, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label='Autocomplete character threshold: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete character threshold: ' ), FLAGS_MIXED )
             gridbox.AddF( self._num_autocomplete_chars, FLAGS_MIXED )
             
             self._file_page.SetSizer( gridbox )
@@ -3022,13 +3023,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( wx.StaticText( self._gui_page, label = 'Default tag sort on management panel:' ), FLAGS_MIXED )
             gridbox.AddF( self._default_tag_sort, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._gui_page, label='Capitalise gui: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._gui_page, label = 'Capitalise gui: ' ), FLAGS_MIXED )
             gridbox.AddF( self._gui_capitalisation, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._gui_page, label='By default, search non-local tags in write-autocomplete: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._gui_page, label = 'By default, search non-local tags in write-autocomplete: ' ), FLAGS_MIXED )
             gridbox.AddF( self._gui_show_all_tags_in_autocomplete, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._gui_page, label='By default, show fullscreen without borders: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._gui_page, label = 'By default, show fullscreen without borders: ' ), FLAGS_MIXED )
             gridbox.AddF( self._fullscreen_borderless, FLAGS_MIXED )
             
             self._gui_page.SetSizer( gridbox )
@@ -3039,31 +3040,31 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:age' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:age' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_age_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_age_years, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='years' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'years' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_age_months, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='months' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'months' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_age_days, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='days' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'days' ), FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:duration' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:duration' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_duration_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_duration_s, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='s' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 's' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_duration_ms, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='ms' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'ms' ), FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:height' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:height' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_height_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_height, FLAGS_MIXED )
             
@@ -3071,23 +3072,23 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:limit=' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:limit=' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_limit, FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:mime' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:mime' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_mime_media, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='/' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = '/' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_mime_type, FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:num_tags' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:num_tags' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_tags_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_tags, FLAGS_MIXED )
             
@@ -3095,14 +3096,14 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:local_rating_like' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:local_rating_like' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_local_rating_like_value, FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:local_rating_numerical' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:local_rating_numerical' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_local_rating_numerical_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_local_rating_numerical_value, FLAGS_MIXED )
             
@@ -3110,17 +3111,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:ratio' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:ratio' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_ratio_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_ratio_width, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label=':' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = ':' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_ratio_height, FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:size' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:size' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_size_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_size, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_size_unit, FLAGS_MIXED )
@@ -3129,7 +3130,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:width' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:width' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_width_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_width, FLAGS_MIXED )
             
@@ -3137,7 +3138,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label='system:num_words' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._file_system_predicates_page, label = 'system:num_words' ), FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_words_sign, FLAGS_MIXED )
             hbox.AddF( self._file_system_predicate_num_words, FLAGS_MIXED )
             
@@ -3513,11 +3514,11 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             self._test = wx.Button( self, label = 'test' )
             self._test.Bind( wx.EVT_BUTTON, self.EventTest )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -3536,9 +3537,9 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='id/email' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'id/email' ), FLAGS_MIXED )
             gridbox.AddF( self._id, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label='password' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'password' ), FLAGS_MIXED )
             gridbox.AddF( self._password, FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
@@ -3629,11 +3630,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             for service_identifier in service_identifiers: self._panels.append( self._Panel( self, service_identifier, media ) )
             
-            self._apply = wx.Button( self, label='Apply' )
+            self._apply = wx.Button( self, label = 'Apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -4233,7 +4234,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 if 'port' in self._options: self._port = wx.SpinCtrl( self._options_panel, min = 1, max = 65535 )
                 if 'max_monthly_data' in self._options: self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max monthly data (MB)', multiplier = 1048576 )
                 if 'max_storage' in self._options: self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max storage (MB)', multiplier = 1048576 )
-                if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel, label='' )
+                if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel, label = '' )
                 if 'message' in self._options: self._message = wx.TextCtrl( self._options_panel )
                 if 'upnp' in self._options: self._upnp = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'external port', none_phrase = 'do not forward port', max = 65535 )
                 
@@ -4775,6 +4776,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     self._service_credentials = wx.TextCtrl( self._service_panel, value = credentials.GetConnectionString() )
                     
+                    self._check_service = wx.Button( self._service_panel, label = 'test credentials' )
+                    self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
+                    
                 
                 if service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
                     
@@ -4810,29 +4814,32 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label='name' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._service_panel, label = 'name' ), FLAGS_MIXED )
                 gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
                 
                 if service_type in HC.REMOTE_SERVICES:
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='credentials' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'credentials' ), FLAGS_MIXED )
                     gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    gridbox.AddF( ( 20, 20 ), FLAGS_MIXED )
+                    gridbox.AddF( self._check_service, FLAGS_LONE_BUTTON )
                     
                 
                 if service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='like' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'like' ), FLAGS_MIXED )
                     gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='dislike' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'dislike' ), FLAGS_MIXED )
                     gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
                     
                 elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='lower limit' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'lower limit' ), FLAGS_MIXED )
                     gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label='upper limit' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'upper limit' ), FLAGS_MIXED )
                     gridbox.AddF( self._upper, FLAGS_EXPAND_BOTH_WAYS )
                     
                 
@@ -4848,6 +4855,58 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             PopulateControls()
             
             ArrangeControls()
+            
+        
+        def EventCheckService( self, event ):
+            
+            ( service_identifier, info ) = self.GetInfo()
+            
+            service_type = service_identifier.GetType()
+            
+            host = info[ 'host' ]
+            port = info[ 'port' ]
+            
+            if 'access_key' in info: access_key = info[ 'access_key' ]
+            else: access_key = None
+            
+            credentials = CC.Credentials( host, port, access_key )
+            
+            try: connection = CC.ConnectionToService( service_identifier, credentials )
+            except:
+                
+                wx.MessageBox( 'Could not connect to the service!' )
+                
+                return
+                
+            
+            try: root = connection.Get( '' )
+            except HydrusExceptions.WrongServiceTypeException:
+                
+                wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ service_type ] + '.' )
+                
+                return
+                
+            
+            if service_type in HC.RESTRICTED_SERVICES:
+                
+                if access_key is None:
+                    
+                    wx.MessageBox( 'No access key!' )
+                    
+                    return
+                    
+                
+                response = connection.Get( 'access_key_verification' )
+                
+                if not response[ 'verified' ]:
+                    
+                    wx.MessageBox( 'That access key was not recognised!' )
+                    
+                    return
+                    
+                
+            
+            wx.MessageBox( 'Everything looks ok!' )
             
         
         def GetInfo( self ):
@@ -4877,6 +4936,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     try: access_key = access_key.decode( 'hex' )
                     except: raise Exception( 'Could not parse those credentials - could not understand access key!' )
+                    
+                    if access_key == '': access_key = None
                     
                     info[ 'access_key' ] = access_key
                     
@@ -5577,11 +5638,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -6038,11 +6099,11 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -6560,11 +6621,11 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
             self._down = wx.Button( self, label = u'\u2193' )
             self._down.Bind( wx.EVT_BUTTON, self.EventDown )
             
-            self._apply = wx.Button( self, label='apply' )
+            self._apply = wx.Button( self, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -6698,11 +6759,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._apply = wx.Button( self, label='Apply' )
+            self._apply = wx.Button( self, label = 'Apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -6835,7 +6896,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
                 
-                self._modify_mappers = wx.Button( self, label='Modify mappers' )
+                self._modify_mappers = wx.Button( self, label = 'Modify mappers' )
                 self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
                 
                 self._copy_tags = wx.Button( self, label = 'copy tags' )

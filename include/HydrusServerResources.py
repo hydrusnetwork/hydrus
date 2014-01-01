@@ -274,13 +274,22 @@ class HydrusResourceWelcome( Resource ):
         
         Resource.__init__( self )
         
-        if service_identifier.GetType() == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
+        service_type = service_identifier.GetType()
+        
+        if service_type == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
         else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
         
         self._body = body.encode( 'utf-8' )
         
+        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
+        
 
-    def render_GET( self, request ): return self._body
+    def render_GET( self, request ):
+        
+        request.setHeader( 'Server', self._server_version_string )
+        
+        return self._body
+        
     
 class HydrusResourceCommand( Resource ):
     
@@ -328,7 +337,7 @@ class HydrusResourceCommand( Resource ):
                 
             
         
-        if 'subject_account_id' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( access_key = hydrus_args[ 'subject_account_id' ] )
+        if 'subject_account_id' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( account_id = hydrus_args[ 'subject_account_id' ] )
         elif 'subject_access_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( access_key = hydrus_args[ 'subject_access_key' ] )
         elif 'subject_hash' in hydrus_args:
             
@@ -559,7 +568,16 @@ class HydrusResourceCommand( Resource ):
     
     def _errbackHandleProcessingError( self, failure, request ):
         
-        if request.is_hydrus_user_agent: 
+        do_yaml = True
+        
+        try:
+            
+            # the error may have occured before user agent was set up!
+            if not request.is_hydrus_user_agent: do_yaml = False
+            
+        except: pass
+        
+        if do_yaml:
             
             default_mime = HC.APPLICATION_YAML
             default_encoding = lambda x: yaml.safe_dump( HC.u( x ) )
@@ -663,6 +681,29 @@ class HydrusResourceCommandAccessKey( HydrusResourceCommand ):
         access_key = HC.app.Read( 'access_key', registration_key )
         
         body = yaml.safe_dump( { 'access_key' : access_key } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandAccessKeyVerification( HydrusResourceCommand ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        access_key = self._parseAccessKey( request )
+        
+        account_identifier = HC.AccountIdentifier( access_key = access_key )
+        
+        try:
+            
+            account = HC.app.Read( 'account', self._service_identifier, account_identifier )
+            
+            verified = True
+            
+        except: verified = False
+        
+        body = yaml.safe_dump( { 'verified' : verified } )
         
         response_context = HC.ResponseContext( 200, body = body )
         

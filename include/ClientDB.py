@@ -3124,14 +3124,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            mappings_ids = []
-            deleted_mappings_ids = []
+            ultimate_mappings_ids = []
+            ultimate_deleted_mappings_ids = []
             
-            pending_mappings_ids = []
-            pending_rescinded_mappings_ids = []
+            ultimate_pending_mappings_ids = []
+            ultimate_pending_rescinded_mappings_ids = []
             
-            petitioned_mappings_ids = []
-            petitioned_rescinded_mappings_ids = []
+            ultimate_petitioned_mappings_ids = []
+            ultimate_petitioned_rescinded_mappings_ids = []
             
             for content_update in content_updates:
                 
@@ -3326,17 +3326,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hash_ids = self._GetHashIds( c, hashes )
                             
-                            if action == HC.CONTENT_UPDATE_ADD: mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                            elif action == HC.CONTENT_UPDATE_DELETE: deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                            elif action == HC.CONTENT_UPDATE_PENDING: pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            if action == HC.CONTENT_UPDATE_ADD: ultimate_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_DELETE: ultimate_deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_PENDING: ultimate_pending_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: ultimate_pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             elif action == HC.CONTENT_UPDATE_PETITION:
                                 
                                 reason_id = self._GetReasonId( c, reason )
                                 
-                                petitioned_mappings_ids.append( ( namespace_id, tag_id, hash_ids, reason_id ) )
+                                ultimate_petitioned_mappings_ids.append( ( namespace_id, tag_id, hash_ids, reason_id ) )
                                 
-                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
+                            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: ultimate_petitioned_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             
                         
                     elif data_type == HC.CONTENT_DATA_TYPE_TAG_SIBLINGS:
@@ -3387,6 +3387,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
                             
+                            notify_new_pending = True
+                            
                         
                         notify_new_siblings = True
                         
@@ -3436,13 +3438,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             reason_id = self._GetReasonId( c, reason )
                             
-                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id ) )
+                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
                             
                             c.execute( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, new_status ) )
                             
                             if action == HC.CONTENT_UPDATE_PENDING:
                                 
-                                existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT ) ) ]
+                                existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status IN ( ?, ? );', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT, HC.PENDING ) ) ]
                                 
                                 existing_hashes = self._GetHashes( c, existing_hash_ids )
                                 
@@ -3466,7 +3468,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
                             
-                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, deletee_status ) )
+                            ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
+                            
+                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
+                            
+                            notify_new_pending = True
                             
                         
                         notify_new_parents = True
@@ -3519,9 +3525,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 
             
-            if len( mappings_ids ) + len( deleted_mappings_ids ) + len( pending_mappings_ids ) + len( pending_rescinded_mappings_ids ) + len( petitioned_mappings_ids ) + len( petitioned_rescinded_mappings_ids ) > 0:
+            if len( ultimate_mappings_ids ) + len( ultimate_deleted_mappings_ids ) + len( ultimate_pending_mappings_ids ) + len( ultimate_pending_rescinded_mappings_ids ) + len( ultimate_petitioned_mappings_ids ) + len( ultimate_petitioned_rescinded_mappings_ids ) > 0:
                 
-                self._UpdateMappings( c, service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids, pending_mappings_ids = pending_mappings_ids, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_mappings_ids = petitioned_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
+                self._UpdateMappings( c, service_id, mappings_ids = ultimate_mappings_ids, deleted_mappings_ids = ultimate_deleted_mappings_ids, pending_mappings_ids = ultimate_pending_mappings_ids, pending_rescinded_mappings_ids = ultimate_pending_rescinded_mappings_ids, petitioned_mappings_ids = ultimate_petitioned_mappings_ids, petitioned_rescinded_mappings_ids = ultimate_petitioned_rescinded_mappings_ids )
                 
                 notify_new_pending = True
                 

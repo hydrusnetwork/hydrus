@@ -182,7 +182,8 @@ class AnimationBar( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                self._canvas_bmp.Destroy()
+                wx.CallAfter( self._canvas_bmp.Destroy )
+                
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._Draw()
@@ -527,7 +528,8 @@ class Canvas():
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        self._canvas_bmp.Destroy()
+        wx.CallAfter( self._canvas_bmp.Destroy )
+        
         self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
         
         if self._media_container is not None:
@@ -568,7 +570,8 @@ class Canvas():
                 
                 if self._media_container is not None:
                     
-                    self._media_container.Destroy()
+                    wx.CallAfter( self._media_container.Destroy )
+                    
                     self._media_container = None
                     
                 
@@ -676,8 +679,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
         
         HC.pubsub.pub( 'set_focus', self._page_key, None )
-        
-        self.t = 0
         
     
     def _DoManualPan( self, delta_x, delta_y ):
@@ -1020,8 +1021,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     def EventDrag( self, event ):
         
         CC.CAN_HIDE_MOUSE = True
-        self.t += 1
-        print( self.t )
+        
         self._focus_holder.SetFocus()
         
         if event.Dragging() and self._last_drag_coordinates is not None:
@@ -1050,7 +1050,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
         
         self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-        self.t-=1
+        
     
     def EventDragBegin( self, event ):
         
@@ -1523,16 +1523,19 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                         
                         if service_type == HC.LOCAL_TAG:
                             
-                            if tag in current: content_update_action = HC.CONTENT_UPDATE_DELETE
-                            else: content_update_action = HC.CONTENT_UPDATE_ADD
-                            
-                            tag_parents_manager = HC.app.GetManager( 'tag_parents' )
-                            
-                            parents = tag_parents_manager.GetParents( service_identifier, tag )
-                            
                             tags = [ tag ]
                             
-                            tags.extend( parents )
+                            if tag in current: content_update_action = HC.CONTENT_UPDATE_DELETE
+                            else:
+                                
+                                content_update_action = HC.CONTENT_UPDATE_ADD
+                                
+                                tag_parents_manager = HC.app.GetManager( 'tag_parents' )
+                                
+                                parents = tag_parents_manager.GetParents( service_identifier, tag )
+                                
+                                tags.extend( parents )
+                                
                             
                             rows = [ ( tag, hashes ) for tag in tags ]
                             
@@ -1559,16 +1562,19 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                 
                             else:
                                 
-                                if tag in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PENDING
-                                else: content_update_action = HC.CONTENT_UPDATE_PENDING
-                                
-                                tag_parents_manager = HC.app.GetManager( 'tag_parents' )
-                                
-                                parents = tag_parents_manager.GetParents( service_identifier, tag )
-                                
                                 tags = [ tag ]
                                 
-                                tags.extend( parents )
+                                if tag in pending: content_update_action = HC.CONTENT_UPDATE_RESCIND_PENDING
+                                else:
+                                    
+                                    content_update_action = HC.CONTENT_UPDATE_PENDING
+                                    
+                                    tag_parents_manager = HC.app.GetManager( 'tag_parents' )
+                                    
+                                    parents = tag_parents_manager.GetParents( service_identifier, tag )
+                                    
+                                    tags.extend( parents )
+                                    
                                 
                                 rows = [ ( tag, hashes ) for tag in tags ]
                                 
@@ -3831,7 +3837,8 @@ class Image( wx.Window ):
                         
                     
                 
-                self._canvas_bmp.Destroy()
+                wx.CallAfter( self._canvas_bmp.Destroy )
+                
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._Draw()

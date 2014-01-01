@@ -46,7 +46,7 @@ class FakeHTTPConnection():
     
     def GetCookies( self ): return self._cookies
     
-    def geturl( self, url, headers = {}, is_redirect = False, follow_redirects = True, response_to_path = False ):
+    def geturl( self, url, headers = {}, redirects_permitted = 4, follow_redirects = True, response_to_path = False ):
         
         parse_result = urlparse.urlparse( url )
         
@@ -56,12 +56,12 @@ class FakeHTTPConnection():
         
         if query != '': request += '?' + query
         
-        response = self.request( 'GET', request, headers = headers, is_redirect = is_redirect, follow_redirects = follow_redirects, response_to_path = response_to_path )
+        response = self.request( 'GET', request, headers = headers, redirects_permitted = redirects_permitted, follow_redirects = follow_redirects, response_to_path = response_to_path )
         
         return response
         
     
-    def request( self, request_type, request, headers = {}, body = None, is_redirect = False, follow_redirects = True, response_to_path = False ):
+    def request( self, request_type, request, headers = {}, body = None, redirects_permitted = 4, follow_redirects = True, response_to_path = False ):
         
         response = self._responses[ ( request_type, request ) ]
         

@@ -518,6 +518,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ClosePage( self, selection, polite = True ):
         
+        # issue with having all pages closed
+        if HC.PLATFORM_OSX and self._notebook.GetPageCount() == 1: return
+        
         page = self._notebook.GetPage( selection )
         
         if polite:
@@ -543,7 +546,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _DeleteAllPages( self ):
         
-        for ( time_closed, selection, name, page ) in self._closed_pages: page.Destroy()
+        for ( time_closed, selection, name, page ) in self._closed_pages: wx.CallAfter( page.Destroy )
         
         self._closed_pages = []
         
@@ -593,7 +596,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ImportFiles( self, paths = [] ):
         
-        with ClientGUIDialogs.DialogSelectLocalFiles( self, paths ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg: dlg.ShowModal()
         
     
     def _LoadGUISession( self, name ):
@@ -631,6 +634,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                 except: pass
                 
+            
+            if HC.PLATFORM_OSX: self._ClosePage( 0 )
             
         
     
@@ -1080,6 +1085,27 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if page is not None: page.SetSynchronisedWait()
         
     
+    def _StartURLDownload( self ):
+        
+        with wx.TextEntryDialog( self, 'Enter URL' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_OK:
+                
+                url = dlg.GetValue()
+                
+                job_key = HC.JobKey()
+                
+                message_string = url
+                
+                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( job_key, url, message_string ) ).start()
+                
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+                
+            
+        
+    
     def _StartYoutubeDownload( self ):
         
         with wx.TextEntryDialog( self, 'Enter YouTube URL' ) as dlg:
@@ -1337,6 +1363,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.ShowHideSplit()
                 
             elif command == 'site': webbrowser.open( 'http://hydrusnetwork.github.io/hydrus/' )
+            elif command == 'start_url_download': self._StartURLDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
@@ -1599,7 +1626,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         menu.Append( view, p( '&View' ) )
         
         download = wx.Menu()
-        download.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&Download a YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+        download.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+        download.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
         
         menu.Append( download, p( 'Do&wnload' ) )
         
@@ -2075,10 +2103,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._listbook = ClientGUICommon.ListBook( self )
             
-            self._edit = wx.Button( self, label='add, remove or edit services' )
+            self._edit = wx.Button( self, label = 'add, remove or edit services' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
-            self._ok = wx.Button( self, label='ok' )
+            self._ok = wx.Button( self, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOk )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -2276,19 +2304,19 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 if service_type in HC.REPOSITORIES:
                     
-                    self._reset = wx.Button( self, label='reset cache' )
+                    self._reset = wx.Button( self, label = 'reset cache' )
                     self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
                     
                 
                 if service_type == HC.SERVER_ADMIN:
                     
-                    self._init = wx.Button( self, label='initialise server' )
+                    self._init = wx.Button( self, label = 'initialise server' )
                     self._init.Bind( wx.EVT_BUTTON, self.EventServerInitialise )
                     
                 
                 if service_type in HC.RESTRICTED_SERVICES:
                     
-                    self._refresh = wx.Button( self, label='refresh account' )
+                    self._refresh = wx.Button( self, label = 'refresh account' )
                     self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
                     
                 

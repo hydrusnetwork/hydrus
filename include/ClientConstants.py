@@ -639,188 +639,6 @@ def ShowExceptionClient( e ):
     
     HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
     
-def THREADParseImportablePaths( result_callable, raw_paths ):
-    
-    job_key = HC.JobKey()
-    
-    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
-    
-    HC.pubsub.pub( 'message_gauge_info', job_key, None, None, u'Parsing files and folders.' )
-    
-    file_paths = GetAllPaths( raw_paths )
-    
-    good_paths_info = []
-    
-    num_file_paths = len( file_paths )
-    num_odd_files = 0
-    
-    for ( i, path ) in enumerate( file_paths ):
-        
-        if i % 500 == 0: gc.collect()
-        
-        HC.pubsub.pub( 'message_gauge_info', job_key, num_file_paths, i, u'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
-        
-        if job_key.IsCancelled(): break
-        
-        info = os.lstat( path )
-        
-        size = info[6]
-        
-        if size == 0:
-            
-            num_odd_files += 1
-            
-            HC.ShowException( HydrusExceptions.SizeException( path + ' could not be imported because it is empty!' ) )
-            
-            continue
-            
-        
-        mime = HydrusFileHandling.GetMime( path )
-        
-        if mime in HC.ALLOWED_MIMES: good_paths_info.append( ( 'path', mime, size, path ) )
-        elif mime in HC.ARCHIVES:
-            
-            HC.pubsub.pub( 'message_gauge_info', job_key, num_file_paths, i, u'Found an archive; parsing\u2026' )
-            
-            if mime == HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP:
-                
-                aes_key = None
-                iv = None
-                
-                if '.encrypted' in path:
-                    
-                    try:
-                        
-                        potential_key_path = path.replace( '.encrypted', '.key' )
-                        
-                        if os.path.exists( potential_key_path ):
-                            
-                            with open( potential_key_path, 'rb' ) as f: key_text = f.read()
-                            
-                            ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
-                            
-                        
-                    except:
-                        
-                        message = 'Tried to read a key, but did not understand it.'
-                        
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-                        
-                    
-                
-                job = HC.Job()
-                
-                def WXTHREADGetAESKey():
-                    
-                    while aes_key is None:
-                        
-                        with wx.TextEntryDialog( HC.app.GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
-                            
-                            result = dlg.ShowModal()
-                            
-                            if result == wx.ID_OK:
-                                
-                                try:
-                                    
-                                    key_text = dlg.GetValue()
-                                    
-                                    ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
-                                    
-                                    job.PutResult( ( aes_key, iv ) )
-                                    
-                                except: wx.MessageBox( 'Did not understand that key!' )
-                                
-                            elif result == wx.ID_CANCEL: job.PutResult( ( None, None ) )
-                            
-                        
-                    
-                
-                if aes_key is None:
-                    
-                    wx.CallAfter( WXTHREADGetAESKey )
-                    
-                    ( aes_key, iv ) = job.GetResult()
-                    
-                
-                if aes_key is not None:
-                    
-                    path_to = HydrusEncryption.DecryptAESFile( aes_key, iv, path )
-                    
-                    path = path_to
-                    mime = HC.APPLICATION_ZIP
-                    
-                
-            
-            if mime == HC.APPLICATION_ZIP:
-                
-                try:
-                    
-                    with zipfile.ZipFile( path, 'r' ) as z:
-                        
-                        if z.testzip() is not None: raise Exception()
-                        
-                        for name in z.namelist():
-                            
-                            # zip is deflate, which means have to read the whole file to read any of the file, so:
-                            # the file pointer returned by open doesn't support seek, lol!
-                            # so, might as well open the whole damn file
-                            
-                            zip_temp_path = HC.GetTempPath()
-                            
-                            with open( zip_temp_path, 'wb' ) as f: f.write( z.read( name ) )
-                            
-                            name_mime = HydrusFileHandling.GetMime( zip_temp_path )
-                            
-                            os.remove( zip_temp_path )
-                            
-                            if name_mime in HC.ALLOWED_MIMES:
-                                
-                                size = z.getinfo( name ).file_size
-                                
-                                if size > 0: good_paths_info.append( ( 'zip', name_mime, size, ( path, name ) ) )
-                                
-                            
-                        
-                    
-                except Exception as e:
-                    
-                    num_odd_files += 1
-                    
-                    HC.ShowException( e )
-                    
-                    continue
-                    
-                
-            
-        else:
-            
-            num_odd_files += 1
-            
-            e = HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' )
-            
-            HC.ShowException( e )
-            
-            continue
-            
-        
-    
-    if len( good_paths_info ) > 0:
-        
-        if len( good_paths_info ) == 1: message = '1 file was parsed successfully'
-        else: message = HC.u( len( good_paths_info ) ) + ' files were parsed successfully'
-        
-        if num_odd_files > 0: message += ', but ' + HC.u( num_odd_files ) + ' failed.'
-        else: message += '.'
-        
-    else:
-        
-        message = HC.u( num_odd_files ) + ' files could not be parsed.'
-        
-    
-    HC.pubsub.pub( 'message_gauge_info', job_key, None, None, message )
-    
-    wx.CallAfter( result_callable, good_paths_info )
-    
 class AutocompleteMatches():
     
     def __init__( self, matches ):
@@ -1169,7 +987,7 @@ class ConnectionToService():
         headers = {}
         
         if request == 'init': pass
-        elif request == 'session_key':
+        elif request in ( 'session_key', 'access_key_verification' ):
             
             if self._credentials.HasAccessKey():
                 
@@ -1209,30 +1027,17 @@ class ConnectionToService():
                 
                 del request_args[ 'subject_identifier' ]
                 
-                if subject_identifier.HasAccessKey():
+                data = subject_identifier.GetData()
+                
+                if subject_identifier.HasAccessKey(): request_args[ 'subject_access_key' ] = data.encode( 'hex' )
+                elif subject_identifier.HasAccountId(): request_args[ 'subject_account_id' ] = data
+                elif subject_identifier.HasHash(): request_args[ 'subject_hash' ] = data.encode( 'hex' )
+                if subject_identifier.HasMapping():
                     
-                    subject_access_key = subject_identifier.GetAccessKey()
+                    ( subject_hash, subject_tag ) = data
                     
-                    request_args[ 'subject_access_key' ] = subject_access_key.encode( 'hex' )
-                    
-                elif subject_identifier.HasAccountId():
-                    
-                    subject_account_id = subject_identifier.GetAccountId()
-                    
-                    request_args[ 'subject_account_id' ] = subject_account_id
-                    
-                elif subject_identifier.HasHash():
-                    
-                    subject_hash = subject_identifier.GetHash()
-                    
-                    request_args[ 'subject_hash' ] = subject_hash.encode( 'hex' )
-                    
-                    if subject_identifier.HasMapping():
-                        
-                        ( subject_tag, subject_hash ) = subject_identifier.GetMapping()
-                        
-                        request_args[ 'subject_tag' ] = subject_tag.encode( 'hex' )
-                        
+                    request_args[ 'subject_hash' ] = data.encode( 'hex' )
+                    request_args[ 'subject_tag' ] = subject_tag.encode( 'hex' )
                     
                 
             
@@ -1397,7 +1202,7 @@ class Credentials( HC.HydrusYAMLBase ):
         
         connection_string = ''
         
-        if self._access_key is not None: connection_string += self._access_key.encode( 'hex' ) + '@'
+        if self.HasAccessKey(): connection_string += self._access_key.encode( 'hex' ) + '@'
         
         connection_string += self._host + ':' + HC.u( self._port )
         

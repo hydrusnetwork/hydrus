@@ -74,71 +74,6 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
     
     return service_identifiers_to_tags
     
-def DownloadYoutubeURL( job_key, url, message_string ):
-    
-    try:
-        
-        parse_result = urlparse.urlparse( url )
-        
-        connection = httplib.HTTPConnection( parse_result.hostname, timeout = 20 )
-        
-        connection.request( 'GET', url )
-        
-        response = connection.getresponse()
-        
-        try:
-            
-            total_num_bytes = int( response.getheader( 'Content-Length' ) )
-            
-            get_message = lambda num_bytes_so_far: message_string + ' - ' + HC.ConvertIntToBytes( num_bytes_so_far ) + '/' + HC.ConvertIntToBytes( total_num_bytes )
-            
-        except:
-            
-            total_num_bytes = None
-            
-            get_message = lambda num_bytes_so_far: message_string + ' - ' + HC.ConvertIntToBytes( num_bytes_so_far )
-            
-        
-        block_size = 64 * 1024
-        
-        num_bytes_so_far = 0
-        
-        temp_path = HC.GetTempPath()
-        
-        HC.pubsub.pub( 'message_gauge_info', job_key, total_num_bytes, num_bytes_so_far, get_message( num_bytes_so_far ) )
-        
-        with open( temp_path, 'wb' ) as f:
-            
-            while True:
-                
-                if HC.shutdown or job_key.IsCancelled(): return
-                
-                block = response.read( block_size )
-                
-                num_bytes_so_far += len( block )
-                
-                HC.pubsub.pub( 'message_gauge_info', job_key, total_num_bytes, num_bytes_so_far, get_message( num_bytes_so_far ) )
-                
-                if block == '': break
-                
-                f.write( block )
-                
-            
-        
-        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'importing ' + message_string )
-        
-        ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
-        
-        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_show_file_button', job_key, message_string, { hash } )
-        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'File was already deleted!' )
-        
-    except Exception as e:
-        
-        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'Error with ' + message_string + '!' )
-        
-        HC.ShowException( e )
-        
-    
 def GetYoutubeFormats( youtube_url ):
     
     try: p = pafy.Pafy( youtube_url )
@@ -1230,4 +1165,36 @@ def PathGeneratorBooru( self, page_key, queue_object ):
     # we should return temp_path
     
     pass
+    
+def THREADDownloadURL( job_key, url, message_string ):
+    
+    try:
+        
+        connection = HC.AdvancedHTTPConnection( url = url )
+        
+        def hook( range, value ):
+            
+            if range is None: message = message_string + ' - ' + HC.ConvertIntToBytes( value )
+            else: message = message_string + ' - ' + HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
+            
+            wx.CallAfter( HC.pubsub.pub, 'message_gauge_info', job_key, range, value, message )
+            
+        
+        connection.AddReportHook( hook )
+        
+        temp_path = connection.geturl( url, response_to_path = True )
+        
+        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'importing ' + message_string )
+        
+        ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
+        
+        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_show_file_button', job_key, message_string, { hash } )
+        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'File was already deleted!' )
+        
+    except Exception as e:
+        
+        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'Error with ' + message_string + '!' )
+        
+        HC.ShowException( e )
+        
     

@@ -64,7 +64,7 @@ class HydrusMessagingSessionManagerServer():
         
         account = HC.app.Read( 'account', service_identifier, account_identifier )
         
-        account_identifier = account.GetAccountIdentifier() # for better account_id based identifier
+        account_identifier = account.GetAccountIdentifier() # for better account_id-based identifier
         
         identity = hashlib.sha256( access_key ).digest()
         
@@ -174,7 +174,7 @@ class HydrusSessionManagerServer():
                 
                 account = HC.app.Read( 'account', service_identifier, account_identifier )
                 
-                account_identifier = account.GetAccountIdentifier() # get the account_id based account_identifier
+                account_identifier = account.GetAccountIdentifier() # get the account_id-based account_identifier
                 
                 if account_identifier not in self._account_cache[ service_identifier ]:
                     self._account_cache[ service_identifier ][ account_identifier ] = account
@@ -226,7 +226,7 @@ class HydrusSessionManagerServer():
                 
                 account = HC.app.Read( 'account', service_identifier, account_identifier )
                 
-                account_identifier = account.GetAccountIdentifier() # get the account_id based account_identifier
+                account_identifier = account.GetAccountIdentifier() # get the account_id-based account_identifier
                 
                 self._account_cache[ service_identifier ][ account_identifier ] = account
                 

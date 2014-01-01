@@ -44,8 +44,8 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 
 # Misc
 
-NETWORK_VERSION = 12
-SOFTWARE_VERSION = 97
+NETWORK_VERSION = 13
+SOFTWARE_VERSION = 98
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -478,6 +478,7 @@ local_file_requests.append( ( GET, 'thumbnail', None ) )
 
 restricted_requests = list( service_requests )
 restricted_requests.append( ( GET, 'access_key', None ) )
+restricted_requests.append( ( GET, 'access_key_verification', None ) )
 restricted_requests.append( ( GET, 'account', None ) )
 restricted_requests.append( ( GET, 'account_info', MANAGE_USERS ) )
 restricted_requests.append( ( GET, 'account_types', MANAGE_USERS ) )
@@ -1404,7 +1405,7 @@ class AdvancedHTTPConnection():
     
     def GetCookies( self ): return self._cookies
     
-    def geturl( self, url, headers = {}, response_to_path = False, is_redirect = False, follow_redirects = True ):
+    def geturl( self, url, headers = {}, response_to_path = False, redirects_permitted = 4, follow_redirects = True ):
         
         parse_result = urlparse.urlparse( url )
         
@@ -1414,10 +1415,10 @@ class AdvancedHTTPConnection():
         
         if query != '': request += '?' + query
         
-        return self.request( 'GET', request, headers = headers, response_to_path = response_to_path, is_redirect = is_redirect, follow_redirects = follow_redirects )
+        return self.request( 'GET', request, headers = headers, response_to_path = response_to_path, redirects_permitted = redirects_permitted, follow_redirects = follow_redirects )
         
     
-    def request( self, request_type, request, headers = {}, body = None, response_to_path = False, is_redirect = False, follow_redirects = True ):
+    def request( self, request_type, request, headers = {}, body = None, response_to_path = False, redirects_permitted = 4, follow_redirects = True ):
         
         if body is None: size_of_request = 0
         else: size_of_request = len( body )
@@ -1451,7 +1452,7 @@ class AdvancedHTTPConnection():
                 
                 if not follow_redirects: return ''
                 
-                if is_redirect: raise Exception( 'Too many redirects!' )
+                if redirects_permitted == 0: raise Exception( 'Too many redirects!' )
                 
                 url = location
                 
@@ -1476,14 +1477,14 @@ class AdvancedHTTPConnection():
                         # 301: moved permanently, repeat request
                         # 307: moved temporarily, repeat request
                         
-                        return new_connection.request( request_type, redirected_request, headers = headers, body = body, response_to_path = response_to_path, is_redirect = True )
+                        return new_connection.request( request_type, redirected_request, headers = headers, body = body, response_to_path = response_to_path, redirects_permitted = redirects_permitted - 1 )
                         
                     elif response.status in ( 302, 303 ):
                         
                         # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
                         # 303: thanks, now go here with GET
                         
-                        return new_connection.request( 'GET', redirected_request, response_to_path = response_to_path, is_redirect = True )
+                        return new_connection.request( 'GET', redirected_request, response_to_path = response_to_path, redirects_permitted = redirects_permitted - 1 )
                         
                     
                 
@@ -1656,41 +1657,61 @@ class Account( HydrusYAMLBase ):
     
 class AccountIdentifier( HydrusYAMLBase ):
     
+    TYPE_ACCOUNT_ID = 0
+    TYPE_ACCESS_KEY = 1
+    TYPE_HASH = 2
+    TYPE_MAPPING = 3
+    TYPE_SIBLING = 4
+    TYPE_PARENT = 5
+    
     yaml_tag = u'!AccountIdentifier'
     
     def __init__( self, access_key = None, hash = None, tag = None, account_id = None ):
         
         HydrusYAMLBase.__init__( self )
         
-        self._access_key = access_key
-        self._hash = hash
-        self._tag = tag
-        self._account_id = account_id
+        if account_id is not None:
+            
+            self._type = self.TYPE_ACCOUNT_ID
+            self._data = account_id
+            
+        elif access_key is not None:
+            
+            self._type = self.TYPE_ACCESS_KEY
+            self._data = access_key
+            
+        elif hash is not None:
+            
+            if tag is not None:
+                
+                self._type = self.TYPE_MAPPING
+                self._data = ( hash, tag )
+                
+            else:
+                
+                self._type = self.TYPE_HASH
+                self._data = hash
+                
+            
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
     
-    def __hash__( self ): return ( self._access_key, self._hash, self._tag, self._account_id ).__hash__()
+    def __hash__( self ): return ( self._type, self._data ).__hash__()
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Account Identifier: ' + u( ( self._access_key.encode( 'hex' ), self._hash.encode( 'hex' ), self._tag, self._account_id ) )
+    def __repr__( self ): return 'Account Identifier: ' + u( ( self._type, self._data ) )
     
-    def GetAccessKey( self ): return self._access_key
+    def GetData( self ): return self._data
     
-    def GetAccountId( self ): return self._account_id
+    def HasAccessKey( self ): return self._type == self.TYPE_ACCESS_KEY
     
-    def GetHash( self ): return self._hash
+    def HasAccountId( self ): return self._type == self.TYPE_ACCOUNT_ID
     
-    def GetMapping( self ): return ( self._tag, self._hash )
+    def HasHash( self ): return self._type == self.TYPE_HASH
     
-    def HasAccessKey( self ): return self._access_key is not None
-    
-    def HasHash( self ): return self._hash is not None and self._tag is None
-    
-    def HasAccountId( self ): return self._account_id is not None
-    
-    def HasMapping( self ): return self._tag is not None and self._hash is not None
+    def HasMapping( self ): return self._type == self.TYPE_MAPPING
     
 class AccountType( HydrusYAMLBase ):
     
@@ -2529,7 +2550,7 @@ class ServerToClientPetition( HydrusYAMLBase ):
         return hashes
         
     
-    def GetPetitioner( self ): return self._petitioner_account_identifier
+    def GetPetitionerIdentifier( self ): return self._petitioner_account_identifier
     
     def GetPetitionString( self ):
         

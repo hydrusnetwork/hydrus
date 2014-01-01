@@ -325,6 +325,7 @@ class HydrusServiceRestricted( HydrusService ):
         root = HydrusService._InitRoot( self )
         
         root.putChild( 'access_key', HydrusServerResources.HydrusResourceCommandAccessKey( self._service_identifier ) )
+        root.putChild( 'access_key_verification', HydrusServerResources.HydrusResourceCommandAccessKeyVerification( self._service_identifier ) )
         root.putChild( 'session_key', HydrusServerResources.HydrusResourceCommandSessionKey( self._service_identifier ) )
         
         root.putChild( 'account', HydrusServerResources.HydrusResourceCommandRestrictedAccount( self._service_identifier ) )

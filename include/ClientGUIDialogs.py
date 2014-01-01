@@ -2,10 +2,13 @@ import Crypto.PublicKey.RSA
 import HydrusConstants as HC
 import HydrusDownloading
 import HydrusEncryption
+import HydrusExceptions
+import HydrusFileHandling
 import HydrusTags
 import ClientConstants as CC
 import ClientGUICommon
 import collections
+import gc
 import itertools
 import os
 import random
@@ -522,11 +525,11 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._lifetime = wx.Choice( self )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -975,7 +978,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._days = wx.SpinCtrl( self, max = 90 )
                 self._hours = wx.SpinCtrl( self, max = 24 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -997,16 +1000,16 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:age' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:age' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._years, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='years' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'years' ), FLAGS_MIXED )
                 hbox.AddF( self._months, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='months' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'months' ), FLAGS_MIXED )
                 hbox.AddF( self._days, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='days' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'days' ), FLAGS_MIXED )
                 hbox.AddF( self._hours, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='hours' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'hours' ), FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
@@ -1036,7 +1039,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._duration_s = wx.SpinCtrl( self, max = 3599 )
                 self._duration_ms = wx.SpinCtrl( self, max = 999 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1056,12 +1059,12 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:duration' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:duration' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._duration_s, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='s' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 's' ), FLAGS_MIXED )
                 hbox.AddF( self._duration_ms, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='ms' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'ms' ), FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
@@ -1096,7 +1099,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._file_service_identifier = wx.Choice( self )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1117,7 +1120,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:file service:' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:file service:' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._current_pending, FLAGS_MIXED )
                 hbox.AddF( self._file_service_identifier, FLAGS_MIXED )
@@ -1147,7 +1150,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._hash = wx.TextCtrl( self )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1162,7 +1165,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:hash=' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:hash=' ), FLAGS_MIXED )
                 hbox.AddF( self._hash, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
@@ -1192,7 +1195,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._height = wx.SpinCtrl( self, max = 200000 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1211,7 +1214,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:height' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:height' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._height, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
@@ -1240,7 +1243,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._limit = wx.SpinCtrl( self, max = 1000000 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1257,7 +1260,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:limit=' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:limit=' ), FLAGS_MIXED )
                 hbox.AddF( self._limit, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
@@ -1288,7 +1291,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._mime_type = wx.Choice( self, choices = [], size = ( 120, -1 ) )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1309,9 +1312,9 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:mime' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:mime' ), FLAGS_MIXED )
                 hbox.AddF( self._mime_media, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='/' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = '/' ), FLAGS_MIXED )
                 hbox.AddF( self._mime_type, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
@@ -1341,7 +1344,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._num_tags = wx.SpinCtrl( self, max = 2000 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1360,7 +1363,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:num_tags' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:num_tags' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._num_tags, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
@@ -1391,7 +1394,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._num_words = wx.SpinCtrl( self, max = 1000000 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1410,7 +1413,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:num_words' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:num_words' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._num_words, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
@@ -1444,7 +1447,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._value_numerical = wx.SpinCtrl( self, min = 0, max = 50000 ) # set bounds based on current service
                 
-                self._first_ok = wx.Button( self, label='Ok', id = HC.LOCAL_RATING_NUMERICAL )
+                self._first_ok = wx.Button( self, label = 'Ok', id = HC.LOCAL_RATING_NUMERICAL )
                 self._first_ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._first_ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -1453,7 +1456,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._value_like = wx.Choice( self, choices=[ 'like', 'dislike', 'rated', 'not rated' ] ) # set words based on current service
                 
-                self._second_ok = wx.Button( self, label='Ok', id = HC.LOCAL_RATING_LIKE )
+                self._second_ok = wx.Button( self, label = 'Ok', id = HC.LOCAL_RATING_LIKE )
                 self._second_ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._second_ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -1489,7 +1492,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:rating:' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), FLAGS_MIXED )
                 hbox.AddF( self._service_numerical, FLAGS_MIXED )
                 hbox.AddF( self._sign_numerical, FLAGS_MIXED )
                 hbox.AddF( self._value_numerical, FLAGS_MIXED )
@@ -1499,9 +1502,9 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:rating:' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), FLAGS_MIXED )
                 hbox.AddF( self._service_like, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='=' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = '=' ), FLAGS_MIXED )
                 hbox.AddF( self._value_like, FLAGS_MIXED )
                 hbox.AddF( self._second_ok, FLAGS_MIXED )
                 
@@ -1535,7 +1538,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._height = wx.SpinCtrl( self, max = 50000 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1591,7 +1594,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._unit = wx.Choice( self, choices = [ 'B', 'KB', 'MB', 'GB' ] )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1612,7 +1615,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:size' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:size' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._size, FLAGS_MIXED )
                 hbox.AddF( self._unit, FLAGS_MIXED )
@@ -1644,7 +1647,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._width = wx.SpinCtrl( self, max = 200000 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1663,7 +1666,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:width' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:width' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._width, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
@@ -1694,7 +1697,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._max_hamming = wx.SpinCtrl( self, max = 256 )
                 
-                self._ok = wx.Button( self, id = wx.ID_OK, label='Ok' )
+                self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1711,7 +1714,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:similar_to' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:similar_to' ), FLAGS_MIXED )
                 hbox.AddF( self._hash, FLAGS_MIXED )
                 hbox.AddF( wx.StaticText( self, label=u'\u2248' ), FLAGS_MIXED )
                 hbox.AddF( self._max_hamming, FLAGS_MIXED )
@@ -1909,6 +1912,506 @@ class DialogInputFileSystemPredicate( Dialog ):
     
     def GetPredicate( self ): return self._predicate
     
+class DialogInputLocalFiles( Dialog ):
+    
+    def __init__( self, parent, paths = [] ):
+        
+        def InitialiseControls():
+            
+            self._paths_list = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ] )
+            
+            self._paths_list.SetMinSize( ( 780, 360 ) )
+            
+            self._gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
+            
+            self._gauge = ClientGUICommon.Gauge( self )
+            
+            self._gauge_text = wx.StaticText( self, label = '' )
+            
+            self._gauge_pause = wx.Button( self, label = 'pause' )
+            self._gauge_pause.Bind( wx.EVT_BUTTON, self.EventGaugePause )
+            
+            self._gauge_cancel = wx.Button( self, label = 'cancel' )
+            self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
+            
+            self._add_files_button = wx.Button( self, label = 'Add Files' )
+            self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
+            
+            self._add_folder_button = wx.Button( self, label = 'Add Folder' )
+            self._add_folder_button.Bind( wx.EVT_BUTTON, self.EventAddFolder )
+            
+            self._remove_files_button = wx.Button( self, label = 'Remove Files' )
+            self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
+            
+            self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
+            
+            self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
+            
+            self._add_button = wx.Button( self, label = 'Import now' )
+            self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._tag_button = wx.Button( self, label = 'Add tags before importing' )
+            self._tag_button.Bind( wx.EVT_BUTTON, self.EventTags )
+            self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+    
+        def PopulateControls():
+            
+            pass
+            
+        
+        def ArrangeControls():
+            
+            self._gauge_sizer.AddF( self._gauge, FLAGS_EXPAND_BOTH_WAYS )
+            self._gauge_sizer.AddF( self._gauge_text, FLAGS_EXPAND_BOTH_WAYS )
+            self._gauge_sizer.AddF( self._gauge_pause, FLAGS_MIXED )
+            self._gauge_sizer.AddF( self._gauge_cancel, FLAGS_MIXED )
+            
+            self._gauge_sizer.ShowItems( False )
+            
+            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            file_buttons.AddF( self._gauge_sizer, FLAGS_EXPAND_SIZER_BOTH_WAYS.ReserveSpaceEvenIfHidden() )
+            file_buttons.AddF( self._add_files_button, FLAGS_MIXED )
+            file_buttons.AddF( self._add_folder_button, FLAGS_MIXED )
+            file_buttons.AddF( self._remove_files_button, FLAGS_MIXED )
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._add_button, FLAGS_MIXED )
+            buttons.AddF( self._tag_button, FLAGS_MIXED )
+            buttons.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._paths_list, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( file_buttons, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._delete_after_success, FLAGS_LONE_BUTTON )
+            vbox.AddF( ( 0, 5 ), FLAGS_NONE )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'importing files' )
+        
+        self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddPathsToList ) )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        self._processing_queue = []
+        self._currently_parsing = False
+        
+        self._pause_event = threading.Event()
+        self._cancel_event = threading.Event()
+        
+        if len( paths ) > 0: self._AddPathsToList( paths )
+        
+        wx.CallAfter( self._add_button.SetFocus )
+        
+    
+    def _AddPathsToList( self, paths ):
+        
+        self._processing_queue.append( paths )
+        
+        self._ProcessQueue()
+        
+    
+    def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
+    
+    def _ProcessQueue( self ):
+        
+        if not self._currently_parsing and len( self._processing_queue ) > 0:
+            
+            paths = self._processing_queue.pop( 0 )
+            
+            self._currently_parsing = True
+            
+            self._pause_event = threading.Event()
+            self._cancel_event = threading.Event()
+            
+            threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._pause_event, self._cancel_event ) ).start()
+            
+            self.SetGaugeInfo( None, None, '' )
+            
+            self._gauge_pause.Enable()
+            self._gauge_cancel.Enable()
+            
+            self._gauge_sizer.ShowItems( True )
+            self._gauge_sizer.Layout()
+            
+        
+    
+    def _TidyUp( self ):
+        
+        self._pause_event.clear()
+        self._cancel_event.set()
+        
+    
+    def AddParsedPath( self, path_type, mime, size, path_info ):
+        
+        pretty_size = HC.ConvertIntToBytes( size )
+        
+        if path_type == 'path': pretty_path = path_info
+        elif path_type == 'zip':
+            
+            ( zip_path, name ) = path_info
+            
+            pretty_path = zip_path + os.path.sep + name
+            
+        
+        self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
+        
+    
+    def DoneParsing( self ):
+        
+        self._gauge_sizer.ShowItems( False )
+        
+        self._currently_parsing = False
+        
+        self._ProcessQueue()
+        
+    
+    def EventAddPaths( self, event ):
+        
+        with wx.FileDialog( self, 'Select the files to add.', style=wx.FD_MULTIPLE ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                paths = dlg.GetPaths()
+                
+                self._AddPathsToList( paths )
+                
+            
+        
+    
+    def EventAddFolder( self, event ):
+        
+        with wx.DirDialog( self, 'Select a folder to add.', style=wx.DD_DIR_MUST_EXIST ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                self._AddPathsToList( ( path, ) )
+                
+            
+        
+    
+    def EventCancel( self, event ):
+        
+        self._TidyUp()
+        
+        self.EndModal( wx.ID_CANCEL )
+        
+    
+    def EventGaugeCancel( self, event ):
+        
+        self._pause_event.clear()
+        
+        self._cancel_event.set()
+        
+        self._gauge_pause.Disable()
+        self._gauge_cancel.Disable()
+        
+    
+    def EventGaugePause( self, event ):
+        
+        if self._pause_event.is_set():
+            
+            self._pause_event.clear()
+            
+            self._gauge_pause.SetLabel( 'pause' )
+            
+        else:
+            
+            self._pause_event.set()
+            
+            self._gauge_pause.SetLabel( 'resume' )
+            
+        
+    
+    def EventOK( self, event ):
+        
+        self._TidyUp()
+        
+        paths_info = self._GetPathsInfo()
+        
+        if len( paths_info ) > 0:
+            
+            advanced_import_options = self._advanced_import_options.GetInfo()
+            
+            delete_after_success = self._delete_after_success.GetValue()
+            
+            HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, delete_after_success = delete_after_success )
+            
+            self.EndModal( wx.ID_OK )
+            
+        
+    
+    def EventRemovePaths( self, event ): self._paths_list.RemoveAllSelected()
+    
+    def EventTags( self, event ):
+        
+        try:
+            
+            paths_info = self._GetPathsInfo()
+            
+            if len( paths_info ) > 0:
+                
+                advanced_import_options = self._advanced_import_options.GetInfo()
+                
+                paths_to_send_to_dialog = []
+                
+                for ( path_type, path_info ) in paths_info:
+                    
+                    if path_type == 'path': pretty_path = path_info
+                    elif path_type == 'zip':
+                        
+                        ( zip_path, name ) = path_info
+                        
+                        pretty_path = zip_path + os.path.sep + name
+                        
+                    
+                    paths_to_send_to_dialog.append( pretty_path )
+                    
+                
+                with DialogPathsToTagsRegex( self, paths_to_send_to_dialog ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        delete_after_success = self._delete_after_success.GetValue()
+                        
+                        paths_to_tags = dlg.GetInfo()
+                        
+                        HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                        
+                        self.EndModal( wx.ID_OK )
+                        
+                    
+                
+            
+        except: wx.MessageBox( traceback.format_exc() )
+        
+    
+    def SetGaugeInfo( self, range, value, text ):
+        
+        if range is None: self._gauge.Pulse()
+        else:
+            
+            self._gauge.SetRange( range )
+            self._gauge.SetValue( value )
+            
+        
+        self._gauge_text.SetLabel( text )
+        
+    
+    def THREADParseImportablePaths( self, raw_paths, pause_event, cancel_event ):
+        
+        wx.CallAfter( self.SetGaugeInfo, None, None, u'Parsing files and folders.' )
+        
+        file_paths = CC.GetAllPaths( raw_paths )
+        
+        num_file_paths = len( file_paths )
+        num_good_files = 0
+        num_odd_files = 0
+        
+        for ( i, path ) in enumerate( file_paths ):
+            
+            if i % 500 == 0: gc.collect()
+            
+            wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
+            
+            while pause_event.is_set(): time.sleep( 1 )
+            
+            if cancel_event.is_set(): break
+            
+            info = os.lstat( path )
+            
+            size = info[6]
+            
+            if size == 0:
+                
+                num_odd_files += 1
+                
+                HC.ShowException( HydrusExceptions.SizeException( path + ' could not be imported because it is empty!' ) )
+                
+                continue
+                
+            
+            mime = HydrusFileHandling.GetMime( path )
+            
+            if mime in HC.ALLOWED_MIMES:
+                
+                num_good_files += 1
+                
+                wx.CallAfter( self.AddParsedPath, 'path', mime, size, path )
+                
+            elif mime in HC.ARCHIVES:
+                
+                wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Found an archive; parsing\u2026' )
+                
+                if mime == HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP:
+                    
+                    aes_key = None
+                    iv = None
+                    
+                    if '.encrypted' in path:
+                        
+                        try:
+                            
+                            potential_key_path = path.replace( '.encrypted', '.key' )
+                            
+                            if os.path.exists( potential_key_path ):
+                                
+                                with open( potential_key_path, 'rb' ) as f: key_text = f.read()
+                                
+                                ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
+                                
+                            
+                        except:
+                            
+                            message = 'Tried to read a key, but did not understand it.'
+                            
+                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                            
+                        
+                    
+                    job = HC.Job()
+                    
+                    def WXTHREADGetAESKey():
+                        
+                        while aes_key is None:
+                            
+                            with wx.TextEntryDialog( HC.app.GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
+                                
+                                result = dlg.ShowModal()
+                                
+                                if result == wx.ID_OK:
+                                    
+                                    try:
+                                        
+                                        key_text = dlg.GetValue()
+                                        
+                                        ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
+                                        
+                                        job.PutResult( ( aes_key, iv ) )
+                                        
+                                    except: wx.MessageBox( 'Did not understand that key!' )
+                                    
+                                elif result == wx.ID_CANCEL: job.PutResult( ( None, None ) )
+                                
+                            
+                        
+                    
+                    if aes_key is None:
+                        
+                        wx.CallAfter( WXTHREADGetAESKey )
+                        
+                        ( aes_key, iv ) = job.GetResult()
+                        
+                    
+                    if aes_key is not None:
+                        
+                        path_to = HydrusEncryption.DecryptAESFile( aes_key, iv, path )
+                        
+                        path = path_to
+                        mime = HC.APPLICATION_ZIP
+                        
+                    
+                
+                if mime == HC.APPLICATION_ZIP:
+                    
+                    try:
+                        
+                        with zipfile.ZipFile( path, 'r' ) as z:
+                            
+                            if z.testzip() is not None: raise Exception()
+                            
+                            for name in z.namelist():
+                                
+                                # zip is deflate, which means have to read the whole file to read any of the file, so:
+                                # the file pointer returned by open doesn't support seek, lol!
+                                # so, might as well open the whole damn file
+                                
+                                zip_temp_path = HC.GetTempPath()
+                                
+                                with open( zip_temp_path, 'wb' ) as f: f.write( z.read( name ) )
+                                
+                                name_mime = HydrusFileHandling.GetMime( zip_temp_path )
+                                
+                                os.remove( zip_temp_path )
+                                
+                                if name_mime in HC.ALLOWED_MIMES:
+                                    
+                                    size = z.getinfo( name ).file_size
+                                    
+                                    if size > 0:
+                                        
+                                        num_good_files += 1
+                                        
+                                        wx.CallAfter( self.AddParsedPath, 'zip', name_mime, size, ( path, name ) )
+                                        
+                                    
+                                
+                            
+                        
+                    except Exception as e:
+                        
+                        num_odd_files += 1
+                        
+                        HC.ShowException( e )
+                        
+                        continue
+                        
+                    
+                
+            else:
+                
+                num_odd_files += 1
+                
+                e = HydrusExceptions.MimeException( path + ' could not be imported because its mime is not supported.' )
+                
+                HC.ShowException( e )
+                
+                continue
+                
+            
+        
+        if num_good_files > 0:
+            
+            if num_good_files == 1: message = '1 file was parsed successfully'
+            else: message = HC.u( num_good_files ) + ' files were parsed successfully'
+            
+            if num_odd_files > 0: message += ', but ' + HC.u( num_odd_files ) + ' failed.'
+            else: message += '.'
+            
+        else:
+            
+            message = HC.u( num_odd_files ) + ' files could not be parsed.'
+            
+        
+        wx.CallAfter( self.SetGaugeInfo, num_file_paths, num_file_paths, message )
+        
+        time.sleep( 1.5 )
+        
+        wx.CallAfter( self.DoneParsing )
+        
+    
 class DialogInputMessageSystemPredicate( Dialog ):
     
     def __init__( self, parent, type ):
@@ -1923,7 +2426,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 self._months = wx.SpinCtrl( self, max = 60 )
                 self._days = wx.SpinCtrl( self, max = 90 )
                 
-                self._ok = wx.Button( self, label='Ok' )
+                self._ok = wx.Button( self, label = 'Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -1941,14 +2444,14 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:age' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:age' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._years, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='years' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'years' ), FLAGS_MIXED )
                 hbox.AddF( self._months, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='months' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'months' ), FLAGS_MIXED )
                 hbox.AddF( self._days, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label='days' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'days' ), FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
@@ -1975,7 +2478,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 self._contact = wx.Choice( self, choices=contact_names )
                 
-                self._ok = wx.Button( self, label='Ok' )
+                self._ok = wx.Button( self, label = 'Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -1989,7 +2492,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:from' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:from' ), FLAGS_MIXED )
                 hbox.AddF( self._contact, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
@@ -2017,7 +2520,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 self._contact = wx.Choice( self, choices = contact_names )
                 
-                self._ok = wx.Button( self, label='Ok' )
+                self._ok = wx.Button( self, label = 'Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -2031,7 +2534,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:started_by' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:started_by' ), FLAGS_MIXED )
                 hbox.AddF( self._contact, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
@@ -2059,7 +2562,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 self._contact = wx.Choice( self, choices = contact_names )
                 
-                self._ok = wx.Button( self, label='Ok' )
+                self._ok = wx.Button( self, label = 'Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -2073,7 +2576,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:to' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:to' ), FLAGS_MIXED )
                 hbox.AddF( self._contact, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
@@ -2101,7 +2604,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 self._num_attachments = wx.SpinCtrl( self, max = 2000 )
                 
-                self._ok = wx.Button( self, label='Ok' )
+                self._ok = wx.Button( self, label = 'Ok' )
                 self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
                 self._ok.SetForegroundColour( ( 0, 128, 0 ) )
                 
@@ -2117,7 +2620,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label='system:numattachments' ), FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:numattachments' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._num_attachments, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
@@ -2174,11 +2677,11 @@ class DialogInputNamespaceRegex( Dialog ):
             
             self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2265,11 +2768,11 @@ class DialogInputNewAccountType( Dialog ):
             self._max_num_requests = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly requests' )
             self._max_num_requests.SetValue( max_num_requests )
             
-            self._apply = wx.Button( self, label='apply' )
+            self._apply = wx.Button( self, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2403,11 +2906,11 @@ class DialogInputNewFormField( Dialog ):
             
             self._editable = wx.CheckBox( self )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2430,16 +2933,16 @@ class DialogInputNewFormField( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='name' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'name' ), FLAGS_MIXED )
             gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label='type' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'type' ), FLAGS_MIXED )
             gridbox.AddF( self._type, FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label='default' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'default' ), FLAGS_MIXED )
             gridbox.AddF( self._default, FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label='editable' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'editable' ), FLAGS_MIXED )
             gridbox.AddF( self._editable, FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
@@ -2502,11 +3005,11 @@ class DialogInputShortcut( Dialog ):
             
             self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo' ] )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2576,11 +3079,11 @@ class DialogInputUPnPMapping( Dialog ):
             self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
             self._description = wx.TextCtrl( self )
             
-            self._ok = wx.Button( self, label='Ok' )
+            self._ok = wx.Button( self, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -2746,7 +3249,7 @@ class DialogModifyAccounts( Dialog ):
             self._superban.SetBackgroundColour( ( 255, 0, 0 ) )
             self._superban.SetForegroundColour( ( 255, 255, 0 ) )
             
-            self._exit = wx.Button( self, id = wx.ID_CANCEL, label='Exit' )
+            self._exit = wx.Button( self, id = wx.ID_CANCEL, label = 'Exit' )
             self._exit.Bind( wx.EVT_BUTTON, lambda event: self.EndModal( wx.ID_OK ) )
             
     
@@ -3015,11 +3518,11 @@ class DialogPathsToTagsRegex( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._add_button = wx.Button( self, label='Import Files' )
+            self._add_button = wx.Button( self, label = 'Import Files' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
             self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Back to File Selection' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Back to File Selection' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -3389,11 +3892,15 @@ class DialogPathsToTagsRegex( Dialog ):
                     
                     ( num, path, old_tags ) = self._paths_list.GetClientData( index )
                     
-                    if tag not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( tag )
-                    
-                    for parent in parents:
+                    if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
+                    else:
                         
-                        if parent not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( parent )
+                        self._paths_to_single_tags[ path ].append( tag )
+                        
+                        for parent in parents:
+                            
+                            if parent not in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].append( parent )
+                            
                         
                     
                 
@@ -3664,10 +4171,10 @@ class DialogRegisterService( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label='address' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'address' ), FLAGS_MIXED )
             gridbox.AddF( self._address, FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label='registration key' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self, label = 'registration key' ), FLAGS_MIXED )
             gridbox.AddF( self._registration_key, FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -3937,212 +4444,6 @@ class DialogSelectFromListOfStrings( Dialog ):
     
     def GetString( self ): return self._strings.GetStringSelection()
     
-class DialogSelectLocalFiles( Dialog ):
-    
-    def __init__( self, parent, paths = [] ):
-        
-        def InitialiseControls():
-            
-            self._paths_list = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ] )
-            
-            self._paths_list.SetMinSize( ( 780, 360 ) )
-            
-            self._add_button = wx.Button( self, label='Import now' )
-            self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._tag_button = wx.Button( self, label = 'Add tags before importing' )
-            self._tag_button.Bind( wx.EVT_BUTTON, self.EventTags )
-            self._tag_button.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-            self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
-            
-            self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
-            
-            self._add_files_button = wx.Button( self, label='Add Files' )
-            self._add_files_button.Bind( wx.EVT_BUTTON, self.EventAddPaths )
-            
-            self._add_folder_button = wx.Button( self, label='Add Folder' )
-            self._add_folder_button.Bind( wx.EVT_BUTTON, self.EventAddFolder )
-            
-            self._remove_files_button = wx.Button( self, label='Remove Files' )
-            self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
-            
-    
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            file_buttons.AddF( ( 20, 0 ), FLAGS_NONE )
-            file_buttons.AddF( self._add_files_button, FLAGS_MIXED )
-            file_buttons.AddF( self._add_folder_button, FLAGS_MIXED )
-            file_buttons.AddF( self._remove_files_button, FLAGS_MIXED )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._add_button, FLAGS_MIXED )
-            buttons.AddF( self._tag_button, FLAGS_MIXED )
-            buttons.AddF( self._cancel, FLAGS_MIXED )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._paths_list, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._delete_after_success, FLAGS_LONE_BUTTON )
-            vbox.AddF( ( 0, 5 ), FLAGS_NONE )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
-        Dialog.__init__( self, parent, 'importing files' )
-        
-        self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddPathsToList ) )
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        self._AddPathsToList( paths )
-        
-        wx.CallAfter( self._add_button.SetFocus )
-        
-    
-    
-    def _AddPathsToList( self, paths ):
-        
-        threading.Thread( target = CC.THREADParseImportablePaths, args = ( self.AddParsedPaths, paths ) ).start()
-        
-    
-    def _GetPathsInfo( self ): return [ row[0] for row in self._paths_list.GetClientData() ]
-    
-    def AddParsedPaths( self, good_paths_info ):
-        
-        odd_paths = False
-        
-        for ( path_type, mime, size, path_info ) in good_paths_info:
-            
-            pretty_size = HC.ConvertIntToBytes( size )
-            
-            if path_type == 'path': pretty_path = path_info
-            elif path_type == 'zip':
-                
-                ( zip_path, name ) = path_info
-                
-                pretty_path = zip_path + os.path.sep + name
-                
-            
-            self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
-            
-        
-        if odd_paths: wx.MessageBox( HC.u( len( odd_paths ) ) + ' files could not be added.' )
-        
-    
-    def EventAddPaths( self, event ):
-        
-        with wx.FileDialog( self, 'Select the files to add.', style=wx.FD_MULTIPLE ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                paths = dlg.GetPaths()
-                
-                self._AddPathsToList( paths )
-                
-            
-        
-    
-    def EventAddFolder( self, event ):
-        
-        with wx.DirDialog( self, 'Select a folder to add.', style=wx.DD_DIR_MUST_EXIST ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = dlg.GetPath()
-                
-                self._AddPathsToList( ( path, ) )
-                
-            
-        
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ):
-        
-        paths_info = self._GetPathsInfo()
-        
-        if len( paths_info ) > 0:
-            
-            advanced_import_options = self._advanced_import_options.GetInfo()
-            
-            delete_after_success = self._delete_after_success.GetValue()
-            
-            HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, delete_after_success = delete_after_success )
-            
-            self.EndModal( wx.ID_OK )
-            
-        
-    
-    def EventRemovePaths( self, event ): self._paths_list.RemoveAllSelected()
-    
-    def EventTags( self, event ):
-        
-        try:
-            
-            paths_info = self._GetPathsInfo()
-            
-            if len( paths_info ) > 0:
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                paths_to_send_to_dialog = []
-                
-                for ( path_type, path_info ) in paths_info:
-                    
-                    if path_type == 'path': pretty_path = path_info
-                    elif path_type == 'zip':
-                        
-                        ( zip_path, name ) = path_info
-                        
-                        pretty_path = zip_path + os.path.sep + name
-                        
-                    
-                    paths_to_send_to_dialog.append( pretty_path )
-                    
-                
-                with DialogPathsToTagsRegex( self, paths_to_send_to_dialog ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        delete_after_success = self._delete_after_success.GetValue()
-                        
-                        paths_to_tags = dlg.GetInfo()
-                        
-                        HC.pubsub.pub( 'new_hdd_import', paths_info, advanced_import_options = advanced_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
-                        
-                        self.EndModal( wx.ID_OK )
-                        
-                    
-                
-            
-        except: wx.MessageBox( traceback.format_exc() )
-        
-    
 class DialogSelectYoutubeURL( Dialog ):
     
     def __init__( self, parent, info ):
@@ -4157,7 +4458,7 @@ class DialogSelectYoutubeURL( Dialog ):
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -4216,7 +4517,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 message_string = title + ' ' + resolution + ' ' + extension
                 
-                threading.Thread( target = HydrusDownloading.DownloadYoutubeURL, args = ( job_key, url, message_string ) ).start()
+                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( job_key, url, message_string ) ).start()
                 
                 HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
                 
@@ -4264,7 +4565,7 @@ class DialogSetupCustomFilterActions( Dialog ):
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='cancel' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
@@ -4581,7 +4882,7 @@ class DialogSetupExport( Dialog ):
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label='close' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'close' )
             
     
         def PopulateControls():

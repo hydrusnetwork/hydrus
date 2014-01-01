@@ -2651,7 +2651,7 @@ class PopupMessageManager( wx.Frame ):
         
         self._message_vbox.Detach( window )
         
-        window.Destroy()
+        wx.CallAfter( window.Destroy )
         
         self._SizeAndPositionAndShow()
         
@@ -3064,6 +3064,10 @@ class CollapsiblePanel( wx.Panel ):
             
         
         self.GetParent().GetParent().Layout() # this may need to be cleverer
+        
+        tlp = self.GetTopLevelParent()
+        
+        if issubclass( type( tlp ), wx.Dialog ): tlp.Fit()
         
     
 class AdvancedOptions( StaticBox ):
