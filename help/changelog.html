@@ -10,6 +10,49 @@
 			<ul>
 				<li><h3>version 97</h3></li>
 				<ul>
+					<li>update to wxpython 3.0</li>
+					<li>you can now add tags when importing from a zip</li>
+					<li>you can now download arbitrary urls from download->a raw url</li>
+					<li>'select files to import' dialog has massively improved file parsing, with:</li>
+					<ul>
+						<li>new gauge location</li>
+						<li>queueable parse jobs</li>
+						<li>paths that stream as they are parsed</li>
+						<li>pause/cancel buttons</li>
+					</ul>
+					<li>new 'check credentials' button in manage services dialog</li>
+					<li>new access_key_verification server request</li>
+					<li>fixed a very important bug that affected normal tags when adding parents or siblings</li>
+					<li>fixed a bug where old pending parents would not be remembered when new same-child parents were later pended</li>
+					<li>fixed a similar bug where rescinding parent pends would screw things up</li>
+					<li>pending counts will new correctly update on a sibling or parent pend rescind</li>
+					<li>parent tags no longer (incorrectly) remove when:</li>
+					<ul>
+						<li>removing 'just this file' child tags in 'add tags before importing' dialog</li>
+						<li>removing child tags in custom filter</li>
+					</ul>
+					<li>some youtube videos were not downloading due to a redirect issue. it is improved, possibly fixed completely</li>
+					<li>collapsible panes, like 'advanced import options', will refit dialogs on collapse/expand</li>
+					<li>fixed an bug in the way certain server errors were handled</li>
+					<li>fixed a serverside bug for GET account when using account_id as identifier</li>
+					<li>fixed 'modify petitioner' button in petition pages</li>
+					<li>fixed a bug that was preventing clearing of temp path on client startup</li>
+					<li>cleaned up some credentials code</li>
+					<li>some general code grammar improvement</li>
+					<li>reworded some help</li>
+					<li>reworked account identifiers</li>
+					<li>os x</li>
+					<ul>
+						<li>now has an app icon, woop</li>
+						<li>os x page closing logic improved</li>
+						<li>collections checkbox dropdown seems to work, now</li>
+						<li>fixed segfault on popup message close</li>
+						<li>thumbs loading from initial session seems to draw properly, sometimes</li>
+						<li>fullscreen no longer causes segfault whenever you zoom or scroll</li>
+					</ul>
+				</ul>
+				<li><h3>version 97</h3></li>
+				<ul>
 					<li>initial os x test build</li>
 					<li>collect typo fixed</li>
 					<li>'remove all mappings with specific namespace' added to advanced content update dialog</li>
