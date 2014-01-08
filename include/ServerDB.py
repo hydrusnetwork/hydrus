@@ -2655,19 +2655,6 @@ class DB( ServiceDB ):
     
     def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
-    def AddJobServer( self, service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length ):
-        
-        priority = HC.HIGH_PRIORITY
-        
-        job = HC.JobServer( service_identifier, access_key, session_key, ip, request_type, request, request_args, request_length )
-        
-        self._jobs.put( ( priority, job ) )
-        
-        if not HC.shutdown: return job.GetResult()
-        
-        raise Exception( 'Application quit before db could serve result!' )
-        
-    
     def MainLoop( self ):
         
         def ProcessJob( c, job ):

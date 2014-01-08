@@ -7,6 +7,8 @@ import TestConstants
 import unittest
 import wx
 
+def HitCancelButton( window ): wx.PostEvent( window, wx.CommandEvent( wx.EVT_BUTTON.typeId, wx.ID_CANCEL ) )
+
 def HitButton( button ): wx.PostEvent( button, wx.CommandEvent( wx.EVT_BUTTON.typeId, button.GetId() ) )
 
 def PressKey( window, key ):
@@ -27,7 +29,7 @@ class TestDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             
-            HitButton( dlg._dialog_cancel_button )
+            HitCancelButton( dlg )
             
             result = dlg.ShowModal()
             
@@ -67,7 +69,7 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogChooseNewServiceMethod( None ) as dlg:
             
-            HitButton( dlg._dialog_cancel_button )
+            HitCancelButton( dlg )
             
             result = dlg.ShowModal()
             
@@ -139,7 +141,7 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogFirstStart( None ) as dlg:
             
-            HitButton( dlg._dialog_cancel_button )
+            HitCancelButton( dlg )
             
             result = dlg.ShowModal()
             
@@ -186,7 +188,7 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
             
-            HitButton( dlg._dialog_cancel_button )
+            HitCancelButton( dlg )
             
             result = dlg.ShowModal()
             

@@ -20,7 +20,7 @@ import wx.media
 if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
 
 ID_TIMER_ANIMATED = wx.NewId()
-ID_TIMER_FLASH = wx.NewId()
+ID_TIMER_ANIMATION_BAR_UPDATE = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_CURSOR_HIDE = wx.NewId()
 
@@ -87,18 +87,16 @@ class AnimationBar( wx.Window ):
         self._media = media
         self._media_window = media_window
         self._num_frames = self._media.GetNumFrames()
+        self._num_frames_rendered = 0
         self._current_frame_index = 0
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        self.Bind( wx.EVT_TIMER, self.EventTimerFlash, id = ID_TIMER_FLASH )
+        self.Bind( wx.EVT_TIMER, self.EventTimerUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
-        if media.GetMime() == HC.APPLICATION_FLASH:
-            
-            self._timer_flash = wx.Timer( self, id = ID_TIMER_FLASH )
-            self._timer_flash.Start( 100, wx.TIMER_CONTINUOUS )
-            
+        self._timer_update = wx.Timer( self, id = ID_TIMER_ANIMATION_BAR_UPDATE )
+        self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
         
         self._Draw()
         
@@ -115,11 +113,11 @@ class AnimationBar( wx.Window ):
             
             image_container = self._media_window.GetImageContainer()
             
-            num_frames_rendered = image_container.GetNumFramesRendered()
+            self._num_frames_rendered = image_container.GetNumFramesRendered()
             
             num_frames = image_container.GetNumFrames()
             
-            my_rendered_width = int( my_width * ( float( num_frames_rendered ) / num_frames ) )
+            my_rendered_width = int( my_width * ( float( self._num_frames_rendered ) / num_frames ) )
             
             dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
             
@@ -191,19 +189,29 @@ class AnimationBar( wx.Window ):
             
         
     
-    def EventTimerFlash( self, event ):
+    def EventTimerUpdate( self, event ):
         
-        # maybe need to pause this while mouse dragging events are occuring? whatever
-        
-        if self.IsShown() and self._media.GetMime() == HC.APPLICATION_FLASH:
+        if self.IsShown():
             
-            frame_index = self._media_window.CurrentFrame()
-            
-            if frame_index != self._current_frame_index:
+            if self._media.GetMime() in HC.IMAGES:
                 
-                self._current_frame_index = frame_index
+                image_container = self._media_window.GetImageContainer()
                 
-                self._Draw()
+                if self._num_frames_rendered != image_container.GetNumFramesRendered():
+                    
+                    self._Draw()
+                    
+                
+            elif self._media.GetMime() == HC.APPLICATION_FLASH:
+                
+                frame_index = self._media_window.CurrentFrame()
+                
+                if frame_index != self._current_frame_index:
+                    
+                    self._current_frame_index = frame_index
+                    
+                    self._Draw()
+                    
                 
             
         
@@ -485,6 +493,11 @@ class Canvas():
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
+            if ShouldHaveAnimationBar( self._current_display_media ):
+                
+                media_height += ANIMATED_SCANBAR_HEIGHT
+                
+            
             if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: my_width -= 1
             
             if media_width > my_width or media_height > my_height:
@@ -569,6 +582,8 @@ class Canvas():
                 self._last_drag_coordinates = None
                 
                 if self._media_container is not None:
+                    
+                    self._media_container.Hide()
                     
                     wx.CallAfter( self._media_container.Destroy )
                     
@@ -3666,7 +3681,6 @@ class EmbedWindowAudio( wx.Window ):
         
         path = CC.GetFilePath( self._hash, self._mime )
         
-        # os.system( 'start ' + path )
         subprocess.call( 'start "" "' + path + '"', shell = True )
         
     

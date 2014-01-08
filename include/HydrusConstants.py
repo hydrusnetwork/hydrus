@@ -45,7 +45,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 98
+SOFTWARE_VERSION = 99
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -2114,7 +2114,10 @@ class JobKey():
         
         self._key = os.urandom( 32 )
         
+        self._begun = threading.Event()
+        self._done = threading.Event()
         self._cancelled = threading.Event()
+        self._paused = threading.Event()
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
@@ -2123,43 +2126,47 @@ class JobKey():
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def Cancel( self ): self._cancelled.set()
+    def Begin( self ): self._begun.set()
+    
+    def Cancel( self ):
+        
+        self._cancelled.set()
+        
+        self.Finish()
+        
+    
+    def Finish( self ): self._done.set()
     
     def GetKey( self ): return self._key
     
+    def IsBegun( self ): return self._begun.is_set()
+    
     def IsCancelled( self ): return self._cancelled.is_set()
     
-class JobServer():
+    def IsDone( self ): return self._done.is_set()
     
-    yaml_tag = u'!JobServer'
+    def IsPaused( self ): return self.IsWorking() and self._paused.is_set()
     
-    def __init__( self, *args ):
+    def IsWorking( self ): return self.IsBegun() and not self.IsDone()
+    
+    def Pause( self ): self._paused.set()
+    
+    def PauseResume( self ):
         
-        self._args = args
-        
-        self._result = None
-        self._result_ready = threading.Event()
+        if self._paused.is_set(): self._paused.clear()
+        else: self._paused.set()
         
     
-    def GetArgs( self ): return self._args
+    def Resume( self ): self._paused.clear()
     
-    def GetResult( self ):
+    def WaitOnPause( self ):
         
-        while True:
+        while self._paused.is_set():
             
-            if self._result_ready.wait( 5 ) == True: break
-            elif shutdown: raise Exception( 'Application quit before db could serve result!' )
+            time.sleep( 0.1 )
             
-        
-        if issubclass( type( self._result ), Exception ): raise self._result
-        else: return self._result
-        
-    
-    def PutResult( self, result ):
-        
-        self._result = result
-        
-        self._result_ready.set()
+            if shutdown or self.IsCancelled() or self.IsDone(): return
+            
         
     
 class Message():

@@ -88,7 +88,7 @@ class PageBase():
     
     def TryToClose( self ): pass
     
-    def Unpause( self ): HC.pubsub.pub( 'unpause', self._page_key )
+    def Resume( self ): HC.pubsub.pub( 'resume', self._page_key )
     
 class PageLog( PageBase, wx.Panel ):
     

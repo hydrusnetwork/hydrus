@@ -1140,7 +1140,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( time_closed, index, name, page ) = self._closed_pages.pop( closed_page_index )
         
-        page.Unpause()
+        page.Resume()
         
         page.Show()
         
@@ -1263,6 +1263,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             if command == 'account_info': self._AccountInfo( data )
             elif command == 'auto_repo_setup': self._AutoRepoSetup()
             elif command == 'auto_server_setup': self._AutoServerSetup()
+            elif command == 'backup_database': HC.app.BackupDatabase()
             elif command == 'backup_service': self._BackupService( data )
             elif command == 'clear_caches': HC.app.ClearCaches()
             elif command == 'close_page': self._CloseCurrentPage()
@@ -1351,6 +1352,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 if page is not None: page.RefreshQuery()
                 
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
+            elif command == 'restore_database': HC.app.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
             elif command == 'save_gui_session': self._SaveGUISession()
             elif command == 'set_password': self._SetPassword()
@@ -1497,11 +1499,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         menu = wx.MenuBar()
         
-        # sessions
-          # load -> (all sessions in db)
-          # save current (loads name dialog
-          # delete ->
-        
         file = wx.Menu()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
@@ -1634,7 +1631,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         database = wx.Menu()
         database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
         database.AppendSeparator()
-        #database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'reindex_db' ), '&reindex', 'reindex the database.' )
+        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
+        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
+        database.AppendSeparator()
         database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
         database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
         database.AppendSeparator()
@@ -2134,7 +2133,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         pos = ( pos_x + 25, pos_y + 50 )
         
-        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'Review Services' ), pos = pos )
+        tlp = HC.app.GetTopWindow()
+        
+        ClientGUICommon.Frame.__init__( self, tlp, title = HC.app.PrepStringForDisplay( 'Review Services' ), pos = pos )
         
         InitialiseControls()
         

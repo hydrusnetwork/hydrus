@@ -2480,9 +2480,9 @@ class PopupMessageText( PopupMessage ):
     
 class PopupMessageManager( wx.Frame ):
     
-    def __init__( self, top_level_parent ):
+    def __init__( self, parent ):
         
-        wx.Frame.__init__( self, top_level_parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE )
+        wx.Frame.__init__( self, parent, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_NONE )
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
@@ -2502,8 +2502,8 @@ class PopupMessageManager( wx.Frame ):
         
         self._pending_messages = []
         
-        top_level_parent.Bind( wx.EVT_SIZE, self.EventMove )
-        top_level_parent.Bind( wx.EVT_MOVE, self.EventMove )
+        parent.Bind( wx.EVT_SIZE, self.EventMove )
+        parent.Bind( wx.EVT_MOVE, self.EventMove )
         
         self._SizeAndPositionAndShow()
         
@@ -2708,6 +2708,7 @@ class RegexButton( wx.Button ):
     ID_REGEX_BACKSPACE = 22
     ID_REGEX_SET = 23
     ID_REGEX_NOT_SET = 24
+    ID_REGEX_FILENAME = 25
     
     def __init__( self, parent ):
         
@@ -2756,6 +2757,10 @@ class RegexButton( wx.Button ):
         
         menu.AppendSeparator()
         
+        menu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)' )
+        
+        menu.AppendSeparator()
+        
         menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
         menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
         menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
@@ -2796,6 +2801,7 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
         elif id == self.ID_REGEX_NUMBER_EXT: phrase = r'[1-9]+\d*(?=.{4}$)'
         elif id == self.ID_REGEX_AUTHOR: phrase = r'[^\\][\w\s]*(?=\s-)'
+        elif id == self.ID_REGEX_FILENAME: phrase = r'(?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)'
         else: event.Skip()
         
         if phrase is not None:

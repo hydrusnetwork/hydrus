@@ -1395,6 +1395,34 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
+    def _Backup( self, c, path ):
+        
+        deletee_filenames = dircache.listdir( path )
+        
+        for deletee_filename in deletee_filenames:
+
+            def make_files_deletable( function_called, path, traceback_gumpf ):
+                
+                os.chmod( path, stat.S_IWRITE )
+                
+                function_called( path ) # try again
+                
+            
+            deletee_path = path + os.path.sep + deletee_filename
+            
+            if os.path.isdir( deletee_path ): shutil.rmtree( deletee_path, onerror = make_files_deletable )
+            else: os.remove( deletee_path )
+            
+        
+        shutil.copy( self._db_path, path + os.path.sep + 'client.db' )
+        if os.path.exists( self._db_path + '-wal' ): shutil.copy( self._db_path + '-wal', path + os.path.sep + 'client.db-wal' )
+        
+        shutil.copytree( HC.CLIENT_FILES_DIR, path + os.path.sep + 'client_files' )
+        shutil.copytree( HC.CLIENT_THUMBNAILS_DIR, path + os.path.sep + 'client_thumbnails'  )
+        
+        self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'Backup done!' ) )
+        
+    
     def _DeleteFiles( self, c, service_id, hash_ids ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
@@ -6677,6 +6705,7 @@ class DB( ServiceDB ):
                 elif action == 'add_downloads': result = self._AddDownloads( c, *args, **kwargs )
                 elif action == 'add_uploads': result = self._AddUploads( c, *args, **kwargs )
                 elif action == 'archive_conversation': result = self._ArchiveConversation( c, *args, **kwargs )
+                elif action == 'backup': result = self._Backup( c, *args, **kwargs )
                 elif action == 'contact_associated': result = self._AssociateContact( c, *args, **kwargs )
                 elif action == 'content_updates': result = self._ProcessContentUpdates( c, *args, **kwargs )
                 elif action == 'copy_files': result = self._CopyFiles( c, *args, **kwargs )
@@ -6817,6 +6846,35 @@ class DB( ServiceDB ):
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
         if synchronous: return job.GetResult()
+        
+    
+    def RestoreBackup( self, path ):
+        
+        deletee_filenames = dircache.listdir( HC.DB_DIR )
+        
+        for deletee_filename in deletee_filenames:
+            
+            def make_files_deletable( function_called, path, traceback_gumpf ):
+                
+                os.chmod( path, stat.S_IWRITE )
+                
+                function_called( path ) # try again
+                
+            
+            if deletee_filename.startswith( 'client' ):
+                
+                deletee_path = HC.DB_DIR + os.path.sep + deletee_filename
+                
+                if os.path.isdir( deletee_path ): shutil.rmtree( deletee_path, onerror = make_files_deletable )
+                else: os.remove( deletee_path )
+                
+            
+        
+        shutil.copy( path + os.path.sep + 'client.db', self._db_path )
+        if os.path.exists( path + os.path.sep + 'client.db-wal' ): shutil.copy( path + os.path.sep + 'client.db-wal', self._db_path + '-wal' )
+        
+        shutil.copytree( path + os.path.sep + 'client_files', HC.CLIENT_FILES_DIR )
+        shutil.copytree( path + os.path.sep + 'client_thumbnails', HC.CLIENT_THUMBNAILS_DIR )
         
     
     def Shutdown( self ): self._local_shutdown = True

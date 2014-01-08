@@ -16,6 +16,7 @@ import random
 import shutil
 import sqlite3
 import stat
+import subprocess
 import sys
 import threading
 import time
@@ -33,6 +34,29 @@ class Controller( wx.App ):
     def _Read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
     
     def _Write( self, action, priority, synchronous, *args, **kwargs ): return self._db.Write( action, priority, synchronous, *args, **kwargs )
+    
+    def BackupDatabase( self ):
+        
+        with wx.DirDialog( self._gui, 'Select backup location.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                message = '''Are you sure "''' + path + '''" is the correct directory?
+Everything already in that directory will be deleted before the backup starts.
+The database will be locked while the backup occurs, which may lock up your gui as well.'''
+                
+                with ClientGUIDialogs.DialogYesNo( self._gui, message ) as dlg_yn:
+                    
+                    if dlg_yn.ShowModal() == wx.ID_YES:
+                        
+                        self.Write( 'backup', path )
+                        
+                    
+                
+            
+        
     
     def ClearCaches( self ):
         
@@ -382,6 +406,44 @@ class Controller( wx.App ):
             
         
         reactor.callFromThread( TWISTEDRestartServer )
+        
+    
+    def RestoreDatabase( self ):
+        
+        with wx.DirDialog( self._gui, 'Select backup location.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                message = '''Are you sure you want to restore a backup from "''' + path + '''"?
+Everything in your current database will be deleted!
+The gui will shut down, and then it will take a while to complete the restore.
+Once it is done, the client will restart.'''
+                
+                with ClientGUIDialogs.DialogYesNo( self._gui, message ) as dlg_yn:
+                    
+                    if dlg_yn.ShowModal() == wx.ID_YES:
+                        
+                        self._gui.Hide()
+                        
+                        self._gui.Destroy()
+                        
+                        self._db.Shutdown()
+                        
+                        while not self._db.GetLoopFinished(): time.sleep( 0.1 )
+                        
+                        self._db.RestoreBackup( path )
+                        
+                        call_stuff = [ sys.executable ]
+                        
+                        call_stuff.extend( sys.argv )
+                        
+                        subprocess.call( call_stuff, shell = True )
+                        
+                    
+                
+            
         
     
     def SetSplashText( self, text ):

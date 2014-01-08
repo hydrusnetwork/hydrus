@@ -112,7 +112,7 @@ class Dialog( wx.Dialog ):
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
-        self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        #self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
         if position == 'center': wx.CallAfter( self.Center )
         
@@ -2016,8 +2016,7 @@ class DialogInputLocalFiles( Dialog ):
         self._processing_queue = []
         self._currently_parsing = False
         
-        self._pause_event = threading.Event()
-        self._cancel_event = threading.Event()
+        self._job_key = HC.JobKey()
         
         if len( paths ) > 0: self._AddPathsToList( paths )
         
@@ -2041,10 +2040,9 @@ class DialogInputLocalFiles( Dialog ):
             
             self._currently_parsing = True
             
-            self._pause_event = threading.Event()
-            self._cancel_event = threading.Event()
+            self._job_key = HC.JobKey()
             
-            threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._pause_event, self._cancel_event ) ).start()
+            threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._job_key ) ).start()
             
             self.SetGaugeInfo( None, None, '' )
             
@@ -2056,11 +2054,7 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def _TidyUp( self ):
-        
-        self._pause_event.clear()
-        self._cancel_event.set()
-        
+    def _TidyUp( self ): self._job_key.Cancel()
     
     def AddParsedPath( self, path_type, mime, size, path_info ):
         
@@ -2121,9 +2115,7 @@ class DialogInputLocalFiles( Dialog ):
     
     def EventGaugeCancel( self, event ):
         
-        self._pause_event.clear()
-        
-        self._cancel_event.set()
+        self._job_key.Cancel()
         
         self._gauge_pause.Disable()
         self._gauge_cancel.Disable()
@@ -2131,15 +2123,15 @@ class DialogInputLocalFiles( Dialog ):
     
     def EventGaugePause( self, event ):
         
-        if self._pause_event.is_set():
+        if self._job_key.IsPaused():
             
-            self._pause_event.clear()
+            self._job_key.Resume()
             
             self._gauge_pause.SetLabel( 'pause' )
             
         else:
             
-            self._pause_event.set()
+            self._job_key.Pause()
             
             self._gauge_pause.SetLabel( 'resume' )
             
@@ -2220,7 +2212,7 @@ class DialogInputLocalFiles( Dialog ):
         self._gauge_text.SetLabel( text )
         
     
-    def THREADParseImportablePaths( self, raw_paths, pause_event, cancel_event ):
+    def THREADParseImportablePaths( self, raw_paths, job_key ):
         
         wx.CallAfter( self.SetGaugeInfo, None, None, u'Parsing files and folders.' )
         
@@ -2236,9 +2228,9 @@ class DialogInputLocalFiles( Dialog ):
             
             wx.CallAfter( self.SetGaugeInfo, num_file_paths, i, u'Done ' + HC.u( i ) + '/' + HC.u( num_file_paths ) )
             
-            while pause_event.is_set(): time.sleep( 1 )
+            job_key.WaitOnPause()
             
-            if cancel_event.is_set(): break
+            if job_key.IsCancelled(): break
             
             info = os.lstat( path )
             

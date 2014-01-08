@@ -1089,14 +1089,7 @@ class DownloaderEngine(): # rename this to something more import related
                 
                 self._current_queue_processor.ProcessQueue()
                 
-            
-            # if there are any pending jobs:
-            
-                # get it
-                # process it
-            
-            
-            pass
+            else: time.sleep( 0.1 )
             
         
     

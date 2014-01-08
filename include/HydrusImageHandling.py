@@ -275,7 +275,7 @@ def RenderImage( path, hash, target_resolution = None, synchronous = True ):
         else: renderer = StaticFrameRenderer( image_container, path, target_resolution )
         
         if synchronous: renderer.Render()
-        else: threading.Thread( target = renderer.RenderCallAfter ).start()
+        else: threading.Thread( target = renderer.THREADRender ).start()
         
         return image_container
         
@@ -332,9 +332,9 @@ class AnimatedFrameRenderer( FrameRenderer ):
         for ( frame, duration ) in self.GetFrames(): self._image_container.AddFrame( frame, duration )
         
     
-    def RenderCallAfter( self ):
+    def THREADRender( self ):
         
-        time.sleep( 0 ) # thread yield
+        time.sleep( 0.00001 ) # thread yield
         
         for ( frame, duration ) in self.GetFrames(): wx.CallAfter( self._image_container.AddFrame, frame, duration )
         
@@ -347,9 +347,9 @@ class StaticFrameRenderer( FrameRenderer ):
     
     def Render( self ): self._image_container.AddFrame( self.GetFrame() )
     
-    def RenderCallAfter( self ):
+    def THREADRender( self ):
         
-        time.sleep( 0 ) # thread yield
+        time.sleep( 0.00001 ) # thread yield
         
         wx.CallAfter( self._image_container.AddFrame, self.GetFrame() )
         
