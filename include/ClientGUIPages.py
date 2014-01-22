@@ -305,7 +305,7 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
             
             self.ReplaceWindow( self._media_panel, new_panel )
             
-            self._media_panel.Close()
+            self._media_panel.Destroy()
             
             self._media_panel = new_panel
             
