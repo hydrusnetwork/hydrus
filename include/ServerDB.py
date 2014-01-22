@@ -2798,7 +2798,7 @@ class DB( ServiceDB ):
         
         synchronous = True
         
-        job = HC.JobInternal( action, job_type, synchronous, *args, **kwargs )
+        job = HC.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
         self._jobs.put( ( priority + 1, job ) ) # +1 so all writes of equal priority can clear out first
         
@@ -2811,7 +2811,7 @@ class DB( ServiceDB ):
         
         synchronous = True
         
-        job = HC.JobInternal( action, job_type, synchronous, *args, **kwargs )
+        job = HC.JobDatabase( action, job_type, synchronous, *args, **kwargs )
         
         self._jobs.put( ( priority, job ) )
         

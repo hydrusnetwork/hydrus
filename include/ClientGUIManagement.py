@@ -20,15 +20,12 @@ import urllib
 import urlparse
 import wx
 import wx.lib.scrolledpanel
-import zipfile
 
 CAPTCHA_FETCH_EVENT_TYPE = wx.NewEventType()
 CAPTCHA_FETCH_EVENT = wx.PyEventBinder( CAPTCHA_FETCH_EVENT_TYPE )
 
 ID_TIMER_CAPTCHA = wx.NewId()
 ID_TIMER_DUMP = wx.NewId()
-ID_TIMER_PROCESS_IMPORT_QUEUE = wx.NewId()
-ID_TIMER_PROCESS_FEED_QUEUE = wx.NewId()
 ID_TIMER_UPDATE = wx.NewId()
 
 # Sizer Flags
@@ -400,6 +397,8 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         sizer.AddF( self._sort_by, FLAGS_EXPAND_PERPENDICULAR )
         
     
+    def CleanBeforeDestroy( self ): pass
+    
     def Pause( self, page_key ):
         
         if page_key == self._page_key: self._paused = True
@@ -412,7 +411,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def SetSearchFocus( self, page_key ): pass
     
-    def TryToClose( self ): pass
+    def TestAbleToClose( self ): pass
     
 class ManagementPanelDumper( ManagementPanel ):
     
@@ -450,19 +449,19 @@ class ManagementPanelDumper( ManagementPanel ):
         
         # progress
         
-        self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
+        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
         
-        self._progress_info = wx.StaticText( self._processing_panel )
+        self._progress_info = wx.StaticText( self._import_queue_panel )
         
-        self._progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
+        self._progress_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         self._progress_gauge.SetRange( len( media_results ) )
         
-        self._start_button = wx.Button( self._processing_panel, label = 'start' )
+        self._start_button = wx.Button( self._import_queue_panel, label = 'start' )
         self._start_button.Bind( wx.EVT_BUTTON, self.EventStartButton )
         
-        self._processing_panel.AddF( self._progress_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._start_button, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._progress_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._start_button, FLAGS_EXPAND_PERPENDICULAR )
         
         # thread options
         
@@ -558,7 +557,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._MakeSort( vbox )
         
-        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._import_queue_panel, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._thread_panel, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._post_panel, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
@@ -835,7 +834,7 @@ class ManagementPanelDumper( ManagementPanel ):
             dump_status_enum = CC.DUMPER_UNRECOVERABLE_ERROR
             dump_status_string = ''
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, phrase ) )
+            HC.ShowText( phrase )
             
             self._progress_info.SetLabel( 'error: ' + phrase )
             
@@ -1143,7 +1142,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
         
     
-    def TryToClose( self ):
+    def TestAbleToClose( self ):
         
         if self._dumping:
             
@@ -1156,77 +1155,114 @@ class ManagementPanelDumper( ManagementPanel ):
     
 class ManagementPanelImport( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, import_controller, starting_from_session = False ):
         
         ManagementPanel.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
         
-        self._successful = 0
-        self._failed = 0
-        self._deleted = 0
-        self._redundant = 0
+        self._import_controller = import_controller
         
-        self._import_queue = []
-        self._import_queue_position = 0
+        self._import_panel = ClientGUICommon.StaticBox( self, 'current file' )
         
-        self._import_job_key = HC.JobKey()
-        self._import_queue_job_key = HC.JobKey()
-        self._feed_queue_job_key = HC.JobKey()
+        self._import_current_info = wx.StaticText( self._import_panel )
+        self._import_gauge = ClientGUICommon.Gauge( self._import_panel )
         
-        self._processing_panel = ClientGUICommon.StaticBox( self, 'progress' )
+        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
         
-        self._import_overall_info = wx.StaticText( self._processing_panel )
-        self._import_current_info_string = ''
-        self._import_current_info = wx.StaticText( self._processing_panel )
-        self._import_gauge = ClientGUICommon.Gauge( self._processing_panel )
+        self._import_overall_info = wx.StaticText( self._import_queue_panel )
+        self._import_queue_info = wx.StaticText( self._import_queue_panel )
+        self._import_queue_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
-        self._import_pause_button = wx.Button( self._processing_panel, label = 'pause' )
+        self._import_pause_button = wx.Button( self._import_queue_panel, label = 'pause' )
         self._import_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueue )
         self._import_pause_button.Disable()
         
-        self._timer_process_import_queue = wx.Timer( self, id = ID_TIMER_PROCESS_IMPORT_QUEUE )
+        self._import_cancel_button = wx.Button( self._import_queue_panel, label = 'that\'s enough' )
+        self._import_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImportQueue )
+        self._import_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
+        self._import_cancel_button.Disable()
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventProcessImportQueue, id = ID_TIMER_PROCESS_IMPORT_QUEUE )
+        #
         
-        self._timer_process_import_queue.Start( 1000, wx.TIMER_ONE_SHOT )
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._MakeSort( vbox )
+        
+        self._import_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.AddF( self._import_panel, FLAGS_EXPAND_PERPENDICULAR )
+        
+        c_p_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        c_p_hbox.AddF( self._import_pause_button, FLAGS_EXPAND_BOTH_WAYS )
+        c_p_hbox.AddF( self._import_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._import_queue_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._import_queue_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._import_queue_gauge, FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox.AddF( self._import_queue_panel, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._InitExtraVboxElements( vbox )
+        
+        self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
+        
+        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_UPDATE )
         
         self._timer_update = wx.Timer( self, id = ID_TIMER_UPDATE )
         self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
         
-        HC.pubsub.sub( self, 'ImportDone', 'import_done' )
-        HC.pubsub.sub( self, 'SetImportInfo', 'set_import_info' )
-        
     
-    def _GetPreimportStatus( self ):
+    def _InitExtraVboxElements( self, vbox ):
         
-        status = 'importing ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
+        pass
         
-        return status
-        
-    
-    def _GetPreprocessStatus( self ): pass
     
     def _UpdateGUI( self ):
+        
+        import_controller_job_key = self._import_controller.GetJobKey( 'controller' )
+        import_job_key = self._import_controller.GetJobKey( 'import' )
+        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
         # info
         
         status_strings = []
         
-        if self._successful > 0: status_strings.append( HC.u( self._successful ) + ' successful' )
-        if self._failed > 0: status_strings.append( HC.u( self._failed ) + ' failed' )
-        if self._deleted > 0: status_strings.append( HC.u( self._deleted ) + ' already deleted' )
-        if self._redundant > 0: status_strings.append( HC.u( self._redundant ) + ' already in db' )
+        num_successful = import_controller_job_key.GetVariable( 'num_successful' )
+        num_failed = import_controller_job_key.GetVariable( 'num_failed' )
+        num_deleted = import_controller_job_key.GetVariable( 'num_deleted' )
+        num_redundant = import_controller_job_key.GetVariable( 'num_redundant' )
+        
+        if num_successful > 0: status_strings.append( HC.u( num_successful ) + ' successful' )
+        if num_failed > 0: status_strings.append( HC.u( num_failed ) + ' failed' )
+        if num_deleted > 0: status_strings.append( HC.u( num_deleted ) + ' already deleted' )
+        if num_redundant > 0: status_strings.append( HC.u( num_redundant ) + ' already in db' )
         
         overall_info = ', '.join( status_strings )
         
         if overall_info != self._import_overall_info.GetLabel(): self._import_overall_info.SetLabel( overall_info )
         
-        if self._import_current_info_string != self._import_current_info.GetLabel(): self._import_current_info.SetLabel( self._import_current_info_string )
+        import_status = import_job_key.GetVariable( 'status' )
+        
+        if import_status != self._import_current_info.GetLabel(): self._import_current_info.SetLabel( import_status )
+        
+        import_queue_status = import_queue_position_job_key.GetVariable( 'status' )
+        
+        if import_queue_status != self._import_queue_info.GetLabel(): self._import_queue_info.SetLabel( import_queue_status )
         
         # buttons
         
-        if self._import_queue_job_key.IsPaused():
+        if import_queue_position_job_key.IsPaused():
             
             if self._import_pause_button.GetLabel() != 'resume':
                 
@@ -1243,148 +1279,79 @@ class ManagementPanelImport( ManagementPanel ):
                 
             
         
-        if self._import_queue_job_key.IsWorking() and not self._import_queue_job_key.IsCancelled(): self._import_pause_button.Enable()
-        else: self._import_pause_button.Disable()
-        
-    
-    def CALLBACKAddToImportQueue( self, items ):
-        
-        if self._import_queue_job_key.IsWorking(): self._import_queue.extend( items )
-        else:
+        if import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsCancelled():
             
-            self._import_queue = items
-            self._import_queue_position = 0
-            
-            self._timer_process_import_queue.Start( 10, wx.TIMER_ONE_SHOT )
-            
-            self._import_queue_job_key = HC.JobKey()
-            
-            self._import_queue_job_key.Begin()
-            
-            self._UpdateGUI()
-            
-        
-        self._import_gauge.SetRange( len( self._import_queue ) )
-        
-    
-    def CALLBACKImportArgs( self, path, advanced_import_options, service_identifiers_to_tags, url = None, exception = None ):
-        
-        if exception is None:
-            
-            self._import_current_info_string = self._GetPreimportStatus()
-            
-            HC.app.Write( 'import_file_from_page', self._page_key, path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
+            self._import_pause_button.Enable()
+            self._import_cancel_button.Enable()
             
         else:
             
-            self._import_job_key.Cancel()
-            self._import_current_info_string = HC.u( exception )
-            self._import_gauge.SetValue( self._import_queue_position + 1 )
-            self._import_queue_position += 1
+            self._import_pause_button.Disable()
+            self._import_cancel_button.Disable()
             
-            self._timer_process_import_queue.Start( 2000, wx.TIMER_ONE_SHOT )
+        
+        # gauges
+        
+        range = import_job_key.GetVariable( 'range' )
+        
+        if range is None: self._import_gauge.Pulse()
+        else:
+            
+            value = import_job_key.GetVariable( 'value' )
+            
+            self._import_gauge.SetRange( range )
+            self._import_gauge.SetValue( value )
+            
+        
+        queue = import_queue_job_key.GetVariable( 'queue' )
+        
+        if len( queue ) == 0:
+            
+            if import_queue_job_key.IsWorking(): self._import_queue_gauge.Pulse()
+            else:
+                
+                self._import_queue_gauge.SetRange( 1 )
+                self._import_queue_gauge.SetValue( 0 )
+                
+            
+        else:
+            
+            queue_position = import_queue_position_job_key.GetVariable( 'queue_position' )
+            
+            self._import_queue_gauge.SetRange( len( queue ) )
+            self._import_queue_gauge.SetValue( queue_position )
             
         
     
-    def EventPauseImportQueue( self, event ):
+    def EventCancelImportQueue( self, event ):
         
-        self._import_queue_job_key.PauseResume()
+        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        
+        import_queue_position_job_key.Cancel()
+        import_queue_job_key.Cancel()
         
         self._UpdateGUI()
         
     
-    def ImportDone( self, page_key, result, exception = None ):
+    def EventPauseImportQueue( self, event ):
         
-        if page_key == self._page_key:
-            
-            if result == 'successful': self._successful += 1
-            elif result == 'failed': self._failed += 1
-            elif result == 'deleted': self._deleted += 1
-            elif result == 'redundant': self._redundant += 1
-            
-            self._import_job_key.Finish()
-            self._import_gauge.SetValue( self._import_queue_position + 1 )
-            self._import_queue_position += 1
-            
-            if exception is None: self._timer_process_import_queue.Start( 10, wx.TIMER_ONE_SHOT )
-            else:
-                
-                message = os.linesep + 'Had trouble importing ' + HC.u( self._import_queue[ self._import_queue_position - 1 ] ) + ':' + os.linesep + HC.u( exception )
-                
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
-                
-                self._import_current_info_string = HC.u( exception )
-                
-                self._timer_process_import_queue.Start( 2000, wx.TIMER_ONE_SHOT )
-                
-            
+        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )    
+        
+        import_queue_position_job_key.PauseResume()
+        
+        self._UpdateGUI()
         
     
-    def SetImportInfo( self, page_key, info ):
-        
-        if self._page_key == page_key: self._import_current_info_string = info
-        
-    
-    def TIMEREventProcessImportQueue( self, event ):
-        
-        if self._import_queue_job_key.IsPaused() or self._paused: self._import_current_info_string = 'paused'
-        else:
-            
-            if self._import_queue_job_key.IsCancelled(): self._import_queue = self._import_queue[ : self._import_queue_position ] # cut excess queue
-            
-            if len( self._import_queue ) == 0: self._import_current_info_string = ''
-            else:
-                
-                if not self._import_job_key.IsWorking():
-                    
-                    if self._import_queue_position < len( self._import_queue ):
-                        
-                        self._import_job_key = HC.JobKey()
-                        
-                        self._import_job_key.Begin()
-                        
-                        self._import_current_info_string = self._GetPreprocessStatus()
-                        
-                        item = self._import_queue[ self._import_queue_position ]
-                        
-                        threading.Thread( target = self._THREADGetImportArgs, args = ( item, ), name = 'Generate Import Args' ).start()
-                        
-                    else:
-                        
-                        if self._feed_queue_job_key.IsWorking(): self._import_current_info_string = 'waiting for more items'
-                        else:
-                            
-                            num_files_processed = 0
-                            
-                            num_files_processed += self._successful
-                            num_files_processed += self._failed
-                            num_files_processed += self._deleted
-                            num_files_processed += self._redundant
-                            
-                            if num_files_processed > 0: status = 'import done'
-                            else: status = 'import abandoned'
-                            
-                            self._import_current_info_string = status
-                            
-                            self._import_queue_job_key.Finish()
-                            
-                            self._feed_queue_job_key.Finish()
-                            
-                            self._UpdateGUI()
-                            
-                        
-                    
-                
-            
-        
-        self._timer_process_import_queue.Start( 1000, wx.TIMER_ONE_SHOT )
-        
+    def GetAdvancedImportOptions( self ): return self._advanced_import_options.GetInfo()
     
     def TIMEREventUpdate( self, event ): self._UpdateGUI()
     
-    def TryToClose( self ):
+    def TestAbleToClose( self ):
         
-        if self._import_queue_job_key.IsWorking() and not self._import_queue_job_key.IsPaused():
+        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
+        
+        if import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsPaused():
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
@@ -1393,175 +1360,148 @@ class ManagementPanelImport( ManagementPanel ):
             
         
     
-class ManagementPanelImportHDD( ManagementPanelImport ):
+class ManagementPanelImports( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False, starting_from_session = False ):
+    def _InitExtraVboxElements( self, vbox ):
         
-        self._advanced_import_options = advanced_import_options
-        self._paths_to_tags = paths_to_tags
-        self._delete_after_success = delete_after_success
+        ManagementPanelImport._InitExtraVboxElements( self, vbox )
         
-        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        self._building_import_queue_panel = ClientGUICommon.StaticBox( self, 'building import queue' )
         
-        self._MakeSort( vbox )
+        self._building_import_queue_info = wx.StaticText( self._building_import_queue_panel )
         
-        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
+        self._building_import_queue_pause_button = wx.Button( self._building_import_queue_panel, label = 'pause' )
+        self._building_import_queue_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseBuildImportQueue )
+        self._building_import_queue_pause_button.Disable()
         
-        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
+        self._building_import_queue_cancel_button = wx.Button( self._building_import_queue_panel, label = 'that\'s enough' )
+        self._building_import_queue_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelBuildImportQueue )
+        self._building_import_queue_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
+        self._building_import_queue_cancel_button.Disable()
         
-        self._MakeCurrentSelectionTagsBox( vbox )
+        queue_pause_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self.SetSizer( vbox )
+        queue_pause_buttons_hbox.AddF( self._building_import_queue_pause_button, FLAGS_EXPAND_BOTH_WAYS )
+        queue_pause_buttons_hbox.AddF( self._building_import_queue_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
         
-        if self._starting_from_session: self._processing_panel.Hide()
+        self._building_import_queue_panel.AddF( self._building_import_queue_info, FLAGS_EXPAND_PERPENDICULAR )
+        self._building_import_queue_panel.AddF( queue_pause_buttons_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        self.CALLBACKAddToImportQueue( paths_info )
+        vbox.AddF( self._building_import_queue_panel, FLAGS_EXPAND_PERPENDICULAR )
         
-    
-    def _THREADGetImportArgs( self, queue_object ):
+        #
         
-        try:
-            
-            self._last_queue_object = queue_object
-            
-            ( path_type, path_info ) = queue_object
-            
-            service_identifiers_to_tags = {}
-            
-            if path_type == 'path':
-                
-                path = path_info
-                
-                if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
-                
-            elif path_type == 'zip':
-                
-                ( zip_path, name ) = path_info
-                
-                pretty_path = zip_path + os.path.sep + name
-                
-                if pretty_path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ pretty_path ]
-                
-                path = HC.GetTempPath()
-                
-                with open( path, 'wb' ) as f:
-                    
-                    with zipfile.ZipFile( zip_path, 'r' ) as z: f.write( z.read( name ) )
-                    
-                
-            
-            wx.CallAfter( self.CALLBACKImportArgs, path, self._advanced_import_options, service_identifiers_to_tags )
-            
-        except Exception as e:
-            
-            wx.CallAfter( self.CALLBACKImportArgs, '', {}, {}, exception = e )
-            
-            raise
-            
+        self._pending_import_queues_panel = ClientGUICommon.StaticBox( self, 'pending imports' )
         
-    
-    def _GetPreprocessStatus( self ):
+        self._pending_import_queues_listbox = wx.ListBox( self._pending_import_queues_panel, size = ( -1, 200 ) )
         
-        status = 'reading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
-        
-        return status
-        
-    
-    def ImportDone( self, page_key, result, exception = None ):
-        
-        if page_key == self._page_key:
-            
-            ManagementPanelImport.ImportDone( self, page_key, result, exception = exception )
-            
-            if self._delete_after_success and result in ( 'successful', 'redundant' ):
-                
-                ( path_type, path_info ) = self._last_queue_object
-                
-                if path_type == 'path':
-                    
-                    path = path_info
-                    
-                    try: os.remove( path )
-                    except: pass
-                    
-                
-            
-        
-    
-class ManagementPanelImportWithQueue( ManagementPanelImport ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
-        
-        self._download_progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
-        
-        self._import_cancel_button = wx.Button( self._processing_panel, label = 'that\'s enough' )
-        self._import_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImportQueue )
-        self._import_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
-        self._import_cancel_button.Disable()
-        
-        self._feed_queue_panel = ClientGUICommon.StaticBox( self, 'queue' )
-        
-        self._feed_queue_info_string = ''
-        self._feed_queue_info = wx.StaticText( self._feed_queue_panel )
-        
-        self._feed_queue = wx.ListBox( self._feed_queue_panel, size = ( -1, 200 ) )
-        
-        self._new_queue_input = wx.TextCtrl( self._feed_queue_panel, style=wx.TE_PROCESS_ENTER )
+        self._new_queue_input = wx.TextCtrl( self._pending_import_queues_panel, style = wx.TE_PROCESS_ENTER )
         self._new_queue_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._up = wx.Button( self._feed_queue_panel, label = u'\u2191' )
+        self._up = wx.Button( self._pending_import_queues_panel, label = u'\u2191' )
         self._up.Bind( wx.EVT_BUTTON, self.EventUp )
         
-        self._remove = wx.Button( self._feed_queue_panel, label = 'X' )
+        self._remove = wx.Button( self._pending_import_queues_panel, label = 'X' )
         self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
         
-        self._down = wx.Button( self._feed_queue_panel, label = u'\u2193' )
+        self._down = wx.Button( self._pending_import_queues_panel, label = u'\u2193' )
         self._down.Bind( wx.EVT_BUTTON, self.EventDown )
         
-        self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
+        queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._feed_queue_timer = wx.Timer( self, id = ID_TIMER_PROCESS_FEED_QUEUE )
+        queue_buttons_vbox.AddF( self._up, FLAGS_MIXED )
+        queue_buttons_vbox.AddF( self._remove, FLAGS_MIXED )
+        queue_buttons_vbox.AddF( self._down, FLAGS_MIXED )
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventProcessFeedQueue, id = ID_TIMER_PROCESS_FEED_QUEUE )
+        queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._feed_queue_timer.Start( 1000, wx.TIMER_ONE_SHOT )
+        queue_hbox.AddF( self._pending_import_queues_listbox, FLAGS_EXPAND_BOTH_WAYS )
+        queue_hbox.AddF( queue_buttons_vbox, FLAGS_MIXED )
         
-        HC.pubsub.sub( self, 'SetFeedQueueInfo', 'set_feed_queue_info' )
-        HC.pubsub.sub( self, 'SetDownloadProgress', 'set_download_progress' )
+        self._pending_import_queues_panel.AddF( queue_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._pending_import_queues_panel.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
         
-    
-    def _GetPreprocessStatus( self ):
+        vbox.AddF( self._pending_import_queues_panel, FLAGS_EXPAND_BOTH_WAYS )
         
-        status = 'checking url status ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
-        
-        return status
+        wx.CallAfter( self._new_queue_input.SelectAll ) # to select the 'artist username' init gumpf
         
     
     def _UpdateGUI( self ):
         
-        super( ManagementPanelImportWithQueue, self )._UpdateGUI()
+        ManagementPanelImport._UpdateGUI( self )
+        
+        import_job_key = self._import_controller.GetJobKey( 'import' )
+        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
         # info
         
-        if self._feed_queue_info_string != self._feed_queue_info.GetLabel(): self._feed_queue_info.SetLabel( self._feed_queue_info_string )
+        extend_import_queue_status = import_queue_job_key.GetVariable( 'status' )
+        
+        if extend_import_queue_status != self._building_import_queue_info.GetLabel(): self._building_import_queue_info.SetLabel( extend_import_queue_status )
         
         # buttons
         
-        if self._import_queue_job_key.IsWorking() and not self._import_queue_job_key.IsCancelled(): self._import_cancel_button.Enable()
-        else: self._import_cancel_button.Disable()
+        #
+        
+        if import_queue_job_key.IsPaused():
+            
+            if self._building_import_queue_pause_button.GetLabel() != 'resume':
+                
+                self._building_import_queue_pause_button.SetLabel( 'resume' )
+                self._building_import_queue_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
+                
+            
+        else:
+            
+            if self._building_import_queue_pause_button.GetLabel() != 'pause':
+                
+                self._building_import_queue_pause_button.SetLabel( 'pause' )
+                self._building_import_queue_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
+                
+            
+        
+        if import_queue_job_key.IsWorking() and not import_queue_job_key.IsCancelled():
+            
+            self._building_import_queue_pause_button.Enable()
+            self._building_import_queue_cancel_button.Enable()
+            
+        else:
+            
+            self._building_import_queue_pause_button.Disable()
+            self._building_import_queue_cancel_button.Disable()
+            
+        
+        # gauge
+        
+        range = import_job_key.GetVariable( 'range' )
+        
+        if range is None: self._import_gauge.Pulse()
+        else:
+            
+            value = import_job_key.GetVariable( 'value' )
+            
+            self._import_gauge.SetRange( range )
+            self._import_gauge.SetValue( value )
+            
+        
+        # pending import queues
+        
+        import_queues = self._import_controller.GetPendingImportQueues()
+        
+        if import_queues != self._pending_import_queues_listbox.GetItems():
+            
+            self._pending_import_queues_listbox.SetItems( import_queues )
+            
         
     
-    def EventCancelImportQueue( self, event ):
+    def EventCancelBuildImportQueue( self, event ):
         
-        self._import_queue_job_key.Cancel()
-        self._feed_queue_job_key.Cancel()
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        
+        import_queue_job_key.Cancel()
         
         self._UpdateGUI()
         
@@ -1570,13 +1510,13 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
-            url = self._new_queue_input.GetValue()
+            s = self._new_queue_input.GetValue()
             
-            if url != '':
+            if s != '':
                 
-                self._feed_queue.Append( url, url )
+                self._import_controller.PendImportQueue( s )
                 
-                self._feed_queue_timer.Start( 10, wx.TIMER_ONE_SHOT )
+                self._UpdateGUI()
                 
                 self._new_queue_input.SetValue( '' )
                 
@@ -1584,69 +1524,65 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         else: event.Skip()
         
     
+    def EventPauseBuildImportQueue( self, event ):
+        
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        
+        import_queue_job_key.PauseResume()
+        
+        self._UpdateGUI()
+        
+    
     def EventUp( self, event ):
         
-        selection = self._feed_queue.GetSelection()
+        selection = self._pending_import_queues_listbox.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
             if selection > 0:
                 
-                url = self._feed_queue.GetClientData( selection )
+                s = self._pending_import_queues_listbox.GetString( selection )
                 
-                self._feed_queue.Delete( selection )
+                self._import_controller.MovePendingImportQueueUp( s )
                 
-                self._feed_queue.Insert( url, selection - 1, url )
+                self._UpdateGUI()
                 
-                self._feed_queue.Select( selection - 1 )
+                self._pending_import_queues_listbox.Select( selection - 1 )
                 
             
         
     
     def EventRemove( self, event ):
         
-        selection = self._feed_queue.GetSelection()
+        selection = self._pending_import_queues_listbox.GetSelection()
         
-        if selection != wx.NOT_FOUND: self._feed_queue.Delete( selection )
+        if selection != wx.NOT_FOUND:
+            
+            s = self._pending_import_queues_listbox.GetString( selection )
+            
+            self._import_controller.RemovePendingImportQueue( s )
+            
+            self._UpdateGUI()
+            
         
     
     def EventDown( self, event ):
         
-        selection = self._feed_queue.GetSelection()
+        selection = self._pending_import_queues_listbox.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            if selection + 1 < self._feed_queue.GetCount():
+            if selection + 1 < self._pending_import_queues_listbox.GetCount():
                 
-                url = self._feed_queue.GetClientData( selection )
+                s = self._pending_import_queues_listbox.GetString( selection )
                 
-                self._feed_queue.Delete( selection )
+                self._import_controller.MovePendingImportQueueDown( s )
                 
-                self._feed_queue.Insert( url, selection + 1, url )
+                self._UpdateGUI()
                 
-                self._feed_queue.Select( selection + 1 )
+                self._pending_import_queues_listbox.Select( selection + 1 )
                 
             
-        
-    
-    def SetDownloadProgress( self, range, value ):
-        
-        if range is None: self._download_progress_gauge.Pulse()
-        else:
-            
-            self._download_progress_gauge.SetRange( range )
-            self._download_progress_gauge.SetValue( value )
-            
-        
-    
-    def SetFeedQueueInfo( self, page_key, info ):
-        
-        if self._page_key == page_key: self._feed_queue_info_string = info
-        
-    
-    def SetImportInfo( self, page_key, info ):
-        
-        if self._page_key == page_key: self._import_current_info_string = info
         
     
     def SetSearchFocus( self, page_key ):
@@ -1654,578 +1590,97 @@ class ManagementPanelImportWithQueue( ManagementPanelImport ):
         if page_key == self._page_key: self._new_queue_input.SetFocus()
         
     
-    def TIMEREventProcessFeedQueue( self, event ):
-        
-        if self._feed_queue_job_key.IsPaused(): self._feed_queue_info_string = 'paused'
-        else:
-            
-            if self._feed_queue.GetCount() > 0 and not self._import_queue_job_key.IsWorking() and not self._feed_queue_job_key.IsWorking():
-                
-                self._feed_queue_job_key = HC.JobKey()
-                
-                self._feed_queue_job_key.Begin()
-                
-                item = self._feed_queue.GetClientData( 0 )
-                
-                self._feed_queue.Delete( 0 )
-                
-                threading.Thread( target = self._THREADDownloadImportItems, args = ( item, ), name = 'Generate Import Items' ).start()
-                
-            
-        
-        self._feed_queue_timer.Start( 1000, wx.TIMER_ONE_SHOT )
-        
+class ManagementPanelImportsGallery( ManagementPanelImports ):
     
-class ManagementPanelImportWithQueueAdvanced( ManagementPanelImportWithQueue ):
-    
-    def __init__( self, parent, page, page_key, name, namespaces, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, import_controller, name, namespaces, initial_search_value, starting_from_session = False ):
         
-        ManagementPanelImportWithQueue.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        self._name = name
+        self._namespaces = namespaces
+        self._initial_search_value = initial_search_value
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send ' + name + ' tags to ', namespaces )
-        
-        self._feed_queue_pause_button = wx.Button( self._feed_queue_panel, label = 'pause' )
-        self._feed_queue_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFeedQueue )
-        self._feed_queue_pause_button.Disable()
-        
-        self._feed_queue_cancel_button = wx.Button( self._feed_queue_panel, label = 'that\'s enough' )
-        self._feed_queue_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelFeedQueue )
-        self._feed_queue_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
-        self._feed_queue_cancel_button.Disable()
-        
-        c_p_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        c_p_hbox.AddF( self._import_pause_button, FLAGS_EXPAND_BOTH_WAYS )
-        c_p_hbox.AddF( self._import_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._download_progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        queue_buttons_vbox.AddF( self._up, FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._remove, FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._down, FLAGS_MIXED )
-        
-        queue_pause_buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        queue_pause_buttons_hbox.AddF( self._feed_queue_pause_button, FLAGS_EXPAND_BOTH_WAYS )
-        queue_pause_buttons_hbox.AddF( self._feed_queue_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
-        
-        queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        queue_hbox.AddF( self._feed_queue, FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.AddF( queue_buttons_vbox, FLAGS_MIXED )
-        
-        self._feed_queue_panel.AddF( queue_pause_buttons_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._feed_queue_panel.AddF( self._feed_queue_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._feed_queue_panel.AddF( queue_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._feed_queue_panel.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._MakeSort( vbox )
-        
-        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._feed_queue_panel, FLAGS_EXPAND_BOTH_WAYS )
-        self._InitExtraVboxElements( vbox )
-        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-        wx.CallAfter( self._new_queue_input.SelectAll )
-        
-    
-    def _InitExtraVboxElements( self, vbox ): pass
-    
-    def _THREADGetImportArgs( self, url_args ):
-        
-        try:
-            
-            downloader = self._GetDownloaders( 'example' )[0]
-            
-            advanced_tag_options = self._advanced_tag_options.GetInfo()
-            
-            do_tags = len( advanced_tag_options ) > 0
-            
-            url = url_args[0]
-            
-            ( status, hash ) = HC.app.Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
-                
-                ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
-                
-                if do_tags:
-                    
-                    tags = downloader.GetTags( *url_args )
-                    
-                    service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                    
-                    service_identifiers_to_content_updates = HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
-                    
-                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
-                    
-                
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-                
-            else:
-                
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
-                
-                def hook( range, value ): wx.CallAfter( self.SetDownloadProgress, range, value )
-                
-                downloader.AddReportHook( hook )
-                
-                if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
-                else:
-                    
-                    temp_path = downloader.GetFile( *url_args )
-                    
-                    tags = []
-                    
-                
-                downloader.ClearReportHooks()
-                
-                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
-                
-            
-        except Exception as e:
-            
-            wx.CallAfter( self.CALLBACKImportArgs, self._page_key, '', {}, {}, exception = e )
-            
-            raise
-            
-        
-    
-    def _THREADDownloadImportItems( self, raw_query ):
-        
-        # this is important, because we'll instantiate new objects in the eventcancel
-        
-        feed_queue_job_key = self._feed_queue_job_key
-        
-        try:
-            
-            downloaders = list( self._GetDownloaders( raw_query ) )
-            
-            downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
-            
-            total_urls_found = 0
-            
-            while True:
-                
-                downloaders_to_remove = []
-                
-                for downloader in downloaders:
-                    
-                    HC.pubsub.pub( 'set_feed_queue_info', self._page_key, 'found ' + HC.u( total_urls_found ) + ' urls' )
-                    
-                    self._feed_queue_job_key.WaitOnPause()
-                    
-                    if feed_queue_job_key.IsCancelled(): break
-                    
-                    page_of_url_args = downloader.GetAnotherPage()
-                    
-                    total_urls_found += len( page_of_url_args )
-                    
-                    if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
-                    else: wx.CallAfter( self.CALLBACKAddToImportQueue, page_of_url_args )
-                    
-                
-                if feed_queue_job_key.IsCancelled(): break
-                
-                for downloader in downloaders_to_remove: downloaders.remove( downloader )
-                
-                if len( downloaders ) == 0: break
-                
-            
-            HC.pubsub.pub( 'set_feed_queue_info', self._page_key, '' )
-            
-        finally: self._feed_queue_job_key.Finish()
-        
-    
-    def _UpdateGUI( self ):
-        
-        super( ManagementPanelImportWithQueueAdvanced, self )._UpdateGUI()
-        
-        # info
-        
-        # buttons
-        
-        if self._feed_queue_job_key.IsPaused():
-            
-            if self._feed_queue_pause_button.GetLabel() != 'resume':
-                
-                self._feed_queue_pause_button.SetLabel( 'resume' )
-                self._feed_queue_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            
-        else:
-            
-            if self._feed_queue_pause_button.GetLabel() != 'pause':
-                
-                self._feed_queue_pause_button.SetLabel( 'pause' )
-                self._feed_queue_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
-                
-            
-        
-        if self._feed_queue_job_key.IsWorking() and not self._feed_queue_job_key.IsCancelled():
-            
-            self._feed_queue_pause_button.Enable()
-            self._feed_queue_cancel_button.Enable()
-            
-        else:
-            
-            self._feed_queue_pause_button.Disable()
-            self._feed_queue_cancel_button.Disable()
-            
-        
-    
-    def EventCancelFeedQueue( self, event ):
-        
-        self._feed_queue_job_key.Cancel()
-        
-        self._UpdateGUI()
-        
-    
-    def EventPauseFeedQueue( self, event ):
-        
-        self._feed_queue_job_key.PauseResume()
-        
-        self._UpdateGUI()
-        
-    
-class ManagementPanelImportWithQueueAdvancedBooru( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, booru, starting_from_session = False ):
-        
-        self._booru = booru
-        
-        name = self._booru.GetName()
-        namespaces = booru.GetNamespaces()
-        
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
-        
-    
-    def _GetDownloaders( self, raw_tags ):
-        
-        tags = raw_tags.split( ' ' )
-        
-        return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_BOORU, self._booru, tags ), )
-        
-    
-class ManagementPanelImportWithQueueAdvancedDeviantArt( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        name = 'deviant art'
-        namespaces = [ 'creator', 'title', '' ]
-        
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'artist username' )
-        
-    
-    def _GetDownloaders( self, artist ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, artist ), )
-    
-class ManagementPanelImportWithQueueAdvancedGiphy( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        name = 'giphy'
-        namespaces = [ '' ]
-        
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'tag' )
-        
-    
-    def _GetDownloaders( self, tag ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_GIPHY, tag ), )
-    
-class ManagementPanelImportWithQueueAdvancedHentaiFoundry( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        name = 'hentai foundry'
-        namespaces = [ 'creator', 'title', '' ]
-        
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
+        ManagementPanelImports.__init__( self, parent, page, page_key, import_controller, starting_from_session = starting_from_session )
         
     
     def _InitExtraVboxElements( self, vbox ):
+        
+        ManagementPanelImports._InitExtraVboxElements( self, vbox )
+        
+        #
+        
+        self._new_queue_input.SetValue( self._initial_search_value )
+        
+        #
+        
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send ' + self._name + ' tags to ', self._namespaces )
+        
+        vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
+        
+    
+    def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
+    
+class ManagementPanelImportsGalleryHentaiFoundry( ManagementPanelImportsGallery ):
+    
+    def _InitExtraVboxElements( self, vbox ):
+        
+        ManagementPanelImportsGallery._InitExtraVboxElements( self, vbox )
         
         self._advanced_hentai_foundry_options = ClientGUICommon.AdvancedHentaiFoundryOptions( self )
         
         vbox.AddF( self._advanced_hentai_foundry_options, FLAGS_EXPAND_PERPENDICULAR )
         
     
-class ManagementPanelImportWithQueueAdvancedHentaiFoundryArtist( ManagementPanelImportWithQueueAdvancedHentaiFoundry ):
+    def GetAdvancedHentaiFoundryOptions( self ): return self._advanced_hentai_foundry_options.GetInfo()
     
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        ManagementPanelImportWithQueueAdvancedHentaiFoundry.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'artist username' )
-        
+class ManagementPanelImportsURL( ManagementPanelImports ):
     
-    def _GetDownloaders( self, artist ):
+    def _InitExtraVboxElements( self, vbox ):
         
-        pictures_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist pictures', artist, self._advanced_hentai_foundry_options.GetInfo() )
-        scraps_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist scraps', artist, self._advanced_hentai_foundry_options.GetInfo() )
+        ManagementPanelImports._InitExtraVboxElements( self, vbox )
         
-        return ( pictures_downloader, scraps_downloader )
+        self._building_import_queue_pause_button.Hide()
+        self._building_import_queue_cancel_button.Hide()
         
     
-class ManagementPanelImportWithQueueAdvancedHentaiFoundryTags( ManagementPanelImportWithQueueAdvancedHentaiFoundry ):
+class ManagementPanelImportHDD( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
+    def __init__( self, *args, **kwargs ):
         
-        ManagementPanelImportWithQueueAdvancedHentaiFoundry.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        ManagementPanelImport.__init__( self, *args, **kwargs )
         
-        self._new_queue_input.SetValue( 'search tags' )
-        
-    
-    def _GetDownloaders( self, tags_string ):
-        
-        tags = tags_string.split( ' ' )
-        
-        return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'tags', tags, self._advanced_hentai_foundry_options.GetInfo() ), )
+        self._advanced_import_options.Hide()
         
     
-class ManagementPanelImportWithQueueAdvancedNewgrounds( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
+    def _InitExtraVboxElements( self, vbox ):
         
-        name = 'newgrounds'
-        namespaces = [ 'creator', 'title', '' ]
+        ManagementPanelImport._InitExtraVboxElements( self, vbox )
         
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'artist' )
-        
-    
-    def _GetDownloaders( self, artist ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS, artist ), )
-    
-class ManagementPanelImportWithQueueAdvancedPixiv( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        name = 'pixiv'
-        namespaces = [ 'creator', 'title', '' ]
-        
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
-        
-    
-class ManagementPanelImportWithQueueAdvancedPixivArtist( ManagementPanelImportWithQueueAdvancedPixiv ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'artist id number' )
-        
-    
-    def _GetDownloaders( self, query ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_PIXIV, 'artist', query ), )
-    
-class ManagementPanelImportWithQueueAdvancedPixivTag( ManagementPanelImportWithQueueAdvancedPixiv ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        ManagementPanelImportWithQueueAdvancedPixiv.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'search tag' )
-        
-    
-    def _GetDownloaders( self, query ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_PIXIV, 'tag', query ), )
-    
-class ManagementPanelImportWithQueueAdvancedTumblr( ManagementPanelImportWithQueueAdvanced ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        name = 'tumblr'
-        namespaces = [ '' ]
-        
-        ManagementPanelImportWithQueueAdvanced.__init__( self, parent, page, page_key, name, namespaces, starting_from_session = starting_from_session )
-        
-        self._new_queue_input.SetValue( 'username' )
-        
-    
-    def _GetDownloaders( self, username ): return ( HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_TUMBLR, username ), )
-    
-class ManagementPanelImportWithQueueURL( ManagementPanelImportWithQueue ):
-    
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
-        
-        ManagementPanelImportWithQueue.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
-        
-        self._connections = {}
-        
-        c_p_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        c_p_hbox.AddF( self._import_pause_button, FLAGS_EXPAND_BOTH_WAYS )
-        c_p_hbox.AddF( self._import_cancel_button, FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._download_progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( c_p_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        queue_buttons_vbox.AddF( self._up, FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._remove, FLAGS_MIXED )
-        queue_buttons_vbox.AddF( self._down, FLAGS_MIXED )
-        
-        queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        queue_hbox.AddF( self._feed_queue, FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.AddF( queue_buttons_vbox, FLAGS_MIXED )
-        
-        self._feed_queue_panel.AddF( self._feed_queue_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._feed_queue_panel.AddF( queue_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._feed_queue_panel.AddF( self._new_queue_input, FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._MakeSort( vbox )
-        
-        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._feed_queue_panel, FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-    
-    def _THREADGetImportArgs( self, queue_object ):
-        
-        url = queue_object
-        
-        ( status, hash ) = HC.app.Read( 'url_status', url )
-        
-        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-        
-        if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-        elif status == 'redundant':
-            
-            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
-            
-            HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
-            HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-            
-        else:
-            
-            HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
-            
-            parse_result = urlparse.urlparse( url )
-            
-            ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-            
-            if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
-            
-            connection = self._connections[ ( scheme, host, port ) ]
-            
-            def hook( range, value ): wx.CallAfter( self.SetDownloadProgress, range, value )
-            
-            connection.AddReportHook( hook )
-            
-            temp_path = connection.geturl( url, response_to_path = True )
-            
-            connection.ClearReportHooks()
-            
-            advanced_import_options = self._advanced_import_options.GetInfo()
-            
-            service_identifiers_to_tags = {}
-            
-            wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
-            
-        
-    
-    def _THREADDownloadImportItems( self, url ):
-        
-        try:
-            
-            HC.pubsub.pub( 'set_feed_queue_info', self._page_key, 'parsing url' )
-            
-            try:
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-            except: raise Exception( 'Could not parse that URL' )
-            
-            HC.pubsub.pub( 'set_feed_queue_info', self._page_key, 'Connecting to address' )
-            
-            try: connection = HC.get_connection( scheme = scheme, host = host, port = port )
-            except: raise Exception( 'Could not connect to server' )
-            
-            try: html = connection.geturl( url )
-            except: raise Exception( 'Could not download that url' )
-            
-            HC.pubsub.pub( 'set_feed_queue_info', self._page_key, 'parsing html' )
-            
-            try: urls = ClientParsers.ParsePage( html, url )
-            except: raise Exception( 'Could not parse that URL\'s html' )
-            
-            wx.CallAfter( self.CALLBACKAddToImportQueue, urls )
-            
-        except Exception as e: HC.pubsub.pub( 'set_feed_queue_info', self._page_key, HC.u( e ) )
-        
-        self._feed_queue_job_key.Finish()
+        self._import_gauge.Hide()
+        self._import_cancel_button.Hide()
         
     
 class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
-    def __init__( self, parent, page, page_key, starting_from_session = False ):
+    def _InitExtraVboxElements( self, vbox ):
         
-        ManagementPanelImport.__init__( self, parent, page, page_key, starting_from_session = starting_from_session )
+        ManagementPanelImport._InitExtraVboxElements( self, vbox )
         
-        self._download_progress_gauge = ClientGUICommon.Gauge( self._processing_panel )
+        self._import_cancel_button.Hide()
         
-        self._connections = {}
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._MakeSort( vbox )
-        
-        self._processing_panel.AddF( self._import_overall_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_current_info, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._download_progress_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_gauge, FLAGS_EXPAND_PERPENDICULAR )
-        self._processing_panel.AddF( self._import_pause_button, FLAGS_EXPAND_PERPENDICULAR )
+        #
         
         self._thread_panel = ClientGUICommon.StaticBox( self, 'thread checker' )
         
-        self._thread_info = wx.StaticText( self._thread_panel, label = '' )
+        self._thread_info = wx.StaticText( self._thread_panel, label = 'enter a 4chan thread url' )
         
         self._thread_time = wx.SpinCtrl( self._thread_panel, min = 30, max = 1800 )
         self._thread_time.SetValue( 180 )
+        self._thread_time.Bind( wx.EVT_SPINCTRL, self.EventThreadTime )
         
         self._thread_input = wx.TextCtrl( self._thread_panel, style = wx.TE_PROCESS_ENTER )
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         self._thread_pause_button = wx.Button( self._thread_panel, label = 'pause' )
-        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecker )
-        self._thread_pause_button.SetForegroundColour( ( 128, 0, 0 ) )
-        self._thread_pause_button.Disable()
+        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseBuildImportQueue )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2238,151 +1693,55 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._thread_panel.AddF( self._thread_pause_button, FLAGS_EXPAND_PERPENDICULAR )
         
+        vbox.AddF( self._thread_panel, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
         self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send to ', [ 'filename' ] )
         
-        self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
-        
-        vbox.AddF( self._processing_panel, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._thread_panel, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-        self._last_thread_check = None
-        self._4chan_board = None
-        self._thread_id = None
-        self._currently_checking_thread = False
-        self._currently_paused = False
-        self._image_infos_already_added = set()
-        
-        self._feed_queue_timer = wx.Timer( self, id = ID_TIMER_PROCESS_FEED_QUEUE )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventProcessFeedQueue, id = ID_TIMER_PROCESS_FEED_QUEUE )
-        
-        self._feed_queue_timer.Start( 1000, wx.TIMER_ONE_SHOT )
-        
-        HC.pubsub.sub( self, 'SetThreadInfo', 'set_thread_info' )
         
     
-    def _THREADFetchThread( self ):
+    def _SetThreadTime( self ):
         
-        HC.pubsub.pub( 'set_thread_info', self._page_key, 'checking thread' )
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
-        url = 'http://api.4chan.org/' + self._4chan_board + '/res/' + self._thread_id + '.json'
+        thread_time = self._thread_time.GetValue()
         
-        try:
-            
-            connection = HC.get_connection( url = url )
-            
-            raw_json = connection.geturl( url )
-            
-            json_dict = json.loads( raw_json )
-            
-            posts_list = json_dict[ 'posts' ]
-            
-            image_infos = [ ( post[ 'md5' ].decode( 'base64' ), HC.u( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
-            
-            image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in self._image_infos_already_added ]
-            
-            self._image_infos_already_added.update( image_infos_i_can_add )
-            
-            if len( image_infos_i_can_add ) > 0: wx.CallAfter( self.CALLBACKAddToImportQueue, image_infos_i_can_add )
-            
-        except HydrusExceptions.NotFoundException:
-            
-            HC.pubsub.pub( 'set_thread_info', self._page_key, 'Thread 404' )
-            
-            wx.CallAfter( self._thread_pause_button.Disable )
-            
-            return
-            
-        except Exception as e:
-            
-            HC.pubsub.pub( 'set_thread_info', self._page_key, HC.u( e ) )
-            
-            wx.CallAfter( self._thread_pause_button.Disable )
-            
-            return
-            
-        
-        self._last_thread_check = HC.GetNow()
-        
-        self._currently_checking_thread = False
+        import_queue_job_key.SetVariable( 'thread_time', thread_time )
         
     
-    def _THREADGetImportArgs( self, queue_object ):
+    def _UpdateGUI( self ):
         
-        ( md5, image_name, ext, filename ) = queue_object
+        ManagementPanelImport._UpdateGUI( self )
         
-        ( status, hash ) = HC.app.Read( 'md5_status', md5 )
+        import_job_key = self._import_controller.GetJobKey( 'import' )
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
-        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
+        # thread_info
         
-        if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-        elif status == 'redundant':
+        status = import_queue_job_key.GetVariable( 'status' )
+        
+        if status != self._thread_info.GetLabel(): self._thread_info.SetLabel( status )
+        
+        # button
+        
+        if import_queue_job_key.IsWorking():
             
-            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            self._thread_pause_button.Enable()
             
-            HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
-            HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
-            
-        else:
-            
-            url = 'http://images.4chan.org/' + self._4chan_board + '/src/' + image_name + ext
-            
-            ( status, hash ) = HC.app.Read( 'url_status', url )
-            
-            if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options.GetInfo(): status = 'new'
-            
-            if status == 'deleted': HC.pubsub.pub( 'import_done', self._page_key, 'deleted' )
-            elif status == 'redundant':
+            if import_queue_job_key.IsPaused():
                 
-                ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
-                
-                HC.pubsub.pub( 'add_media_results', self._page_key, ( media_result, ) )
-                HC.pubsub.pub( 'import_done', self._page_key, 'redundant' )
+                self._thread_pause_button.SetLabel( 'resume' )
+                self._thread_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
                 
             else:
                 
-                HC.pubsub.pub( 'set_import_info', self._page_key, 'downloading ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) ) )
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme, host, port ) not in self._connections: self._connections[ ( scheme, host, port ) ] = HC.get_connection( scheme = scheme, host = host, port = port )
-                
-                connection = self._connections[ ( scheme, host, port ) ]
-                
-                def hook( range, value ): wx.CallAfter( self.SetDownloadProgress, range, value )
-                
-                connection.AddReportHook( hook )
-                
-                temp_path = connection.geturl( url, response_to_path = True )
-                
-                connection.ClearReportHooks()
-                
-                advanced_import_options = self._advanced_import_options.GetInfo()
-                
-                advanced_tag_options = self._advanced_tag_options.GetInfo()
-                
-                tags = [ 'filename:' + filename + ext ]
-                
-                service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
-                
-                wx.CallAfter( self.CALLBACKImportArgs, temp_path, advanced_import_options, service_identifiers_to_tags, url = url )
+                self._thread_pause_button.SetLabel( 'pause' )
+                self._thread_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
                 
             
-        
-    
-    def _GetPreprocessStatus( self ):
-        
-        status = 'checking url/hash status ' + HC.u( self._import_queue_position + 1 ) + '/' + HC.u( len( self._import_queue ) )
-        
-        return status
+        else: self._thread_pause_button.Disable()
         
     
     def EventKeyDown( self, event ):
@@ -2419,77 +1778,31 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 return
                 
             
-            self._4chan_board = board
-            self._thread_id = thread_id
-            
-            self._last_thread_check = 0
-            
             self._thread_input.Disable()
-            self._thread_pause_button.Enable()
+            
+            self._SetThreadTime()
+            
+            self._import_controller.PendImportQueue( ( board, thread_id ) )
             
         else: event.Skip()
         
     
-    def EventPauseChecker( self, event ):
+    def EventPauseBuildImportQueue( self, event ):
         
-        if self._currently_paused:
-            
-            self._currently_paused = False
-            
-            self._thread_pause_button.SetLabel( 'pause' )
-            self._thread_pause_button.SetForegroundColour( ( 0, 0, 0 ) )
-            
-        else:
-            
-            self._currently_paused = True
-            
-            self._thread_pause_button.SetLabel( 'resume' )
-            self._thread_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
-            
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        
+        import_queue_job_key.PauseResume()
+        
+        self._UpdateGUI()
         
     
-    def SetDownloadProgress( self, range, value ):
-        
-        if range is None: self._download_progress_gauge.Pulse()
-        else:
-            
-            self._download_progress_gauge.SetRange( range )
-            self._download_progress_gauge.SetValue( value )
-            
-        
+    def EventThreadTime( self, event ): self._SetThreadTime()
+    
+    def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
     
     def SetSearchFocus( self, page_key ):
         
         if page_key == self._page_key: self._thread_input.SetFocus()
-        
-    
-    def SetThreadInfo( self, page_key, info ):
-        
-        if self._page_key == page_key: self._thread_info.SetLabel( info )
-        
-    
-    def TIMEREventProcessFeedQueue( self, event ):
-        
-        if self._4chan_board is None: self._thread_info.SetLabel( 'enter a 4chan thread url' )
-        elif self._currently_paused: self._thread_info.SetLabel( 'paused' )
-        elif not self._currently_checking_thread:
-            
-            thread_time = self._thread_time.GetValue()
-            
-            if thread_time < 30: thread_time = 30
-            
-            next_thread_check = self._last_thread_check + thread_time
-            
-            if next_thread_check < HC.GetNow():
-                
-                self._currently_checking_thread = True
-                
-                threading.Thread( target = self._THREADFetchThread, name = 'Fetch Thread' ).start()
-                
-            else: self._thread_info.SetLabel( 'rechecking thread ' + HC.ConvertTimestampToPrettyPending( next_thread_check ) )
-            
-        
-        self._feed_queue_timer.Start( 1000, wx.TIMER_ONE_SHOT )
         
     
 class ManagementPanelPetitions( ManagementPanel ):
@@ -2828,6 +2141,13 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
+    def CleanBeforeDestroy( self ):
+        
+        ManagementPanel.CleanBeforeDestroy( self )
+        
+        self._query_key.Cancel()
+        
+    
     def GetPredicates( self ):
         
         if hasattr( self, '_current_predicates_box' ): return self._current_predicates_box.GetPredicates()
@@ -3080,7 +2400,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         except: wx.MessageBox( traceback.format_exc() )
         
     
-    def TryToClose( self ):
+    def TestAbleToClose( self ):
         
         pass
         

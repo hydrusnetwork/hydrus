@@ -1,3 +1,4 @@
+class DBException( Exception ): pass
 class DBAccessException( Exception ): pass
 class MimeException( Exception ): pass
 class SizeException( Exception ): pass

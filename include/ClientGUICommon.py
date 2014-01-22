@@ -281,7 +281,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     def EventText( self, event ):
         
         if len( self.GetValue() ) == 0: self._UpdateList()
-        else: self._lag_timer.Start( 150, wx.TIMER_ONE_SHOT )
+        else: self._lag_timer.Start( 250, wx.TIMER_ONE_SHOT )
         
     
 class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
@@ -2248,9 +2248,12 @@ class PopupMessageError( PopupMessage ):
         error = wx.StaticText( self, label = HC.u( etype.__name__ ), style = wx.ALIGN_CENTER )
         error.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        text = wx.StaticText( self, label = HC.u( value ) )
-        text.Wrap( 380 )
-        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        if len( HC.u( value ) ) > 0:
+            
+            text = wx.StaticText( self, label = HC.u( value ) )
+            text.Wrap( 380 )
+            text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+            
         
         self._show_tb_button = wx.Button( self, label = 'show traceback' )
         self._show_tb_button.Bind( wx.EVT_BUTTON, self.EventShowButton )
@@ -2267,7 +2270,7 @@ class PopupMessageError( PopupMessage ):
         self._copy_tb_button.Hide()
         
         vbox.AddF( error, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        if len( HC.u( value ) ) > 0: vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_tb_button, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._tb_text, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._copy_tb_button, FLAGS_EXPAND_PERPENDICULAR )
@@ -2469,7 +2472,7 @@ class PopupMessageText( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        text = wx.StaticText( self, label = message_string ) # make this multi-line. There's an easy way to do that, right? A func that takes a pixel width, I think
+        text = wx.StaticText( self, label = message_string )
         text.Wrap( 380 )
         text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
@@ -2515,6 +2518,7 @@ class PopupMessageManager( wx.Frame ):
         
         sys.excepthook = CC.CatchExceptionClient
         HC.ShowException = CC.ShowExceptionClient
+        HC.ShowText = CC.ShowTextClient
         
     
     def _CheckPending( self ):
@@ -2636,22 +2640,18 @@ class PopupMessageManager( wx.Frame ):
         self._CheckPending()
         
     
-    def CleanUp( self ):
+    def CleanBeforeDestroy( self ):
         
         sys.excepthook = self._old_excepthook
         
         HC.ShowException = self._old_show_exception
-        
-        self.DismissAll()
-        
-        self.Hide()
         
     
     def Dismiss( self, window ):
         
         self._message_vbox.Detach( window )
         
-        wx.CallAfter( window.Destroy )
+        window.Destroy()
         
         self._SizeAndPositionAndShow()
         
@@ -3607,10 +3607,7 @@ class ShowKeys( Frame ):
         self.Show( True )
         
     
-    def EventDone( self, event ):
-        
-        self.Destroy()
-        
+    def EventDone( self, event ): self.Close()
     
     def EventSaveToFile( self, event ):
         

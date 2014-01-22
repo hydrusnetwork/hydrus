@@ -585,7 +585,7 @@ class Canvas():
                     
                     self._media_container.Hide()
                     
-                    wx.CallAfter( self._media_container.Destroy )
+                    self._media_container.Close()
                     
                     self._media_container = None
                     

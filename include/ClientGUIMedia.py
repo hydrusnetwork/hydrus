@@ -863,9 +863,11 @@ class MediaPanelLoading( MediaPanel ):
     
 class MediaPanelThumbnails( MediaPanel ):
     
-    def __init__( self, parent, page_key, file_service_identifier, media_results ):
+    def __init__( self, parent, page_key, file_service_identifier, media_results, refreshable = True ):
         
         MediaPanel.__init__( self, parent, page_key, file_service_identifier, media_results )
+        
+        self._refreshable = refreshable
         
         self._num_columns = 1
         self._num_rows_in_client_height = 0
@@ -1516,26 +1518,43 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnail = self._GetThumbnailUnderMouse( event )
         
+        if thumbnail is not None: self._HitMedia( thumbnail, event.CmdDown(), event.ShiftDown() )
+        
+        all_service_identifiers = [ media.GetFileServiceIdentifiersCDPP() for media in self._selected_media ]
+        
+        selection_has_local = True in ( s_is.HasLocal() for s_is in all_service_identifiers )
+        selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
+        selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
+        
         menu = wx.Menu()
         
         if thumbnail is None:
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+            if self._refreshable:
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+                
             
-            menu.AppendSeparator()
-            
-            select_menu = wx.Menu()
-            
-            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
-            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
-            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
-            select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
-            
-            menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
+            if len( self._sorted_media ) > 0:
+                
+                if menu.GetMenuItemCount() > 0: menu.AppendSeparator()
+                
+                select_menu = wx.Menu()
+                
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                
+                if selection_has_archive and selection_has_inbox:
+                    
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                    
+                
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
+                
+                menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
+                
             
         else:
-            
-            self._HitMedia( thumbnail, event.CmdDown(), event.ShiftDown() )
             
             if self._focussed_media is not None:
                 
@@ -1561,12 +1580,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 petitionable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_identifiers
                 user_manageable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.MANAGE_USERS ) }
                 admin_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) }
-                
-                all_service_identifiers = [ media.GetFileServiceIdentifiersCDPP() for media in self._selected_media ]
-                
-                selection_has_local = True in ( s_is.HasLocal() for s_is in all_service_identifiers )
-                selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
-                selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
                 
                 if multiple_selected:
                     
@@ -1826,20 +1839,31 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                menu.AppendSeparator()
+                if self._refreshable:
+                    
+                    menu.AppendSeparator()
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+                    
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
-                
-                menu.AppendSeparator()
-                
-                select_menu = wx.Menu()
-                
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
-                
-                menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
+                if len( self._sorted_media ) > 0:
+                    
+                    menu.AppendSeparator()
+                    
+                    select_menu = wx.Menu()
+                    
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                    
+                    if selection_has_archive and selection_has_inbox:
+                        
+                        select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
+                        select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                        
+                    
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
+                    
+                    menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
+                    
                 
                 menu.AppendSeparator()
                 
@@ -1854,7 +1878,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        self.PopupMenu( menu )
+        if menu.GetMenuItemCount() > 0: self.PopupMenu( menu )
         
         menu.Destroy()
         

@@ -618,10 +618,14 @@ class TestClientDB( unittest.TestCase ):
         
         generate_media_result = True
         
-        ( written_result, written_hash, written_media_result ) = self._write( 'import_file', path, generate_media_result = True )
+        ( written_result, written_hash ) = self._write( 'import_file', path )
         
         self.assertEqual( written_result, 'successful' )
         self.assertEqual( written_hash, hash )
+        
+        ( written_result, written_media_result ) = self._write( 'import_file', path, generate_media_result = True )
+        
+        self.assertEqual( written_result, 'redundant' )
         
         ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_file_service_identifiers_cdpp, mr_local_ratings, mr_remote_ratings ) = written_media_result.ToTuple()
         

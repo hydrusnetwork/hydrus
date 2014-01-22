@@ -16,7 +16,7 @@ def Parse4chanPostScreen( html ):
         
         message = 'You are banned from this board! html written to log.'
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+        HC.ShowText( message )
         
         return ( 'big error', message )
         
@@ -33,7 +33,7 @@ def Parse4chanPostScreen( html ):
                 
                 message = 'Unknown problem; html written to log.'
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                HC.ShowText( message )
                 
                 return ( 'error', message )
                 

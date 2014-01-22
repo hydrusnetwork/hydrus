@@ -1,15 +1,20 @@
 import bs4
+import ClientParsers
 import collections
 import httplib
 import HydrusConstants as HC
+import HydrusExceptions
 import json
 import lxml
+import os
 import pafy
 import threading
+import time
 import traceback
 import urllib
 import urlparse
 import wx
+import zipfile
 
 def ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags ):
     
@@ -1054,110 +1059,779 @@ class DownloaderTumblr( Downloader ):
     
     def GetTags( self, url, tags ): return tags
     
-class DownloaderEngine(): # rename this to something more import related
+class ImportArgsGenerator():
     
-    # this should be a yamlable thing
-    
-    def __init__( self, page_key, import_queue_generator ):
+    def __init__( self, job_key, item, advanced_import_options ):
         
-        self._page_key = page_key
-        self._import_queue_generator = import_queue_generator
-        
-        self._current_queue_processor = None
-        
-        self._pending_queue_jobs = []
+        self._job_key = job_key
+        self._item = item
+        self._advanced_import_options = advanced_import_options
         
     
-    def GetCurrentQueueProcessor( self ): return self._current_queue_processor
-    
-    def ToTuple( self ): return ( self._pending_queue_jobs, )
-    
-    def PendQueueJob( self, job ):
+    def __call__( self ):
         
-        self._pending_queue_jobs.append( job )
-        
-    
-    def THREADProcessJobs( self ):
-        
-        while True:
+        try:
             
-            if len( self._pending_queue_jobs ) > 0:
+            ( result, media_result ) = self._CheckCurrentStatus()
+            
+            if result == 'new':
                 
-                job = self._pending_queue_jobs.pop( 0 )
+                ( temp_path, service_identifiers_to_tags, url ) = self._GetArgs()
                 
-                self._current_queue_processor = self._import_queue_generator( job )
+                self._job_key.SetVariable( 'status', 'importing' )
                 
-                self._current_queue_processor.ProcessQueue()
+                ( result, media_result ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = self._advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True, url = url )
                 
-            else: time.sleep( 0.1 )
+            
+            self._job_key.SetVariable( 'result', result )
+            
+            if result in ( 'successful', 'redundant' ):
+                
+                page_key = self._job_key.GetVariable( 'page_key' )
+                
+                if media_result is not None and page_key is not None:
+                    
+                    HC.pubsub.pub( 'add_media_results', page_key, ( media_result, ) )
+                    
+                    
+                
+            
+            self._job_key.SetVariable( 'status', '' )
+            
+            self._job_key.Finish()
+            
+            self._CleanUp() # e.g. possibly delete the file for hdd importargsgenerator
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'result', 'failed' )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+            self._job_key.Cancel()
             
         
     
-class ImportQueueProcessor():
+    def _CleanUp( self ): pass
     
-    def __init__( self, page_key, import_args_generator ):
+    def _CheckCurrentStatus( self ): return ( 'new', None )
+    
+class ImportArgsGeneratorGallery( ImportArgsGenerator ):
+    
+    def __init__( self, job_key, item, advanced_import_options, advanced_tag_options, downloaders_factory ):
         
+        ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
+        
+        self._advanced_tag_options = advanced_tag_options
+        self._downloaders_factory = downloaders_factory
+        
+    
+    def _GetArgs( self ):
+        
+        url_args = self._item
+        
+        url = url_args[0]
+        
+        self._job_key.SetVariable( 'status', 'downloading' )
+        
+        downloader = self._downloaders_factory( 'example' )[0]
+        
+        def hook( range, value ):
+            
+            self._job_key.SetVariable( 'range', range )
+            self._job_key.SetVariable( 'value', value )
+            
+        
+        downloader.AddReportHook( hook )
+        
+        do_tags = len( self._advanced_tag_options ) > 0
+        
+        if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
+        else:
+            
+            temp_path = downloader.GetFile( *url_args )
+            
+            tags = []
+            
+        
+        downloader.ClearReportHooks()
+        
+        service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
+        
+        return ( temp_path, service_identifiers_to_tags, url )
+        
+    
+    def _CheckCurrentStatus( self ):
+        
+        url_args = self._item
+        
+        url = url_args[0]
+        
+        self._job_key.SetVariable( 'status', 'checking url status' )
+        
+        downloader = self._downloaders_factory( 'example' )[0]
+        
+        ( status, hash ) = HC.app.Read( 'url_status', url )
+        
+        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options: status = 'new'
+        
+        if status == 'redundant':
+            
+            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            
+            do_tags = len( self._advanced_tag_options ) > 0
+            
+            if do_tags:
+                
+                tags = downloader.GetTags( *url_args )
+                
+                service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
+                
+                service_identifiers_to_content_updates = ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
+                
+                HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                
+            
+            return ( status, media_result )
+            
+        else: return ( status, None )
+        
+    
+class ImportArgsGeneratorHDD( ImportArgsGenerator ):
+    
+    def __init__( self, job_key, item, advanced_import_options, paths_to_tags, delete_after_success ):
+        
+        ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
+        
+        self._paths_to_tags = paths_to_tags
+        self._delete_after_success = delete_after_success
+        
+    
+    def _CleanUp( self ):
+        
+        result = self._job_key.GetVariable( 'result' )
+        
+        if self._delete_after_success and result in ( 'successful', 'redundant' ):
+            
+            ( path_type, path_info ) = self._item
+            
+            if path_type == 'path':
+                
+                path = path_info
+                
+                try: os.remove( path )
+                except: pass
+                
+            
+        
+    
+    def _GetArgs( self ):
+        
+        self._job_key.SetVariable( 'status', 'reading from hdd' )
+        
+        ( path_type, path_info ) = self._item
+        
+        service_identifiers_to_tags = {}
+        
+        if path_type == 'path':
+            
+            path = path_info
+            
+            if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
+            
+        elif path_type == 'zip':
+            
+            ( zip_path, name ) = path_info
+            
+            path = HC.GetTempPath()
+            
+            with open( path, 'wb' ) as f:
+                
+                with zipfile.ZipFile( zip_path, 'r' ) as z: f.write( z.read( name ) )
+                
+            
+            pretty_path = zip_path + os.path.sep + name
+            
+            if pretty_path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ pretty_path ]
+            
+        
+        return ( path, service_identifiers_to_tags, None )
+        
+    
+class ImportArgsGeneratorThread( ImportArgsGenerator ):
+    
+    def __init__( self, job_key, item, advanced_import_options, advanced_tag_options ):
+        
+        ImportArgsGenerator.__init__( self, job_key, item, advanced_import_options )
+        
+        self._advanced_tag_options = advanced_tag_options
+        
+    
+    def _GetArgs( self ):
+        
+        self._job_key.SetVariable( 'status', 'downloading' )
+        
+        ( md5, board, image_name, ext, filename ) = self._item
+        
+        # where do I get 4chan_board from? is it set to the controller_job_key?
+        # that'd prob be the best place, but think about it
+        
+        url = 'http://images.4chan.org/' + board + '/src/' + image_name + ext
+        
+        parse_result = urlparse.urlparse( url )
+        
+        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+        
+        connection = HC.get_connection( scheme = scheme, host = host, port = port )
+        
+        def hook( range, value ):
+            
+            self._job_key.SetVariable( 'range', range )
+            self._job_key.SetVariable( 'value', value )
+            
+        
+        connection.AddReportHook( hook )
+        
+        temp_path = connection.geturl( url, response_to_path = True )
+        
+        connection.ClearReportHooks()
+        
+        tags = [ 'filename:' + filename + ext ]
+        
+        service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
+        
+        return ( temp_path, service_identifiers_to_tags, url )
+        
+    
+    def _CheckCurrentStatus( self ):
+        
+        self._job_key.SetVariable( 'status', 'checking md5 status' )
+        
+        ( md5, board, image_name, ext, filename ) = self._item
+        
+        ( status, hash ) = HC.app.Read( 'md5_status', md5 )
+        
+        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options: status = 'new'
+        
+        if status == 'redundant':
+            
+            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            
+            return ( status, media_result )
+            
+        else: return ( status, None )
+        
+    
+class ImportArgsGeneratorURLs( ImportArgsGenerator ):
+    
+    def _GetArgs( self ):
+        
+        url = self._item
+        
+        self._job_key.SetVariable( 'status', 'downloading' )
+        
+        parse_result = urlparse.urlparse( url )
+        
+        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+        
+        connection = HC.get_connection( scheme = scheme, host = host, port = port )
+        
+        def hook( range, value ):
+            
+            self._job_key.SetVariable( 'range', range )
+            self._job_key.SetVariable( 'value', value )
+            
+        
+        connection.AddReportHook( hook )
+        
+        temp_path = connection.geturl( url, response_to_path = True )
+        
+        connection.ClearReportHooks()
+        
+        service_identifiers_to_tags = {}
+        
+        return ( temp_path, service_identifiers_to_tags, url )
+        
+    
+    def _CheckCurrentStatus( self ):
+        
+        url = self._item
+        
+        self._job_key.SetVariable( 'status', 'checking url status' )
+        
+        ( status, hash ) = HC.app.Read( 'url_status', url )
+        
+        if status == 'deleted' and 'exclude_deleted_files' not in self._advanced_import_options: status = 'new'
+        
+        if status == 'redundant':
+            
+            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            
+            return ( status, media_result )
+            
+        else: return ( status, None )
+        
+    
+class ImportQueueGenerator():
+    
+    def __init__( self, job_key, item ):
+        
+        self._job_key = job_key
+        self._item = item
+        
+    
+    def __call__( self ):
+        
+        queue = self._item
+        
+        self._job_key.SetVariable( 'queue', queue )
+        
+        self._job_key.Finish()
+        
+    
+class ImportQueueGeneratorGallery( ImportQueueGenerator ):
+    
+    def __init__( self, job_key, item, downloaders_factory ):
+        
+        ImportQueueGenerator.__init__( self, job_key, item )
+        
+        self._downloaders_factory = downloaders_factory
+        
+    
+    def __call__( self ):
+        
+        try:
+            
+            raw_query = self._item
+            
+            downloaders = list( self._downloaders_factory( raw_query ) )
+            
+            downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
+            
+            total_urls_found = 0
+            
+            while True:
+                
+                downloaders_to_remove = []
+                
+                for downloader in downloaders:
+                    
+                    if self._job_key.IsPaused():
+                        
+                        self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
+                        
+                        self._job_key.WaitOnPause()
+                        
+                    
+                    if self._job_key.IsCancelled(): break
+                    
+                    self._job_key.SetVariable( 'status', 'found ' + HC.u( total_urls_found ) + ' urls' )
+                    
+                    page_of_url_args = downloader.GetAnotherPage()
+                    
+                    total_urls_found += len( page_of_url_args )
+                    
+                    if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                    else:
+                        
+                        queue = self._job_key.GetVariable( 'queue' )
+                        
+                        queue = list( queue )
+                        
+                        queue.extend( page_of_url_args )
+                        
+                        self._job_key.SetVariable( 'queue', queue )
+                        
+                    
+                
+                for downloader in downloaders_to_remove: downloaders.remove( downloader )
+                
+                if len( downloaders ) == 0: break
+                
+                if self._job_key.IsPaused():
+                    
+                    self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
+                    
+                    self._job_key.WaitOnPause()
+                    
+                
+                if self._job_key.IsCancelled(): break
+                
+            
+            self._job_key.SetVariable( 'status', '' )
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'status', HC.u( e ) )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+        finally: self._job_key.Finish()
+        
+    
+class ImportQueueGeneratorURLs( ImportQueueGenerator ):
+    
+    def __call__( self ):
+        
+        try:
+            
+            url = self._item
+            
+            self._job_key.SetVariable( 'status', 'parsing url' )
+            
+            try:
+                
+                parse_result = urlparse.urlparse( url )
+                
+                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+                
+            except: raise Exception( 'Could not parse that URL' )
+            
+            self._job_key.SetVariable( 'status', 'Connecting to address' )
+            
+            try: connection = HC.get_connection( scheme = scheme, host = host, port = port )
+            except: raise Exception( 'Could not connect to server' )
+            
+            try: html = connection.geturl( url )
+            except: raise Exception( 'Could not download that url' )
+            
+            self._job_key.SetVariable( 'status', 'parsing html' )
+            
+            try: urls = ClientParsers.ParsePage( html, url )
+            except: raise Exception( 'Could not parse that URL\'s html' )
+            
+            queue = urls
+            
+            self._job_key.SetVariable( 'queue', queue )
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'status', HC.u( e ) )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+        finally: self._job_key.Finish()
+        
+    
+class ImportQueueGeneratorThread( ImportQueueGenerator ):
+    
+    def __call__( self ):
+        
+        try:
+            
+            ( board, thread_id ) = self._item
+            
+            last_thread_check = 0
+            image_infos_already_added = set()
+            
+            while True:
+            
+                if self._job_key.IsPaused():
+                    
+                    self._job_key.SetVariable( 'status', 'paused' )
+                    
+                    self._job_key.WaitOnPause()
+                    
+                
+                if self._job_key.IsCancelled(): break
+                
+                thread_time = self._job_key.GetVariable( 'thread_time' )
+                
+                if thread_time < 30: thread_time = 30
+                
+                next_thread_check = last_thread_check + thread_time
+                
+                if next_thread_check < HC.GetNow():
+                    
+                    self._job_key.SetVariable( 'status', 'checking thread' )
+                    
+                    url = 'http://api.4chan.org/' + board + '/res/' + thread_id + '.json'
+                    
+                    try:
+                        
+                        connection = HC.get_connection( url = url )
+                        
+                        raw_json = connection.geturl( url )
+                        
+                        json_dict = json.loads( raw_json )
+                        
+                        posts_list = json_dict[ 'posts' ]
+                        
+                        image_infos = [ ( post[ 'md5' ].decode( 'base64' ), board, HC.u( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
+                        
+                        image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in image_infos_already_added ]
+                        
+                        image_infos_already_added.update( image_infos_i_can_add )
+                        
+                        if len( image_infos_i_can_add ) > 0:
+                            
+                            queue = self._job_key.GetVariable( 'queue' )
+                            
+                            queue = list( queue )
+                            
+                            queue.extend( image_infos_i_can_add )
+                            
+                            self._job_key.SetVariable( 'queue', queue )
+                            
+                        
+                    except HydrusExceptions.NotFoundException: raise Exception( 'Thread 404' )
+                    
+                    last_thread_check = HC.GetNow()
+                    
+                else: self._job_key.SetVariable( 'status', 'rechecking thread ' + HC.ConvertTimestampToPrettyPending( next_thread_check ) )
+                
+                
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'status', HC.u( e ) )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+        finally: self._job_key.Finish()
+        
+    
+    
+class ImportController():
+    
+    def __init__( self, import_args_generator_factory, import_queue_generator_factory, page_key = None ):
+        
+        self._controller_job_key = self._GetNewJobKey( 'controller' )
+        
+        self._import_args_generator_factory = import_args_generator_factory
+        self._import_queue_generator_factory = import_queue_generator_factory
         self._page_key = page_key
-        self._import_args_generator = import_args_generator
         
-        self._queue_is_done = False
-        
-        self._queue = []
-        
-        self._paused = False
-        
-        self._current_position = 0
+        self._import_job_key = self._GetNewJobKey( 'import' )
+        self._import_queue_position_job_key = self._GetNewJobKey( 'import_queue_position' )
+        self._import_queue_job_key = self._GetNewJobKey( 'import_queue' )
+        self._pending_import_queue_jobs = []
         
         self._lock = threading.Lock()
         
-        HC.pubsub.sub( self, 'SetPaused', 'pause_import_queue_processor' )
-        
     
-    def AddToQueue( self, queue_objects ):
+    def _GetNewJobKey( self, type ):
         
-        with self._lock: self._queue.extend( queue_objects )
+        job_key = HC.JobKey()
         
-    
-    def QueueIsDone( self ): self._queue_is_done = True
-    
-    def SetPaused( self, status ): self._paused = status
-    
-    def ToTuple( self ):
-        
-        with self._lock: return ( self._current_position, len( self._queue ) )
-        
-    
-    def ProcessQueue( self ):
-        
-        while not self._queue_is_done:
+        if type == 'controller':
             
-            with self._lock: queue_length = len( self._queue )
+            job_key.SetVariable( 'num_successful', 0 )
+            job_key.SetVariable( 'num_failed', 0 )
+            job_key.SetVariable( 'num_deleted', 0 )
+            job_key.SetVariable( 'num_redundant', 0 )
             
-            if not self._paused and self._current_position < queue_length:
+        else:
+            
+            job_key.SetVariable( 'status', '' )
+            
+            if type == 'import':
                 
-                with self._lock: queue_object = self._queue[ self._current_position ]
+                job_key.SetVariable( 'page_key', self._page_key )
+                job_key.SetVariable( 'range', 1 )
+                job_key.SetVariable( 'value', 0 )
                 
-                # reorder these params as is best
-                ( temp_path, url, tags, anything_else ) = self._path_generator( self._page_key, queue_object )
+            elif type == 'import_queue_position':
                 
-                # synchronously write import to db
+                job_key.SetVariable( 'queue_position', 0 )
                 
-                self._current_position += 1
+            elif type == 'import_queue':
+                
+                job_key.SetVariable( 'queue', [] )
                 
             
-            time.sleep( 1 )
+        
+        return job_key
+        
+    
+    def CleanBeforeDestroy( self ): self._controller_job_key.Cancel()
+    
+    def GetJobKey( self, type ):
+        
+        with self._lock:
+            
+            if type == 'controller': return self._controller_job_key
+            elif type == 'import': return self._import_job_key
+            elif type == 'import_queue_position': return self._import_queue_position_job_key
+            elif type == 'import_queue': return self._import_queue_job_key
             
         
     
-def PathGeneratorBooru( self, page_key, queue_object ):
+    def GetPendingImportQueues( self ):
+        
+        with self._lock: return self._pending_import_queue_jobs
+        
     
-    # unpack queue_object
-    # test url or whatever as appropriate
-    # fetch file, possibly with help of downloader or whatever!
-    # downloader should write file to path, returning temp_path
-    # we should return temp_path
+    def PendImportQueue( self, job ):
+        
+        with self._lock: self._pending_import_queue_jobs.append( job )
+        
     
-    pass
+    def RemovePendingImportQueue( self, job ):
+        
+        with self._lock:
+            
+            if job in self._pending_import_queue_jobs: self._pending_import_queue_jobs.remove( job )
+            
+        
+    
+    def MovePendingImportQueueUp( self, job ):
+        
+        with self._lock:
+            
+            if job in self._pending_import_queue_jobs:
+                
+                index = self._pending_import_queue_jobs.index( job )
+                
+                if index > 0:
+                    
+                    self._pending_import_queue_jobs.remove( job )
+                    
+                    self._pending_import_queue_jobs.insert( index - 1, job )
+                    
+                
+            
+        
+    
+    def MovePendingImportQueueDown( self, job ):
+        
+        with self._lock:
+            
+            if s in self._pending_import_queue_jobs:
+                
+                index = self._pending_import_queue_jobs.index( job )
+                
+                if index + 1 < len( self._pending_import_queue_jobs ):
+                    
+                    self._pending_import_queue_jobs.remove( job )
+                    
+                    self._pending_import_queue_jobs.insert( index + 1, job )
+                    
+                
+            
+        
+    
+    def MainLoop( self ):
+        
+        try:
+            
+            while not self._controller_job_key.IsDone():
+                
+                if self._controller_job_key.IsPaused():
+                    
+                    self._import_job_key.Pause()
+                    self._import_queue_position_job_key.Pause()
+                    self._import_queue_job_key.Pause()
+                    
+                    self._controller_job_key.WaitOnPause()
+                    
+                
+                with self._lock:
+                    
+                    queue_position = self._import_queue_position_job_key.GetVariable( 'queue_position' )
+                    queue = self._import_queue_job_key.GetVariable( 'queue' )
+            
+                    if self._import_job_key.IsDone():
+                        
+                        result = self._import_job_key.GetVariable( 'result' )
+                        
+                        variable_name = 'num_' + result
+                        
+                        num_result = self._controller_job_key.GetVariable( variable_name )
+                        
+                        self._controller_job_key.SetVariable( variable_name, num_result + 1 )
+                        
+                        self._import_job_key = self._GetNewJobKey( 'import' )
+                        
+                        queue_position += 1
+                        
+                        self._import_queue_position_job_key.SetVariable( 'queue_position', queue_position )
+                        
+                    
+                    position_string = HC.u( queue_position + 1 ) + '/' + HC.u( len( queue ) )
+                    
+                    if self._import_queue_position_job_key.IsPaused(): self._import_queue_position_job_key.SetVariable( 'status', 'paused at ' + position_string )
+                    elif self._import_queue_position_job_key.IsWorking():
+                        
+                        if self._import_job_key.IsWorking():
+                            
+                            self._import_queue_position_job_key.SetVariable( 'status', 'processing ' + position_string )
+                            
+                        else:
+                            
+                            if queue_position < len( queue ):
+                                
+                                self._import_queue_position_job_key.SetVariable( 'status', 'preparing ' + position_string )
+                                
+                                self._import_job_key.Begin()
+                                
+                                item = queue[ queue_position ]
+                                
+                                args_generator = self._import_args_generator_factory( self._import_job_key, item )
+                                
+                                threading.Thread( target = args_generator, name = 'Generate Import Args' ).start()
+                                
+                            else:
+                                
+                                if self._import_queue_job_key.IsWorking(): self._import_queue_position_job_key.SetVariable( 'status', 'waiting for more items' )
+                                else: self._import_queue_position_job_key.Finish()
+                                
+                            
+                        
+                    else:
+                        
+                        if self._import_queue_position_job_key.IsDone():
+                            
+                            if self._import_queue_position_job_key.IsCancelled(): status = 'cancelled at ' + position_string
+                            else: status = 'done'
+                            
+                            self._import_queue_position_job_key = self._GetNewJobKey( 'import_queue_position' )
+                            
+                            self._import_queue_job_key = self._GetNewJobKey( 'import_queue' )
+                            
+                        else: status = ''
+                        
+                        self._import_queue_position_job_key.SetVariable( 'status', status )
+                        
+                        if len( self._pending_import_queue_jobs ) > 0:
+                            
+                            self._import_queue_position_job_key.Begin()
+                            
+                            self._import_queue_job_key.Begin()
+                            
+                            item = self._pending_import_queue_jobs.pop( 0 )
+                            
+                            queue_generator = self._import_queue_generator_factory( self._import_queue_job_key, item )
+                            
+                            threading.Thread( target = queue_generator, name = 'Generate Import Items' ).start()
+                            
+                        
+                    
+                
+                time.sleep( 0.05 )
+                
+            
+        except Exception as e: HC.ShowException( e )
+        finally:
+            
+            self._import_job_key.Cancel()
+            self._import_queue_position_job_key.Cancel()
+            self._import_queue_job_key.Cancel()
+            
+        
+    
+    def StartThread( self ):
+        
+        threading.Thread( target = self.MainLoop ).start()
+        
     
 def THREADDownloadURL( job_key, url, message_string ):
     

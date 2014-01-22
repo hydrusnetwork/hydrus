@@ -433,7 +433,7 @@ class ConversationPanel( wx.Panel ):
             
             self._drafts_vbox.Detach( draft_panel )
             
-            draft_panel.Destroy()
+            draft_panel.Close()
             
             self._scrolling_messages_window.FitInside()
             
@@ -522,7 +522,7 @@ class ConversationSplitter( wx.SplitterWindow ):
                 
                 self.ReplaceWindow( self._conversation_panel, new_panel )
                 
-                self._conversation_panel.Destroy()
+                self._conversation_panel.Close()
                 
                 self._conversation_panel = new_panel
                 
@@ -694,7 +694,7 @@ class DestinationPanel( wx.Panel ):
         
         self._hbox.Replace( self._status_panel, new_status_panel )
         
-        self._status_panel.Destroy()
+        self._status_panel.Close()
         
         self._status_panel = new_status_panel
         
@@ -1285,7 +1285,7 @@ class DraftPanel( wx.Panel ):
                 
                 message = 'The hydrus client could not connect to your message depot, so the message could not be sent!'
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                HC.ShowText( message )
                 
                 return
                 
@@ -1413,7 +1413,7 @@ class MessagePanel( wx.Panel ):
             
             self._hbox.Replace( self._body_panel, body_panel )
             
-            self._body_panel.Destroy()
+            self._body_panel.Close()
             
             self._body_panel = body_panel
             

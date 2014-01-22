@@ -222,7 +222,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                     message += os.linesep + os.linesep
                     message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
                     
-                    with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'quit now' ) as dlg:
+                    with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
                         else: raise HydrusExceptions.PermissionException()
@@ -288,7 +288,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             self.SetSplashText( 'starting daemons' )
             
             if HC.is_first_start: self._gui.DoFirstStart()
-            if HC.is_db_updated: wx.CallLater( 1, HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' ) )
+            if HC.is_db_updated: wx.CallLater( 1, HC.ShowText, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
             
             self.RestartServer()
             self._db.StartDaemons()
@@ -315,13 +315,13 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
             wx.MessageBox( 'Woah, bad error:' + os.linesep + os.linesep + traceback.format_exc() )
             
-            try: self._splash.Close()
-            except: pass
-            
             init_result = False
             
-        
-        self._splash.Close()
+        finally:
+            
+            try: self._splash.Destroy()
+            except: pass
+            
         
         return init_result
         
@@ -367,7 +367,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                         
                         message = 'Something was already bound to port ' + HC.u( port )
                         
-                        wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                        wx.CallLater( 1, HC.ShowText, message )
                         
                     except:
                         
@@ -386,7 +386,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                             
                             message = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
                             
-                            wx.CallAfter( HC.pubsub.pub, 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                            wx.CallLater( 1, HC.ShowText, message )
                             
                         
                     
@@ -427,7 +427,7 @@ Once it is done, the client will restart.'''
                         
                         self._gui.Hide()
                         
-                        self._gui.Destroy()
+                        self._gui.Close()
                         
                         self._db.Shutdown()
                         

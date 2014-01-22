@@ -2279,11 +2279,11 @@ class DialogInputLocalFiles( Dialog ):
                             
                             message = 'Tried to read a key, but did not understand it.'
                             
-                            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+                            HC.ShowText( message )
                             
                         
                     
-                    job = HC.Job()
+                    job_key = HC.JobKey()
                     
                     def WXTHREADGetAESKey():
                         
@@ -2301,11 +2301,11 @@ class DialogInputLocalFiles( Dialog ):
                                         
                                         ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
                                         
-                                        job.PutResult( ( aes_key, iv ) )
+                                        job_key.SetVariable( 'result', ( aes_key, iv ) )
                                         
                                     except: wx.MessageBox( 'Did not understand that key!' )
                                     
-                                elif result == wx.ID_CANCEL: job.PutResult( ( None, None ) )
+                                elif result == wx.ID_CANCEL: job_key.SetVariable( 'result', ( None, None ) )
                                 
                             
                         
@@ -2314,7 +2314,14 @@ class DialogInputLocalFiles( Dialog ):
                         
                         wx.CallAfter( WXTHREADGetAESKey )
                         
-                        ( aes_key, iv ) = job.GetResult()
+                        while not job_key.HasVariable( 'result' ):
+                            
+                            if job_key.IsCancelled(): return
+                            
+                            time.sleep( 0.1 )
+                            
+                        
+                        ( aes_key, iv ) = job_key.GetVariable( 'result' )
                         
                     
                     if aes_key is not None:

@@ -20,7 +20,6 @@ import traceback
 import urllib
 import wx
 import yaml
-import zipfile
 
 # Option Enums
 

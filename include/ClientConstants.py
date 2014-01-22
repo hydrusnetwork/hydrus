@@ -25,7 +25,6 @@ import urlparse
 import urllib
 import yaml
 import wx
-import zipfile
 import zlib
 
 ID_NULL = wx.NewId()
@@ -331,7 +330,7 @@ def CatchExceptionClient( etype, value, tb ):
         try: message += traceback.format_exc()
         except: pass
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, message ) )
+        HC.ShowText( message )
         
     
 def GenerateCollectByChoices( sort_by_choices ):
@@ -629,16 +628,34 @@ def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_I
     
 def ShowExceptionClient( e ):
     
+    if not wx.Thread_IsMain():
+        
+        ( etype, value, tb ) = sys.exc_info()
+        
+        if etype is not None: e = type( e )( os.linesep.join( traceback.format_exception( etype, value, tb ) ) )
+        
+    
     etype = type( e )
     
-    value = HC.u( e )
-    
-    trace_list = traceback.format_stack()
-    
-    trace = ''.join( trace_list )
+    if etype == HydrusExceptions.DBException:
+        
+        value = ''
+        
+        trace = HC.u( e )
+        
+    else:
+        
+        value = HC.u( e )
+        
+        trace_list = traceback.format_stack()
+        
+        trace = ''.join( trace_list )
+        
     
     HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
     
+def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, text ) )
+
 class AutocompleteMatches():
     
     def __init__( self, matches ):
@@ -1883,26 +1900,6 @@ fourchan_imageboards.append( Imageboard( '/y/', 'https://sys.4chan.org/y/post', 
 fourchan_imageboards.append( Imageboard( '/vp/', 'https://sys.4chan.org/vp/post', 75, fourchan_spoiler_form_fields, fourchan_typical_restrictions ) )
 
 DEFAULT_IMAGEBOARDS.append( ( '4chan', fourchan_imageboards ) )
-
-class Job( threading.Thread ):
-    
-    def __init__( self, job_key, name ):
-        
-        threading.Thread.__init__( self, name = name )
-        
-        self._job_key = job_key
-        
-    
-    def _NotifyAllDone( self ): pass
-    
-    def _NotifyPartDone( self, i ): pass
-    
-    def _NotifyStart( self ): pass
-    
-    def run( self ):
-        
-        pass # think about this more
-        
 
 class Log():
     

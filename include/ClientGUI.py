@@ -81,7 +81,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         HC.pubsub.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         HC.pubsub.sub( self, 'NewCompose', 'new_compose_frame' )
-        HC.pubsub.sub( self, 'NewPageImportBooru', 'new_page_import_booru' )
         HC.pubsub.sub( self, 'NewPageImportGallery', 'new_page_import_gallery' )
         HC.pubsub.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         HC.pubsub.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
@@ -335,7 +334,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 HC.app.Write( 'update_services', edit_log )
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, 'Auto repo setup done!' ) )
+                HC.ShowText( 'Auto repo setup done!' )
                 
             
         
@@ -501,14 +500,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _CloseAllPages( self ):
-        
-        while self._notebook.GetPageCount() > 0:
-            
-            self._CloseCurrentPage( polite = False )
-            
-        
-    
     def _CloseCurrentPage( self, polite = True ):
         
         selection = self._notebook.GetSelection()
@@ -525,7 +516,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if polite:
             
-            try: page.TryToClose()
+            try: page.TestAbleToClose()
             except: return
             
         
@@ -544,9 +535,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.RefreshMenuBar()
         
     
-    def _DeleteAllPages( self ):
+    def _DeleteAllClosedPages( self ):
         
-        for ( time_closed, selection, name, page ) in self._closed_pages: wx.CallAfter( page.Destroy )
+        for ( time_closed, selection, name, page ) in self._closed_pages: self._DestroyPage( page )
         
         self._closed_pages = []
         
@@ -561,6 +552,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_identifier )
             
+        
+    
+    def _DestroyPage( self, page ):
+        
+        page.Hide()
+        
+        page.CleanBeforeDestroy()
+        
+        page.Destroy()
         
     
     def _FetchIP( self, service_identifier ):
@@ -610,11 +610,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
                 
-                try: page.TryToClose()
+                try: page.TestAbleToClose()
                 except: return
                 
             
-            self._CloseAllPages()
+            while self._notebook.GetPageCount() > 0:
+                
+                self._CloseCurrentPage( polite = False )
+                
             
             for ( page_name, c_text, args, kwargs ) in info:
                 
@@ -758,30 +761,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _NewPageImportBooru( self ):
+    def _NewPageImportGallery( self, name, type ):
         
-        with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                booru = dlg.GetBooru()
-                
-                new_page = ClientGUIPages.PageImportBooru( self._notebook, booru )
-                
-                self._notebook.AddPage( new_page, booru.GetName(), select = True )
-                
-                self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-                
-                new_page.SetSearchFocus()
-                
-            
+        new_page = ClientGUIPages.PageImportGallery( self._notebook, name, type )
         
-    
-    def _NewPageImportGallery( self, name ):
+        if name == 'booru': page_name = type.GetName()
+        elif type is None: page_name = name
+        else: page_name = name + ' by ' + type
         
-        new_page = ClientGUIPages.PageImportGallery( self._notebook, name )
-        
-        self._notebook.AddPage( new_page, name, select = True )
+        self._notebook.AddPage( new_page, page_name, select = True )
         
         self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
         
@@ -1176,7 +1164,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         for ( time_closed, index, name, page ) in self._closed_pages:
             
-            if time_closed + timeout < now: page.Destroy()
+            if time_closed + timeout < now: self._DestroyPage( page )
             else: new_closed_pages.append( ( time_closed, index, name, page ) )
             
         
@@ -1226,14 +1214,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
-            try: page.TryToClose()
+            try: page.TestAbleToClose()
+            except Exception as e: return
+            
+        
+        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
+            
+            try: page.CleanBeforeDestroy()
             except: return
             
         
-        self._DeleteAllPages()
-        
-        self._message_manager.CleanUp()
-        self._message_manager.Destroy()
+        self._message_manager.CleanBeforeDestroy()
+        self._message_manager.Hide()
         
         self.Hide()
         
@@ -1302,7 +1294,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 print( 'garbage: ' + HC.u( gc.garbage ) )
                 
-            elif command == 'delete_all_pages': self._DeleteAllPages()
+            elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
             elif command == 'delete_gui_session': HC.app.Write( 'gui_session', data, None )
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
@@ -1330,7 +1322,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_upnp': self._ManageUPnP( data )
             elif command == 'modify_account': self._ModifyAccount( data )
             elif command == 'new_accounts': self._GenerateNewAccounts( data )
-            elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
             elif command == 'new_log_page': self._NewPageLog()
@@ -1418,9 +1409,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         FrameComposeMessage( empty_draft_message )
         
     
-    def NewPageImportBooru( self ): self._NewPageImportBooru()
-    
-    def NewPageImportGallery( self, name ): self._NewPageImportGallery( name )
+    def NewPageImportGallery( self, gallery_name, gallery_type ): self._NewPageImportGallery( gallery_name, gallery_type )
     
     def NewPageImportHDD( self, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False ):
         
@@ -1578,7 +1567,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 undo_pages = wx.Menu()
                 
-                undo_pages.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_all_pages' ), 'clear all' )
+                undo_pages.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_all_closed_pages' ), 'clear all' )
                 
                 undo_pages.AppendSeparator()
                 
@@ -1882,12 +1871,12 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
     
     def DeleteConversation( self, conversation_key ):
         
-        if self._draft_panel.GetConversationKey() == conversation_key: self.Destroy()
+        if self._draft_panel.GetConversationKey() == conversation_key: self.Close()
         
     
     def DeleteDraft( self, draft_key ):
         
-        if draft_key == self._draft_panel.GetDraftKey(): self.Destroy()
+        if draft_key == self._draft_panel.GetDraftKey(): self.Close()
         
     
 class FramePageChooser( ClientGUICommon.Frame ):
@@ -1993,7 +1982,13 @@ class FramePageChooser( ClientGUICommon.Frame ):
             button.SetLabel( name )
             
         elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
-        elif entry_type == 'page_import_gallery': button.SetLabel( obj )
+        elif entry_type == 'page_import_gallery':
+            
+            ( name, type ) = obj
+            
+            if type is None: button.SetLabel( name )
+            else: button.SetLabel( name + ' by ' + type )
+            
         elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
         elif entry_type == 'page_import_url': button.SetLabel( 'url' )
         
@@ -2019,16 +2014,16 @@ class FramePageChooser( ClientGUICommon.Frame ):
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
             
-            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', 'giphy' ), ( 'page_import_gallery', 'deviant art by artist' ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', 'newgrounds' ) ]
+            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', None ) ), ( 'page_import_gallery', ( 'deviant art', 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', None ) ) ]
             
             ( id, password ) = HC.app.Read( 'pixiv_account' )
             
             if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
             
-            entries.extend( [ ( 'page_import_gallery', 'tumblr' ) ] )
+            entries.extend( [ ( 'page_import_gallery', ( 'tumblr', None ) ) ] )
             
-        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', 'hentai foundry by artist' ), ( 'page_import_gallery', 'hentai foundry by tags' ) ]
-        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', 'pixiv by artist' ), ( 'page_import_gallery', 'pixiv by tag' ) ]
+        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry', 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry', 'tags' ) ) ]
+        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
         elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
         
         if len( entries ) <= 4:
@@ -2067,13 +2062,29 @@ class FramePageChooser( ClientGUICommon.Frame ):
             else:
                 
                 if entry_type == 'page_query': HC.pubsub.pub( 'new_page_query', obj )
-                elif entry_type == 'page_import_booru': HC.pubsub.pub( 'new_page_import_booru' )
-                elif entry_type == 'page_import_gallery': HC.pubsub.pub( 'new_page_import_gallery', obj )
+                elif entry_type == 'page_import_booru':
+                    
+                    with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            booru = dlg.GetBooru()
+                            
+                            HC.pubsub.pub( 'new_page_import_gallery', 'booru', booru )
+                            
+                        
+                    
+                elif entry_type == 'page_import_gallery':
+                    
+                    ( gallery_name, gallery_type ) = obj
+                    
+                    HC.pubsub.pub( 'new_page_import_gallery', gallery_name, gallery_type )
+                    
                 elif entry_type == 'page_import_thread_watcher': HC.pubsub.pub( 'new_page_import_thread_watcher' )
                 elif entry_type == 'page_import_url': HC.pubsub.pub( 'new_page_import_url' )
                 elif entry_type == 'page_petitions': HC.pubsub.pub( 'new_page_petitions', obj )
                 
-                self.Destroy()
+                self.Close()
                 
             
         
@@ -2090,7 +2101,7 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
             self.ProcessEvent( new_event )
             
-        elif event.KeyCode == wx.WXK_ESCAPE: self.Destroy()
+        elif event.KeyCode == wx.WXK_ESCAPE: self.Close()
         else: event.Skip()
         
     
@@ -2218,7 +2229,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         HC.options[ 'pause_repo_sync' ] = original_pause_status
         
     
-    def EventOk( self, event ): self.Destroy()
+    def EventOk( self, event ): self.Close()
     
     def RefreshServices( self ): self._InitialiseServices()
     

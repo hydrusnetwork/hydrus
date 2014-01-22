@@ -45,7 +45,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 99
+SOFTWARE_VERSION = 100
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1037,23 +1037,6 @@ def ConvertZoomToPercentage( zoom ):
     
     return pretty_zoom
     
-def ShowExceptionDefault( e ):
-    
-    etype = type( e )
-    
-    value = u( e )
-    
-    trace_list = traceback.format_stack()
-    
-    trace = ''.join( trace_list )
-    
-    message = u( etype.__name__ ) + ': ' + u( value ) + os.linesep + u( trace )
-    
-    try: print( message )
-    except: print( repr( message ) )
-    
-ShowException = ShowExceptionDefault
-
 def GetEmptyDataDict():
     
     data = collections.defaultdict( default_dict_list )
@@ -1114,20 +1097,6 @@ def MergeKeyToListDicts( key_to_list_dicts ):
         
     
     return result
-
-def u( text_producing_object ):
-    
-    if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ): text = text_producing_object
-    else:
-        try: text = str( text_producing_object ) # dealing with exceptions, etc...
-        except: text = repr( text_producing_object )
-    
-    try: return unicode( text )
-    except:
-        
-        try: return text.decode( locale.getpreferredencoding() )
-        except: return str( text )
-        
     
 def SearchEntryMatchesPredicate( search_entry, predicate ):
     
@@ -1168,6 +1137,29 @@ def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
     
     return False
     
+def ShowExceptionDefault( e ):
+    
+    etype = type( e )
+    
+    value = u( e )
+    
+    trace_list = traceback.format_stack()
+    
+    trace = ''.join( trace_list )
+    
+    message = u( etype.__name__ ) + ': ' + u( value ) + os.linesep + u( trace )
+    
+    try: print( message )
+    except: print( repr( message ) )
+    
+ShowException = ShowExceptionDefault
+
+def ShowTextDefault( text ):
+    
+    print( text )
+    
+ShowText = ShowTextDefault
+
 def SplayListForDB( xs ): return '(' + ','.join( [ '"' + u( x ) + '"' for x in xs ] ) + ')'
 
 def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + u( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
@@ -1190,7 +1182,21 @@ def ThumbnailResolution( original_resolution, target_resolution ):
         
     
     return ( int( round( original_width ) ), int( round( original_height ) ) )
-
+    
+def u( text_producing_object ):
+    
+    if type( text_producing_object ) in ( str, unicode, bs4.element.NavigableString ): text = text_producing_object
+    else:
+        try: text = str( text_producing_object ) # dealing with exceptions, etc...
+        except: text = repr( text_producing_object )
+    
+    try: return unicode( text )
+    except:
+        
+        try: return text.decode( locale.getpreferredencoding() )
+        except: return str( text )
+        
+    
 class AdvancedHTTPConnection():
     
     def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
@@ -2043,15 +2049,27 @@ class DAEMONWorker( DAEMON ):
     
     def set( self, *args, **kwargs ): self._event.set()
     
-class Job():
+class JobDatabase():
     
-    yaml_tag = u'!Job'
+    yaml_tag = u'!JobDatabase'
     
-    def __init__( self ):
+    def __init__( self, action, type, synchronous, *args, **kwargs ):
+        
+        self._action = action
+        self._type = type
+        self._synchronous = synchronous
+        self._args = args
+        self._kwargs = kwargs
         
         self._result = None
         self._result_ready = threading.Event()
         
+    
+    def GetAction( self ): return self._action
+    
+    def GetArgs( self ): return self._args
+    
+    def GetKWArgs( self ): return self._kwargs
     
     def GetResult( self ):
         
@@ -2069,12 +2087,18 @@ class Job():
             
             trace_list = traceback.format_stack()
             
-            my_trace = ''.join( trace_list )
+            my_trace = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
             
-            raise etype( my_trace + os.linesep + db_traceback )
+            full_message = os.linesep.join( ( 'GUI Thread:', my_trace, 'DB Thread:', db_traceback ) )
+            
+            raise HydrusExceptions.DBException( full_message )
             
         else: return self._result
         
+    
+    def GetType( self ): return self._type
+    
+    def IsSynchronous( self ): return self._synchronous
     
     def PutResult( self, result ):
         
@@ -2082,31 +2106,6 @@ class Job():
         
         self._result_ready.set()
         
-    
-class JobInternal( Job ):
-    
-    yaml_tag = u'!JobInternal'
-    
-    def __init__( self, action, type, synchronous, *args, **kwargs ):
-        
-        Job.__init__( self )
-        
-        self._action = action
-        self._type = type
-        self._synchronous = synchronous
-        self._args = args
-        self._kwargs = kwargs
-        
-    
-    def GetAction( self ): return self._action
-    
-    def GetArgs( self ): return self._args
-    
-    def GetKWArgs( self ): return self._kwargs
-    
-    def GetType( self ): return self._type
-    
-    def IsSynchronous( self ): return self._synchronous
     
 class JobKey():
     
@@ -2118,6 +2117,9 @@ class JobKey():
         self._done = threading.Event()
         self._cancelled = threading.Event()
         self._paused = threading.Event()
+        
+        self._variable_lock = threading.Lock()
+        self._variables = dict()
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
@@ -2139,13 +2141,23 @@ class JobKey():
     
     def GetKey( self ): return self._key
     
+    def GetVariable( self, name ):
+        
+        with self._variable_lock: return self._variables[ name ]
+        
+    
+    def HasVariable( self, name ):
+        
+        with self._variable_lock: return name in self._variables
+        
+    
     def IsBegun( self ): return self._begun.is_set()
     
-    def IsCancelled( self ): return self._cancelled.is_set()
+    def IsCancelled( self ): return shutdown or self._cancelled.is_set()
     
-    def IsDone( self ): return self._done.is_set()
+    def IsDone( self ): return shutdown or self._done.is_set()
     
-    def IsPaused( self ): return self.IsWorking() and self._paused.is_set()
+    def IsPaused( self ): return self._paused.is_set()
     
     def IsWorking( self ): return self.IsBegun() and not self.IsDone()
     
@@ -2159,14 +2171,71 @@ class JobKey():
     
     def Resume( self ): self._paused.clear()
     
+    def SetVariable( self, name, value ):
+        
+        with self._variable_lock: self._variables[ name ] = value
+        
+    
     def WaitOnPause( self ):
         
         while self._paused.is_set():
             
             time.sleep( 0.1 )
             
-            if shutdown or self.IsCancelled() or self.IsDone(): return
+            if shutdown or self.IsDone(): return
             
+        
+    
+class JobNetwork():
+    
+    yaml_tag = u'!JobNetwork'
+    
+    def __init__( self, request_type, request, headers = {}, body = None, response_to_path = False, redirects_permitted = 4, service_identifier = None ):
+        
+        self._request_type = request_type
+        self._request = request
+        self._headers = headers
+        self._body = body
+        self._response_to_path = response_to_path
+        self._redirects_permitted = redirects_permitted
+        self._service_identifier = service_identifier
+        
+        self._result = None
+        self._result_ready = threading.Event()
+        
+    
+    def ToTuple( self ): return ( self._request_type, self._request, self._headers, self._body, self._response_to_path, self._redirects_permitted, self._service_identifier )
+    
+    def GetResult( self ):
+        
+        while True:
+            
+            if self._result_ready.wait( 5 ) == True: break
+            elif shutdown: raise Exception( 'Application quit before network could serve result!' )
+            
+        
+        if issubclass( type( self._result ), Exception ):
+            
+            etype = type( self._result )
+            
+            network_traceback = unicode( self._result )
+            
+            trace_list = traceback.format_stack()
+            
+            my_trace = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
+            
+            full_message = os.linesep.join( ( 'Calling Thread:', my_trace, 'Network Thread:', network_traceback ) )
+            
+            raise etype( full_message )
+            
+        else: return self._result
+        
+    
+    def PutResult( self, result ):
+        
+        self._result = result
+        
+        self._result_ready.set()
         
     
 class Message():
