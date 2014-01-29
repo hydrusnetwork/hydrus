@@ -121,11 +121,7 @@ class HydrusSessionManagerClient():
             
             service = HC.app.Read( 'service', service_identifier )
             
-            connection = service.GetConnection()
-            
-            connection.Get( 'session_key' )
-            
-            cookies = connection.GetCookies()
+            ( response, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
             
             try: session_key = cookies[ 'session_key' ].decode( 'hex' )
             except: raise Exception( 'Service did not return a session key!' )
@@ -296,12 +292,7 @@ class WebSessionManagerClient():
             
             if name == 'hentai foundry':
                 
-                connection = HC.get_connection( url = 'http://www.hentai-foundry.com', accept_cookies = True )
-                
-                # this establishes the php session cookie, the csrf cookie, and tells hf that we are 18 years of age
-                connection.request( 'GET', '/?enterAgree=1' )
-                
-                cookies = connection.GetCookies()
+                ( response_gumpf, cookies ) = HC.http.Request( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
                 
                 expiry = now + 60 * 60
                 
@@ -313,8 +304,6 @@ class WebSessionManagerClient():
                     
                     raise Exception( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
                     
-                
-                connection = HC.get_connection( url = 'http://www.pixiv.net', accept_cookies = True )
                 
                 form_fields = {}
                 
@@ -328,13 +317,10 @@ class WebSessionManagerClient():
                 headers = {}
                 headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
                 
-                # this logs in and establishes the php session cookie
-                response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
-                
-                cookies = connection.GetCookies()
+                ( response_gumpf, cookies ) = HC.http.Request( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
                 
                 # _ only given to logged in php sessions
-                if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Login credentials not accepted!' )
+                if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]: raise Exception( 'Pixiv login credentials not accepted!' )
                 
                 expiry = now + 30 * 86400
                 

@@ -3,6 +3,7 @@ import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusNetworking
 import HydrusImageHandling
 import HydrusSessions
 import HydrusServer
@@ -168,6 +169,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
     def OnInit( self ):
     
         HC.app = self
+        HC.http = HydrusNetworking.HTTPConnectionManager()
         
         self._local_service = None
         self._server = None

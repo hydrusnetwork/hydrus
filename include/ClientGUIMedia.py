@@ -2026,7 +2026,7 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_left' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
-        ( wx.ACCEL_CMD, ord( 'A' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ) ),
+        ( wx.ACCEL_CTRL, ord( 'A' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ) ),
         ( wx.ACCEL_CTRL, ord( 'c' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' )  ),
         ( wx.ACCEL_CTRL, wx.WXK_SPACE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ctrl-space' )  )
         ]

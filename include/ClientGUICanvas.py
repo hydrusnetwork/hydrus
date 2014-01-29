@@ -585,7 +585,7 @@ class Canvas():
                     
                     self._media_container.Hide()
                     
-                    self._media_container.Close()
+                    wx.CallAfter( self._media_container.Destroy )
                     
                     self._media_container = None
                     
@@ -1030,7 +1030,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         HC.pubsub.pub( 'set_focus', self._page_key, self._current_media )
         
-        self.Destroy()
+        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False )
+        
+        wx.CallAfter( self.Destroy )
         
     
     def EventDrag( self, event ):
@@ -1154,7 +1156,6 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
-        
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         if first_hash is None: self.SetMedia( self._GetFirst() )
@@ -3012,7 +3013,9 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         HC.pubsub.pub( 'set_focus', self._page_key, self._current_media_to_rate )
         
-        self.Destroy()
+        if HC.PLATFORM_OSX and self.IsFullScreen(): self.ShowFullScreen( False )
+        
+        wx.CallAfter( self.Destroy )
         
     
     def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()

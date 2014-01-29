@@ -540,9 +540,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             service = HC.app.Read( 'service', service_identifier )
             
-            connection = service.GetConnection()
-            
-            response = connection.Get( 'account_types' )
+            response = service.Request( HC.GET, 'account_types' )
             
             account_types = response[ 'account_types' ]
             
@@ -605,10 +603,11 @@ class DialogGenerateNewAccounts( Dialog ):
         
         try:
             
-            connection = service.GetConnection()
+            request_args = { 'num' : num, 'title' : title }
             
-            if lifetime is None: response = connection.Get( 'registration_keys', num = num, title = title )
-            else: response = connection.Get( 'registration_keys', num = num, title = title, lifetime = lifetime )
+            if lifetime is not None: request_args[ 'lifetime' ] = lifetime
+            
+            response = service.Request( HC.GET, 'registration_keys', request_args )
             
             registration_keys = response[ 'registration_keys' ]
             
@@ -3254,13 +3253,11 @@ class DialogModifyAccounts( Dialog ):
     
         def PopulateControls():
             
-            connection = self._service.GetConnection()
-            
             if len( self._subject_identifiers ) == 1:
                 
                 ( subject_identifier, ) = self._subject_identifiers
                 
-                response = connection.Get( 'account_info', subject_identifier = subject_identifier )
+                response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
                 
                 subject_string = HC.u( response[ 'account_info' ] )
                 
@@ -3270,7 +3267,7 @@ class DialogModifyAccounts( Dialog ):
             
             #
             
-            response = connection.Get( 'account_types' )
+            response = self._service.Request( HC.GET, 'account_types' )
             
             account_types = response[ 'account_types' ]
             
@@ -3359,18 +3356,18 @@ class DialogModifyAccounts( Dialog ):
     
     def _DoModification( self, action, **kwargs ):
         
-        connection = self._service.GetConnection()
+        request_args = kwargs
         
-        kwargs[ 'subject_identifiers' ] = self._subject_identifiers
-        kwargs[ 'action' ] = action
+        request_args[ 'subject_identifiers' ] = self._subject_identifiers
+        request_args[ 'action' ] = action
         
-        connection.Post( 'account', **kwargs )
+        self._service.Request( HC.POST, 'account', request_args )
         
         if len( self._subject_identifiers ) == 1:
             
             ( subject_identifier, ) = self._subject_identifiers
             
-            response = connection.Get( 'account_info', subject_identifier = subject_identifier )
+            response = self._service.Request( HC.GET, 'account_info', { 'subject_identifier' : subject_identifier } )
             
             account_info = response[ 'account_info' ]
             

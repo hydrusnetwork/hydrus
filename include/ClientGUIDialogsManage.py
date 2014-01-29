@@ -216,9 +216,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
             service = HC.app.Read( 'service', service_identifier )
             
-            connection = service.GetConnection()
-            
-            response = connection.Get( 'account_types' )
+            response = service.Request( HC.GET, 'account_types' )
             
             account_types = response[ 'account_types' ]
             
@@ -394,9 +392,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         
         service = HC.app.Read( 'service', self._service_identifier )
         
-        connection = service.GetConnection()
-        
-        connection.Post( 'account_types', edit_log = self._edit_log )
+        service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
         
         self.EndModal( wx.ID_OK )
         
@@ -3600,11 +3596,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         headers = {}
         headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
-        connection = HC.get_connection( url = 'http://www.pixiv.net/', accept_cookies = True )
-        
-        response = connection.request( 'POST', '/login.php', headers = headers, body = body, follow_redirects = False )
-        
-        cookies = connection.GetCookies()
+        ( response_gumpf, cookies ) = HC.http.Request( HC.POST, 'http://www.pixiv.net/login.php', request_headers = headers, body = body, return_cookies = True )
         
         # _ only given to logged in php sessions
         if 'PHPSESSID' in cookies and '_' in cookies[ 'PHPSESSID' ]: self._status.SetLabel( 'OK!' )
@@ -4034,9 +4026,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             self._service_types.SetSelection( 0 )
             
-            connection = self._service.GetConnection()
-            
-            response = connection.Get( 'services' )
+            response = self._service.Request( HC.GET, 'services' )
             
             services_info = response[ 'services_info' ]
             
@@ -4170,11 +4160,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             if len( self._edit_log ) > 0:
                 
-                connection = self._service.GetConnection()
+                response = self._service.Request( HC.POST, 'services', { 'edit_log' : self._edit_log } )
                 
-                result = connection.Post( 'services', edit_log = self._edit_log )
-                
-                service_identifiers_to_access_keys = dict( result[ 'service_identifiers_to_access_keys' ] )
+                service_identifiers_to_access_keys = dict( response[ 'service_identifiers_to_access_keys' ] )
                 
                 HC.app.Write( 'update_server_services', self._service_identifier, self._edit_log, service_identifiers_to_access_keys )
                 
@@ -4859,43 +4847,35 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         def EventCheckService( self, event ):
             
             ( service_identifier, info ) = self.GetInfo()
-            
+        
             service_type = service_identifier.GetType()
             
-            host = info[ 'host' ]
-            port = info[ 'port' ]
+            service = CC.Service( service_identifier, info )
             
-            if 'access_key' in info: access_key = info[ 'access_key' ]
-            else: access_key = None
-            
-            credentials = CC.Credentials( host, port, access_key )
-            
-            try: connection = CC.ConnectionToService( service_identifier, credentials )
-            except:
-                
-                wx.MessageBox( 'Could not connect to the service!' )
-                
-                return
-                
-            
-            try: root = connection.Get( '' )
+            try: root = service.Request( HC.GET, '' )
             except HydrusExceptions.WrongServiceTypeException:
                 
                 wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ service_type ] + '.' )
                 
                 return
                 
+            except:
+                
+                wx.MessageBox( 'Could not connect!' )
+                
+                return
+                
             
             if service_type in HC.RESTRICTED_SERVICES:
                 
-                if access_key is None:
+                if 'access_key' not in info or info[ 'access_key' ] is None:
                     
                     wx.MessageBox( 'No access key!' )
                     
                     return
                     
                 
-                response = connection.Get( 'access_key_verification' )
+                response = service.Request( HC.GET, 'access_key_verification' )
                 
                 if not response[ 'verified' ]:
                     

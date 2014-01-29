@@ -4986,13 +4986,16 @@ class DB( ServiceDB ):
             c.execute( 'BEGIN IMMEDIATE' )
             
         
-        for ( service_id, info ) in c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
+        if version > 95:
             
-            if 'account' in info:
+            for ( service_id, info ) in c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
                 
-                info[ 'account' ].MakeStale()
-                
-                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                if 'account' in info:
+                    
+                    info[ 'account' ].MakeStale()
+                    
+                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    
                 
             
         
@@ -7017,8 +7020,6 @@ def DAEMONCheckImportFolders():
     
 def DAEMONDownloadFiles():
     
-    service_identifiers_to_connections = {}
-    
     hashes = HC.app.ReadDaemon( 'downloads' )
     
     num_downloads = len( hashes )
@@ -7044,15 +7045,9 @@ def DAEMONDownloadFiles():
                 
                 try:
                     
-                    if service_identifier not in service_identifiers_to_connections: service_identifiers_to_connections[ service_identifier ] = file_repository.GetConnection()
+                    request_args = { 'hash' : hash.encode( 'hex' ) }
                     
-                    connection = service_identifiers_to_connections[ service_identifier ]
-                    
-                    file = connection.Get( 'file', hash = hash.encode( 'hex' ) )
-                    
-                    temp_path = HC.GetTempPath()
-                    
-                    with open( temp_path, 'wb' ) as f: f.write( file )
+                    temp_path = file_repository.Request( HC.GET, 'file', request_args = request_args, response_to_path = True )
                     
                     num_downloads -= 1
                     
@@ -7102,8 +7097,6 @@ def DAEMONDownloadThumbnails():
                 
                 try:
                     
-                    connection = file_repository.GetConnection()
-                    
                     num_per_round = 50
                     
                     for i in range( 0, len( thumbnail_hashes_i_need ), num_per_round ):
@@ -7114,7 +7107,9 @@ def DAEMONDownloadThumbnails():
                         
                         for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]:
                             
-                            thumbnail = connection.Get( 'thumbnail', hash = hash.encode( 'hex' ) )
+                            request_args = { 'hash' : hash.encode( 'hex' ) }
+                            
+                            thumbnail = file_repository.Request( HC.GET, 'thumbnail', request_args = request_args )
                             
                             thumbnails.append( ( hash, thumbnail ) )
                             
@@ -7209,9 +7204,7 @@ def DAEMONSynchroniseAccounts():
             
             try:
                 
-                connection = service.GetConnection()
-                
-                response = connection.Get( 'account' )
+                response = service.Request( HC.GET, 'account' )
                 
                 account = response[ 'account' ]
                 
@@ -7437,100 +7430,95 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                 try: service = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
                 
-                if service.CanUpdate():
+                while service.CanUpdate():
                     
-                    connection = service.GetConnection()
-                    
-                    while service.CanUpdate():
+                    while HC.options[ 'pause_repo_sync' ]:
                         
-                        while HC.options[ 'pause_repo_sync' ]:
-                            
-                            HC.pubsub.pub( 'service_status', 'Repository synchronisation paused' )
-                            
-                            time.sleep( 5 )
-                            
-                            if HC.shutdown: raise Exception( 'Application shutting down!' )
-                            
-                            if HC.repos_or_subs_changed:
-                                
-                                HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
-                                
-                                HC.pubsub.pub( 'notify_restart_sync_daemon' )
-                                
-                                return
-                                
-                            
+                        HC.pubsub.pub( 'service_status', 'Repository synchronisation paused' )
+                        
+                        time.sleep( 5 )
                         
                         if HC.shutdown: raise Exception( 'Application shutting down!' )
                         
-                        first_begin = service.GetFirstBegin()
-                        
-                        next_begin = service.GetNextBegin()
-                        
-                        if first_begin == 0: update_index_string = 'initial update'
-                        else: update_index_string = 'update ' + HC.u( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
-                        
-                        prefix_string = name + ' ' + update_index_string + ': '
-                        
-                        HC.pubsub.pub( 'service_status', prefix_string + 'downloading and parsing' )
-                        
-                        update = connection.Get( 'update', begin = next_begin )
-                        
-                        if service_type == HC.TAG_REPOSITORY:
+                        if HC.repos_or_subs_changed:
                             
-                            HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
+                            HC.pubsub.pub( 'service_status', 'Sync daemon restarting' )
                             
-                            HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
+                            HC.pubsub.pub( 'notify_restart_sync_daemon' )
                             
-                        
-                        i = 0
-                        num_content_updates = update.GetNumContentUpdates()
-                        content_updates = []
-                        current_weight = 0
-                        
-                        for content_update in update.IterateContentUpdates():
+                            return
                             
-                            content_updates.append( content_update )
-                            
-                            current_weight += len( content_update.GetHashes() )
-                            
-                            i += 1
-                            
-                            if current_weight > 50:
-                                
-                                HC.pubsub.pub( 'service_status', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
-                                
-                                HC.app.WaitUntilGoodTimeToUseGUIThread()
-                                
-                                time.sleep( 0.0001 )
-                                
-                                HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
-                                
-                                content_updates = []
-                                current_weight = 0
-                                
-                            
-                        
-                        if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
-                        
-                        HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
-                        
-                        service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
-                        
-                        service_identifiers_to_service_updates = { service_identifier : service_updates }
-                        
-                        HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
-                        
-                        HC.pubsub.pub( 'notify_new_pending' )
-                        
-                        time.sleep( 0.10 )
-                        
-                        try: service = HC.app.ReadDaemon( 'service', service_identifier )
-                        except: break
                         
                     
-                    HC.pubsub.pub( 'service_status', '' )
+                    if HC.shutdown: raise Exception( 'Application shutting down!' )
                     
+                    first_begin = service.GetFirstBegin()
+                    
+                    next_begin = service.GetNextBegin()
+                    
+                    if first_begin == 0: update_index_string = 'initial update'
+                    else: update_index_string = 'update ' + HC.u( ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1 )
+                    
+                    prefix_string = name + ' ' + update_index_string + ': '
+                    
+                    HC.pubsub.pub( 'service_status', prefix_string + 'downloading and parsing' )
+                    
+                    update = service.Request( HC.GET, 'update', { 'begin' : next_begin } )
+                    
+                    if service_type == HC.TAG_REPOSITORY:
+                        
+                        HC.pubsub.pub( 'service_status', 'Generating tags for ' + name )
+                        
+                        HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
+                        
+                    
+                    i = 0
+                    num_content_updates = update.GetNumContentUpdates()
+                    content_updates = []
+                    current_weight = 0
+                    
+                    for content_update in update.IterateContentUpdates():
+                        
+                        content_updates.append( content_update )
+                        
+                        current_weight += len( content_update.GetHashes() )
+                        
+                        i += 1
+                        
+                        if current_weight > 50:
+                            
+                            HC.pubsub.pub( 'service_status', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
+                            
+                            HC.app.WaitUntilGoodTimeToUseGUIThread()
+                            
+                            time.sleep( 0.0001 )
+                            
+                            HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                            
+                            content_updates = []
+                            current_weight = 0
+                            
+                        
+                    
+                    if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                    
+                    HC.pubsub.pub( 'service_status', prefix_string + 'processing service info' )
+                    
+                    service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
+                    
+                    service_identifiers_to_service_updates = { service_identifier : service_updates }
+                    
+                    HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
+                    
+                    HC.pubsub.pub( 'notify_new_pending' )
+                    
+                    time.sleep( 0.10 )
+                    
+                    try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                    except: break
+                    
+                
+                HC.pubsub.pub( 'service_status', '' )
                 
             except Exception as e:
                 

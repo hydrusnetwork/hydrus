@@ -2972,7 +2972,7 @@ class Shortcut( wx.TextCtrl ):
             modifier = wx.ACCEL_NORMAL
             
             if event.AltDown(): modifier = wx.ACCEL_ALT
-            elif event.ControlDown(): modifier = wx.ACCEL_CTRL
+            elif event.CmdDown(): modifier = wx.ACCEL_CTRL
             elif event.ShiftDown(): modifier = wx.ACCEL_SHIFT
             
             ( self._modifier, self._key ) = HC.GetShortcutFromEvent( event )

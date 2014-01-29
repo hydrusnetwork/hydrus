@@ -4,6 +4,7 @@ import collections
 import cStringIO
 import httplib
 import HydrusExceptions
+import HydrusNetworking
 import HydrusPubSub
 import itertools
 import locale
@@ -45,7 +46,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 100
+SOFTWARE_VERSION = 101
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -57,9 +58,12 @@ lifetimes = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), (
 
 app = None
 shutdown = False
+
 is_first_start = False
 is_db_updated = False
 repos_or_subs_changed = False
+
+http = None
 
 busy_doing_pubsub = False
 
@@ -1050,7 +1054,7 @@ def GetShortcutFromEvent( event ):
     modifier = wx.ACCEL_NORMAL
     
     if event.AltDown(): modifier = wx.ACCEL_ALT
-    elif event.ControlDown(): modifier = wx.ACCEL_CTRL
+    elif event.CmdDown(): modifier = wx.ACCEL_CTRL
     elif event.ShiftDown(): modifier = wx.ACCEL_SHIFT
     
     key = event.KeyCode

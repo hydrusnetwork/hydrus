@@ -140,7 +140,7 @@ class FakePubSub():
     def sub( self, object, method_name, topic ): pass
     
     def WXpubimmediate( self, topic, *args, **kwargs ):
-        return
+        
         with self._lock:
         
             callables = self._GetCallables( topic )

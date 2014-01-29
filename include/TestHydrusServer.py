@@ -307,8 +307,6 @@ class TestServer( unittest.TestCase ):
         
         service_for_session_manager = CC.Service( service_identifier, info )
         
-        connection = service_for_session_manager.GetConnection()
-        
         HC.app.SetRead( 'service', service_for_session_manager )
         
         HC.app.SetRead( 'account', self._account )

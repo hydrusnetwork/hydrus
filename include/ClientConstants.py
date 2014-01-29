@@ -9,6 +9,7 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusMessageHandling
+import HydrusNetworking
 import HydrusTags
 import itertools
 import multipart
@@ -2109,8 +2110,6 @@ class Service( HC.HydrusYAMLBase ):
     
     def GetAccount( self ): return self._info[ 'account' ]
     
-    def GetConnection( self ): return ConnectionToService( self._service_identifier, self.GetCredentials() )
-    
     def GetCredentials( self ):
         
         host = self._info[ 'host' ]
@@ -2215,6 +2214,89 @@ class Service( HC.HydrusYAMLBase ):
                 
             
         
+    
+    def Request( self, method, command, request_args = {}, report_hooks = [], response_to_path = False, return_cookies = False ):
+        
+        try:
+            
+            credentials = self.GetCredentials()
+            
+            request_headers = {}
+            
+            if command == 'init': pass
+            elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
+            else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._service_identifier, request_headers )
+            
+            path = '/' + command
+            
+            if method == HC.GET:
+                
+                query = HydrusNetworking.ConvertHydrusGETArgsToQuery( request_args )
+                
+                body = ''
+                
+            elif method == HC.POST:
+                
+                query = ''
+                
+                if command == 'file':
+                    
+                    content_type = HC.APPLICATION_OCTET_STREAM
+                    
+                    body = request_args[ 'file' ]
+                    
+                else:
+                    
+                    content_type = HC.APPLICATION_YAML
+                    
+                    body = yaml.safe_dump( request_args )
+                    
+                
+                request_headers[ 'Content-Type' ] = HC.mime_string_lookup[ content_type ]
+                
+            
+            if query != '': path_and_query = path + '?' + query
+            else: path_and_query = path
+            
+            ( host, port ) = credentials.GetAddress()
+            
+            url = 'http://' + host + ':' + HC.u( port ) + path_and_query
+            
+            ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True )
+            
+            HydrusNetworking.CheckHydrusVersion( self._service_identifier, response_headers )
+            
+            if method == HC.GET: data_used = size_of_response
+            elif method == HC.POST: data_used = len( body )
+            
+            HydrusNetworking.DoHydrusBandwidth( self._service_identifier, method, command, data_used )
+            
+            if return_cookies: return ( response, cookies )
+            else: return response
+            
+        except Exception as e:
+            
+            if isinstance( e, HydrusExceptions.ForbiddenException ):
+                
+                if HC.u( e ) == 'Session not found!':
+                    
+                    session_manager = HC.app.GetManager( 'hydrus_sessions' )
+                    
+                    session_manager.DeleteSessionKey( self._service_identifier )
+                    
+                
+            
+            HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
+            
+            if isinstance( e, ( HydrusExceptions.PermissionException, HydrusExceptions.NetworkVersionException ) ):
+                
+                HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
+                
+            
+            raise
+            
+        
+    
     
     def SetCredentials( self, credentials ):
         

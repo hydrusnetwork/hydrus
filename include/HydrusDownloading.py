@@ -1280,23 +1280,13 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         url = 'http://images.4chan.org/' + board + '/src/' + image_name + ext
         
-        parse_result = urlparse.urlparse( url )
-        
-        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-        
-        connection = HC.get_connection( scheme = scheme, host = host, port = port )
-        
         def hook( range, value ):
             
             self._job_key.SetVariable( 'range', range )
             self._job_key.SetVariable( 'value', value )
             
         
-        connection.AddReportHook( hook )
-        
-        temp_path = connection.geturl( url, response_to_path = True )
-        
-        connection.ClearReportHooks()
+        temp_path = HC.http.Request( HC.GET, url, report_hooks = [ hook ], response_to_path = True )
         
         tags = [ 'filename:' + filename + ext ]
         
@@ -1332,23 +1322,13 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         self._job_key.SetVariable( 'status', 'downloading' )
         
-        parse_result = urlparse.urlparse( url )
-        
-        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-        
-        connection = HC.get_connection( scheme = scheme, host = host, port = port )
-        
         def hook( range, value ):
             
             self._job_key.SetVariable( 'range', range )
             self._job_key.SetVariable( 'value', value )
             
         
-        connection.AddReportHook( hook )
-        
-        temp_path = connection.geturl( url, response_to_path = True )
-        
-        connection.ClearReportHooks()
+        temp_path = HC.http.Request( HC.GET, url, report_hooks = [ hook ], response_to_path = True )
         
         service_identifiers_to_tags = {}
         
@@ -1481,22 +1461,9 @@ class ImportQueueGeneratorURLs( ImportQueueGenerator ):
             
             url = self._item
             
-            self._job_key.SetVariable( 'status', 'parsing url' )
-            
-            try:
-                
-                parse_result = urlparse.urlparse( url )
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-            except: raise Exception( 'Could not parse that URL' )
-            
             self._job_key.SetVariable( 'status', 'Connecting to address' )
             
-            try: connection = HC.get_connection( scheme = scheme, host = host, port = port )
-            except: raise Exception( 'Could not connect to server' )
-            
-            try: html = connection.geturl( url )
+            try: html = HC.http.Request( HC.GET, url )
             except: raise Exception( 'Could not download that url' )
             
             self._job_key.SetVariable( 'status', 'parsing html' )
@@ -1555,9 +1522,7 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                     
                     try:
                         
-                        connection = HC.get_connection( url = url )
-                        
-                        raw_json = connection.geturl( url )
+                        raw_json = HC.http.Request( HC.GET, url )
                         
                         json_dict = json.loads( raw_json )
                         

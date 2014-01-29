@@ -247,36 +247,27 @@ class CaptchaControl( wx.Panel ):
     
     def EventRefreshCaptcha( self, event ):
         
-        try:
-            
-            connection = HC.get_connection( scheme = 'http', host = 'www.google.com', port = 80 )
-            
-            javascript_string = connection.request( 'GET', '/recaptcha/api/challenge?k=' + self._captcha_key )
-            
-            ( trash, rest ) = javascript_string.split( 'challenge : \'', 1 )
-            
-            ( self._captcha_challenge, trash ) = rest.split( '\'', 1 )
-            
-            jpeg = connection.request( 'GET', '/recaptcha/api/image?c=' + self._captcha_challenge )
-            
-            temp_path = HC.GetTempPath()
-            
-            with open( temp_path, 'wb' ) as f: f.write( jpeg )
-            
-            self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
-            
-            self._captcha_runs_out = HC.GetNow() + 5 * 60 - 15
-            
-            self._DrawMain()
-            self._DrawEntry( '' )
-            self._DrawReady( False )
-            
-            self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
-            
-        except:
-            
-            wx.MessageBox( traceback.format_exc() )
-            
+        javascript_string = HC.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
+        
+        ( trash, rest ) = javascript_string.split( 'challenge : \'', 1 )
+        
+        ( self._captcha_challenge, trash ) = rest.split( '\'', 1 )
+        
+        jpeg = HC.http.Request( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
+        
+        temp_path = HC.GetTempPath()
+        
+        with open( temp_path, 'wb' ) as f: f.write( jpeg )
+        
+        self._bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+        
+        self._captcha_runs_out = HC.GetNow() + 5 * 60 - 15
+        
+        self._DrawMain()
+        self._DrawEntry( '' )
+        self._DrawReady( False )
+        
+        self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
     def EventTimer( self, event ):
@@ -1927,9 +1918,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         update = self._current_petition.GetApproval()
         
-        connection = self._service.GetConnection()
-        
-        connection.Post( 'update', update = update )
+        self._service.Request( HC.POST, 'update', { 'update' : update } )
         
         HC.app.Write( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
         
@@ -1944,9 +1933,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         update = self._current_petition.GetDenial()
         
-        connection = self._service.GetConnection()
-        
-        connection.Post( 'update', update = update )
+        self._service.Request( HC.POST, 'update', { 'update' : update } )
         
         self._current_petition = None
         
@@ -1959,9 +1946,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         try:
             
-            connection = self._service.GetConnection()
-            
-            response = connection.Get( 'petition' )
+            response = self._service.Request( HC.GET, 'petition' )
             
             self._current_petition = response[ 'petition' ]
             
@@ -1988,9 +1973,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         try:
             
-            connection = self._service.GetConnection()
-            
-            response = connection.Get( 'num_petitions' )
+            response = self._service.Request( HC.GET, 'num_petitions' )
             
             self._num_petitions = response[ 'num_petitions' ]
             

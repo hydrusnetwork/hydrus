@@ -781,9 +781,9 @@ class DraftBodyPanel( wx.Panel ):
         self.SetSizer( vbox )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( [
-        ( wx.ACCEL_CMD, ord( 'b' ), self.ID_BOLD ),
-        ( wx.ACCEL_CMD, ord( 'i' ), self.ID_ITALIC ),
-        ( wx.ACCEL_CMD, ord( 'u' ), self.ID_UNDERLINE )
+        ( wx.ACCEL_CTRL, ord( 'b' ), self.ID_BOLD ),
+        ( wx.ACCEL_CTRL, ord( 'i' ), self.ID_ITALIC ),
+        ( wx.ACCEL_CTRL, ord( 'u' ), self.ID_UNDERLINE )
         ] ) )
         
         self.Bind( wx.EVT_TOOL, self.EventToolBar )

@@ -162,8 +162,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
                 
-                connection = service.GetConnection()
-                
                 good_hashes = []
                 
                 error_messages = set()
@@ -186,7 +184,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         with open( path, 'rb' ) as f: file = f.read()
                         
-                        connection.Post( 'file', file = file )
+                        service.Request( HC.POST, 'file', { 'file' : file } )
                         
                         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = media_result.ToTuple()
                         
@@ -207,6 +205,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         time.sleep( 1 )
                         
                     
+                    time.sleep( 0.1 )
+                    
+                    HC.app.WaitUntilGoodTimeToUseGUIThread()
+                    
                 
                 if not update.IsEmpty():
                     
@@ -214,7 +216,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'uploading petitions' )
                     
-                    connection.Post( 'update', update = update )
+                    service.Request( HC.POST, 'update', { 'update' : update } )
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
@@ -237,8 +239,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
                 
-                connection = service.GetConnection()
-                
                 for update in updates:
                     
                     if job_key.IsCancelled(): return
@@ -247,11 +247,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'posting update' )
                     
-                    connection.Post( 'update', update = update )
+                    service.Request( HC.POST, 'update', { 'update' : update } )
                     
                     service_identifiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
                     
                     HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                    
+                    time.sleep( 0.5 )
+                    
+                    HC.app.WaitUntilGoodTimeToUseGUIThread()
                     
                 
             
@@ -291,9 +295,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
-                connection = service.GetConnection()
-                
-                response = connection.Get( 'account_info', subject_access_key = subject_access_key.encode( 'hex' ) )
+                response = service.Request( HC.GET, 'account_info', { 'subject_access_key' : subject_access_key.encode( 'hex' ) } )
                 
                 account_info = response[ 'account_info' ]
                 
@@ -439,9 +441,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 #
                 
-                connection = service.GetConnection()
-                
-                response = connection.Get( 'init' )
+                response = service.Request( HC.GET, 'init' )
                 
                 access_key = response[ 'access_key' ]
                 
@@ -470,9 +470,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
                 edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
                 
-                result = connection.Post( 'services', edit_log = edit_log )
+                response = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
                 
-                service_identifiers_to_access_keys = dict( result[ 'service_identifiers_to_access_keys' ] )
+                service_identifiers_to_access_keys = dict( response[ 'service_identifiers_to_access_keys' ] )
                 
                 HC.app.Write( 'update_server_services', admin_service_identifier, edit_log, service_identifiers_to_access_keys )
                 
@@ -491,9 +491,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
-                connection = service.GetConnection()
-                
-                with wx.BusyCursor(): connection.Post( 'backup' )
+                with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
                 wx.MessageBox( 'Done!' )
                 
@@ -573,9 +571,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
-                connection = service.GetConnection()
-                
-                with wx.BusyCursor(): response = connection.Get( 'ip', hash = hash.encode( 'hex' ) )
+                with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
                 
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
@@ -880,9 +876,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
-                connection = service.GetConnection()
-                
-                with wx.BusyCursor(): connection.Post( 'news', news = news )
+                with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
                 
             
         
@@ -1115,9 +1109,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         service = HC.app.Read( 'service', service_identifier )
         
-        connection = service.GetConnection()
-        
-        response = connection.Get( 'stats' )
+        response = service.Request( HC.GET, 'stats' )
         
         stats = response[ 'stats' ]
         
@@ -1910,15 +1902,15 @@ class FramePageChooser( ClientGUICommon.Frame ):
             
             gridbox = wx.GridSizer( 0, 3 )
             
-            gridbox.AddF( self._button_1, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_2, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_3, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_4, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_5, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_6, FLAGS_EXPAND_BOTH_WAYS )
             gridbox.AddF( self._button_7, FLAGS_EXPAND_BOTH_WAYS )
             gridbox.AddF( self._button_8, FLAGS_EXPAND_BOTH_WAYS )
             gridbox.AddF( self._button_9, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_4, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_5, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_6, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_1, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_2, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_3, FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( gridbox )
             
@@ -1928,23 +1920,6 @@ class FramePageChooser( ClientGUICommon.Frame ):
         ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'New Page' ) )
         
         self.Center()
-        
-        self._keycodes_to_ids = {}
-        
-        self._keycodes_to_ids[ wx.WXK_NUMPAD1 ] = 1
-        self._keycodes_to_ids[ wx.WXK_NUMPAD2 ] = 2
-        self._keycodes_to_ids[ wx.WXK_NUMPAD3 ] = 3
-        self._keycodes_to_ids[ wx.WXK_NUMPAD4 ] = 4
-        self._keycodes_to_ids[ wx.WXK_NUMPAD5 ] = 5
-        self._keycodes_to_ids[ wx.WXK_NUMPAD6 ] = 6
-        self._keycodes_to_ids[ wx.WXK_NUMPAD7 ] = 7
-        self._keycodes_to_ids[ wx.WXK_NUMPAD8 ] = 8
-        self._keycodes_to_ids[ wx.WXK_NUMPAD9 ] = 9
-        
-        self._keycodes_to_ids[ wx.WXK_UP ] = 2
-        self._keycodes_to_ids[ wx.WXK_DOWN ] = 8
-        self._keycodes_to_ids[ wx.WXK_LEFT ] = 4
-        self._keycodes_to_ids[ wx.WXK_RIGHT ] = 6
         
         InitialiseControls()
         
@@ -1960,8 +1935,32 @@ class FramePageChooser( ClientGUICommon.Frame ):
         
         self.Bind( wx.EVT_BUTTON, self.EventButton )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self.Bind( wx.EVT_MENU, self.EventMenu )
         
         self._button_hidden.SetFocus()
+        
+        #
+        
+        entries = []
+        
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 1 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 3 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 5 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 7 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 9 ) ) )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+        #
         
         self.Show( True )
         
@@ -2034,20 +2033,22 @@ class FramePageChooser( ClientGUICommon.Frame ):
             self._button_7.Hide()
             self._button_9.Hide()
             
-            usable_buttons = [ self._button_2, self._button_4, self._button_6, self._button_8 ]
+            potential_buttons = [ self._button_8, self._button_4, self._button_6, self._button_2 ]
             
-        elif len( entries ) <= 9: usable_buttons = [ self._button_1, self._button_2, self._button_3, self._button_4, self._button_5, self._button_6, self._button_7, self._button_8, self._button_9 ]
+        elif len( entries ) <= 9: potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
         else:
             
             pass # sort out a multi-page solution? maybe only if this becomes a big thing; the person can always select from the menus, yeah?
             
-            usable_buttons = [ self._button_1, self._button_2, self._button_3, self._button_4, self._button_5, self._button_6, self._button_7, self._button_8, self._button_9 ]
+            potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
             entries = entries[:9]
             
         
-        for entry in entries: self._AddEntry( usable_buttons.pop( 0 ), entry )
+        for entry in entries: self._AddEntry( potential_buttons.pop( 0 ), entry )
         
-        for button in usable_buttons: button.Hide()
+        unused_buttons = potential_buttons
+        
+        for button in unused_buttons: button.Hide()
         
     
     def EventButton( self, event ):
@@ -2093,16 +2094,27 @@ class FramePageChooser( ClientGUICommon.Frame ):
     
     def EventCharHook( self, event ):
         
-        if event.KeyCode in self._keycodes_to_ids.keys():
-            
-            id = self._keycodes_to_ids[ event.KeyCode ]
-            
-            new_event = wx.CommandEvent( wx.wxEVT_COMMAND_BUTTON_CLICKED, winid = id )
-            
-            self.ProcessEvent( new_event )
-            
-        elif event.KeyCode == wx.WXK_ESCAPE: self.Close()
+        if event.KeyCode == wx.WXK_ESCAPE: self.Close()
         else: event.Skip()
+        
+    
+    def EventMenu( self, event ):
+        
+        event_id = event.GetId()
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event_id )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'button':
+                
+                new_event = wx.CommandEvent( wx.wxEVT_COMMAND_BUTTON_CLICKED, winid = data )
+                
+                self.ProcessEvent( new_event )
+                
+            
         
     
 class FrameReviewServices( ClientGUICommon.Frame ):
@@ -2645,11 +2657,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventServerInitialise( self, event ):
             
-            service = HC.app.Read( 'service', self._service_identifier )
-            
-            connection = service.GetConnection()
-            
-            response = connection.Get( 'init' )
+            response = self._service.Request( HC.GET, 'init' )
             
             access_key = response[ 'access_key' ]
             
@@ -2666,9 +2674,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._refresh.Disable()
             
-            connection = self._service.GetConnection()
-            
-            response = connection.Get( 'account' )
+            response = self._service.Request( HC.GET, 'account' )
             
             account = response[ 'account' ]
             
