@@ -1,6 +1,7 @@
 import cStringIO
 import numpy.core.multiarray # important this comes before cv!
 import cv
+import cv2
 import HydrusConstants as HC
 import os
 from PIL import Image as PILImage
@@ -56,7 +57,7 @@ def EfficientlyThumbnailImage( pil_image, ( x, y ) ):
     
     pil_image.thumbnail( ( x, y ), PILImage.ANTIALIAS )
     
-def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
+def GenerateAnimatedFrame( pil_image, pil_frame, target_resolution, canvas ):
     
     if 'duration' not in pil_image.info: duration = 40 # 25 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
     else:
@@ -66,7 +67,7 @@ def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
         if duration == 0: duration = 40
         
     
-    current_frame = EfficientlyResizeImage( pil_image, target_resolution )
+    current_frame = EfficientlyResizeImage( pil_frame, target_resolution )
     
     if pil_image.mode == 'P' and 'transparency' in pil_image.info:
         
@@ -186,32 +187,29 @@ def GeneratePerceptualHash( path ):
     
 def GeneratePILImage( path ): return PILImage.open( path )
 
-def GenerateResolutionAndNumFrames( path ):
-    
-    pil_image = GeneratePILImage( path )
-    
+def GenerateResolutionAndFrames( path ):
+
+    cv_image = cv2.VideoCapture( path )
+    frames = []
+
+    while True:
+        flag, frame = cv_image.read()
+        if(flag == False):
+            break
+
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        img = PILImage.fromarray(rgb)
+
+        frames.append(img)
+
+    if(len(frames) < 1):
+        frames.append(GeneratePILImage( path ))
+
+
+    pil_image = frames[0]
     ( x, y ) = pil_image.size
     
-    try:
-        
-        pil_image.seek( 1 )
-        pil_image.seek( 0 )
-        
-        num_frames = 1
-        
-        while True:
-            
-            try:
-                
-                pil_image.seek( pil_image.tell() + 1 )
-                num_frames += 1
-                
-            except: break
-            
-        
-    except: num_frames = 1
-    
-    return ( ( x, y ), num_frames )
+    return ( ( x, y ), frames )
     
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
@@ -265,11 +263,11 @@ def RenderImage( path, hash, target_resolution = None, synchronous = True ):
     
     try:
         
-        ( original_resolution, num_frames ) = GenerateResolutionAndNumFrames( path )
+        ( original_resolution, frames ) = GenerateResolutionAndFrames( path )
         
         if target_resolution is None: target_resolution = original_resolution
         
-        image_container = RenderedImageContainer( hash, original_resolution, target_resolution, num_frames )
+        image_container = RenderedImageContainer( hash, original_resolution, target_resolution, frames )
         
         if image_container.IsAnimated(): renderer = AnimatedFrameRenderer( image_container, path, target_resolution )
         else: renderer = StaticFrameRenderer( image_container, path, target_resolution )
@@ -291,44 +289,19 @@ class FrameRenderer():
         
     
 class AnimatedFrameRenderer( FrameRenderer ):
-    
+
     def GetFrames( self ):
-        
+
         canvas = None
-        
-        global_palette = self._pil_image.palette
-        
-        dirty = self._pil_image.palette.dirty
-        mode = self._pil_image.palette.mode
-        rawmode = self._pil_image.palette.rawmode
-        
-        # believe it or not, doing this actually fixed a couple of gifs!
-        self._pil_image.seek( 1 )
-        self._pil_image.seek( 0 )
-        
-        while True:
-            
-            ( canvas, duration ) = GenerateAnimatedFrame( self._pil_image, self._target_resolution, canvas )
-            
-            yield ( GenerateHydrusBitmapFromPILImage( canvas ), duration )
-            
-            try:
-                
-                self._pil_image.seek( self._pil_image.tell() + 1 )
-                
-                if self._pil_image.palette == global_palette: # for some reason, when we fall back to global palette (no local-frame palette), we reset bunch of important variables!
-                    
-                    self._pil_image.palette.dirty = dirty
-                    self._pil_image.palette.mode = mode
-                    self._pil_image.palette.rawmode = rawmode
-                    
-                
-            except: break
-            
-        
-    
+        frames = self._image_container.GetFrameImages()
+
+        for frame in frames:
+            ( canvas, duration ) = GenerateAnimatedFrame( self._pil_image, frame, self._target_resolution, canvas )
+            yield( GenerateHydrusBitmapFromPILImage( canvas ), duration )
+
+
     def Render( self ):
-        
+
         for ( frame, duration ) in self.GetFrames(): self._image_container.AddFrame( frame, duration )
         
     
@@ -379,12 +352,13 @@ class HydrusBitmap():
     
 class RenderedImageContainer():
     
-    def __init__( self, hash, original_resolution, my_resolution, num_frames ):
+    def __init__( self, hash, original_resolution, my_resolution, frames ):
         
         self._hash = hash
         self._original_resolution = original_resolution
         self._my_resolution = my_resolution
-        self._num_frames = num_frames
+        self._num_frames = len(frames)
+        self._frame_images = frames
         
         ( original_width, original_height ) = original_resolution
         
@@ -406,9 +380,11 @@ class RenderedImageContainer():
     def AddFrame( self, frame, duration = None ):
         
         self._frames.append( frame )
-        
+
         if duration is not None: self._durations.append( duration )
-        
+
+    def GetFrameImages( self ):
+        return self._frame_images
     
     def GetDuration( self, index ): return self._durations[ index ]
     
