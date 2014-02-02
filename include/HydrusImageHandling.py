@@ -191,27 +191,34 @@ def GenerateResolutionAndFrames( path ):
 
     cv_image = cv2.VideoCapture( path )
     cv_image.set(cv2.cv.CV_CAP_PROP_CONVERT_RGB, True)
+    frameCount = cv_image.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
+
     frames = []
 
-    while True:
-        flag, frame = cv_image.read()
-        if(flag == False):
-            break
+    # openCV cannot read this file, so we'll skip it here and try to generate a PILImage below
+    # frameCount is a float, which is at least 1.0, so if it's 0 there's something wrong (like a 100% grayscale image which
+    # could not be converted to RGB for whatever reason)
+    if frameCount != 0:
+        while True:
+            flag, frame = cv_image.read()
+            if(flag == False):
+                break
 
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
 
-        img = PILImage.fromarray(rgb, "RGBA")
+            img = PILImage.fromarray(rgb, "RGBA")
 
-        frames.append(img)
+            frames.append(img)
+
 
     if(len(frames) < 1):
         frames.append(GeneratePILImage( path ))
-
 
     pil_image = frames[0]
     ( x, y ) = pil_image.size
     
     return ( ( x, y ), frames )
+
     
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
