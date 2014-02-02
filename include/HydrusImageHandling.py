@@ -190,6 +190,7 @@ def GeneratePILImage( path ): return PILImage.open( path )
 def GenerateResolutionAndFrames( path ):
 
     cv_image = cv2.VideoCapture( path )
+    cv_image.set(cv2.cv.CV_CAP_PROP_CONVERT_RGB, True)
     frames = []
 
     while True:
@@ -198,7 +199,8 @@ def GenerateResolutionAndFrames( path ):
             break
 
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-        img = PILImage.fromarray(rgb)
+
+        img = PILImage.fromarray(rgb, "RGBA")
 
         frames.append(img)
 
