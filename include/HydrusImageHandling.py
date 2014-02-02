@@ -190,7 +190,6 @@ def GeneratePILImage( path ): return PILImage.open( path )
 def GenerateResolutionAndFrames( path ):
 
     cv_image = cv2.VideoCapture( path )
-    cv_image.set(cv2.cv.CV_CAP_PROP_CONVERT_RGB, True)
     frameCount = cv_image.get(cv2.cv.CV_CAP_PROP_FRAME_COUNT)
 
     frames = []
@@ -199,6 +198,7 @@ def GenerateResolutionAndFrames( path ):
     # frameCount is a float, which is at least 1.0, so if it's 0 there's something wrong (like a 100% grayscale image which
     # could not be converted to RGB for whatever reason)
     if frameCount != 0:
+        cv_image.set(cv2.cv.CV_CAP_PROP_CONVERT_RGB, True)
         while True:
             flag, frame = cv_image.read()
             if(flag == False):
