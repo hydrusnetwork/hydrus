@@ -1,9 +1,9 @@
 import bs4
-import ClientParsers
 import collections
 import httplib
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusNetworking
 import json
 import lxml
 import os
@@ -94,8 +94,6 @@ class Downloader():
         
         self._we_are_done = False
         
-        self._connections = {}
-        
         self._report_hooks = []
         
         self._all_urls_so_far = set()
@@ -103,35 +101,13 @@ class Downloader():
         self._num_pages_done = 0
         
     
-    def _DownloadFile( self, connection, *args, **kwargs ):
-        
-        for hook in self._report_hooks: connection.AddReportHook( hook )
-        
-        response = connection.geturl( *args, **kwargs )
-        
-        connection.ClearReportHooks()
-        
-        return response
-        
+    def _AddSessionCookies( self, request_headers ): pass
     
-    def _EstablishSession( self, connection ): pass
-    
-    def _GetConnection( self, url ):
+    def _FetchData( self, url, request_headers = {}, report_hooks = [], response_to_path = False ):
         
-        parse_result = urlparse.urlparse( url )
+        self._AddSessionCookies( request_headers )
         
-        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-        
-        if ( scheme, host, port ) not in self._connections:
-            
-            connection = HC.get_connection( scheme = scheme, host = host, port = port )
-            
-            self._EstablishSession( connection )
-            
-            self._connections[ ( scheme, host, port ) ] = connection
-            
-        
-        return self._connections[ ( scheme, host, port ) ]
+        return HC.http.Request( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, response_to_path = response_to_path )
         
     
     def _GetNextGalleryPageURLs( self ): return ( self._GetNextGalleryPageURL(), )
@@ -150,9 +126,7 @@ class Downloader():
         
         for url in urls:
             
-            connection = self._GetConnection( url )
-            
-            data = connection.geturl( url )
+            data = self._FetchData( url )
             
             page_of_url_info = self._ParseGalleryPage( data, url )
             
@@ -170,12 +144,7 @@ class Downloader():
         return url_info
         
     
-    def GetFile( self, url, *args ):
-        
-        connection = self._GetConnection( url )
-        
-        return self._DownloadFile( connection, url, response_to_path = True )
-        
+    def GetFile( self, url, *args ): return self._FetchData( url, report_hooks = self._report_hooks, response_to_path = True )
     
     def GetFileAndTags( self, url, *args ):
         
@@ -315,9 +284,7 @@ class DownloaderBooru( Downloader ):
     
     def _GetFileURLAndTags( self, url ):
         
-        connection = self._GetConnection( url )
-        
-        html = connection.geturl( url )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
@@ -326,18 +293,16 @@ class DownloaderBooru( Downloader ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        connection = self._GetConnection( file_url )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
-        return self._DownloadFile( connection, file_url, response_to_path = True )
+        return temp_path
         
     
     def GetFileAndTags( self, url ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        connection = self._GetConnection( file_url )
-        
-        temp_path = self._DownloadFile( connection, file_url, response_to_path = True )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
         return ( temp_path, tags )
         
@@ -440,9 +405,7 @@ class DownloaderDeviantArt( Downloader ):
     
     def _GetFileURL( self, url ):
         
-        connection = self._GetConnection( url )
-        
-        html = connection.geturl( url )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html )
         
@@ -451,9 +414,9 @@ class DownloaderDeviantArt( Downloader ):
         
         file_url = self._GetFileURL( url )
         
-        connection = self._GetConnection( file_url )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
-        return self._DownloadFile( connection, file_url, response_to_path = True )
+        return temp_path
         
     
     def GetTags( self, url, tags ): return tags
@@ -486,11 +449,9 @@ class DownloaderGiphy( Downloader ):
         
         url = 'http://giphy.com/api/gifs/' + HC.u( id )
         
-        connection = self._GetConnection( url )
-        
         try:
             
-            raw_json = connection.geturl( url )
+            raw_json = self._FetchData( url )
             
             json_dict = json.loads( raw_json )
             
@@ -519,20 +480,18 @@ class DownloaderHentaiFoundry( Downloader ):
         Downloader.__init__( self )
         
     
-    def _EstablishSession( self, connection ):
+    def _AddSessionCookies( self, request_headers ):
         
         manager = HC.app.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'hentai foundry' )
         
-        for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
+        HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
         
     
     def _GetFileURLAndTags( self, url ):
         
-        connection = self._GetConnection( url )
-        
-        html = connection.geturl( url )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
@@ -660,18 +619,16 @@ class DownloaderHentaiFoundry( Downloader ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        connection = self._GetConnection( file_url )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
-        return self._DownloadFile( connection, file_url, response_to_path = True )
+        return temp_path
         
     
     def GetFileAndTags( self, url ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        connection = self._GetConnection( file_url )
-        
-        temp_path = self._DownloadFile( connection, file_url, response_to_path = True )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
         return ( temp_path, tags )
         
@@ -685,11 +642,11 @@ class DownloaderHentaiFoundry( Downloader ):
     
     def SetupGallerySearch( self ):
         
-        connection = self._GetConnection( 'http://www.hentai-foundry.com/site/filters' )
+        manager = HC.app.GetManager( 'web_sessions' )
         
-        cookies = connection.GetCookies()
+        cookies = manager.GetCookies( 'hentai foundry' )
         
-        raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # YII_CSRF_TOKEN=19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
+        raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # 19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
         
         processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
         
@@ -699,10 +656,12 @@ class DownloaderHentaiFoundry( Downloader ):
         
         body = urllib.urlencode( self._advanced_hentai_foundry_options )
         
-        headers = {}
-        headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
+        request_headers = {}
+        request_headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
         
-        connection.request( 'POST', '/site/filters', headers = headers, body = body )
+        self._AddSessionCookies( request_headers )
+        
+        HC.http.Request( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
         
     
 class DownloaderNewgrounds( Downloader ):
@@ -716,9 +675,7 @@ class DownloaderNewgrounds( Downloader ):
     
     def _GetFileURLAndTags( self, url ):
         
-        connection = self._GetConnection( url )
-        
-        html = connection.geturl( url )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
@@ -845,18 +802,16 @@ class DownloaderNewgrounds( Downloader ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        connection = self._GetConnection( file_url )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
-        return self._DownloadFile( connection, file_url, response_to_path = True )
+        return temp_path
         
     
     def GetFileAndTags( self, url ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        connection = self._GetConnection( file_url )
-        
-        temp_path = self._DownloadFile( connection, file_url, response_to_path = True )
+        temp_path = self._FetchData( file_url, report_hooks = self._report_hooks, response_to_path = True )
         
         return ( temp_path, tags )
         
@@ -878,13 +833,13 @@ class DownloaderPixiv( Downloader ):
         Downloader.__init__( self )
         
     
-    def _EstablishSession( self, connection ):
+    def _AddSessionCookies( self, request_headers ):
         
         manager = HC.app.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'pixiv' )
         
-        for ( key, value ) in cookies.items(): connection.SetCookie( key, value )
+        HydrusNetworking.AddCookiesToHeaders( cookies, request_headers )
         
     
     def _GetNextGalleryPageURL( self ):
@@ -969,9 +924,7 @@ class DownloaderPixiv( Downloader ):
     
     def _GetReferralURLFileURLAndTags( self, page_url ):
         
-        connection = self._GetConnection( page_url )
-        
-        html = connection.geturl( page_url )
+        html = self._FetchData( page_url )
         
         return self._ParseImagePage( html, page_url )
         
@@ -980,22 +933,18 @@ class DownloaderPixiv( Downloader ):
         
         ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
         
-        connection = self._GetConnection( image_url )
+        request_headers = { 'Referer' : referral_url }
         
-        headers = { 'Referer' : referral_url }
-        
-        return self._DownloadFile( connection, image_url, headers = headers, response_to_path = True )
+        return self._FetchData( image_url, request_headers = request_headers, report_hooks = self._report_hooks, response_to_path = True )
         
     
     def GetFileAndTags( self, url ):
         
         ( referral_url, image_url, tags ) = self._GetReferralURLFileURLAndTags( url )
         
-        connection = self._GetConnection( image_url )
+        request_headers = { 'Referer' : referral_url }
         
-        headers = { 'Referer' : referral_url }
-        
-        temp_path = self._DownloadFile( connection, image_url, headers = headers, response_to_path = True )
+        temp_path = self._FetchData( image_url, request_headers = request_headers, report_hooks = self._report_hooks, response_to_path = True )
         
         return ( temp_path, tags )
         
@@ -1468,7 +1417,7 @@ class ImportQueueGeneratorURLs( ImportQueueGenerator ):
             
             self._job_key.SetVariable( 'status', 'parsing html' )
             
-            try: urls = ClientParsers.ParsePage( html, url )
+            try: urls = ParsePageForURLs( html, url )
             except: raise Exception( 'Could not parse that URL\'s html' )
             
             queue = urls
@@ -1829,4 +1778,63 @@ def THREADDownloadURL( job_key, url, message_string ):
         
         HC.ShowException( e )
         
+    
+def Parse4chanPostScreen( html ):
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    title_tag = soup.find( 'title' )
+    
+    if title_tag.string == 'Post successful!': return ( 'success', None )
+    elif title_tag.string == '4chan - Banned':
+        
+        print( repr( soup ) )
+        
+        message = 'You are banned from this board! html written to log.'
+        
+        HC.ShowText( message )
+        
+        return ( 'big error', message )
+        
+    else:
+        
+        try:
+            
+            problem_tag = soup.find( id = 'errmsg' )
+            
+            if problem_tag is None:
+                
+                try: print( repr( soup ) )
+                except: pass
+                
+                message = 'Unknown problem; html written to log.'
+                
+                HC.ShowText( message )
+                
+                return ( 'error', message )
+                
+            
+            problem = HC.u( problem_tag )
+            
+            if 'CAPTCHA' in problem: return ( 'captcha', None )
+            elif 'seconds' in problem: return ( 'too quick', None )
+            elif 'Duplicate' in problem: return ( 'error', 'duplicate file detected' )
+            else: return ( 'error', problem )
+            
+        except: return ( 'error', 'unknown error' )
+        
+    
+def ParsePageForURLs( html, starting_url ):
+    
+    soup = bs4.BeautifulSoup( html )
+    
+    all_links = soup.find_all( 'a' )
+    
+    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
+    
+    urls = [ urlparse.urljoin( starting_url, link[ 'href' ] ) for link in links_with_images ]
+    
+    # old version included (images that don't have a link wrapped around them)'s src
+    
+    return urls
     

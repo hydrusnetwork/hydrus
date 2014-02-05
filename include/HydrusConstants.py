@@ -22,9 +22,11 @@ import yaml
 
 PLATFORM_WINDOWS = False
 PLATFORM_OSX  = False
+PLATFORM_LINUX = False
 
 if sys.platform == 'win32': PLATFORM_WINDOWS = True
 elif sys.platform == 'darwin': PLATFORM_OSX = True
+elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
 options = {}
 
@@ -46,7 +48,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 101
+SOFTWARE_VERSION = 102
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

@@ -24,7 +24,6 @@ import sys
 import threading
 import time
 import traceback
-import urlparse
 import wx
 import yaml
 
@@ -3131,7 +3130,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_type = service_identifier.GetType()
             
-            service_id = self._GetServiceId( c, service_identifier )
+            try: service_id = self._GetServiceId( c, service_identifier )
+            except: continue
             
             ultimate_mappings_ids = []
             ultimate_deleted_mappings_ids = []
@@ -3563,7 +3563,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            service_id = self._GetServiceId( c, service_identifier )
+            try: service_id = self._GetServiceId( c, service_identifier )
+            except: continue
             
             for service_update in service_updates:
                 

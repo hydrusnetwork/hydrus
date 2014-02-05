@@ -112,11 +112,14 @@ class Dialog( wx.Dialog ):
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
-        #self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
-        if position == 'center': wx.CallAfter( self.Center )
+        # this button is important, as escape maps to it
+        # can't hide it, or the escape doesn't go through
+        self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        self.SetEscapeId( wx.ID_CANCEL )
         
         self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
+        
+        if position == 'center': wx.CallAfter( self.Center )
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -2033,23 +2036,34 @@ class DialogInputLocalFiles( Dialog ):
     
     def _ProcessQueue( self ):
         
-        if not self._currently_parsing and len( self._processing_queue ) > 0:
+        if not self._currently_parsing:
             
-            paths = self._processing_queue.pop( 0 )
-            
-            self._currently_parsing = True
-            
-            self._job_key = HC.JobKey()
-            
-            threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._job_key ) ).start()
-            
-            self.SetGaugeInfo( None, None, '' )
-            
-            self._gauge_pause.Enable()
-            self._gauge_cancel.Enable()
-            
-            self._gauge_sizer.ShowItems( True )
-            self._gauge_sizer.Layout()
+            if len( self._processing_queue ) == 0:
+                
+                self._add_button.Enable()
+                self._tag_button.Enable()
+                
+            else:
+                
+                paths = self._processing_queue.pop( 0 )
+                
+                self._currently_parsing = True
+                
+                self._job_key = HC.JobKey()
+                
+                threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._job_key ) ).start()
+                
+                self.SetGaugeInfo( None, None, '' )
+                
+                self._gauge_pause.Enable()
+                self._gauge_cancel.Enable()
+                
+                self._gauge_sizer.ShowItems( True )
+                self._gauge_sizer.Layout()
+                
+                self._add_button.Disable()
+                self._tag_button.Disable()
+                
             
         
     
@@ -2119,6 +2133,9 @@ class DialogInputLocalFiles( Dialog ):
         self._gauge_pause.Disable()
         self._gauge_cancel.Disable()
         
+        self._add_button.Enable()
+        self._tag_button.Enable()
+        
     
     def EventGaugePause( self, event ):
         
@@ -2126,11 +2143,17 @@ class DialogInputLocalFiles( Dialog ):
             
             self._job_key.Resume()
             
+            self._add_button.Disable()
+            self._tag_button.Disable()
+            
             self._gauge_pause.SetLabel( 'pause' )
             
         else:
             
             self._job_key.Pause()
+            
+            self._add_button.Enable()
+            self._tag_button.Enable()
             
             self._gauge_pause.SetLabel( 'resume' )
             
@@ -4078,7 +4101,7 @@ class DialogProgress( Dialog ):
         
         ArrangeControls()
         
-        self.Bind( wx.EVT_TIMER, self.EventTimer, id = ID_TIMER_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_UPDATE )
         
         self._timer = wx.Timer( self, id = ID_TIMER_UPDATE )
         
@@ -4111,7 +4134,7 @@ class DialogProgress( Dialog ):
         self._cancel_event.set()
         
     
-    def EventTimer( self, event ):
+    def TIMEREvent( self, event ):
         
         value = self._gauge.GetValue()
         range = self._gauge.GetRange()
@@ -4138,7 +4161,7 @@ class DialogProgress( Dialog ):
     
 class DialogRegisterService( Dialog ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, service_type ):
         
         def InitialiseControls():
             
@@ -4191,6 +4214,8 @@ class DialogRegisterService( Dialog ):
         
         Dialog.__init__( self, parent, 'register account', position = 'center' )
         
+        self._service_type = service_type
+        
         InitialiseControls()
         
         PopulateControls()
@@ -4231,13 +4256,13 @@ class DialogRegisterService( Dialog ):
             return
             
         
-        connection = HC.get_connection( host = host, port = port )
+        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), self._service_type, 'temp registering service' )
         
-        headers = {}
+        info = { 'host' : host, 'port' : port }
         
-        headers[ 'Hydrus-Key' ] = registration_key.encode( 'hex' )
+        service = CC.Service( service_identifier, info )
         
-        response = connection.request( 'GET', '/access_key', headers = headers )
+        response = service.Request( HC.GET, 'access_key', request_headers = { 'Hydrus-Key' : registration_key_encoded } )
         
         access_key = response[ 'access_key' ]
         

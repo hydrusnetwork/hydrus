@@ -169,12 +169,10 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             
             ( ct, body ) = CC.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
             
-            headers = {}
-            headers[ 'Content-Type' ] = ct
+            request_headers = {}
+            request_headers[ 'Content-Type' ] = ct
             
-            connection = HC.get_connection( url = 'https://sys.4chan.org/', accept_cookies = True )
-            
-            response = connection.request( 'POST', '/auth', headers = headers, body = body )
+            response = HC.http.Request( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
             
             self._timeout = HC.GetNow() + 365 * 24 * 3600
             
@@ -4508,7 +4506,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                 
                                 if register:
                                     
-                                    with ClientGUIDialogs.DialogRegisterService( self ) as dlg:
+                                    with ClientGUIDialogs.DialogRegisterService( self, service_type ) as dlg:
                                         
                                         if dlg.ShowModal() != wx.ID_OK: return
                                         

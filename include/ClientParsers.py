@@ -48,7 +48,7 @@ def Parse4chanPostScreen( html ):
         except: return ( 'error', 'unknown error' )
         
     
-def ParsePage( html, starting_url ):
+def ParsePageForURLs( html, starting_url ):
     
     soup = bs4.BeautifulSoup( html )
     

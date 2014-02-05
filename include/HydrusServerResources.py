@@ -16,6 +16,7 @@ import os
 import random
 import ServerConstants as SC
 import SocketServer
+import threading
 import traceback
 import urllib
 import wx
@@ -942,6 +943,8 @@ class HydrusResourceCommandRestrictedBackup( HydrusResourceCommandRestricted ):
     POST_PERMISSION = HC.GENERAL_ADMIN
     
     def _threadDoPOSTJob( self, request ):
+        
+        #threading.Thread( target = HC.app.Write, args = ( 'backup', ), name = 'Backup Thread' ).start()
         
         HC.app.Write( 'backup' )
         

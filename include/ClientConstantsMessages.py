@@ -14,7 +14,6 @@ import threading
 import time
 import threading
 import traceback
-import urlparse
 import yaml
 import wx
 import zlib

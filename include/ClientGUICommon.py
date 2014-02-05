@@ -113,8 +113,8 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
-        self.Bind( wx.EVT_TIMER, self.EventDropdownHideTimer, id = ID_TIMER_DROPDOWN_HIDE )
-        self.Bind( wx.EVT_TIMER, self.EventLagTimer, id = ID_TIMER_AC_LAG )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventDropdownHide, id = ID_TIMER_DROPDOWN_HIDE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventLag, id = ID_TIMER_AC_LAG )
         
         self._move_hide_timer = wx.Timer( self, id = ID_TIMER_DROPDOWN_HIDE )
         self._lag_timer = wx.Timer( self, id = ID_TIMER_AC_LAG )
@@ -179,12 +179,6 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def _UpdateList( self ): pass
     
-    def EventDropdownHideTimer( self, event ):
-        
-        try: self._ShowDropdownIfFocussed()
-        except: pass
-        
-    
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self.GetValue() == '' and len( self._dropdown_list ) == 0: self._BroadcastChoice( None )
@@ -210,8 +204,6 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         event.Skip()
         
-    
-    def EventLagTimer( self, event ): self._UpdateList()
     
     def EventMouseWheel( self, event ):
         
@@ -280,9 +272,20 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventText( self, event ):
         
-        if len( self.GetValue() ) == 0: self._UpdateList()
+        num_chars = len( self.GetValue() )
+        
+        if num_chars == 0: self._UpdateList()
+        elif num_chars < 3: self._lag_timer.Start( 500, wx.TIMER_ONE_SHOT )
         else: self._lag_timer.Start( 250, wx.TIMER_ONE_SHOT )
         
+    
+    def TIMEREventDropdownHide( self, event ):
+        
+        try: self._ShowDropdownIfFocussed()
+        except: pass
+        
+    
+    def TIMEREventLag( self, event ): self._UpdateList()
     
 class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
     

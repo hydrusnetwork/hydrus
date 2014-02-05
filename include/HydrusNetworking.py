@@ -123,9 +123,9 @@ class HTTPConnectionManager():
         threading.Thread( target = self.MaintainConnections, name = 'Maintain Connections' ).start()
         
     
-    def _DoRequest( self, location, method, path_and_query, request_headers, body, follow_redirects = True, report_hooks = [], response_to_path = False, num_redirects_permitted = 4 ):
+    def _DoRequest( self, location, method, path_and_query, request_headers, body, follow_redirects = True, report_hooks = [], response_to_path = False, num_redirects_permitted = 4, long_timeout = False ):
         
-        connection = self._GetConnection( location )
+        connection = self._GetConnection( location, long_timeout )
         
         try:
             
@@ -157,22 +157,26 @@ class HTTPConnectionManager():
             
         
     
-    def _GetConnection( self, location ):
+    def _GetConnection( self, location, long_timeout = False ):
         
         with self._lock:
             
-            if location not in self._connections:
+            if long_timeout: return HTTPConnection( location, long_timeout )
+            else:
                 
-                connection = HTTPConnection( location )
+                if location not in self._connections:
+                    
+                    connection = HTTPConnection( location )
+                    
+                    self._connections[ location ] = connection
+                    
                 
-                self._connections[ location ] = connection
+                return self._connections[ location ]
                 
-            
-            return self._connections[ location ]
             
         
     
-    def Request( self, method, url, request_headers = {}, body = '', return_everything = False, return_cookies = False, report_hooks = [], response_to_path = False ):
+    def Request( self, method, url, request_headers = {}, body = '', return_everything = False, return_cookies = False, report_hooks = [], response_to_path = False, long_timeout = False ):
         
         ( location, path, query ) = ParseURL( url )
         
@@ -181,7 +185,7 @@ class HTTPConnectionManager():
         
         follow_redirects = not return_cookies
         
-        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( location, method, path_and_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path )
+        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( location, method, path_and_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path, long_timeout = long_timeout )
         
         if return_everything: return ( response, size_of_response, response_headers, cookies )
         elif return_cookies: return ( response, cookies )
@@ -215,12 +219,14 @@ class HTTPConnectionManager():
     
 class HTTPConnection():
     
-    timeout = 30
     read_block_size = 64 * 1024
     
-    def __init__( self, location ):
+    def __init__( self, location, long_timeout = False ):
         
         ( self._scheme, self._host, self._port ) = location
+        
+        if long_timeout: self._timeout = 600
+        else: self._timeout = 30
         
         self.lock = threading.Lock()
         
@@ -319,8 +325,8 @@ class HTTPConnection():
     
     def _RefreshConnection( self ):
         
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self.timeout )
-        elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self.timeout )
+        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self._timeout )
+        elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
         
         try: self._connection.connect()
         except: raise Exception( 'Could not connect to ' + self._host + '!' )
@@ -366,7 +372,7 @@ class HTTPConnection():
         
         time_since_last_request = HC.GetNow() - self._last_request_time
         
-        return time_since_last_request > self.timeout
+        return time_since_last_request > self._timeout
         
     
     def Request( self, method, path_and_query, request_headers, body, report_hooks = [], response_to_path = False ):

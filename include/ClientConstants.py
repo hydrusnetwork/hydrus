@@ -22,7 +22,6 @@ import threading
 import time
 import threading
 import traceback
-import urlparse
 import urllib
 import yaml
 import wx
@@ -2114,7 +2113,8 @@ class Service( HC.HydrusYAMLBase ):
         
         host = self._info[ 'host' ]
         port = self._info[ 'port' ]
-        access_key = self._info[ 'access_key' ]
+        if 'access_key' in self._info: access_key = self._info[ 'access_key' ]
+        else: access_key = None
         
         credentials = Credentials( host, port, access_key )
         
@@ -2215,17 +2215,18 @@ class Service( HC.HydrusYAMLBase ):
             
         
     
-    def Request( self, method, command, request_args = {}, report_hooks = [], response_to_path = False, return_cookies = False ):
+    def Request( self, method, command, request_args = {}, request_headers = {}, report_hooks = [], response_to_path = False, return_cookies = False ):
         
         try:
             
             credentials = self.GetCredentials()
             
-            request_headers = {}
-            
-            if command == 'init': pass
+            if command in ( 'access_key', 'init' ): pass
             elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
             else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._service_identifier, request_headers )
+            
+            if command == 'backup': long_timeout = True
+            else: long_timeout = False
             
             path = '/' + command
             
@@ -2262,7 +2263,7 @@ class Service( HC.HydrusYAMLBase ):
             
             url = 'http://' + host + ':' + HC.u( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True )
+            ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True, long_timeout = long_timeout )
             
             HydrusNetworking.CheckHydrusVersion( self._service_identifier, response_headers )
             

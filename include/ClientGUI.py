@@ -18,6 +18,7 @@ import time
 import traceback
 import webbrowser
 import wx
+import yaml
 
 # timers
 
@@ -483,17 +484,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _BackupService( self, service_identifier ):
         
-        message = 'This will tell the service to lock and copy its database files. It will not be able to serve any requests until the operation is complete.'
+        message = 'This will tell the service to lock and copy its database files. It will probably take a few minutes to complete, and will not be able to serve any requests during that time. The GUI will lock up as well.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
-                
-                wx.MessageBox( 'Done!' )
                 
             
         
@@ -593,6 +592,54 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     def _ImportFiles( self, paths = [] ):
         
         with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg: dlg.ShowModal()
+        
+    
+    def _ImportMetadata( self ):
+        
+        with wx.FileDialog( self, style = wx.FD_MULTIPLE ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                paths = dlg.GetPaths()
+                
+                for path in paths:
+                    
+                    try:
+                        
+                        with open( path, 'rb' ) as f: o = yaml.safe_load( f )
+                        
+                        if isinstance( o, HC.ServerToClientUpdate ):
+                            
+                            # turn this into a thread that'll spam it to a gui-polite gauge
+                            
+                            update = o
+                            
+                            service_identifier = HC.LOCAL_TAG_SERVICE_IDENTIFIER
+                            
+                            content_updates = []
+                            current_weight = 0
+                            
+                            for content_update in update.IterateContentUpdates():
+                                
+                                content_updates.append( content_update )
+                                
+                                current_weight += len( content_update.GetHashes() )
+                                
+                                if current_weight > 50:
+                                    
+                                    HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                    
+                                    content_updates = []
+                                    current_weight = 0
+                                    
+                                
+                            
+                            if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                            
+                        
+                    except Exception as e: HC.ShowException( e )
+                    
+                
         
     
     def _LoadGUISession( self, name ):
@@ -1295,7 +1342,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
-            elif command == 'import': self._ImportFiles()
+            elif command == 'import_files': self._ImportFiles()
+            elif command == 'import_metadata': self._ImportMetadata()
             elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'manage_4chan_pass': self._Manage4chanPass()
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
@@ -1481,7 +1529,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         menu = wx.MenuBar()
         
         file = wx.Menu()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_metadata' ), p( '&Import Metadata' ), p( 'Add YAML metadata.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
         file.AppendSeparator()
@@ -2466,7 +2515,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in HC.REPOSITORIES:
                 
-                self.Bind( wx.EVT_TIMER, self.EventTimerUpdates, id = ID_TIMER_UPDATES )
+                self.Bind( wx.EVT_TIMER, self.TIMEREventUpdates, id = ID_TIMER_UPDATES )
                 
                 self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
                 
@@ -2696,27 +2745,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
-        def EventTimerUpdates( self, event ):
-            
-            now = HC.GetNow()
-            
-            first_begin = self._service.GetFirstBegin()
-            next_begin = self._service.GetNextBegin()
-            
-            if first_begin == 0:
-                
-                num_updates = 0
-                num_updates_downloaded = 0
-                
-            else:
-                
-                num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
-                num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
-                
-            
-            self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
-            
-        
         def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
             
             for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
@@ -2736,6 +2764,27 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     
                 
+            
+        
+        def TIMEREventUpdates( self, event ):
+            
+            now = HC.GetNow()
+            
+            first_begin = self._service.GetFirstBegin()
+            next_begin = self._service.GetNextBegin()
+            
+            if first_begin == 0:
+                
+                num_updates = 0
+                num_updates_downloaded = 0
+                
+            else:
+                
+                num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
+                num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
+                
+            
+            self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
             
         
     

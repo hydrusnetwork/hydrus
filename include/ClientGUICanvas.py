@@ -91,7 +91,7 @@ class AnimationBar( wx.Window ):
         self._current_frame_index = 0
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        self.Bind( wx.EVT_TIMER, self.EventTimerUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
@@ -189,7 +189,14 @@ class AnimationBar( wx.Window ):
             
         
     
-    def EventTimerUpdate( self, event ):
+    def GotoFrame( self, frame_index ):
+        
+        self._current_frame_index = frame_index
+        
+        self._Draw()
+        
+    
+    def TIMEREventUpdate( self, event ):
         
         if self.IsShown():
             
@@ -214,13 +221,6 @@ class AnimationBar( wx.Window ):
                     
                 
             
-        
-    
-    def GotoFrame( self, frame_index ):
-        
-        self._current_frame_index = frame_index
-        
-        self._Draw()
         
     
 class Canvas():
@@ -685,7 +685,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
         
-        self.Bind( wx.EVT_TIMER, self.EventTimerCursorHide, id = ID_TIMER_CURSOR_HIDE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
         
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         
@@ -1112,14 +1112,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
     def EventFullscreenSwitch( self, event ): self._FullscreenSwitch()
     
-    def EventTimerCursorHide( self, event ):
-        
-        if not CC.CAN_HIDE_MOUSE: return
-        
-        if self._menu_open: self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-        else: self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
-        
-    
     def KeepCursorAlive( self ): self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
     
     def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
@@ -1140,6 +1132,14 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         else: self.SetMedia( next_media )
         
     
+    def TIMEREventCursorHide( self, event ):
+        
+        if not CC.CAN_HIDE_MOUSE: return
+        
+        if self._menu_open: self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+        else: self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+        
+    
 class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
     def __init__( self, my_parent, page_key, file_service_identifier, media_results, first_hash ):
@@ -1148,7 +1148,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
         
-        self.Bind( wx.EVT_TIMER, self.EventTimerSlideshow, id = ID_TIMER_SLIDESHOW )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventSlideshow, id = ID_TIMER_SLIDESHOW )
         
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventClose )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventClose )
@@ -1411,7 +1411,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         event.Skip()
         
     
-    def EventTimerSlideshow( self, event ): self._ShowNext()
+    def TIMEREventSlideshow( self, event ): self._ShowNext()
     
 class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
     
@@ -3152,7 +3152,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             
             self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
             
-            self.Bind( wx.EVT_TIMER, self.EventTimerCursorHide, id = ID_TIMER_CURSOR_HIDE )
+            self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
             
             self.Bind( wx.EVT_MENU, self.EventMenu )
             
@@ -3415,14 +3415,14 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
             
         
-        def EventTimerCursorHide( self, event ):
+        def RefreshBackground( self ): self._DrawBackgroundBitmap()
+        
+        def TIMEREventCursorHide( self, event ):
             
             if not CC.CAN_HIDE_MOUSE: return
             
             self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
             
-        
-        def RefreshBackground( self ): self._DrawBackgroundBitmap()
         
     
 class MediaContainer( wx.Window ):
@@ -3749,19 +3749,25 @@ class Image( wx.Window ):
         
         self._animation_bar = None
         
+        self._last_clock = time.clock()
         self._current_frame_index = 0
         
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self._timer_animated = wx.Timer( self, id = ID_TIMER_ANIMATED )
+        
         self._yet_to_draw_initial_frame = True
+        
+        self._paused = False
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.EventTimerAnimated, id = ID_TIMER_ANIMATED )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         
         self.EventResize( None )
+        
+        self._timer_animated.Start( 16, wx.TIMER_CONTINUOUS )
         
     
     def _Draw( self ):
@@ -3798,18 +3804,15 @@ class Image( wx.Window ):
             
             if self._image_container.IsAnimated():
                 
-                self._timer_animated.Start( self._image_container.GetDuration( self._current_frame_index ), wx.TIMER_ONE_SHOT )
-                
                 if self._animation_bar is not None: self._animation_bar.GotoFrame( self._current_frame_index )
                 
+            else: self._timer_animated.Stop()
             
         else:
             
             dc.SetBackground( wx.Brush( wx.WHITE ) )
             
             dc.Clear()
-            
-            self._timer_animated.Start( 50, wx.TIMER_ONE_SHOT )
             
         
     
@@ -3863,24 +3866,6 @@ class Image( wx.Window ):
             
         
     
-    def EventTimerAnimated( self, event ):
-        
-        if self.IsShown():
-            
-            if self._yet_to_draw_initial_frame:
-                
-                if self._image_container.HasFrame( 0 ): self._yet_to_draw_initial_frame = False
-                
-            else:
-                
-                if self._image_container.HasFrame( self._current_frame_index + 1 ): self._current_frame_index += 1
-                elif self._image_container.IsFinishedRendering(): self._current_frame_index = 0
-                
-            
-            self._Draw()
-            
-        
-    
     def GetImageContainer( self ): return self._image_container
     
     def GotoFrame( self, frame_index ):
@@ -3895,6 +3880,39 @@ class Image( wx.Window ):
     def Play( self ): self._timer_animated.Start()
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
+    
+    def TIMEREventAnimated( self, event ):
+        
+        if self.IsShown():
+            
+            now = time.clock()
+            
+            ms_since_last_clock = int( 1000.0 * ( now - self._last_clock ) )
+            
+            if self._yet_to_draw_initial_frame or ms_since_last_clock > self._image_container.GetDuration( self._current_frame_index ):
+                
+                if self._yet_to_draw_initial_frame: next_frame = 0
+                else:
+                    
+                    num_frames = self._media.GetNumFrames()
+                    
+                    if num_frames is None: next_frame = 0
+                    else: next_frame = ( self._current_frame_index + 1 ) % num_frames
+                    
+                
+                if self._image_container.HasFrame( next_frame ):
+                    
+                    self._current_frame_index = next_frame
+                    
+                    self._last_clock = now
+                    
+                    self._Draw()
+                    
+                    self._yet_to_draw_initial_frame = False
+                    
+                
+            
+        
     
 class PDFButton( wx.Button ):
     
