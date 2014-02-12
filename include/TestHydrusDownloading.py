@@ -11,13 +11,16 @@ class TestDownloaders( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        HC.get_connection = TestConstants.fake_http_connection_manager.GetConnection
+        self.old_http = HC.http
+        
+        HC.http = TestConstants.FakeHTTPConnectionManager()
         
     
     @classmethod
     def tearDownClass( self ):
         
-        HC.get_connection = HC.AdvancedHTTPConnection
+        HC.http = self.old_http
+        
         
     
     def test_deviantart( self ):
@@ -25,18 +28,10 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_gallery.html' ) as f: da_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'da_page.html' ) as f: da_page = f.read()
         
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'sakimichan.deviantart.com' )
+        HC.http.SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
+        HC.http.SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Thumbs-up-411079893', da_page )
         
-        fake_connection.SetResponse( 'GET', '/gallery/?catpath=/&offset=0', da_gallery )
-        fake_connection.SetResponse( 'GET', '/art/Thumbs-up-411079893', da_page )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'sakimichan.deviantart.com' )
-        
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'fc04.deviantart.net' )
-        
-        fake_connection.SetResponse( 'GET', '/fs70/f/2013/306/1/5/thumbs_up_by_sakimichan-d6sqv9x.jpg', 'image file' )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'fc04.deviantart.net' )
+        HC.http.SetResponse( HC.GET, 'http://fc04.deviantart.net/fs70/f/2013/306/1/5/thumbs_up_by_sakimichan-d6sqv9x.jpg', 'image file' )
         
         #
         
@@ -72,12 +67,8 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_games.html' ) as f: newgrounds_gallery_games = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_gallery_movies.html' ) as f: newgrounds_gallery_movies = f.read()
         
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'warlord-of-noodles.newgrounds.com' )
-        
-        fake_connection.SetResponse( 'GET', '/games/', newgrounds_gallery_games )
-        fake_connection.SetResponse( 'GET', '/movies/', newgrounds_gallery_movies )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'warlord-of-noodles.newgrounds.com' )
+        HC.http.SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/games/', newgrounds_gallery_games )
+        HC.http.SetResponse( HC.GET, 'http://warlord-of-noodles.newgrounds.com/movies/', newgrounds_gallery_movies )
         
         #
         
@@ -95,17 +86,9 @@ class TestDownloaders( unittest.TestCase ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'newgrounds_page.html' ) as f: newgrounds_page = f.read()
         
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'www.newgrounds.com' )
+        HC.http.SetResponse( HC.GET, 'http://www.newgrounds.com/portal/view/583715', newgrounds_page )
         
-        fake_connection.SetResponse( 'GET', '/portal/view/583715', newgrounds_page )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'www.newgrounds.com' )
-        
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'uploads.ungrounded.net' )
-        
-        fake_connection.SetResponse( 'GET', '/583000/583715_catdust.swf', 'swf file' )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'uploads.ungrounded.net' )
+        HC.http.SetResponse( HC.GET, 'http://uploads.ungrounded.net/583000/583715_catdust.swf', 'swf file' )
         
         info = downloader.GetFileAndTags( 'http://www.newgrounds.com/portal/view/583715' )
         
@@ -125,12 +108,8 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_page.html' ) as f: e621_page = f.read()
         
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'e621.net' )
-        
-        fake_connection.SetResponse( 'GET', '/post/index?page=1&tags=flash', e621_gallery )
-        fake_connection.SetResponse( 'GET', '/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia', e621_page )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'e621.net' )
+        HC.http.SetResponse( HC.GET, 'http://e621.net/post/index?page=1&tags=flash', e621_gallery )
+        HC.http.SetResponse( HC.GET, 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia', e621_page )
         
         #
         
@@ -146,13 +125,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'e621.net' )
-        
-        fake_connection = TestConstants.FakeHTTPConnection( scheme = 'https', host = 'static1.e621.net' )
-        
-        fake_connection.SetResponse( 'GET', '/data/f5/48/f54897c2543e0264e1a64d7f7c33c9f9.swf', 'swf file' )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, scheme = 'https', host = 'static1.e621.net' )
+        HC.http.SetResponse( HC.GET, 'https://static1.e621.net/data/f5/48/f54897c2543e0264e1a64d7f7c33c9f9.swf', 'swf file' )
         
         info = downloader.GetFileAndTags( 'http://e621.net/post/show/360338/2013-3_toes-anal-anal_penetration-animated-argonia' )
         
@@ -174,16 +147,12 @@ class TestDownloaders( unittest.TestCase ):
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_picture_page.html' ) as f: picture_page = f.read()
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'hf_scrap_page.html' ) as f: scrap_page = f.read()
         
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'www.hentai-foundry.com' )
-        
         # what about page/1 or whatever?
         
-        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/page/1', picture_gallery )
-        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
-        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/226304/Ashantae', picture_page )
-        fake_connection.SetResponse( 'GET', '/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'www.hentai-foundry.com' )
+        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/page/1', picture_gallery )
+        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/1', scrap_gallery )
+        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226304/Ashantae', picture_page )
+        HC.http.SetResponse( HC.GET, 'http://www.hentai-foundry.com/pictures/user/Sparrow/226084/Swegabe-Sketches--Gabrielle-027', scrap_page )
         
         cookies = { 'YII_CSRF_TOKEN' : '19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B' }
         
@@ -217,8 +186,8 @@ class TestDownloaders( unittest.TestCase ):
         info[ 'filter_order' ] = 0
         info[ 'filter_type' ] = 0
         
-        pictures_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
-        scraps_downloader = HydrusDownloading.GetDownloader( HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
+        pictures_downloader = HydrusDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist pictures', 'Sparrow', info )
+        scraps_downloader = HydrusDownloading.GetDownloader( HC.SITE_TYPE_HENTAI_FOUNDRY, 'artist scraps', 'Sparrow', info )
         
         #
         
@@ -236,12 +205,8 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        fake_connection = TestConstants.FakeHTTPConnection( host = 'pictures.hentai-foundry.com' )
-        
-        fake_connection.SetResponse( 'GET', '//s/Sparrow/226304.jpg', 'picture' )
-        fake_connection.SetResponse( 'GET', '//s/Sparrow/226084.jpg', 'scrap' )
-        
-        TestConstants.fake_http_connection_manager.SetConnection( fake_connection, host = 'pictures.hentai-foundry.com' )
+        HC.http.SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226304.jpg', 'picture' )
+        HC.http.SetResponse( HC.GET, 'http://pictures.hentai-foundry.com//s/Sparrow/226084.jpg', 'scrap' )
         
         # ask for specific url
         

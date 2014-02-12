@@ -532,7 +532,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         # misc
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'include tags from', namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
         
         # arrange stuff
         
@@ -1592,7 +1592,7 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         #
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send ' + self._name + ' tags to ', self._namespaces )
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, self._namespaces )
         
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1678,7 +1678,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         #
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send to ', [ 'filename' ] )
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, [ 'filename' ] )
         
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         

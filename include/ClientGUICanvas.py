@@ -90,6 +90,8 @@ class AnimationBar( wx.Window ):
         self._num_frames_rendered = 0
         self._current_frame_index = 0
         
+        self._currently_in_a_drag = False
+        
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
@@ -145,7 +147,9 @@ class AnimationBar( wx.Window ):
         
         ( my_width, my_height ) = self.GetClientSize()
         
-        if event.Dragging() or event.ButtonDown():
+        if event.Dragging(): self._currently_in_a_drag = True
+        
+        if event.ButtonIsDown( wx.MOUSE_BTN_ANY ):
             
             ( x, y ) = event.GetPosition()
             
@@ -160,11 +164,13 @@ class AnimationBar( wx.Window ):
             
             self._Draw()
             
-            should_pause = event.Dragging()
-            
             self._media_window.GotoFrame( self._current_frame_index )
             
-            if not should_pause: self._media_window.Play()
+        elif event.ButtonUp():
+            
+            if not self._currently_in_a_drag: self._media_window.Play()
+            
+            self._currently_in_a_drag = False
             
         
     
@@ -3854,6 +3860,10 @@ class Image( wx.Window ):
                         full_resolution = self._image_container.GetResolution()
                         
                         self._image_container = self._image_cache.GetImage( self._media.GetHash(), self._media.GetMime(), full_resolution )
+                        
+                        self._yet_to_draw_initial_frame = True
+                        
+                        self._timer_animated.Start()
                         
                     
                 

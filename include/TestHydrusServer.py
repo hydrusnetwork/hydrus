@@ -126,15 +126,15 @@ class TestServer( unittest.TestCase ):
     
     def _test_file_repo( self, host, port ):
         
-        # set up connection
-        
         service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'service' )
         
-        credentials = CC.Credentials( host, port, self._access_key )
+        info = {}
         
-        connection = CC.ConnectionToService( service_identifier, credentials )
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        info[ 'access_key' ] = self._access_key
         
-        file_connection = httplib.HTTPConnection( host, port, timeout = 10 )
+        service = CC.Service( service_identifier, info )
         
         # file
         
@@ -142,7 +142,7 @@ class TestServer( unittest.TestCase ):
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
-        response = connection.Get( 'file', hash = self._file_hash.encode( 'hex' ) )
+        response = service.Request( HC.GET, 'file', { 'hash' : self._file_hash.encode( 'hex' ) } )
         
         self.assertEqual( response, 'file' )
         
@@ -153,7 +153,7 @@ class TestServer( unittest.TestCase ):
 
         with open( path, 'rb' ) as f: file = f.read()
         
-        connection.Post( 'file', file = file )
+        service.Request( HC.POST, 'file', { 'file' : file } )
         
         written = HC.app.GetWrite( 'file' )
         
@@ -174,7 +174,7 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'ip', ( ip, timestamp ) )
         
-        response = connection.Get( 'ip', hash = self._file_hash.encode( 'hex' ) )
+        response = service.Request( HC.GET, 'ip', { 'hash' : self._file_hash.encode( 'hex' ) } )
         
         self.assertEqual( response[ 'ip' ], ip )
         self.assertEqual( response[ 'timestamp' ], timestamp )
@@ -185,7 +185,7 @@ class TestServer( unittest.TestCase ):
         
         with open( path, 'wb' ) as f: f.write( 'thumb' )
         
-        response = connection.Get( 'thumbnail', hash = self._file_hash.encode( 'hex' ) )
+        response = service.Request( HC.GET, 'thumbnail', { 'hash' : self._file_hash.encode( 'hex' ) } )
         
         self.assertEqual( response, 'thumb' )
         
@@ -195,19 +195,21 @@ class TestServer( unittest.TestCase ):
     
     def _test_repo( self, host, port, service_type ):
         
-        # set up connection
-        
         service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, 'service' )
         
-        credentials = CC.Credentials( host, port, self._access_key )
+        info = {}
         
-        connection = CC.ConnectionToService( service_identifier, credentials )
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        info[ 'access_key' ] = self._access_key
+        
+        service = CC.Service( service_identifier, info )
         
         # news
         
         news = 'this is the news'
         
-        connection.Post( 'news', news = news )
+        service.Request( HC.POST, 'news', { 'news' : news } )
         
         written = HC.app.GetWrite( 'news' )
         
@@ -223,7 +225,7 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'num_petitions', num_petitions )
         
-        response = connection.Get( 'num_petitions' )
+        response = service.Request( HC.GET, 'num_petitions' )
         
         self.assertEqual( response[ 'num_petitions' ], num_petitions )
         
@@ -233,7 +235,7 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'petition', petition )
         
-        response = connection.Get( 'petition' )
+        response = service.Request( HC.GET, 'petition' )
         
         self.assertEqual( response[ 'petition' ], petition )
         
@@ -249,14 +251,14 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'update_key', update_key )
         
-        response = connection.Get( 'update', begin = 100 )
+        response = service.Request( HC.GET, 'update', { 'begin' : 100 } )
         
         self.assertEqual( response, update )
         
         try: os.remove( path )
         except: pass
         
-        connection.Post( 'update', update = update )
+        service.Request( HC.POST, 'update', { 'update' : update } )
         
         written = HC.app.GetWrite( 'update' )
         
@@ -269,35 +271,32 @@ class TestServer( unittest.TestCase ):
     
     def _test_restricted( self, host, port, service_type ):
         
-        # access_key
-        
-        registration_key = os.urandom( 32 )
-        
-        HC.app.SetRead( 'access_key', self._access_key )
-        
-        connection = HC.get_connection( host = host, port = port )
-        
-        headers = {}
-        
-        headers[ 'Hydrus-Key' ] = registration_key.encode( 'hex' )
-        
-        response = connection.request( 'GET', '/access_key', headers = headers )
-        
-        self.assertEqual( response[ 'access_key' ], self._access_key )
-        
-        # set up connection
-        
         service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, 'service' )
         
         info = {}
         
         info[ 'host' ] = host
         info[ 'port' ] = port
+        
+        service = CC.Service( service_identifier, info )
+        
+        # access_key
+        
+        registration_key = os.urandom( 32 )
+        
+        HC.app.SetRead( 'access_key', self._access_key )
+        
+        request_headers = {}
+        
+        request_headers[ 'Hydrus-Key' ] = registration_key.encode( 'hex' )
+        
+        response = service.Request( HC.GET, 'access_key', request_headers = request_headers )
+        
+        self.assertEqual( response[ 'access_key' ], self._access_key )
+        
         info[ 'access_key' ] = self._access_key
         
-        credentials = CC.Credentials( host, port, self._access_key )
-        
-        connection = CC.ConnectionToService( service_identifier, credentials )
+        service = CC.Service( service_identifier, info )
         
         # set up session
         
@@ -313,7 +312,7 @@ class TestServer( unittest.TestCase ):
         
         # account
         
-        response = connection.Get( 'account' )
+        response = service.Request( HC.GET, 'account' )
         
         self.assertEqual( repr( response[ 'account' ] ), repr( self._account ) )
         
@@ -323,19 +322,19 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'account_info', account_info )
         
-        response = connection.Get( 'account_info', subject_account_id = 1 )
+        response = service.Request( HC.GET, 'account_info', { 'subject_account_id' : 1 } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
-        response = connection.Get( 'account_info', subject_access_key = os.urandom( 32 ).encode( 'hex' ) )
+        response = service.Request( HC.GET, 'account_info', { 'subject_access_key' : os.urandom( 32 ).encode( 'hex' ) } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
-        response = connection.Get( 'account_info', subject_hash = os.urandom( 32 ).encode( 'hex' ) )
+        response = service.Request( HC.GET, 'account_info', { 'subject_hash' : os.urandom( 32 ).encode( 'hex' ) } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
-        response = connection.Get( 'account_info', subject_hash = os.urandom( 32 ).encode( 'hex' ), subject_tag = 'hello'.encode( 'hex' ) )
+        response = service.Request( HC.GET, 'account_info', { 'subject_hash' : os.urandom( 32 ).encode( 'hex' ), 'subject_tag' : 'hello'.encode( 'hex' ) } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
@@ -345,13 +344,13 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'account_types', account_types )
         
-        response = connection.Get( 'account_types' )
+        response = service.Request( HC.GET, 'account_types' )
         
         self.assertEqual( response[ 'account_types' ], account_types )
         
         edit_log = 'blah'
         
-        connection.Post( 'account_types', edit_log = edit_log )
+        service.Request( HC.POST, 'account_types', { 'edit_log' : edit_log } )
         
         written = HC.app.GetWrite( 'account_types' )
         
@@ -367,11 +366,11 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'registration_keys', [ registration_key ] )
         
-        response = connection.Get( 'registration_keys', num = 1, title = 'blah' )
+        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'title' : 'blah' } )
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         
-        response = connection.Get( 'registration_keys', num = 1, title = 'blah', lifetime = 100 )
+        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'title' : 'blah', 'lifetime' : 100 } )
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         
@@ -381,19 +380,21 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'stats', stats )
         
-        response = connection.Get( 'stats' )
+        response = service.Request( HC.GET, 'stats' )
         
         self.assertEqual( response[ 'stats' ], stats )
         
     
     def _test_server_admin( self, host, port ):
         
-        # set up init connection 
-        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'server admin' )
+        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'service' )
         
-        credentials = CC.Credentials( host, port )
+        info = {}
         
-        connection = CC.ConnectionToService( service_identifier, credentials )
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        
+        service = CC.Service( service_identifier, info )
         
         # init
         
@@ -401,19 +402,19 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'init', access_key )
         
-        response = connection.Get( 'init' )
+        response = service.Request( HC.GET, 'init' )
         
         self.assertEqual( response[ 'access_key' ], access_key )
         
-        # set up connection
+        #
         
-        credentials = CC.Credentials( host, port, self._access_key )
+        info[ 'access_key' ] = self._access_key
         
-        connection = CC.ConnectionToService( service_identifier, credentials )
+        service = CC.Service( service_identifier, info )
         
         # backup
         
-        response = connection.Post( 'backup' )
+        response = service.Request( HC.POST, 'backup' )
         
         # services
         
@@ -421,13 +422,13 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'services', services )
         
-        response = connection.Get( 'services' )
+        response = service.Request( HC.GET, 'services' )
         
         self.assertEqual( response[ 'services_info' ], services )
         
         edit_log = 'blah'
         
-        registration_keys = connection.Post( 'services', edit_log = edit_log )
+        registration_keys = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
         
         written = HC.app.GetWrite( 'services' )
         

@@ -34,15 +34,15 @@ def ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, s
     
     return service_identifiers_to_content_updates
     
-def GetDownloader( site_download_type, *args ):
+def GetDownloader( site_type, *args ):
     
-    if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: c = DownloaderBooru
-    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART: c = DownloaderDeviantArt
-    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_GIPHY: c = DownloaderGiphy
-    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: c = DownloaderHentaiFoundry
-    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: c = DownloaderPixiv
-    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: c = DownloaderTumblr
-    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS: c = DownloaderNewgrounds
+    if site_type == HC.SITE_TYPE_BOORU: c = DownloaderBooru
+    elif site_type == HC.SITE_TYPE_DEVIANT_ART: c = DownloaderDeviantArt
+    elif site_type == HC.SITE_TYPE_GIPHY: c = DownloaderGiphy
+    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: c = DownloaderHentaiFoundry
+    elif site_type == HC.SITE_TYPE_PIXIV: c = DownloaderPixiv
+    elif site_type == HC.SITE_TYPE_TUMBLR: c = DownloaderTumblr
+    elif site_type == HC.SITE_TYPE_NEWGROUNDS: c = DownloaderNewgrounds
     
     return c( *args )
     
@@ -1751,8 +1751,6 @@ def THREADDownloadURL( job_key, url, message_string ):
     
     try:
         
-        connection = HC.AdvancedHTTPConnection( url = url )
-        
         def hook( range, value ):
             
             if range is None: message = message_string + ' - ' + HC.ConvertIntToBytes( value )
@@ -1761,9 +1759,7 @@ def THREADDownloadURL( job_key, url, message_string ):
             wx.CallAfter( HC.pubsub.pub, 'message_gauge_info', job_key, range, value, message )
             
         
-        connection.AddReportHook( hook )
-        
-        temp_path = connection.geturl( url, response_to_path = True )
+        temp_path = HC.http.Request( HC.GET, url, response_to_path = True, report_hooks = [ hook ] )
         
         HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'importing ' + message_string )
         

@@ -382,6 +382,15 @@ class HTTPConnection():
         
         if 'User-Agent' not in request_headers: request_headers[ 'User-Agent' ] = 'hydrus/' + HC.u( HC.NETWORK_VERSION )
         
+        # it is important to only send str, not unicode, to httplib
+        # it uses += to extend the message body, which propagates the unicode (and thus fails) when
+        # you try to push non-ascii bytes as the body (e.g. during a file upload!)
+        
+        method_string = str( method_string )
+        path_and_query = str( path_and_query )
+        
+        request_headers = { str( k ) : str( v ) for ( k, v ) in request_headers.items() }
+        
         try:
             
             self._connection.request( method_string, path_and_query, headers = request_headers, body = body )
