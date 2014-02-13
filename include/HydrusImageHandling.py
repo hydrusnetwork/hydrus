@@ -211,9 +211,24 @@ def GenerateResolutionAndFrames( path ):
             img = PILImage.fromarray(rgb, "RGBA")
             frames.append(img)
 
-    # frames should never be empty here, but generate another PIL if it *somehow* is
+    # if frames are empty this means, that openCV could not render the animated GIF
+    # try it with PIL and throw exception if it does not work
     if len(frames) < 1:
-        frames.append( GeneratePILImage( path ) )
+        pil_image = GeneratePILImage( path )
+        imagePalette = pil_image.getpalette()
+
+        while True:
+             try:
+                 pil_image.putpalette( imagePalette )
+                 pil_frame = PILImage.new("RGBA", pil_image.size)
+                 pil_frame.paste(pil_image)
+
+                 frames.append( pil_frame )
+                 pil_image.seek( pil_image.tell() + 1 )
+
+            # this is actually not an error, but the end of the file
+             except EOFError, e:
+                 break
 
 
     return frames[0].size, frames
