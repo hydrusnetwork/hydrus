@@ -16,15 +16,16 @@ import sys
 import threading
 import time
 import traceback
-import urlparse
 import wx
 import yaml
 
 PLATFORM_WINDOWS = False
 PLATFORM_OSX  = False
+PLATFORM_LINUX = False
 
 if sys.platform == 'win32': PLATFORM_WINDOWS = True
 elif sys.platform == 'darwin': PLATFORM_OSX = True
+elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
 options = {}
 
@@ -46,7 +47,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 101
+SOFTWARE_VERSION = 103
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -229,6 +230,7 @@ SERVICE_UPDATE_NEWS = 7
 ADD = 0
 DELETE = 1
 EDIT = 2
+SET = 3
 
 APPROVE = 0
 DENY = 1
@@ -370,13 +372,13 @@ PREDICATE_TYPE_TAG = 1
 PREDICATE_TYPE_NAMESPACE = 2
 PREDICATE_TYPE_PARENT = 3
 
-SITE_DOWNLOAD_TYPE_DEVIANT_ART = 0
-SITE_DOWNLOAD_TYPE_GIPHY = 1
-SITE_DOWNLOAD_TYPE_PIXIV = 2
-SITE_DOWNLOAD_TYPE_BOORU = 3
-SITE_DOWNLOAD_TYPE_TUMBLR = 4
-SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY = 5
-SITE_DOWNLOAD_TYPE_NEWGROUNDS = 6
+SITE_TYPE_DEVIANT_ART = 0
+SITE_TYPE_GIPHY = 1
+SITE_TYPE_PIXIV = 2
+SITE_TYPE_BOORU = 3
+SITE_TYPE_TUMBLR = 4
+SITE_TYPE_HENTAI_FOUNDRY = 5
+SITE_TYPE_NEWGROUNDS = 6
 
 SYSTEM_PREDICATE_TYPE_EVERYTHING = 0
 SYSTEM_PREDICATE_TYPE_INBOX = 1
@@ -1201,327 +1203,6 @@ def u( text_producing_object ):
         except: return str( text )
         
     
-class AdvancedHTTPConnection():
-    
-    def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
-        
-        if len( url ) > 0:
-            
-            parse_result = urlparse.urlparse( url )
-            
-            ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-            
-        
-        self._report_hooks = []
-        
-        self._scheme = scheme
-        self._host = host
-        self._port = port
-        self._service_identifier = service_identifier
-        self._accept_cookies = accept_cookies
-        
-        self._cookies = {}
-        
-        self._RefreshConnection()
-        
-    
-    def _AcceptCookies( self, response ):
-    
-        for cookie in response.msg.getallmatchingheaders( 'Set-Cookie' ): # msg is a mimetools.Message
-            
-            try:
-                
-                cookie = cookie.replace( 'Set-Cookie: ', '' )
-                
-                if ';' in cookie: ( cookie, expiry_gumpf ) = cookie.split( ';', 1 )
-                
-                ( k, v ) = cookie.split( '=' )
-                
-                self._cookies[ k ] = v
-                
-            except: pass
-            
-        
-    
-    def _CheckHydrusVersion( self, response ):
-        
-        service_type = self._service_identifier.GetType()
-        
-        service_string = service_string_lookup[ service_type ]
-        
-        server_header = response.getheader( 'Server' )
-        
-        if server_header is None or service_string not in server_header:
-            
-            app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] })
-            
-            raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
-            
-        
-        ( service_string_gumpf, network_version ) = server_header.split( '/' )
-        
-        network_version = int( network_version )
-        
-        if network_version != NETWORK_VERSION:
-            
-            if network_version > NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
-            else: message = 'The server is out of date; please ask its admin to update to the latest release.'
-            
-            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + u( network_version ) + ', whereas your client\'s is ' + u( NETWORK_VERSION ) + '! ' + message )
-            
-        
-    
-    def _DoHydrusBandwidth( self, request, response, size_of_request, size_of_response ):
-        
-        service_type = self._service_identifier.GetType()
-        
-        if '?' in request: request_command = request.split( '?' )[0]
-        else: request_command = request
-        
-        if '/' in request_command: request_command = request_command.split( '/' )[1]
-        
-        if request_type == 'GET':
-            
-            if ( service_type, GET, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, size_of_response ) ] } )
-            
-        elif ( service_type, POST, request_command ) in BANDWIDTH_CONSUMING_REQUESTS: pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_REQUEST_MADE, size_of_request ) ] } )
-        
-    
-    def _DoRequest( self, request_type, request, headers, body, response_to_path ):
-        
-        if request == '/backup' and self._service_identifier is not None and self._service_identifier.GetType() == SERVER_ADMIN:
-            
-            timeout = 600
-            
-            if self._scheme == 'http': connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
-            else: connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
-            
-            connection.request( request_type, request, headers = headers, body = body )
-            
-            response = connection.getresponse()
-            
-        else:
-            
-            self._connection.request( request_type, request, headers = headers, body = body )
-            
-            response = self._connection.getresponse()
-            
-        
-        if self._service_identifier is not None: self._CheckHydrusVersion( response )
-        
-        content_length = response.getheader( 'Content-Length' )
-        
-        if content_length is not None: content_length = int( content_length )
-        
-        block_size = 64 * 1024
-        
-        if response.status == 200 and response_to_path:
-            
-            temp_path = GetTempPath()
-            
-            size_of_response = 0
-            
-            with open( temp_path, 'wb' ) as f:
-                
-                next_block = response.read( block_size )
-                
-                while next_block != '':
-                    
-                    size_of_response += len( next_block )
-                    
-                    f.write( next_block )
-                    
-                    for hook in self._report_hooks: hook( content_length, size_of_response )
-                    
-                    next_block = response.read( block_size )
-                    
-                
-            
-            parsed_response = temp_path
-            
-        else:
-            
-            data = ''
-            
-            next_block = response.read( block_size )
-            
-            while next_block != '':
-                
-                data += next_block
-                
-                for hook in self._report_hooks: hook( content_length, len( data ) )
-                
-                next_block = response.read( block_size )
-                
-            
-            size_of_response = len( data )
-            
-            parsed_response = self._TryToParseResponse( response, data )
-            
-        
-        return ( response, parsed_response, size_of_response )
-        
-    
-    def _RefreshConnection( self ):
-        
-        timeout = 30
-        
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = timeout )
-        else: self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = timeout )
-        
-    
-    def _TryToParseResponse( self, response, data ):
-        
-        content_type = response.getheader( 'Content-Type' )
-        
-        if content_type is None: parsed_response = data
-        else:
-            
-            if '; ' in content_type: ( mime_string, additional_info ) = content_type.split( '; ', 1 )
-            else: ( mime_string, additional_info ) = ( content_type, '' )
-            
-            if 'charset=' in additional_info:
-        
-                # this does utf-8, ISO-8859-4, whatever
-                
-                ( gumpf, charset ) = additional_info.split( '=' )
-                
-                try: parsed_response = data.decode( charset )
-                except: parsed_response = data
-                
-            elif content_type in mime_enum_lookup and mime_enum_lookup[ content_type ] == APPLICATION_YAML:
-                
-                try: parsed_response = yaml.safe_load( data )
-                except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + u( e ) )
-                
-            elif content_type == 'text/html':
-                
-                try: parsed_response = data.decode( 'utf-8' )
-                except: parsed_response = data
-                
-            else: parsed_response = data
-            
-        
-        return parsed_response
-        
-    
-    def AddReportHook( self, hook ): self._report_hooks.append( hook )
-    
-    def ClearReportHooks( self ): self._report_hooks = []
-    
-    def close( self ): self._connection.close()
-    
-    def connect( self ): self._connection.connect()
-    
-    def GetCookies( self ): return self._cookies
-    
-    def geturl( self, url, headers = {}, response_to_path = False, redirects_permitted = 4, follow_redirects = True ):
-        
-        parse_result = urlparse.urlparse( url )
-        
-        request = parse_result.path
-        
-        query = parse_result.query
-        
-        if query != '': request += '?' + query
-        
-        return self.request( 'GET', request, headers = headers, response_to_path = response_to_path, redirects_permitted = redirects_permitted, follow_redirects = follow_redirects )
-        
-    
-    def request( self, request_type, request, headers = {}, body = None, response_to_path = False, redirects_permitted = 4, follow_redirects = True ):
-        
-        if body is None: size_of_request = 0
-        else: size_of_request = len( body )
-        
-        if 'User-Agent' not in headers: headers[ 'User-Agent' ] = 'hydrus/' + u( NETWORK_VERSION )
-        
-        if len( self._cookies ) > 0: headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in self._cookies.items() ] )
-        
-        try: ( response, parsed_response, size_of_response ) = self._DoRequest( request_type, request, headers, body, response_to_path )
-        except ( httplib.CannotSendRequest, httplib.BadStatusLine ):
-            
-            # for some reason, we can't send a request on the current connection, so let's make a new one and try again!
-            
-            self._RefreshConnection()
-            
-            ( response, parsed_response, size_of_response ) = self._DoRequest( request_type, request, headers, body, response_to_path )
-            
-        
-        if self._accept_cookies: self._AcceptCookies( response )
-        
-        if self._service_identifier is not None: self._DoHydrusBandwidth( request, response, size_of_request, size_of_response )
-        
-        if response.status == 200: return parsed_response
-        elif response.status == 205: return
-        elif response.status in ( 301, 302, 303, 307 ):
-            
-            location = response.getheader( 'Location' )
-            
-            if location is None: raise Exception( data )
-            else:
-                
-                if not follow_redirects: return ''
-                
-                if redirects_permitted == 0: raise Exception( 'Too many redirects!' )
-                
-                url = location
-                
-                parse_result = urlparse.urlparse( url )
-                
-                redirected_request = parse_result.path
-                
-                redirected_query = parse_result.query
-                
-                if redirected_query != '': redirected_request += '?' + redirected_query
-                
-                ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
-                
-                if ( scheme is None or scheme == self._scheme ) and ( request == redirected_request or request in redirected_request or redirected_request in request ): raise Exception( 'Redirection problem' )
-                else:
-                    
-                    if host is None or ( scheme == self._scheme and host == self._host and port == self._port ): new_connection = self
-                    else: new_connection = AdvancedHTTPConnection( url )
-                    
-                    if response.status in ( 301, 307 ):
-                        
-                        # 301: moved permanently, repeat request
-                        # 307: moved temporarily, repeat request
-                        
-                        return new_connection.request( request_type, redirected_request, headers = headers, body = body, response_to_path = response_to_path, redirects_permitted = redirects_permitted - 1 )
-                        
-                    elif response.status in ( 302, 303 ):
-                        
-                        # 302: moved temporarily, repeat request (except everyone treats it like 303 for no good fucking reason)
-                        # 303: thanks, now go here with GET
-                        
-                        return new_connection.request( 'GET', redirected_request, response_to_path = response_to_path, redirects_permitted = redirects_permitted - 1 )
-                        
-                    
-                
-            
-        elif response.status == 304: raise HydrusExceptions.NotModifiedException()
-        else:
-            
-            if self._service_identifier is not None:
-                
-                app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ERROR, parsed_response ) ] } )
-                
-                if response.status in ( 401, 426 ): app.Write( 'service_updates', { self._service_identifier : [ ServiceUpdate( SERVICE_UPDATE_ACCOUNT, GetUnknownAccount() ) ] } )
-                
-            
-            if response.status == 401: raise HydrusExceptions.PermissionException( parsed_response )
-            elif response.status == 403: raise HydrusExceptions.ForbiddenException( parsed_response )
-            elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
-            elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
-            elif response.status in ( 500, 501, 502, 503 ): raise Exception( parsed_response )
-            else: raise Exception( parsed_response )
-           
-        
-    
-    def SetCookie( self, key, value ): self._cookies[ key ] = value
-    
-get_connection = AdvancedHTTPConnection
-
 class HydrusYAMLBase( yaml.YAMLObject ):
     
     yaml_loader = yaml.SafeLoader
@@ -2857,24 +2538,23 @@ def construct_python_tuple( self, node ): return tuple( self.construct_sequence(
 def represent_python_tuple( self, data ): return self.represent_sequence( u'tag:yaml.org,2002:python/tuple', data )
 
 yaml.SafeLoader.add_constructor( u'tag:yaml.org,2002:python/tuple', construct_python_tuple )
-yaml.SafeDumper.add_representer( tuple, represent_python_tuple)
-
-# sqlite mod
-
-sqlite3.register_adapter( dict, yaml.safe_dump )
-sqlite3.register_adapter( list, yaml.safe_dump )
-sqlite3.register_adapter( Account, yaml.safe_dump )
-sqlite3.register_adapter( AccountType, yaml.safe_dump )
-sqlite3.register_converter( 'TEXT_YAML', yaml.safe_load )
-
-sqlite3.register_converter( 'BLOB_BYTES', str )
+yaml.SafeDumper.add_representer( tuple, represent_python_tuple )
 
 # for some reason, sqlite doesn't parse to int before this, despite the column affinity
 # it gives the register_converter function a bytestring :/
 def integer_boolean_to_bool( integer_boolean ): return bool( int( integer_boolean ) )
 
-sqlite3.register_adapter( bool, int )
-sqlite3.register_converter( 'INTEGER_BOOLEAN', integer_boolean_to_bool )
+# sqlite mod
 
-# no converters in this case, since we always want to send the dumped string, not the object, to the network
+sqlite3.register_adapter( dict, yaml.safe_dump )
+sqlite3.register_adapter( list, yaml.safe_dump )
+sqlite3.register_adapter( tuple, yaml.safe_dump )
+sqlite3.register_adapter( bool, int )
+# no longer needed since adding tuple? do yaml objects somehow cast to __tuple__?
+sqlite3.register_adapter( Account, yaml.safe_dump )
+sqlite3.register_adapter( AccountType, yaml.safe_dump )
 sqlite3.register_adapter( ServerToClientUpdate, yaml.safe_dump )
+
+sqlite3.register_converter( 'BLOB_BYTES', str )
+sqlite3.register_converter( 'INTEGER_BOOLEAN', integer_boolean_to_bool )
+sqlite3.register_converter( 'TEXT_YAML', yaml.safe_load )

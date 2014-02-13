@@ -18,6 +18,7 @@ import time
 import traceback
 import webbrowser
 import wx
+import yaml
 
 # timers
 
@@ -483,17 +484,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _BackupService( self, service_identifier ):
         
-        message = 'This will tell the service to lock and copy its database files. It will not be able to serve any requests until the operation is complete.'
+        message = 'This will tell the service to lock and copy its database files. It will probably take a few minutes to complete, and will not be able to serve any requests during that time. The GUI will lock up as well.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
-                
-                wx.MessageBox( 'Done!' )
                 
             
         
@@ -595,14 +594,62 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg: dlg.ShowModal()
         
     
+    def _ImportMetadata( self ):
+        
+        with wx.FileDialog( self, style = wx.FD_MULTIPLE ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                paths = dlg.GetPaths()
+                
+                for path in paths:
+                    
+                    try:
+                        
+                        with open( path, 'rb' ) as f: o = yaml.safe_load( f )
+                        
+                        if isinstance( o, HC.ServerToClientUpdate ):
+                            
+                            # turn this into a thread that'll spam it to a gui-polite gauge
+                            
+                            update = o
+                            
+                            service_identifier = HC.LOCAL_TAG_SERVICE_IDENTIFIER
+                            
+                            content_updates = []
+                            current_weight = 0
+                            
+                            for content_update in update.IterateContentUpdates():
+                                
+                                content_updates.append( content_update )
+                                
+                                current_weight += len( content_update.GetHashes() )
+                                
+                                if current_weight > 50:
+                                    
+                                    HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                    
+                                    content_updates = []
+                                    current_weight = 0
+                                    
+                                
+                            
+                            if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                            
+                        
+                    except Exception as e: HC.ShowException( e )
+                    
+                
+        
+    
     def _LoadGUISession( self, name ):
         
-        name_to_info = { name : info for ( name, info ) in HC.app.Read( 'gui_sessions' ) }
+        names_to_info = HC.app.Read( 'gui_sessions' )
         
-        if name not in name_to_info: self._NewPageQuery( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        if name not in names_to_info: self._NewPageQuery( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
         else:
             
-            info = name_to_info[ name ]
+            info = names_to_info[ name ]
             
             for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
                 
@@ -753,6 +800,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 subject_identifiers = ( HC.AccountIdentifier( access_key = access_key ), )
                 
                 with ClientGUIDialogs.DialogModifyAccounts( self, service_identifier, subject_identifiers ) as dlg2: dlg2.ShowModal()
+                
+            
+        
+    
+    def _NewPageImportBooru( self ):
+
+        with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                booru = dlg.GetBooru()
+                
+                self._NewPageImportGallery( 'booru', booru )
                 
             
         
@@ -1287,7 +1347,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 print( 'garbage: ' + HC.u( gc.garbage ) )
                 
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
-            elif command == 'delete_gui_session': HC.app.Write( 'gui_session', data, None )
+            elif command == 'delete_gui_session': HC.app.Write( 'delete_gui_session', data )
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
@@ -1295,7 +1355,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
-            elif command == 'import': self._ImportFiles()
+            elif command == 'import_files': self._ImportFiles()
+            elif command == 'import_metadata': self._ImportMetadata()
             elif command == 'load_gui_session': self._LoadGUISession( data )
             elif command == 'manage_4chan_pass': self._Manage4chanPass()
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
@@ -1314,10 +1375,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_upnp': self._ManageUPnP( data )
             elif command == 'modify_account': self._ModifyAccount( data )
             elif command == 'new_accounts': self._GenerateNewAccounts( data )
+            elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
             elif command == 'new_log_page': self._NewPageLog()
-            elif command == 'new_page': FramePageChooser()
+            elif command == 'new_page':
+                
+                with ClientGUIDialogs.DialogPageChooser( self ) as dlg: dlg.ShowModal()
+                
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
             elif command == 'open_export_folder': self._OpenExportFolder()
@@ -1481,12 +1546,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         menu = wx.MenuBar()
         
         file = wx.Menu()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_metadata' ), p( '&Import Metadata' ), p( 'Add YAML metadata.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
         file.AppendSeparator()
         
-        gui_session_names = HC.app.Read( 'gui_sessions', name_only = True )
+        gui_sessions = HC.app.Read( 'gui_sessions' )
+        
+        gui_session_names = gui_sessions.keys()
         
         sessions = wx.Menu()
         
@@ -1871,252 +1939,6 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
         if draft_key == self._draft_panel.GetDraftKey(): self.Close()
         
     
-class FramePageChooser( ClientGUICommon.Frame ):
-    
-    def __init__( self ):
-        
-        def InitialiseControls():
-            
-            self._button_hidden = wx.Button( self )
-            self._button_hidden.Hide()
-            
-            self._button_1 = wx.Button( self, label = '', id = 1 )
-            self._button_2 = wx.Button( self, label = '', id = 2 )
-            self._button_3 = wx.Button( self, label = '', id = 3 )
-            self._button_4 = wx.Button( self, label = '', id = 4 )
-            self._button_5 = wx.Button( self, label = '', id = 5 )
-            self._button_6 = wx.Button( self, label = '', id = 6 )
-            self._button_7 = wx.Button( self, label = '', id = 7 )
-            self._button_8 = wx.Button( self, label = '', id = 8 )
-            self._button_9 = wx.Button( self, label = '', id = 9 )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-            
-            gridbox = wx.GridSizer( 0, 3 )
-            
-            gridbox.AddF( self._button_7, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_8, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_9, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_4, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_5, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_6, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_1, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_2, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_3, FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( gridbox )
-            
-            self.SetInitialSize( ( 420, 210 ) )
-            
-        
-        ClientGUICommon.Frame.__init__( self, None, title = HC.app.PrepStringForDisplay( 'New Page' ) )
-        
-        self.Center()
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        self._services = HC.app.Read( 'services' )
-        
-        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
-        
-        self._InitButtons( 'home' )
-        
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self._button_hidden.SetFocus()
-        
-        #
-        
-        entries = []
-        
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
-        
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 1 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 3 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 5 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 7 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 9 ) ) )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
-        
-        #
-        
-        self.Show( True )
-        
-    
-    def _AddEntry( self, button, entry ):
-        
-        id = button.GetId()
-        
-        self._command_dict[ id ] = entry
-        
-        ( entry_type, obj ) = entry
-        
-        if entry_type == 'menu': button.SetLabel( obj )
-        elif entry_type in ( 'page_query', 'page_petitions' ):
-            
-            name = obj.GetName()
-            
-            button.SetLabel( name )
-            
-        elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
-        elif entry_type == 'page_import_gallery':
-            
-            ( name, type ) = obj
-            
-            if type is None: button.SetLabel( name )
-            else: button.SetLabel( name + ' by ' + type )
-            
-        elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
-        elif entry_type == 'page_import_url': button.SetLabel( 'url' )
-        
-        button.Show()
-        
-    
-    def _InitButtons( self, menu_keyword ):
-        
-        self._command_dict = {}
-        
-        if menu_keyword == 'home':
-            
-            entries = [ ( 'menu', 'files' ), ( 'menu', 'download' ) ]
-            
-            if len( self._petition_service_identifiers ) > 0: entries.append( ( 'menu', 'petitions' ) )
-            
-        elif menu_keyword == 'files':
-            
-            file_repos = [ ( 'page_query', service_identifier ) for service_identifier in [ service.GetServiceIdentifier() for service in self._services ] if service_identifier.GetType() == HC.FILE_REPOSITORY ]
-            
-            entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
-            
-        elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
-        elif menu_keyword == 'gallery':
-            
-            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', None ) ), ( 'page_import_gallery', ( 'deviant art', 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', None ) ) ]
-            
-            ( id, password ) = HC.app.Read( 'pixiv_account' )
-            
-            if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
-            
-            entries.extend( [ ( 'page_import_gallery', ( 'tumblr', None ) ) ] )
-            
-        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry', 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry', 'tags' ) ) ]
-        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
-        elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
-        
-        if len( entries ) <= 4:
-            
-            self._button_1.Hide()
-            self._button_3.Hide()
-            self._button_5.Hide()
-            self._button_7.Hide()
-            self._button_9.Hide()
-            
-            potential_buttons = [ self._button_8, self._button_4, self._button_6, self._button_2 ]
-            
-        elif len( entries ) <= 9: potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
-        else:
-            
-            pass # sort out a multi-page solution? maybe only if this becomes a big thing; the person can always select from the menus, yeah?
-            
-            potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
-            entries = entries[:9]
-            
-        
-        for entry in entries: self._AddEntry( potential_buttons.pop( 0 ), entry )
-        
-        unused_buttons = potential_buttons
-        
-        for button in unused_buttons: button.Hide()
-        
-    
-    def EventButton( self, event ):
-        
-        id = event.GetId()
-        
-        if id in self._command_dict:
-            
-            ( entry_type, obj ) = self._command_dict[ id ]
-            
-            if entry_type == 'menu': self._InitButtons( obj )
-            else:
-                
-                if entry_type == 'page_query': HC.pubsub.pub( 'new_page_query', obj )
-                elif entry_type == 'page_import_booru':
-                    
-                    with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            booru = dlg.GetBooru()
-                            
-                            HC.pubsub.pub( 'new_page_import_gallery', 'booru', booru )
-                            
-                        
-                    
-                elif entry_type == 'page_import_gallery':
-                    
-                    ( gallery_name, gallery_type ) = obj
-                    
-                    HC.pubsub.pub( 'new_page_import_gallery', gallery_name, gallery_type )
-                    
-                elif entry_type == 'page_import_thread_watcher': HC.pubsub.pub( 'new_page_import_thread_watcher' )
-                elif entry_type == 'page_import_url': HC.pubsub.pub( 'new_page_import_url' )
-                elif entry_type == 'page_petitions': HC.pubsub.pub( 'new_page_petitions', obj )
-                
-                self.Close()
-                
-            
-        
-        self._button_hidden.SetFocus()
-        
-    
-    def EventCharHook( self, event ):
-        
-        if event.KeyCode == wx.WXK_ESCAPE: self.Close()
-        else: event.Skip()
-        
-    
-    def EventMenu( self, event ):
-        
-        event_id = event.GetId()
-        
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event_id )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'button':
-                
-                new_event = wx.CommandEvent( wx.wxEVT_COMMAND_BUTTON_CLICKED, winid = data )
-                
-                self.ProcessEvent( new_event )
-                
-            
-        
-    
 class FrameReviewServices( ClientGUICommon.Frame ):
     
     def __init__( self ):
@@ -2466,7 +2288,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in HC.REPOSITORIES:
                 
-                self.Bind( wx.EVT_TIMER, self.EventTimerUpdates, id = ID_TIMER_UPDATES )
+                self.Bind( wx.EVT_TIMER, self.TIMEREventUpdates, id = ID_TIMER_UPDATES )
                 
                 self._timer_updates.Start( 1000, wx.TIMER_CONTINUOUS )
                 
@@ -2696,27 +2518,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
-        def EventTimerUpdates( self, event ):
-            
-            now = HC.GetNow()
-            
-            first_begin = self._service.GetFirstBegin()
-            next_begin = self._service.GetNextBegin()
-            
-            if first_begin == 0:
-                
-                num_updates = 0
-                num_updates_downloaded = 0
-                
-            else:
-                
-                num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
-                num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
-                
-            
-            self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
-            
-        
         def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
             
             for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
@@ -2736,6 +2537,27 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     
                 
+            
+        
+        def TIMEREventUpdates( self, event ):
+            
+            now = HC.GetNow()
+            
+            first_begin = self._service.GetFirstBegin()
+            next_begin = self._service.GetNextBegin()
+            
+            if first_begin == 0:
+                
+                num_updates = 0
+                num_updates_downloaded = 0
+                
+            else:
+                
+                num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
+                num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
+                
+            
+            self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
             
         
     

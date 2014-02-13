@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 103</h3></li>
+				<ul>
+					<li>fixed a virctual size issue with expanding collapsible panes inside scrolling windows :S</li>
+					<li>fixed images not showing on first zoom switch</li>
+					<li>improved touch and feel of image/flash scanbar</li>
+					<li>subscriptions dialog is now flattened</li>
+					<li>reworked advanced_tag_options to be more efficient and flexible</li>
+					<li>fixed a couple bugs in advanced_tag_options</li>
+					<li>moved fake http unit tests to a fake version of the new networking system (so much better, now!)</li>
+					<li>moved real http unit tests to new networking system (so much better, now!)</li>
+					<li>fixed up a last couple network things</li>
+					<li>I probably fixed some file upload code, as well</li>
+					<li>cleared out old network code</li>
+					<li>fixed a fake pubsub problem in unit tests</li>
+					<li>made a single new db table for consolidating:</li>
+					<ul>
+						<li>4chan_pass</li>
+						<li>pixiv_account</li>
+						<li>boorus</li>
+						<li>favourite_custom_filter_actions</li>
+						<li>gui_sessions</li>
+						<li>imageboard_sites</li>
+						<li>imageboards</li>
+						<li>import_folders</li>
+						<li>subscriptions</li>
+					</ul>
+					<li>couple small help edits</li>
+					<li>fixed view->new booru download page</li>
+					<li>started export folders</li>
+				</ul>
+				<li><h3>version 102</h3></li>
+				<ul>
+					<li>initial linux release</li>
+					<li>rewrote running_from_source.html</li>
+					<li>altered some service object and db stuff to look after null access keys and temp services a bit better</li>
+					<li>key registration works on new network system</li>
+					<li>all downloaders use new network system</li>
+					<li>A/C timer tweaked a little more</li>
+					<li>did some timer event grammar improvements</li>
+					<li>improved button behaviour in import files dialog</li>
+					<li>backing up a server no longer causes a timeout problem</li>
+					<li>prototype export/import tag metadata is done</li>
+					<li>rewrote the way animated gif frames are navigated and thrown to screen</li>
+					<li>fixed an issue that was causing some dialogs to OK when escape was pressed or the close cross was clicked</li>
+					<li>this above issue included the enter system predicate dialog</li>
+				</ul>
 				<li><h3>version 101</h3></li>
 				<ul>
 					<li>fixed another update problem for clients &lt;v95</li>

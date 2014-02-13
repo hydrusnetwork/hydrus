@@ -113,8 +113,8 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
-        self.Bind( wx.EVT_TIMER, self.EventDropdownHideTimer, id = ID_TIMER_DROPDOWN_HIDE )
-        self.Bind( wx.EVT_TIMER, self.EventLagTimer, id = ID_TIMER_AC_LAG )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventDropdownHide, id = ID_TIMER_DROPDOWN_HIDE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventLag, id = ID_TIMER_AC_LAG )
         
         self._move_hide_timer = wx.Timer( self, id = ID_TIMER_DROPDOWN_HIDE )
         self._lag_timer = wx.Timer( self, id = ID_TIMER_AC_LAG )
@@ -179,12 +179,6 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def _UpdateList( self ): pass
     
-    def EventDropdownHideTimer( self, event ):
-        
-        try: self._ShowDropdownIfFocussed()
-        except: pass
-        
-    
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self.GetValue() == '' and len( self._dropdown_list ) == 0: self._BroadcastChoice( None )
@@ -210,8 +204,6 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         event.Skip()
         
-    
-    def EventLagTimer( self, event ): self._UpdateList()
     
     def EventMouseWheel( self, event ):
         
@@ -280,9 +272,20 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventText( self, event ):
         
-        if len( self.GetValue() ) == 0: self._UpdateList()
+        num_chars = len( self.GetValue() )
+        
+        if num_chars == 0: self._UpdateList()
+        elif num_chars < 3: self._lag_timer.Start( 500, wx.TIMER_ONE_SHOT )
         else: self._lag_timer.Start( 250, wx.TIMER_ONE_SHOT )
         
+    
+    def TIMEREventDropdownHide( self, event ):
+        
+        try: self._ShowDropdownIfFocussed()
+        except: pass
+        
+    
+    def TIMEREventLag( self, event ): self._UpdateList()
     
 class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
     
@@ -918,6 +921,19 @@ class BetterChoice( wx.Choice ):
         
         if selection != wx.NOT_FOUND: return self.GetClientData( selection )
         else: raise Exception( 'choice not chosen' )
+        
+    
+    def SelectClientData( self, client_data ):
+        
+        for i in range( self.GetCount() ):
+            
+            if client_data == self.GetClientData( i ):
+                
+                self.Select( i )
+                
+                return
+                
+            
         
     
 class CheckboxCollect( wx.combo.ComboCtrl ):
@@ -3069,12 +3085,22 @@ class CollapsiblePanel( wx.Panel ):
             self._expanded = True
             
         
-        self.GetParent().GetParent().Layout() # this may need to be cleverer
+        parent_of_container = self.GetParent().GetParent()
+        
+        parent_of_container.Layout()
+        
+        if isinstance( parent_of_container, wx.ScrolledWindow ):
+            
+            # fitinside is like fit, but it does the virtual size!
+            parent_of_container.FitInside()
+            
         
         tlp = self.GetTopLevelParent()
         
         if issubclass( type( tlp ), wx.Dialog ): tlp.Fit()
         
+    
+    def IsExpanded( self ): return self._expanded
     
 class AdvancedOptions( StaticBox ):
     
@@ -3084,11 +3110,11 @@ class AdvancedOptions( StaticBox ):
         
         self._collapsible_panel = CollapsiblePanel( self )
         
-        panel = wx.Panel( self._collapsible_panel )
+        self._panel = wx.Panel( self._collapsible_panel )
         
-        self._InitPanel( panel )
+        self._InitPanel()
         
-        self._collapsible_panel.SetPanel( panel )
+        self._collapsible_panel.SetPanel( self._panel )
         
         self.AddF( self._collapsible_panel, FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3097,7 +3123,9 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
     
     def __init__( self, parent ): AdvancedOptions.__init__( self, parent, 'advanced hentai foundry options' )
     
-    def _InitPanel( self, panel ):
+    def _InitPanel( self ):
+        
+        panel = self._panel
         
         def offensive_choice():
             
@@ -3290,7 +3318,9 @@ class AdvancedImportOptions( AdvancedOptions ):
         AdvancedOptions.__init__( self, parent, 'advanced import options' )
         
     
-    def _InitPanel( self, panel ):
+    def _InitPanel( self ):
+        
+        panel = self._panel
         
         self._auto_archive = wx.CheckBox( panel )
         
@@ -3364,86 +3394,78 @@ class AdvancedImportOptions( AdvancedOptions ):
     
 class AdvancedTagOptions( AdvancedOptions ):
     
-    def __init__( self, parent, info_string, namespaces = [], initial_settings = {} ):
+    def __init__( self, parent, namespaces = [], initial_settings = {} ):
         
-        self._info_string = info_string
         self._namespaces = namespaces
         self._initial_settings = initial_settings
         
-        self._checkboxes_to_service_identifiers = {}
-        self._service_identifiers_to_namespaces = {}
+        self._service_identifiers_to_checkbox_info = {}
         
         AdvancedOptions.__init__( self, parent, 'advanced tag options' )
         
     
-    def _InitPanel( self, panel ):
+    def _DrawNamespaces( self ):
+        
+        panel = self._panel
+        
+        self._vbox.Clear( True )
+        
+        self._service_identifiers_to_checkbox_info = {}
         
         service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
         if len( service_identifiers ) > 0:
+            
+            outer_gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            outer_gridbox.AddGrowableCol( 1, 1 )
             
             for service_identifier in service_identifiers:
                 
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                self._service_identifiers_to_checkbox_info[ service_identifier ] = []
                 
-                checkbox = wx.CheckBox( panel )
-                if service_identifier in self._initial_settings: checkbox.SetValue( True )
-                checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
+                outer_gridbox.AddF( wx.StaticText( panel, label = service_identifier.GetName() ), FLAGS_MIXED )
+            
+                gridbox = wx.FlexGridSizer( 0, 2 )
                 
-                self._checkboxes_to_service_identifiers[ checkbox ] = service_identifier
+                gridbox.AddGrowableCol( 1, 1 )
                 
-                hbox.AddF( wx.StaticText( panel, label = service_identifier.GetName() ), FLAGS_MIXED )
-                hbox.AddF( checkbox, FLAGS_MIXED )
-                
-                if len( self._namespaces ) > 0:
+                for namespace in self._namespaces:
                     
-                    namespace_vbox = wx.BoxSizer( wx.VERTICAL )
+                    if namespace == '': text = wx.StaticText( panel, label = 'no namespace' )
+                    else: text = wx.StaticText( panel, label = namespace )
                     
-                    self._service_identifiers_to_namespaces[ service_identifier ] = []
+                    namespace_checkbox = wx.CheckBox( panel )
+                    if service_identifier in self._initial_settings and namespace in self._initial_settings[ service_identifier ]: namespace_checkbox.SetValue( True )
+                    else: namespace_checkbox.SetValue( False )
+                    namespace_checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
                     
-                    gridbox = wx.FlexGridSizer( 0, 2 )
+                    self._service_identifiers_to_checkbox_info[ service_identifier ].append( ( namespace, namespace_checkbox ) )
                     
-                    gridbox.AddGrowableCol( 1, 1 )
-                    
-                    for namespace in self._namespaces:
-                        
-                        if namespace == '': text = wx.StaticText( panel, label = 'no namespace' )
-                        else: text = wx.StaticText( panel, label = namespace )
-                        
-                        namespace_checkbox = wx.CheckBox( panel )
-                        if service_identifier in self._initial_settings and namespace not in self._initial_settings[ service_identifier ]: namespace_checkbox.SetValue( False )
-                        else: namespace_checkbox.SetValue( True )
-                        namespace_checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
-                        
-                        self._service_identifiers_to_namespaces[ service_identifier ].append( ( namespace, namespace_checkbox ) )
-                        
-                        gridbox.AddF( text, FLAGS_MIXED )
-                        gridbox.AddF( namespace_checkbox, FLAGS_EXPAND_BOTH_WAYS )
-                        
-                    
-                    hbox.AddF( gridbox, FLAGS_MIXED )
+                    gridbox.AddF( text, FLAGS_MIXED )
+                    gridbox.AddF( namespace_checkbox, FLAGS_EXPAND_BOTH_WAYS )
                     
                 
-                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                outer_gridbox.AddF( gridbox, FLAGS_MIXED )
                 
             
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( panel, label = self._info_string ), FLAGS_MIXED )
-            hbox.AddF( vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            panel.SetSizer( hbox )
+            self._vbox.AddF( outer_gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         else:
             
-            vbox.AddF( wx.StaticText( panel, label = 'no tag repositories' ), FLAGS_EXPAND_BOTH_WAYS )
-            
-            panel.SetSizer( vbox )
+            self._vbox.AddF( wx.StaticText( panel, label = 'no tag repositories' ), FLAGS_EXPAND_BOTH_WAYS )
             
         
-        return panel
+    
+    def _InitPanel( self ):
+        
+        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._DrawNamespaces()
+        
+        self._panel.SetSizer( self._vbox )
+        
+        return self._panel
         
     
     def EventChecked( self, event ):
@@ -3455,49 +3477,42 @@ class AdvancedTagOptions( AdvancedOptions ):
     
     def GetInfo( self ):
         
-        service_identifiers = [ self._checkboxes_to_service_identifiers[ checkbox ] for checkbox in self._checkboxes_to_service_identifiers.keys() if checkbox.GetValue() ]
-        
         result = {}
         
-        for service_identifier in service_identifiers:
+        for ( service_identifier, checkbox_info ) in self._service_identifiers_to_checkbox_info.items():
             
-            good_namespaces = []
+            namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
             
-            if service_identifier in self._service_identifiers_to_namespaces:
-                
-                namespaces = self._service_identifiers_to_namespaces[ service_identifier ]
-                
-                for ( namespace, namespace_checkbox ) in namespaces:
-                    
-                    if namespace_checkbox.GetValue(): good_namespaces.append( namespace )
-                    
-                
-            
-            result[ service_identifier ] = good_namespaces
+            result[ service_identifier ] = namespaces
             
         
         return result
         
     
+    def SetNamespaces( self, namespaces ):
+        
+        self._namespaces = namespaces
+        
+        self._DrawNamespaces()
+        
+        if self._collapsible_panel.IsExpanded(): self._collapsible_panel.EventChange( None )
+        
+    
     def SetInfo( self, info ):
         
-        for ( checkbox, service_identifier ) in self._checkboxes_to_service_identifiers.items():
+        for ( service_identifier, checkbox_info ) in self._service_identifiers_to_checkbox_info.items():
             
             if service_identifier in info:
                 
-                checkbox.SetValue( True )
-                
-                for ( namespace, namespace_checkbox ) in self._service_identifiers_to_namespaces[ service_identifier ]:
+                for ( namespace, checkbox ) in checkbox_info:
                     
-                    if namespace in info[ service_identifier ]: namespace_checkbox.SetValue( True )
-                    else: namespace_checkbox.SetValue( False )
+                    if namespace in info[ service_identifier ]: checkbox.SetValue( True )
+                    else: checkbox.SetValue( False )
                     
                 
             else:
                 
-                checkbox.SetValue( False )
-                
-                for ( namespace, namespace_checkbox ) in self._service_identifiers_to_namespaces[ service_identifier ]: namespace_checkbox.SetValue( True )
+                for ( namespace, checkbox ) in checkbox_info: checkbox.SetValue( False )
                 
             
         

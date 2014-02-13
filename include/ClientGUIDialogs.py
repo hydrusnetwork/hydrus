@@ -112,11 +112,15 @@ class Dialog( wx.Dialog ):
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
-        #self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        
-        if position == 'center': wx.CallAfter( self.Center )
+        # this button is important, as escape maps to it
+        # can't hide it, or the escape doesn't go through
+        self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        self.SetEscapeId( wx.ID_CANCEL )
+        self.SetAffirmativeId( wx.ID_OK )
         
         self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
+        
+        if position == 'center': wx.CallAfter( self.Center )
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -2033,23 +2037,34 @@ class DialogInputLocalFiles( Dialog ):
     
     def _ProcessQueue( self ):
         
-        if not self._currently_parsing and len( self._processing_queue ) > 0:
+        if not self._currently_parsing:
             
-            paths = self._processing_queue.pop( 0 )
-            
-            self._currently_parsing = True
-            
-            self._job_key = HC.JobKey()
-            
-            threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._job_key ) ).start()
-            
-            self.SetGaugeInfo( None, None, '' )
-            
-            self._gauge_pause.Enable()
-            self._gauge_cancel.Enable()
-            
-            self._gauge_sizer.ShowItems( True )
-            self._gauge_sizer.Layout()
+            if len( self._processing_queue ) == 0:
+                
+                self._add_button.Enable()
+                self._tag_button.Enable()
+                
+            else:
+                
+                paths = self._processing_queue.pop( 0 )
+                
+                self._currently_parsing = True
+                
+                self._job_key = HC.JobKey()
+                
+                threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._job_key ) ).start()
+                
+                self.SetGaugeInfo( None, None, '' )
+                
+                self._gauge_pause.Enable()
+                self._gauge_cancel.Enable()
+                
+                self._gauge_sizer.ShowItems( True )
+                self._gauge_sizer.Layout()
+                
+                self._add_button.Disable()
+                self._tag_button.Disable()
+                
             
         
     
@@ -2119,6 +2134,9 @@ class DialogInputLocalFiles( Dialog ):
         self._gauge_pause.Disable()
         self._gauge_cancel.Disable()
         
+        self._add_button.Enable()
+        self._tag_button.Enable()
+        
     
     def EventGaugePause( self, event ):
         
@@ -2126,11 +2144,17 @@ class DialogInputLocalFiles( Dialog ):
             
             self._job_key.Resume()
             
+            self._add_button.Disable()
+            self._tag_button.Disable()
+            
             self._gauge_pause.SetLabel( 'pause' )
             
         else:
             
             self._job_key.Pause()
+            
+            self._add_button.Enable()
+            self._tag_button.Enable()
             
             self._gauge_pause.SetLabel( 'resume' )
             
@@ -3505,6 +3529,251 @@ class DialogNews( Dialog ):
         self._ShowNews()
         
     
+class DialogPageChooser( Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._button_hidden = wx.Button( self )
+            self._button_hidden.Hide()
+            
+            self._button_1 = wx.Button( self, label = '', id = 1 )
+            self._button_2 = wx.Button( self, label = '', id = 2 )
+            self._button_3 = wx.Button( self, label = '', id = 3 )
+            self._button_4 = wx.Button( self, label = '', id = 4 )
+            self._button_5 = wx.Button( self, label = '', id = 5 )
+            self._button_6 = wx.Button( self, label = '', id = 6 )
+            self._button_7 = wx.Button( self, label = '', id = 7 )
+            self._button_8 = wx.Button( self, label = '', id = 8 )
+            self._button_9 = wx.Button( self, label = '', id = 9 )
+            
+        
+        def PopulateControls():
+            
+            pass
+            
+        
+        def ArrangeControls():
+            
+            self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            gridbox = wx.GridSizer( 0, 3 )
+            
+            gridbox.AddF( self._button_7, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_8, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_9, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_4, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_5, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_6, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_1, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_2, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_3, FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( gridbox )
+            
+            self.SetInitialSize( ( 420, 210 ) )
+            
+        
+        Dialog.__init__( self, parent, 'new page', position = 'center' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        self._services = HC.app.Read( 'services' )
+        
+        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
+        
+        self._InitButtons( 'home' )
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+        self._button_hidden.SetFocus()
+        
+        #
+        
+        entries = []
+        
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 1 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 3 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 5 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 7 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 9 ) ) )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+        #
+        
+        self.Show( True )
+        
+    
+    def _AddEntry( self, button, entry ):
+        
+        id = button.GetId()
+        
+        self._command_dict[ id ] = entry
+        
+        ( entry_type, obj ) = entry
+        
+        if entry_type == 'menu': button.SetLabel( obj )
+        elif entry_type in ( 'page_query', 'page_petitions' ):
+            
+            name = obj.GetName()
+            
+            button.SetLabel( name )
+            
+        elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
+        elif entry_type == 'page_import_gallery':
+            
+            ( name, type ) = obj
+            
+            if type is None: button.SetLabel( name )
+            else: button.SetLabel( name + ' by ' + type )
+            
+        elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
+        elif entry_type == 'page_import_url': button.SetLabel( 'url' )
+        
+        button.Show()
+        
+    
+    def _InitButtons( self, menu_keyword ):
+        
+        self._command_dict = {}
+        
+        if menu_keyword == 'home':
+            
+            entries = [ ( 'menu', 'files' ), ( 'menu', 'download' ) ]
+            
+            if len( self._petition_service_identifiers ) > 0: entries.append( ( 'menu', 'petitions' ) )
+            
+        elif menu_keyword == 'files':
+            
+            file_repos = [ ( 'page_query', service_identifier ) for service_identifier in [ service.GetServiceIdentifier() for service in self._services ] if service_identifier.GetType() == HC.FILE_REPOSITORY ]
+            
+            entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
+            
+        elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
+        elif menu_keyword == 'gallery':
+            
+            entries = [ ( 'page_import_booru', None ), ( 'page_import_gallery', ( 'giphy', None ) ), ( 'page_import_gallery', ( 'deviant art', 'artist' ) ), ( 'menu', 'hentai foundry' ), ( 'page_import_gallery', ( 'newgrounds', None ) ) ]
+            
+            ( id, password ) = HC.app.Read( 'pixiv_account' )
+            
+            if id != '' and password != '': entries.append( ( 'menu', 'pixiv' ) )
+            
+            entries.extend( [ ( 'page_import_gallery', ( 'tumblr', None ) ) ] )
+            
+        elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry', 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry', 'tags' ) ) ]
+        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
+        elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
+        
+        if len( entries ) <= 4:
+            
+            self._button_1.Hide()
+            self._button_3.Hide()
+            self._button_5.Hide()
+            self._button_7.Hide()
+            self._button_9.Hide()
+            
+            potential_buttons = [ self._button_8, self._button_4, self._button_6, self._button_2 ]
+            
+        elif len( entries ) <= 9: potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
+        else:
+            
+            pass # sort out a multi-page solution? maybe only if this becomes a big thing; the person can always select from the menus, yeah?
+            
+            potential_buttons = [ self._button_7, self._button_8, self._button_9, self._button_4, self._button_5, self._button_6, self._button_1, self._button_2, self._button_3 ]
+            entries = entries[:9]
+            
+        
+        for entry in entries: self._AddEntry( potential_buttons.pop( 0 ), entry )
+        
+        unused_buttons = potential_buttons
+        
+        for button in unused_buttons: button.Hide()
+        
+    
+    def EventButton( self, event ):
+        
+        id = event.GetId()
+        
+        if id == wx.ID_CANCEL: self.EndModal( wx.ID_CANCEL )
+        elif id in self._command_dict:
+            
+            ( entry_type, obj ) = self._command_dict[ id ]
+            
+            if entry_type == 'menu': self._InitButtons( obj )
+            else:
+                
+                if entry_type == 'page_query': HC.pubsub.pub( 'new_page_query', obj )
+                elif entry_type == 'page_import_booru':
+                    
+                    with DialogSelectBooru( self ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            booru = dlg.GetBooru()
+                            
+                            HC.pubsub.pub( 'new_page_import_gallery', 'booru', booru )
+                            
+                        
+                    
+                elif entry_type == 'page_import_gallery':
+                    
+                    ( gallery_name, gallery_type ) = obj
+                    
+                    HC.pubsub.pub( 'new_page_import_gallery', gallery_name, gallery_type )
+                    
+                elif entry_type == 'page_import_thread_watcher': HC.pubsub.pub( 'new_page_import_thread_watcher' )
+                elif entry_type == 'page_import_url': HC.pubsub.pub( 'new_page_import_url' )
+                elif entry_type == 'page_petitions': HC.pubsub.pub( 'new_page_petitions', obj )
+                
+                self.EndModal( wx.ID_OK )
+                
+            
+        
+        self._button_hidden.SetFocus()
+        
+    
+    def EventCharHook( self, event ):
+        
+        if event.KeyCode == wx.WXK_ESCAPE: self.EndModal( wx.ID_OK )
+        else: event.Skip()
+        
+    
+    def EventMenu( self, event ):
+        
+        event_id = event.GetId()
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event_id )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'button':
+                
+                new_event = wx.CommandEvent( wx.wxEVT_COMMAND_BUTTON_CLICKED, winid = data )
+                
+                self.ProcessEvent( new_event )
+                
+            
+        
+    
 class DialogPathsToTagsRegex( Dialog ):
     
     def __init__( self, parent, paths ):
@@ -4078,7 +4347,7 @@ class DialogProgress( Dialog ):
         
         ArrangeControls()
         
-        self.Bind( wx.EVT_TIMER, self.EventTimer, id = ID_TIMER_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_UPDATE )
         
         self._timer = wx.Timer( self, id = ID_TIMER_UPDATE )
         
@@ -4111,7 +4380,7 @@ class DialogProgress( Dialog ):
         self._cancel_event.set()
         
     
-    def EventTimer( self, event ):
+    def TIMEREvent( self, event ):
         
         value = self._gauge.GetValue()
         range = self._gauge.GetRange()
@@ -4138,7 +4407,7 @@ class DialogProgress( Dialog ):
     
 class DialogRegisterService( Dialog ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, service_type ):
         
         def InitialiseControls():
             
@@ -4191,6 +4460,8 @@ class DialogRegisterService( Dialog ):
         
         Dialog.__init__( self, parent, 'register account', position = 'center' )
         
+        self._service_type = service_type
+        
         InitialiseControls()
         
         PopulateControls()
@@ -4231,13 +4502,13 @@ class DialogRegisterService( Dialog ):
             return
             
         
-        connection = HC.get_connection( host = host, port = port )
+        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), self._service_type, 'temp registering service' )
         
-        headers = {}
+        info = { 'host' : host, 'port' : port }
         
-        headers[ 'Hydrus-Key' ] = registration_key.encode( 'hex' )
+        service = CC.Service( service_identifier, info )
         
-        response = connection.request( 'GET', '/access_key', headers = headers )
+        response = service.Request( HC.GET, 'access_key', request_headers = { 'Hydrus-Key' : registration_key_encoded } )
         
         access_key = response[ 'access_key' ]
         
@@ -4266,7 +4537,7 @@ class DialogSelectBooru( Dialog ):
             
             boorus = HC.app.Read( 'boorus' )
             
-            for booru in boorus: self._boorus.Append( booru.GetName(), booru )
+            for ( name, booru ) in boorus.items(): self._boorus.Append( name, booru )
             
         
         def ArrangeControls():
@@ -4322,7 +4593,7 @@ class DialogSelectImageboard( Dialog ):
             
             root_item = self._tree.AddRoot( 'all sites' )
             
-            for ( site, imageboards ) in all_imageboards:
+            for ( site, imageboards ) in all_imageboards.items():
                 
                 site_item = self._tree.AppendItem( root_item, site )
                 
@@ -4574,6 +4845,8 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             favourites = HC.app.Read( 'favourite_custom_filter_actions' )
             
+            self._initial_favourite_names = favourites.keys()
+            
             if 'previous' in favourites: self._favourites.Append( 'previous', favourites[ 'previous' ] )
             else: self._favourites.Append( 'previous', default_actions )
             
@@ -4741,7 +5014,11 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         favourites[ 'previous' ] = self._actions.GetClientData() # overwrite
         
-        HC.app.Write( 'favourite_custom_filter_actions', favourites )
+        deletees = set( self._initial_favourite_names ) - set( favourites.keys() )
+        
+        for deletee in deletees: HC.app.Write( 'delete_favourite_custom_filter_actions', deletee )
+        
+        for ( name, actions ) in favourites.items(): HC.app.Write( 'favourite_custom_filter_actions', name, actions )
         
         self.EndModal( wx.ID_OK )
         

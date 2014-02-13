@@ -34,7 +34,7 @@ class TestDaemons( unittest.TestCase ):
         
         old_details = dict( details )
         
-        HC.app.SetRead( 'import_folders', [ ( path, details ) ] )
+        HC.app.SetRead( 'import_folders', { path : details } )
         
         ClientDB.DAEMONCheckImportFolders()
         
@@ -90,7 +90,7 @@ class TestDaemons( unittest.TestCase ):
         
         old_details = dict( details )
         
-        HC.app.SetRead( 'import_folders', [ ( path, details ) ] )
+        HC.app.SetRead( 'import_folders', { path : details } )
         
         ClientDB.DAEMONCheckImportFolders()
         

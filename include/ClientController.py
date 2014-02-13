@@ -109,28 +109,6 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
         
     
-    def EventAnimatedTimer( self, event ):
-        
-        del gc.garbage[:]
-        
-        HC.pubsub.pub( 'animated_tick' )
-        
-    
-    def EventMaintenanceTimer( self, event ):
-        
-        if HC.GetNow() - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
-            
-            self._last_idle_time = HC.GetNow()
-            
-        
-        if HC.GetNow() - self._last_idle_time > 20 * 60: # 20 mins since last user-initiated db request
-            
-            self.MaintainDB()
-            
-        
-        HC.pubsub.pub( 'clear_closed_pages' )
-        
-    
     def EventPubSub( self, event ):
         
         HC.busy_doing_pubsub = True
@@ -282,7 +260,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
             wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
             
-            self.Bind( wx.EVT_TIMER, self.EventAnimatedTimer, id = ID_ANIMATED_EVENT_TIMER )
+            self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_ANIMATED_EVENT_TIMER )
             
             self._animated_event_timer = wx.Timer( self, ID_ANIMATED_EVENT_TIMER )
             self._animated_event_timer.Start( 1000, wx.TIMER_CONTINUOUS )
@@ -297,7 +275,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
             self._last_idle_time = 0.0
             
-            self.Bind( wx.EVT_TIMER, self.EventMaintenanceTimer, id = ID_MAINTENANCE_EVENT_TIMER )
+            self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
             
             self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
             self._maintenance_event_timer.Start( 20 * 60000, wx.TIMER_CONTINUOUS )
@@ -506,6 +484,28 @@ Once it is done, the client will restart.'''
             HC.pubsub.pub( 'file_query_done', query_key, media_results )
             
         except Exception as e: HC.ShowException( e )
+        
+    
+    def TIMEREventAnimated( self, event ):
+        
+        del gc.garbage[:]
+        
+        HC.pubsub.pub( 'animated_tick' )
+        
+    
+    def TIMEREventMaintenance( self, event ):
+        
+        if HC.GetNow() - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
+            
+            self._last_idle_time = HC.GetNow()
+            
+        
+        if HC.GetNow() - self._last_idle_time > 20 * 60: # 20 mins since last user-initiated db request
+            
+            self.MaintainDB()
+            
+        
+        HC.pubsub.pub( 'clear_closed_pages' )
         
     
     def WaitUntilGoodTimeToUseGUIThread( self ):

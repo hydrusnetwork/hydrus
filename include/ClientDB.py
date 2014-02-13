@@ -24,9 +24,17 @@ import sys
 import threading
 import time
 import traceback
-import urlparse
 import wx
 import yaml
+
+YAML_DUMP_ID_SINGLE = 0
+YAML_DUMP_ID_BOORU = 1
+YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS = 2
+YAML_DUMP_ID_GUI_SESSION = 3
+YAML_DUMP_ID_IMAGEBOARD = 4
+YAML_DUMP_ID_IMPORT_FOLDER = 5
+YAML_DUMP_ID_EXPORT_FOLDER = 6
+YAML_DUMP_ID_SUBSCRIPTION = 7
 
 class FileDB():
     
@@ -1559,6 +1567,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
+    def _DeleteYAMLDump( self, c, dump_type, dump_name = None ):
+        
+        if dump_name is None: c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
+        else: c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+        
+        if dump_type == YAML_DUMP_ID_GUI_SESSION: self.pub( 'refresh_menu_bar' )
+        elif dump_type == YAML_DUMP_ID_IMPORT_FOLDER: self.pub( 'notify_new_import_folders' )
+        elif dump_type == YAML_DUMP_ID_SUBSCRIPTION:
+            
+            HC.repos_or_subs_changed = True
+            
+            self.pub( 'notify_new_subscriptions' )
+            
+        
+    
     def _FattenAutocompleteCache( self, c ):
         
         tag_service_identifiers = self._GetServiceIdentifiers( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
@@ -1567,14 +1590,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for ( tag_service_identifier, file_service_identifier ) in itertools.product( tag_service_identifiers, file_service_identifiers ): self._GetAutocompleteTags( c, tag_service_identifier = tag_service_identifier, file_service_identifier = file_service_identifier, collapse = False )
         
         c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, HC.GetNow() ) )
-        
-    
-    def _Get4chanPass( self, c ):
-        
-        result = c.execute( 'SELECT token, pin, timeout FROM fourchan_pass;' ).fetchone()
-        
-        if result is None: return ( '', '', 0 )
-        else: return result
         
     
     def _GetAutocompleteTags( self, c, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, tag = '', half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
@@ -1741,8 +1756,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
     
     def _GetDownloads( self, c ): return { hash for ( hash, ) in c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
-    
-    def _GetFavouriteCustomFilterActions( self, c ): return dict( c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' ).fetchall() )
     
     def _GetFileQueryIds( self, c, search_context ):
         
@@ -2113,14 +2126,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return predicates
         
     
-    def _GetGUISessions( self, c, name_only = False ):
-        
-        if name_only: result = [ name for ( name, ) in c.execute( 'SELECT name FROM gui_sessions;' ) ]
-        else: result = c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
-        
-        return result
-        
-    
     def _GetHashIdsFromNamespace( self, c, file_service_identifier, tag_service_identifier, namespace, include_current_tags, include_pending_tags ):
         
         statuses = []
@@ -2206,13 +2211,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         return sessions
-        
-    
-    def _GetImportFolders( self, c ):
-        
-        results = c.execute( 'SELECT path, details FROM import_folders;' ).fetchall()
-        
-        return results
         
     
     def _GetMD5Status( self, c, md5 ):
@@ -2606,14 +2604,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _GetPixivAccount( self, c ):
-        
-        result = c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
-        
-        if result is None: return ( '', '' )
-        else: return result
-        
-    
     def _GetReason( self, c, reason_id ):
         
         result = c.execute( 'SELECT reason FROM reasons WHERE reason_id = ?;', ( reason_id, ) ).fetchone()
@@ -2843,13 +2833,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return shutdown_timestamps
         
     
-    def _GetSubscriptions( self, c ):
-        
-        subscriptions = [ ( site_download_type, name, query_type, query, frequency_type, frequency_number, dict( advanced_tag_options ), advanced_import_options, last_checked, url_cache, paused ) for ( site_download_type, name, ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) ) in c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' ) ]
-        
-        return subscriptions
-        
-    
     def _GetTagParents( self, c, service_identifier = None ):
         
         if service_identifier is None:
@@ -2971,6 +2954,48 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         sessions = c.execute( 'SELECT name, cookies, expiry FROM web_sessions;' ).fetchall()
         
         return sessions
+        
+    
+    def _GetYAMLDump( self, c, dump_type, dump_name = None ):
+        
+        if dump_name is None:
+            
+            result = { dump_name : data for ( dump_name, data ) in c.execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) }
+            
+            if dump_type == YAML_DUMP_ID_SUBSCRIPTION:
+                
+                for ( dump_name, data ) in result.items():
+                    
+                    data[ 'advanced_tag_options' ] = dict( data[ 'advanced_tag_options' ] )
+                    
+                
+            
+        else:
+            
+            result = c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
+            
+            if result is None:
+                
+                if dump_type == YAML_DUMP_ID_SINGLE:
+                    
+                    if dump_name == '4chan_pass': result = ( '', '', 0 )
+                    elif dump_name == 'pixiv_account': result = ( '', '' )
+                    
+                
+                if result is None: raise Exception( dump_name + ' was not found!' )
+                
+            else:
+                
+                ( result, ) = result
+                
+                if dump_type == YAML_DUMP_ID_SUBSCRIPTION:
+                    
+                    result[ 'advanced_tag_options' ] = dict( result[ 'advanced_tag_options' ] )
+                    
+                
+            
+        
+        return result
         
     
     def _ImportFile( self, c, path, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
@@ -3131,7 +3156,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_type = service_identifier.GetType()
             
-            service_id = self._GetServiceId( c, service_identifier )
+            try: service_id = self._GetServiceId( c, service_identifier )
+            except: continue
             
             ultimate_mappings_ids = []
             ultimate_deleted_mappings_ids = []
@@ -3563,7 +3589,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
             
-            service_id = self._GetServiceId( c, service_identifier )
+            try: service_id = self._GetServiceId( c, service_identifier )
+            except: continue
             
             for service_update in service_updates:
                 
@@ -3708,29 +3735,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         HC.ShowText( 'reset ' + service_name )
         
     
-    def _Set4chanPass( self, c, token, pin, timeout ):
-        
-        c.execute( 'DELETE FROM fourchan_pass;' )
-        
-        c.execute( 'INSERT INTO fourchan_pass ( token, pin, timeout ) VALUES ( ?, ?, ? );', ( token, pin, timeout ) )
-        
-    
-    def _SetFavouriteCustomFilterActions( self, c, favourites ):
-        
-        c.execute( 'DELETE FROM favourite_custom_filter_actions;' )
-        
-        c.executemany( 'INSERT INTO favourite_custom_filter_actions ( name, actions ) VALUES ( ?, ? );', [ ( name, actions ) for ( name, actions ) in favourites.items() ] )
-        
-    
-    def _SetGUISession( self, c, name, info ):
-        
-        c.execute( 'DELETE FROM gui_sessions WHERE name = ?;', ( name, ) )
-        
-        if info is not None: sessions = c.execute( 'INSERT INTO gui_sessions ( name, info ) VALUES ( ?, ? );', ( name, info ) )
-        
-        self.pub( 'refresh_menu_bar' )
-        
-    
     def _SetNamespaceBlacklists( self, c, info ):
         
         c.execute( 'DELETE FROM namespace_blacklists;' )
@@ -3743,46 +3747,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         self.pub( 'notify_new_namespace_blacklists' )
-        
-    
-    def _SetImportFolders( self, c, import_folders ):
-        
-        c.execute( 'DELETE FROM import_folders;' )
-        
-        c.executemany( 'INSERT INTO import_folders ( path, details ) VALUES ( ?, ? );', import_folders )
-        
-        self.pub( 'notify_new_import_folders' )
-        
-    
-    def _SetPixivAccount( self, c, pixiv_id, password ):
-        
-        c.execute( 'DELETE FROM pixiv_account;' )
-        
-        c.execute( 'INSERT INTO pixiv_account ( pixiv_id, password ) VALUES ( ?, ? );', ( pixiv_id, password ) )
-        
-    
-    def _SetSubscription( self, c, subscription ):
-        
-        ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = subscription
-        
-        info = [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache, paused ]
-        
-        c.execute( 'DELETE FROM subscriptions WHERE site_download_type = ? AND name = ?;', ( site_download_type, name ) )
-        
-        c.execute( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', ( site_download_type, name, info ) )
-        
-    
-    def _SetSubscriptions( self, c, subscriptions ):
-        
-        HC.repos_or_subs_changed = True
-        
-        inserts = [ ( site_download_type, name, [ query_type, query, frequency_type, frequency_number, advanced_tag_options.items(), advanced_import_options, last_checked, url_cache, paused ] ) for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions ]
-        
-        c.execute( 'DELETE FROM subscriptions;' )
-        
-        c.executemany( 'INSERT INTO subscriptions ( site_download_type, name, info ) VALUES ( ?, ?, ? );', inserts )
-        
-        self.pub( 'notify_new_subscriptions' )
         
     
     def _SetTagServicePrecedence( self, c, service_identifiers ):
@@ -3804,6 +3768,27 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_service_updates( service_identifiers_to_service_updates )
         
     
+    def _SetYAMLDump( self, c, dump_type, dump_name, data ):
+        
+        c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+        
+        if dump_type == YAML_DUMP_ID_SUBSCRIPTION:
+            
+            data[ 'advanced_tag_options' ] = data[ 'advanced_tag_options' ].items()
+            
+        
+        c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
+        
+        if dump_type == YAML_DUMP_ID_GUI_SESSION: self.pub( 'refresh_menu_bar' )
+        elif dump_type == YAML_DUMP_ID_IMPORT_FOLDER: self.pub( 'notify_new_import_folders' )
+        elif dump_type == YAML_DUMP_ID_SUBSCRIPTION:
+            
+            HC.repos_or_subs_changed = True
+            
+            self.pub( 'notify_new_subscriptions' )
+            
+        
+    
     def _UpdateAutocompleteTagCacheFromFiles( self, c, file_service_id, hash_ids, direction ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
@@ -3813,13 +3798,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
         c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
-        
-    
-    def _UpdateImportFolder( self, c, path, details ):
-        
-        c.execute( 'DELETE FROM import_folders WHERE path = ?;', ( path, ) )
-        
-        c.execute( 'INSERT INTO import_folders ( path, details ) VALUES ( ?, ? );', ( path, details ) )
         
     
     def _UpdateMappings( self, c, service_id, mappings_ids = [], deleted_mappings_ids = [], pending_mappings_ids = [], pending_rescinded_mappings_ids = [], petitioned_mappings_ids = [], petitioned_rescinded_mappings_ids = [] ):
@@ -4447,36 +4425,6 @@ class DB( ServiceDB ):
         return ( db, c )
         
     
-    def _GetBooru( self, c, name ):
-        
-        ( booru, ) = c.execute( 'SELECT booru FROM boorus WHERE name = ?;', ( name, ) ).fetchone()
-        
-        return booru
-        
-    
-    def _GetBoorus( self, c ):
-        
-        boorus = [ booru for ( booru, ) in c.execute( 'SELECT booru FROM boorus;' ) ]
-        
-        return boorus
-        
-    
-    def _GetImageboards( self, c ):
-        
-        all_imageboards = []
-        
-        all_sites = c.execute( 'SELECT site_id, name FROM imageboard_sites;' ).fetchall()
-        
-        for ( site_id, name ) in all_sites:
-            
-            imageboards = [ imageboard for ( imageboard, ) in c.execute( 'SELECT imageboard FROM imageboards WHERE site_id = ? ORDER BY name;', ( site_id, ) ) ]
-            
-            all_imageboards.append( ( name, imageboards ) )
-            
-        
-        return all_imageboards
-        
-    
     def _GetOptions( self, c ):
         
         result = c.execute( 'SELECT options FROM options;' ).fetchone()
@@ -4556,12 +4504,8 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
             c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
             
-            c.execute( 'CREATE TABLE fourchan_pass ( token TEXT, pin TEXT, timeout INTEGER );' )
-            
             c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
-            
-            c.execute( 'CREATE TABLE boorus ( name TEXT PRIMARY KEY, booru TEXT_YAML );' )
             
             c.execute( 'CREATE TABLE contacts ( contact_id INTEGER PRIMARY KEY, contact_key BLOB_BYTES, public_key TEXT, name TEXT, host TEXT, port INTEGER );' )
             c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
@@ -4574,8 +4518,6 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
             
-            c.execute( 'CREATE TABLE favourite_custom_filter_actions ( name TEXT, actions TEXT_YAML );' )
-            
             c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
             
             c.execute( 'CREATE TABLE files_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, size INTEGER, mime INTEGER, timestamp INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
@@ -4587,18 +4529,10 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ), FOREIGN KEY( service_id, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
             c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
             
-            c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
-            
             c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
             c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
             
             c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
-            
-            c.execute( 'CREATE TABLE imageboard_sites ( site_id INTEGER PRIMARY KEY, name TEXT );', )
-            
-            c.execute( 'CREATE TABLE imageboards ( site_id INTEGER, name TEXT, imageboard TEXT_YAML, PRIMARY KEY ( site_id, name ) );', )
-            
-            c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
             
             c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES );' )
             c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
@@ -4657,8 +4591,6 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
             
-            c.execute( 'CREATE TABLE pixiv_account ( pixiv_id TEXT, password TEXT );' )
-            
             c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
             
             c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
@@ -4675,8 +4607,6 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX statuses_status_index ON statuses ( status );' )
-            
-            c.execute( 'CREATE TABLE subscriptions ( site_download_type INTEGER, name TEXT, info TEXT_YAML, PRIMARY KEY( site_download_type, name ) );' )
             
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
             
@@ -4704,6 +4634,8 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
             
+            c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+            
             # inserts
             
             account = HC.GetUnknownAccount()
@@ -4719,14 +4651,9 @@ class DB( ServiceDB ):
                 self._AddService( c, init_service_identifier, info )
                 
             
-            c.executemany( 'INSERT INTO boorus VALUES ( ?, ? );', CC.DEFAULT_BOORUS.items() )
+            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
             
-            for ( site_name, imageboards ) in CC.DEFAULT_IMAGEBOARDS:
-                
-                site_id = self._GetSiteId( c, site_name )
-                
-                c.executemany( 'INSERT INTO imageboards VALUES ( ?, ?, ? );', [ ( site_id, imageboard.GetName(), imageboard ) for imageboard in imageboards ] )
-                
+            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in CC.DEFAULT_IMAGEBOARDS ) )
             
             c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
             
@@ -4778,33 +4705,6 @@ class DB( ServiceDB ):
         HC.options[ 'password' ] = password
         
         self._SaveOptions( c )
-        
-    
-    def _UpdateBoorus( self, c, edit_log ):
-        
-        for ( action, data ) in edit_log:
-            
-            if action == HC.ADD:
-                
-                name = data
-                
-                booru = CC.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
-                
-                c.execute( 'INSERT INTO boorus ( name, booru ) VALUES ( ?, ? );', ( name, booru ) )
-                
-            elif action == HC.DELETE:
-                
-                name = data
-                
-                c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
-                
-            elif action == HC.EDIT:
-                
-                ( name, booru ) = data
-                
-                c.execute( 'UPDATE boorus SET booru = ? WHERE name = ?;', ( booru, name ) )
-                
-            
         
     
     def _UpdateImageboards( self, c, site_edit_log ):
@@ -4997,6 +4897,105 @@ class DB( ServiceDB ):
                     c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                     
                 
+            
+        
+        if version > 101:
+            
+            c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+            
+            inserts = []
+            
+            # singles
+            
+            data = c.execute( 'SELECT token, pin, timeout FROM fourchan_pass;' ).fetchone()
+            
+            if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, '4chan_pass', data ) )
+            
+            data = c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
+            
+            if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, 'pixiv_account', data ) )
+            
+            # boorus
+            
+            data = c.execute( 'SELECT name, booru FROM boorus;' ).fetchall()
+            
+            inserts.extend( ( ( YAML_DUMP_ID_BOORU, name, booru ) for ( name, booru ) in data ) )
+            
+            # favourite custom filter actions
+            
+            data = c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' )
+            
+            inserts.extend( ( ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, name, actions ) for ( name, actions ) in data ) )
+            
+            # gui sessions
+            
+            data = c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
+            
+            inserts.extend( ( ( YAML_DUMP_ID_GUI_SESSION, name, info ) for ( name, info ) in data ) )
+            
+            # imageboards
+            
+            all_imageboards = []
+            
+            all_sites = c.execute( 'SELECT site_id, name FROM imageboard_sites;' ).fetchall()
+            
+            for ( site_id, name ) in all_sites:
+                
+                imageboards = [ imageboard for ( imageboard, ) in c.execute( 'SELECT imageboard FROM imageboards WHERE site_id = ? ORDER BY name;', ( site_id, ) ) ]
+                
+                inserts.append( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) )
+                
+            
+            # import folders
+            
+            data = c.execute( 'SELECT path, details FROM import_folders;' )
+            
+            inserts.extend( ( ( YAML_DUMP_ID_IMPORT_FOLDER, path, details ) for ( path, details ) in data ) )
+            
+            # subs
+            
+            subs = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' )            
+            
+            names = set()
+            
+            for ( site_download_type, name, old_info ) in subs:
+                
+                if name in names: name = name + str( site_download_type )
+                
+                ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = old_info
+                
+                info = {}
+                
+                info[ 'site_type' ] = site_download_type
+                info[ 'query_type' ] = query_type
+                info[ 'query' ] = query
+                info[ 'frequency_type' ] = frequency_type
+                info[ 'frequency' ] = frequency_number
+                info[ 'advanced_tag_options' ] = advanced_tag_options
+                info[ 'advanced_import_options' ] = advanced_import_options
+                info[ 'last_checked' ] = last_checked
+                info[ 'url_cache' ] = url_cache
+                info[ 'paused' ] = paused
+                
+                inserts.append( ( YAML_DUMP_ID_SUBSCRIPTION, name, info ) )
+                
+                names.add( name )
+                
+            
+            #
+            
+            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', inserts )
+            
+            #
+            
+            c.execute( 'DROP TABLE fourchan_pass;' )
+            c.execute( 'DROP TABLE pixiv_account;' )
+            c.execute( 'DROP TABLE boorus;' )
+            c.execute( 'DROP TABLE favourite_custom_filter_actions;' )
+            c.execute( 'DROP TABLE gui_sessions;' )
+            c.execute( 'DROP TABLE imageboard_sites;' )
+            c.execute( 'DROP TABLE imageboards;' )
+            c.execute( 'DROP TABLE subscriptions;' )
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6641,23 +6640,23 @@ class DB( ServiceDB ):
             
             def ProcessRead( action, args, kwargs ):
                 
-                if action == '4chan_pass': result = self._Get4chanPass( c, *args, **kwargs )
+                if action == '4chan_pass': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, '4chan_pass' )
                 elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
                 elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
-                elif action == 'booru': result = self._GetBooru( c, *args, **kwargs )
-                elif action == 'boorus': result = self._GetBoorus( c, *args, **kwargs )
+                elif action == 'booru': result = self._GetYAMLDump( c, YAML_DUMP_ID_BOORU, *args, **kwargs )
+                elif action == 'boorus': result = self._GetYAMLDump( c, YAML_DUMP_ID_BOORU )
                 elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
                 elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
                 elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
-                elif action == 'favourite_custom_filter_actions': result = self._GetFavouriteCustomFilterActions( c, *args, **kwargs )
+                elif action == 'favourite_custom_filter_actions': result = self._GetYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS )
                 elif action == 'file_query_ids': result = self._GetFileQueryIds( c, *args, **kwargs )
                 elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
-                elif action == 'gui_sessions': result = self._GetGUISessions( c, *args, **kwargs )
+                elif action == 'gui_sessions': result = self._GetYAMLDump( c, YAML_DUMP_ID_GUI_SESSION )
                 elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
                 elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
                 elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
-                elif action == 'imageboards': result = self._GetImageboards( c, *args, **kwargs )
-                elif action == 'import_folders': result = self._GetImportFolders( c, *args, **kwargs )
+                elif action == 'imageboards': result = self._GetYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+                elif action == 'import_folders': result = self._GetYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
                 elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
                 elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
                 elif action == 'media_results_from_ids': result = self._GetMediaResults( c, *args, **kwargs )
@@ -6668,7 +6667,7 @@ class DB( ServiceDB ):
                 elif action == 'news': result = self._GetNews( c, *args, **kwargs )
                 elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
                 elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
-                elif action == 'pixiv_account': result = self._GetPixivAccount( c, *args, **kwargs )
+                elif action == 'pixiv_account': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account' )
                 elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
                 elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
                 elif action == 'service': result = self._GetService( c, *args, **kwargs )
@@ -6677,7 +6676,7 @@ class DB( ServiceDB ):
                 elif action == 'services': result = self._GetServices( c, *args, **kwargs )
                 elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
                 elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
-                elif action == 'subscriptions': result = self._GetSubscriptions( c, *args, **kwargs )
+                elif action == 'subscriptions': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
                 elif action == 'tag_service_precedence': result = self._tag_service_precedence
                 elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
                 elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
@@ -6693,49 +6692,52 @@ class DB( ServiceDB ):
             
             def ProcessWrite( action, args, kwargs ):
                 
-                if action == '4chan_pass': result = self._Set4chanPass( c, *args, **kwargs )
+                if action == '4chan_pass': result = self._SetYAMLDump( c, YAML_DUMP_ID_SINGLE, '4chan_pass', *args, **kwargs )
                 elif action == 'add_downloads': result = self._AddDownloads( c, *args, **kwargs )
                 elif action == 'add_uploads': result = self._AddUploads( c, *args, **kwargs )
                 elif action == 'archive_conversation': result = self._ArchiveConversation( c, *args, **kwargs )
                 elif action == 'backup': result = self._Backup( c, *args, **kwargs )
+                elif action == 'booru': result = self._SetYAMLDump( c, YAML_DUMP_ID_BOORU, *args, **kwargs )
                 elif action == 'contact_associated': result = self._AssociateContact( c, *args, **kwargs )
                 elif action == 'content_updates': result = self._ProcessContentUpdates( c, *args, **kwargs )
                 elif action == 'copy_files': result = self._CopyFiles( c, *args, **kwargs )
+                elif action == 'delete_booru': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_BOORU, *args, **kwargs )
                 elif action == 'delete_conversation': result = self._DeleteConversation( c, *args, **kwargs )
                 elif action == 'delete_draft': result = self._DeleteDraft( c, *args, **kwargs )
+                elif action == 'delete_favourite_custom_filter_actions': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
+                elif action == 'delete_gui_session': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
+                elif action == 'delete_imageboard': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+                elif action == 'delete_import_folder': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
                 elif action == 'delete_orphans': result = self._DeleteOrphans( c, *args, **kwargs )
                 elif action == 'delete_pending': result = self._DeletePending( c, *args, **kwargs )
                 elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( c, *args, **kwargs )
                 elif action == 'draft_message': result = self._DraftMessage( c, *args, **kwargs )
                 elif action == 'fatten_autocomplete_cache': result = self._FattenAutocompleteCache( c, *args, **kwargs )
-                elif action == 'favourite_custom_filter_actions': result = self._SetFavouriteCustomFilterActions( c, *args, **kwargs )
+                elif action == 'favourite_custom_filter_actions': result = self._SetYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
                 elif action == 'flush_message_statuses': result = self._FlushMessageStatuses( c, *args, **kwargs )
                 elif action == 'generate_tag_ids': result = self._GenerateTagIdsEfficiently( c, *args, **kwargs )
-                elif action == 'gui_session': result = self._SetGUISession( c, *args, **kwargs )
+                elif action == 'gui_session': result = self._SetYAMLDump( c, YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
                 elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
+                elif action == 'imageboard': result = self._SetYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
                 elif action == 'import_file': result = self._ImportFile( c, *args, **kwargs )
-                elif action == 'import_folder': result = self._UpdateImportFolder( c, *args, **kwargs )
-                elif action == 'import_folders': result = self._SetImportFolders( c, *args, **kwargs )
+                elif action == 'import_folder': result = self._SetYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
                 elif action == 'inbox_conversation': result = self._InboxConversation( c, *args, **kwargs )
                 elif action == 'message': result = self._AddMessage( c, *args, **kwargs )
                 elif action == 'message_info_since': result = self._AddMessageInfoSince( c, *args, **kwargs )
                 elif action == 'message_statuses': result = self._UpdateMessageStatuses( c, *args, **kwargs )
                 elif action == 'namespace_blacklists': result = self._SetNamespaceBlacklists( c, *args, **kwargs )
-                elif action == 'pixiv_account': result = self._SetPixivAccount( c, *args, **kwargs )
+                elif action == 'pixiv_account': result = self._SetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
                 elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
                 elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
                 elif action == 'service_updates': result = self._ProcessServiceUpdates( c, *args, **kwargs )
                 elif action == 'set_password': result = self._SetPassword( c, *args, **kwargs )
                 elif action == 'set_tag_service_precedence': result = self._SetTagServicePrecedence( c, *args, **kwargs )
-                elif action == 'subscription': result = self._SetSubscription( c, *args, **kwargs )
-                elif action == 'subscriptions': result = self._SetSubscriptions( c, *args, **kwargs )
+                elif action == 'subscription': result = self._SetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
                 elif action == 'tag_parents': result = self._UpdateTagParents( c, *args, **kwargs )
                 elif action == 'tag_siblings': result = self._UpdateTagSiblings( c, *args, **kwargs )
                 elif action == 'thumbnails': result = self._AddThumbnails( c, *args, **kwargs )
                 elif action == 'update': result = self._AddUpdate( c, *args, **kwargs )
-                elif action == 'update_boorus': result = self._UpdateBoorus( c, *args, **kwargs )
                 elif action == 'update_contacts': result = self._UpdateContacts( c, *args, **kwargs )
-                elif action == 'update_imageboards': result = self._UpdateImageboards( c, *args, **kwargs )
                 elif action == 'update_server_services': result = self._UpdateServerServices( c, *args, **kwargs )
                 elif action == 'update_services': result = self._UpdateServices( c, *args, **kwargs )
                 elif action == 'vacuum': result = self._Vacuum()
@@ -6905,7 +6907,7 @@ def DAEMONCheckImportFolders():
         
         import_folders = HC.app.ReadDaemon( 'import_folders' )
         
-        for ( folder_path, details ) in import_folders:
+        for ( folder_path, details ) in import_folders.items():
             
             now = HC.GetNow()
             
@@ -7539,13 +7541,20 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
         
         subscriptions = HC.app.ReadDaemon( 'subscriptions' )
         
-        for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in subscriptions:
+        for ( name, info ) in subscriptions:
+            
+            site_type = info[ 'site_type' ]
+            query_type = info[ 'query_type' ]
+            query = info[ 'query' ]
+            frequency_type = info[ 'frequency_type' ]
+            frequency = info[ 'frequency' ]
+            advanced_tag_options = info[ 'advanced_tag_options' ]
+            advanced_import_options = info[ 'advanced_import_options' ]
+            last_checked = info[ 'last_checked' ]
+            url_cache = info[ 'url_cache' ]
+            paused = info[ 'paused' ]
             
             if paused: continue
-            
-            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
-            
-            advanced_tag_options = dict( advanced_tag_options )
             
             try:
                 
@@ -7557,9 +7566,11 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                 
                 if last_checked is None: last_checked = 0
                 
-                if last_checked + ( frequency_type * frequency_number ) < now:
+                if last_checked + ( frequency_type * frequency ) < now:
                     
-                    if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
+                    if site_type == HC.SITE_TYPE_BOORU:
+                        
+                        ( booru_name, booru_query_type ) = query_type
                         
                         try: booru = HC.app.ReadDaemon( 'booru', booru_name )
                         except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
@@ -7568,7 +7579,7 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                         
                         all_args = ( ( booru, tags ), )
                         
-                    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY:
+                    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
                         
                         info = {}
                         
@@ -7606,10 +7617,10 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                             all_args = ( ( query_type, tags, advanced_hentai_foundry_options ), )
                             
                         
-                    elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: all_args = ( ( query_type, query ), )
+                    elif site_type == HC.SITE_TYPE_PIXIV: all_args = ( ( query_type, query ), )
                     else: all_args = ( ( query, ), )
                     
-                    downloaders = [ HydrusDownloading.GetDownloader( site_download_type, *args ) for args in all_args ]
+                    downloaders = [ HydrusDownloading.GetDownloader( site_type, *args ) for args in all_args ]
                     
                     downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
                     
@@ -7761,13 +7772,18 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
                         
                         if i % 20 == 0:
                             
-                            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
+                            info[ 'site_type' ] = site_type
+                            info[ 'query_type' ] = query_type
+                            info[ 'query' ] = query
+                            info[ 'frequency_type' ] = frequency_type
+                            info[ 'frequency' ] = frequency
+                            info[ 'advanced_tag_options' ] = advanced_tag_options
+                            info[ 'advanced_import_options' ] = advanced_import_options
+                            info[ 'last_checked' ] = last_checked
+                            info[ 'url_cache' ] = url_cache
+                            info[ 'paused' ] = paused
                             
-                            subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-                            
-                            HC.app.Write( 'subscription', subscription )
-                            
-                            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: ( booru_name, query_type ) = query_type
+                            HC.app.Write( 'subscription', name, info )
                             
                         
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
@@ -7796,11 +7812,18 @@ def DAEMONSynchroniseRepositoriesAndSubscriptions():
             
             HC.pubsub.pub( 'service_status', '' )
             
-            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( booru_name, query_type )
+            info[ 'site_type' ] = site_type
+            info[ 'query_type' ] = query_type
+            info[ 'query' ] = query
+            info[ 'frequency_type' ] = frequency_type
+            info[ 'frequency' ] = frequency
+            info[ 'advanced_tag_options' ] = advanced_tag_options
+            info[ 'advanced_import_options' ] = advanced_import_options
+            info[ 'last_checked' ] = last_checked
+            info[ 'url_cache' ] = url_cache
+            info[ 'paused' ] = paused
             
-            subscription = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-            
-            HC.app.Write( 'subscription', subscription )
+            HC.app.Write( 'subscription', name, info )
             
         
     

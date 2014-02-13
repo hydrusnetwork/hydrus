@@ -14,7 +14,6 @@ import threading
 import time
 import threading
 import traceback
-import urlparse
 import yaml
 import wx
 import zlib
@@ -209,7 +208,7 @@ class Contact( HC.HydrusYAMLBase ):
     
     def GetAddress( self ): return ( self._host, self._port )
     
-    def GetConnection( self ): return CC.ConnectionToService( None, CC.Credentials( self._host, self._port ) )
+    def GetConnection( self ): return None # this used to be connectiontoservice
     
     def GetContactKey( self ):
         

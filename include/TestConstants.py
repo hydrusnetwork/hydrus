@@ -5,7 +5,6 @@ import HydrusTags
 import os
 import random
 import threading
-import urlparse
 
 tinest_gif = '\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
 
@@ -21,93 +20,36 @@ def GenerateClientServiceIdentifier( service_type ):
         return HC.ClientServiceIdentifier( service_key, service_type, service_name )
         
     
-class FakeHTTPConnection():
-    
-    def __init__( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
-        
-        self._url = url
-        self._scheme = scheme
-        self._host = host
-        self._port = port
-        self._service_identifier = service_identifier
-        self._accept_cookies = accept_cookies
-        
-        self._responses = {}
-        self._cookies = {}
-        
-    
-    def close( self ): pass
-    
-    def connect( self ): pass
-    
-    def AddReportHook( self, hook ): pass
-    
-    def ClearReportHooks( self ): pass
-    
-    def GetCookies( self ): return self._cookies
-    
-    def geturl( self, url, headers = {}, redirects_permitted = 4, follow_redirects = True, response_to_path = False ):
-        
-        parse_result = urlparse.urlparse( url )
-        
-        request = parse_result.path
-        
-        query = parse_result.query
-        
-        if query != '': request += '?' + query
-        
-        response = self.request( 'GET', request, headers = headers, redirects_permitted = redirects_permitted, follow_redirects = follow_redirects, response_to_path = response_to_path )
-        
-        return response
-        
-    
-    def request( self, request_type, request, headers = {}, body = None, redirects_permitted = 4, follow_redirects = True, response_to_path = False ):
-        
-        response = self._responses[ ( request_type, request ) ]
-        
-        if issubclass( type( response ), Exception ): raise response
-        else:
-            
-            if response_to_path:
-                
-                temp_path = HC.GetTempPath()
-                
-                with open( temp_path, 'wb' ) as f: f.write( response )
-                
-                response = temp_path
-                
-            
-            return response
-            
-        
-    
-    def SetCookie( self, key, value ): self._cookies[ key ] = value
-    
-    def SetResponse( self, request_type, request, response ): self._responses[ ( request_type, request ) ] = response
-    
 class FakeHTTPConnectionManager():
     
     def __init__( self ):
         
-        self._fake_connections = {}
+        self._fake_responses = {}
         
     
-    def GetConnection( self, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
+    def Request( self, method, url, request_headers = {}, body = '', return_everything = False, return_cookies = False, report_hooks = [], response_to_path = False, long_timeout = False ):
         
-        args = ( url, scheme, host, port, service_identifier, accept_cookies )
+        ( response, size_of_response, response_headers, cookies ) = self._fake_responses[ ( method, url ) ]
         
-        return self._fake_connections[ args ]
+        if response_to_path:
+            
+            temp_path = HC.GetTempPath()
+            
+            with open( temp_path, 'wb' ) as f: f.write( response )
+            
+            response = temp_path
+            
+        
+        if return_everything: return ( response, size_of_response, response_headers, cookies )
+        elif return_cookies: return ( response, cookies )
+        else: return response
         
     
-    def SetConnection( self, connection, url = '', scheme = 'http', host = '', port = None, service_identifier = None, accept_cookies = False ):
+    def SetResponse( self, method, url, response, size_of_response = 100, response_headers = {}, cookies = [] ):
         
-        args = ( url, scheme, host, port, service_identifier, accept_cookies )
-        
-        self._fake_connections[ args ] = connection
+        self._fake_responses[ ( method, url ) ] = ( response, size_of_response, response_headers, cookies )
         
     
-fake_http_connection_manager = FakeHTTPConnectionManager()
-
 class FakeWebSessionManager():
     
     def GetCookies( self, *args, **kwargs ): return { 'session_cookie' : 'blah' }
@@ -142,10 +84,8 @@ class FakePubSub():
     def WXpubimmediate( self, topic, *args, **kwargs ):
         
         with self._lock:
-        
-            callables = self._GetCallables( topic )
             
-            for callable in callables: callable( *args, **kwargs )
+            self._pubsubs[ topic ].append( ( args, kwargs ) )
             
         
     

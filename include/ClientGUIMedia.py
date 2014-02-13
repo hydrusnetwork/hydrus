@@ -5,6 +5,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUICanvas
 import ClientGUIMixins
+import collections
 import itertools
 import os
 import random
@@ -12,6 +13,7 @@ import threading
 import time
 import traceback
 import wx
+import yaml
 
 # Option Enums
 
@@ -893,7 +895,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseFullScreen )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.EventTimerAnimation, id = ID_TIMER_ANIMATION )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimation, id = ID_TIMER_ANIMATION )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
@@ -1102,6 +1104,76 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
                 with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg: dlg.ShowModal()
+                
+                self.SetFocus()
+                
+            except: wx.MessageBox( traceback.format_exc() )
+            
+        
+    
+    def _ExportTags( self ):
+        
+        if len( self._selected_media ) > 0:
+            
+            try:
+                
+                flat_media = []
+                
+                for media in self._sorted_media:
+                    
+                    if media in self._selected_media:
+                        
+                        if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
+                        else: flat_media.append( media )
+                        
+                    
+                
+                service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+                
+                service_identifiers.add( HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+                
+                service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_identifiers = service_identifiers )
+                
+                if service_identifier is not None:
+                    
+                    with wx.FileDialog( self, style = wx.FD_SAVE, defaultFile = 'tag_update.yaml' ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            hash_ids_to_hashes = dict( enumerate( ( m.GetHash() for m in flat_media ) ) )
+                            hashes_to_hash_ids = { hash : hash_id for ( hash_id, hash ) in hash_ids_to_hashes.items() }
+                            
+                            tags_to_hash_ids = collections.defaultdict( list )
+                            
+                            for m in flat_media:
+                                
+                                hash = m.GetHash()
+                                hash_id = hashes_to_hash_ids[ hash ]
+                                
+                                tags_manager = m.GetTagsManager()
+                                
+                                current_tags = tags_manager.GetCurrent()
+                                
+                                for tag in current_tags: tags_to_hash_ids[ tag ].append( hash_id )
+                                
+                            
+                            #
+                            
+                            service_data = {}
+                            content_data = HC.GetEmptyDataDict()
+                            
+                            mappings = tags_to_hash_ids.items()
+                            
+                            content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_ADD ] = mappings
+                            
+                            update = HC.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )
+                            
+                            yaml_text = yaml.safe_dump( update )
+                            
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml_text )
+                            
+                        
+                    
                 
                 self.SetFocus()
                 
@@ -1436,7 +1508,8 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'custom_filter': self._CustomFilter()
             elif command == 'delete': self._Delete( data )
             elif command == 'download': HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, self._GetSelectedHashes( CC.DISCRIMINANT_NOT_LOCAL ) ) ] } )
-            elif command == 'export': self._ExportFiles()
+            elif command == 'export_files': self._ExportFiles()
+            elif command == 'export_tags': self._ExportTags()
             elif command == 'filter': self._Filter()
             elif command == 'fullscreen': self._FullScreen()
             elif command == 'get_similar_to': self._GetSimilarTo()
@@ -1604,8 +1677,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     remove_phrase = 'remove all'
                     local_delete_phrase = 'delete all'
                     dump_phrase = 'dump all'
-                    export_phrase = 'export all'
-                    export_special_phrase = 'advanced export all'
+                    export_phrase = 'files'
                     copy_phrase = 'files'
                     
                 else:
@@ -1631,8 +1703,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     remove_phrase = 'remove'
                     local_delete_phrase = 'delete'
                     dump_phrase = 'dump'
-                    export_phrase = 'export'
-                    export_special_phrase = 'advanced export'
+                    export_phrase = 'file'
                     copy_phrase = 'file'
                     
                 
@@ -1822,7 +1893,17 @@ class MediaPanelThumbnails( MediaPanel ):
                     menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
                     
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export' ), export_phrase )
+                #
+                
+                export_menu  = wx.Menu()
+                
+                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_files' ), export_phrase )
+                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_tags' ), 'tags' )
+                
+                menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
+                
+                #
+                
                 menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 #
@@ -1912,77 +1993,6 @@ class MediaPanelThumbnails( MediaPanel ):
         event.Skip()
         
     
-    def EventTimerAnimation( self, event ):
-        
-        started = time.clock()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
-        
-        ( start_x, start_y ) = self.GetViewStart()
-        
-        ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
-        
-        ( width, height ) = self.GetClientSize()
-        
-        min_y = ( start_y * y_unit ) - thumbnail_span_height
-        max_y = ( start_y * y_unit ) + height + thumbnail_span_height
-        
-        dc = self._GetScrolledDC()
-        
-        all_info = self._thumbnails_being_faded_in.items()
-        
-        for ( hash, ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered ) ) in all_info:
-            
-            if num_frames_rendered == 0:
-                
-                image = original_bmp.ConvertToImage()
-                
-                try: image.InitAlpha()
-                except: pass
-                
-                image = image.AdjustChannels( 1, 1, 1, 0.25 )
-                
-                alpha_bmp = wx.BitmapFromImage( image, 32 )
-                
-            
-            num_frames_rendered += 1
-            
-            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered )
-            
-            if y < min_y or y > max_y or num_frames_rendered == 9:
-                
-                bmp_to_use = original_bmp
-                
-                del self._thumbnails_being_faded_in[ hash ]
-                
-            else:
-                
-                #canvas_dc = wx.MemoryDC( canvas_bmp )
-                
-                #canvas_dc.DrawBitmap( alpha_bmp, 0, 0, True )
-                
-                #del canvas_dc
-                
-                bmp_to_use = alpha_bmp
-                
-            
-            dc.DrawBitmap( bmp_to_use, x, y, True )
-            
-            if time.clock() - started > 0.016: break
-            
-        
-        finished = time.clock()
-        
-        if len( self._thumbnails_being_faded_in ) > 0:
-            
-            time_this_took_in_ms = ( finished - started ) * 1000
-            
-            ms = max( 1, int( round( 16.7 - time_this_took_in_ms ) ) )
-            
-            self._timer_animation.Start( ms, wx.TIMER_ONE_SHOT )
-            
-        
-    
     def NewThumbnails( self, hashes ):
         
         affected_thumbnails = self._GetMedia( hashes )
@@ -2067,6 +2077,77 @@ class MediaPanelThumbnails( MediaPanel ):
         self._RefitCanvas()
         
         self._RedrawCanvas() # to force redraw
+        
+    
+    def TIMEREventAnimation( self, event ):
+        
+        started = time.clock()
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
+        
+        ( start_x, start_y ) = self.GetViewStart()
+        
+        ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
+        
+        ( width, height ) = self.GetClientSize()
+        
+        min_y = ( start_y * y_unit ) - thumbnail_span_height
+        max_y = ( start_y * y_unit ) + height + thumbnail_span_height
+        
+        dc = self._GetScrolledDC()
+        
+        all_info = self._thumbnails_being_faded_in.items()
+        
+        for ( hash, ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered ) ) in all_info:
+            
+            if num_frames_rendered == 0:
+                
+                image = original_bmp.ConvertToImage()
+                
+                try: image.InitAlpha()
+                except: pass
+                
+                image = image.AdjustChannels( 1, 1, 1, 0.25 )
+                
+                alpha_bmp = wx.BitmapFromImage( image, 32 )
+                
+            
+            num_frames_rendered += 1
+            
+            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered )
+            
+            if y < min_y or y > max_y or num_frames_rendered == 9:
+                
+                bmp_to_use = original_bmp
+                
+                del self._thumbnails_being_faded_in[ hash ]
+                
+            else:
+                
+                #canvas_dc = wx.MemoryDC( canvas_bmp )
+                
+                #canvas_dc.DrawBitmap( alpha_bmp, 0, 0, True )
+                
+                #del canvas_dc
+                
+                bmp_to_use = alpha_bmp
+                
+            
+            dc.DrawBitmap( bmp_to_use, x, y, True )
+            
+            if time.clock() - started > 0.016: break
+            
+        
+        finished = time.clock()
+        
+        if len( self._thumbnails_being_faded_in ) > 0:
+            
+            time_this_took_in_ms = ( finished - started ) * 1000
+            
+            ms = max( 1, int( round( 16.7 - time_this_took_in_ms ) ) )
+            
+            self._timer_animation.Start( ms, wx.TIMER_ONE_SHOT )
+            
         
     
     def WaterfallThumbnail( self, page_key, thumbnail, thumbnail_bmp ):

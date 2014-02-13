@@ -10,7 +10,6 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMedia
 import ClientGUIMixins
-import ClientParsers
 import json
 import os
 import threading
@@ -60,7 +59,7 @@ class CaptchaControl( wx.Panel ):
         self._bitmap = wx.EmptyBitmap( 0, 0, 24 )
         
         self._timer = wx.Timer( self, ID_TIMER_CAPTCHA )
-        self.Bind( wx.EVT_TIMER, self.EventTimer, id = ID_TIMER_CAPTCHA )
+        self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_CAPTCHA )
         
         self._captcha_box_panel = ClientGUICommon.StaticBox( self, 'recaptcha' )
         
@@ -270,14 +269,14 @@ class CaptchaControl( wx.Panel ):
         self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
-    def EventTimer( self, event ):
+    # change this to hold (current challenge, bmp, timestamp it runs out, value, whethere ready to post)
+    def GetValues( self ): return ( self._captcha_challenge, self._bitmap, self._captcha_runs_out, self._captcha_entry.GetValue(), self._ready_button.GetLabel() == 'edit' )
+    
+    def TIMEREvent( self, event ):
         
         if HC.GetNow() > self._captcha_runs_out: self.Enable()
         else: self._DrawMain()
         
-    
-    # change this to hold (current challenge, bmp, timestamp it runs out, value, whethere ready to post)
-    def GetValues( self ): return ( self._captcha_challenge, self._bitmap, self._captcha_runs_out, self._captcha_entry.GetValue(), self._ready_button.GetLabel() == 'edit' )
     
 class Comment( wx.Panel ):
     
@@ -427,16 +426,9 @@ class ManagementPanelDumper( ManagementPanel ):
         self._file_post_name = 'upfile'
         
         self._timer = wx.Timer( self, ID_TIMER_DUMP )
-        self.Bind( wx.EVT_TIMER, self.EventTimer, id = ID_TIMER_DUMP )
+        self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_DUMP )
         
-        ( post_url, self._flood_time, self._form_fields, self._restrictions ) = self._imageboard.GetBoardInfo()
-        
-        o = urlparse.urlparse( post_url )
-        
-        self._post_scheme = o.scheme
-        self._post_host = o.hostname
-        self._post_port = o.port
-        self._post_request = o.path
+        ( self._post_url, self._flood_time, self._form_fields, self._restrictions ) = self._imageboard.GetBoardInfo()
         
         # progress
         
@@ -540,7 +532,7 @@ class ManagementPanelDumper( ManagementPanel ):
         
         # misc
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'include tags from', namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, namespaces = [ 'creator', 'series', 'title', 'volume', 'chapter', 'page', 'character', 'person', 'all others' ] )
         
         # arrange stuff
         
@@ -596,11 +588,9 @@ class ManagementPanelDumper( ManagementPanel ):
         
         try:
             
-            connection = HC.get_connection( scheme = self._post_scheme, host = self._post_host, port = self._post_port )
+            response = HC.http.Request( HC.POST, self._post_url, request_headers = headers, body = body )
             
-            data = connection.request( 'POST', self._post_request, headers = headers, body = body )
-            
-            ( status, phrase ) = ClientParsers.Parse4chanPostScreen( data )
+            ( status, phrase ) = HydrusDownloading.Parse4chanPostScreen( response )
             
         except Exception as e: ( status, phrase ) = ( 'big error', HC.u( e ) )
         
@@ -946,7 +936,88 @@ class ManagementPanelDumper( ManagementPanel ):
             
         
     
-    def EventTimer( self, event ):
+    def FocusChanged( self, page_key, media ):
+        
+        if page_key == self._page_key:
+            
+            if media is None: hash = None
+            else: hash = media.GetHash()
+            
+            if hash != self._current_hash:
+                
+                old_hash = self._current_hash
+                
+                if old_hash is not None: self._FreezeCurrentMediaPostInfo()
+                
+                self._current_hash = hash
+                
+                self._ShowCurrentMedia()
+                
+            
+        
+    
+    def SortedMediaPulse( self, page_key, sorted_media ):
+        
+        if page_key == self._page_key:
+            
+            self._sorted_media_hashes = [ media.GetHash() for media in sorted_media ]
+            
+            self._hashes_to_media = { hash : self._hashes_to_media[ hash ] for hash in self._sorted_media_hashes }
+            
+            new_hashes_to_dump_info = {}
+            
+            for ( hash, ( dump_status_enum, dump_status_string, post_field_info ) ) in self._hashes_to_dump_info.items():
+                
+                if hash not in self._sorted_media_hashes: continue
+                
+                new_post_field_info = []
+                
+                for ( name, type, value ) in post_field_info:
+                    
+                    if type == CC.FIELD_COMMENT:
+                        
+                        ( initial, append ) = value
+                        
+                        media = self._hashes_to_media[ hash ]
+                        
+                        initial = self._GetInitialComment( media )
+                        
+                        value = ( initial, append )
+                        
+                    
+                    new_post_field_info.append( ( name, type, value ) )
+                    
+                
+                new_hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, new_post_field_info )
+                
+            
+            self._hashes_to_dump_info = new_hashes_to_dump_info
+            
+            self._ShowCurrentMedia()
+            
+            if self._current_hash is None and len( self._sorted_media_hashes ) > 0:
+                
+                hash_to_select = self._sorted_media_hashes[0]
+                
+                media_to_select = self._hashes_to_media[ hash_to_select ]
+                
+                HC.pubsub.pub( 'set_focus', self._page_key, media_to_select )
+                
+            
+        
+    
+    def TestAbleToClose( self ):
+        
+        if self._dumping:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'This page is still dumping. Are you sure you want to close it?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                
+            
+        
+    
+    def TIMEREvent( self, event ):
         
         if self._paused: return
         
@@ -1060,87 +1131,6 @@ class ManagementPanelDumper( ManagementPanel ):
             
             if self._num_dumped == 0: self._progress_info.SetLabel( 'will dump to ' + self._imageboard.GetName() )
             else: self._progress_info.SetLabel( 'paused after ' + HC.u( self._num_dumped ) + ' files dumped' )
-            
-        
-    
-    def FocusChanged( self, page_key, media ):
-        
-        if page_key == self._page_key:
-            
-            if media is None: hash = None
-            else: hash = media.GetHash()
-            
-            if hash != self._current_hash:
-                
-                old_hash = self._current_hash
-                
-                if old_hash is not None: self._FreezeCurrentMediaPostInfo()
-                
-                self._current_hash = hash
-                
-                self._ShowCurrentMedia()
-                
-            
-        
-    
-    def SortedMediaPulse( self, page_key, sorted_media ):
-        
-        if page_key == self._page_key:
-            
-            self._sorted_media_hashes = [ media.GetHash() for media in sorted_media ]
-            
-            self._hashes_to_media = { hash : self._hashes_to_media[ hash ] for hash in self._sorted_media_hashes }
-            
-            new_hashes_to_dump_info = {}
-            
-            for ( hash, ( dump_status_enum, dump_status_string, post_field_info ) ) in self._hashes_to_dump_info.items():
-                
-                if hash not in self._sorted_media_hashes: continue
-                
-                new_post_field_info = []
-                
-                for ( name, type, value ) in post_field_info:
-                    
-                    if type == CC.FIELD_COMMENT:
-                        
-                        ( initial, append ) = value
-                        
-                        media = self._hashes_to_media[ hash ]
-                        
-                        initial = self._GetInitialComment( media )
-                        
-                        value = ( initial, append )
-                        
-                    
-                    new_post_field_info.append( ( name, type, value ) )
-                    
-                
-                new_hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, new_post_field_info )
-                
-            
-            self._hashes_to_dump_info = new_hashes_to_dump_info
-            
-            self._ShowCurrentMedia()
-            
-            if self._current_hash is None and len( self._sorted_media_hashes ) > 0:
-                
-                hash_to_select = self._sorted_media_hashes[0]
-                
-                media_to_select = self._hashes_to_media[ hash_to_select ]
-                
-                HC.pubsub.pub( 'set_focus', self._page_key, media_to_select )
-                
-            
-        
-    
-    def TestAbleToClose( self ):
-        
-        if self._dumping:
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'This page is still dumping. Are you sure you want to close it?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_NO: raise Exception()
-                
             
         
     
@@ -1602,7 +1592,7 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         
         #
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send ' + self._name + ' tags to ', self._namespaces )
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, self._namespaces )
         
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1688,7 +1678,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         #
         
-        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send to ', [ 'filename' ] )
+        self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, [ 'filename' ] )
         
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         

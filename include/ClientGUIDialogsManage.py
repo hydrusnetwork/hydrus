@@ -144,7 +144,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         token = self._token.GetValue()
         pin = self._pin.GetValue()
         
-        HC.app.Write( '4chan_pass', token, pin, self._timeout )
+        HC.app.Write( '4chan_pass', ( token, pin, self._timeout ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -169,17 +169,15 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             
             ( ct, body ) = CC.GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
             
-            headers = {}
-            headers[ 'Content-Type' ] = ct
+            request_headers = {}
+            request_headers[ 'Content-Type' ] = ct
             
-            connection = HC.get_connection( url = 'https://sys.4chan.org/', accept_cookies = True )
-            
-            response = connection.request( 'POST', '/auth', headers = headers, body = body )
+            response = HC.http.Request( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
             
             self._timeout = HC.GetNow() + 365 * 24 * 3600
             
         
-        HC.app.Write( '4chan_pass', token, pin, self._timeout )
+        HC.app.Write( '4chan_pass', ( token, pin, self._timeout ) )
         
         self._SetStatus()
         
@@ -431,9 +429,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             boorus = HC.app.Read( 'boorus' )
             
-            for booru in boorus:
-                
-                name = booru.GetName()
+            for ( name, booru ) in boorus.items():
                 
                 page_info = ( self._Panel, ( self._boorus, booru ), {} )
                 
@@ -493,7 +489,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     booru = CC.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                     
-                    self._edit_log.append( ( HC.ADD, name ) )
+                    self._edit_log.append( ( HC.SET, ( name, booru ) ) )
                     
                     page = self._Panel( self._boorus, booru )
                     
@@ -535,12 +531,26 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         for ( name, page ) in self._boorus.GetNameToPageDict().items():
             
-            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( name, page.GetBooru() ) ) )
+            if page.HasChanges(): self._edit_log.append( ( HC.SET, ( name, page.GetBooru() ) ) )
             
         
         try:
             
-            if len( self._edit_log ) > 0: HC.app.Write( 'update_boorus', self._edit_log )
+            for ( action, data ) in self._edit_log:
+                
+                if action == HC.SET:
+                    
+                    ( name, booru ) = data
+                    
+                    HC.app.Write( 'booru', name, booru )
+                    
+                elif action == HC.DELETE:
+                    
+                    name = data
+                    
+                    HC.app.Write( 'delete_booru', name )
+                    
+                
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -579,7 +589,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                         
                         new_booru = CC.Booru( name, 'search_url', '+', 1, 'thumbnail', '', 'original image', {} )
                         
-                        self._edit_log.append( ( HC.ADD, name ) )
+                        self._edit_log.append( ( HC.SET, ( name, new_booru ) ) )
                         
                         page = self._Panel( self._boorus, new_booru )
                         
@@ -1415,6 +1425,283 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             self._public_key.SetValue( public_key )
             
         
+        
+class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._export_folders = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ] )
+            
+            self._export_folders.SetMinSize( ( 780, 360 ) )
+            
+            self._add_button = wx.Button( self, label = 'add' )
+            self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._edit_button = wx.Button( self, label = 'edit' )
+            self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._delete_button = wx.Button( self, label = 'delete' )
+            self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            self._original_paths_to_details = HC.app.Read( 'export_folders' )
+            
+            for ( path, details ) in self._original_paths_to_details.items():
+                
+                query = details[ 'query' ]
+                period = details[ 'period' ]
+                phrase = details[ 'phrase' ]
+                
+                ( pretty_query, pretty_period, pretty_phrase ) = self._GetPrettyVariables( query, period, phrase )
+                
+                self._import_folders.Append( ( path, pretty_query, pretty_period, pretty_phrase ), ( path, query, period, phrase ) )
+                
+            
+        
+        def ArrangeControls():
+            
+            file_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            file_buttons.AddF( self._add_button, FLAGS_MIXED )
+            file_buttons.AddF( self._edit_button, FLAGS_MIXED )
+            file_buttons.AddF( self._delete_button, FLAGS_MIXED )
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok, FLAGS_MIXED )
+            buttons.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._export_folders, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def _AddFolder( self, path ):
+        
+        all_existing_client_data = self._import_folders.GetClientData()
+        
+        if path not in ( existing_path for ( existing_path, query, period, phrase ) in all_existing_client_data ):
+            
+            query = []
+            period = 15 * 60
+            phrase = '{hash}'
+            
+            with DialogManageExportFoldersEdit( self, path, query, period, phrase ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( path, query, period, phrase ) = dlg.GetInfo()
+                    
+                    ( pretty_query, pretty_period, pretty_phrase ) = self._GetPrettyVariables( query, period, phrase )
+                    
+                    self._export_folders.Append( ( path, pretty_query, pretty_period, pretty_phrase ), ( path, query, period, phrase ) )
+                    
+                
+            
+        
+    
+    def _GetPrettyVariables( self, query, period, phrase ):
+        
+        raise Exception( 'do pretty query' )
+        pretty_query = 'pretty query' # just join the predicate tostrings
+        
+        pretty_period = HC.u( period / 60 ) + ' minutes'
+        
+        pretty_phrase = phrase
+        
+        return ( pretty_query, pretty_period, pretty_phrase )
+        
+    
+    def EventAdd( self, event ):
+        
+        with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                self._AddFolder( path )
+                
+            
+        
+    
+    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
+    
+    def EventDelete( self, event ): self._export_folders.RemoveAllSelected()
+    
+    def EventEdit( self, event ):
+        
+        indices = self._import_folders.GetAllSelected()
+        
+        for index in indices:
+            
+            ( path, type, check_period, local_tag ) = self._import_folders.GetClientData( index )
+            
+            with DialogManageImportFoldersEdit( self, path, type, check_period, local_tag ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( path, query, period, phrase ) = dlg.GetInfo()
+                    
+                    ( pretty_query, pretty_period, pretty_phrase ) = self._GetPrettyVariables( query, period, phrase )
+                    
+                    self._import_folders.UpdateRow( index, ( path, pretty_query, pretty_period, pretty_phrase ), ( path, query, period, phrase ) )
+                    
+                
+            
+        
+    
+    def EventOK( self, event ):
+        
+        client_data = self._export_folders.GetClientData()
+        
+        export_folders = []
+        
+        paths = set()
+        
+        for ( path, query, period, phrase ) in client_data:
+            
+            if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
+            else: details = { 'last_checked' : 0 }
+            
+            details[ 'query' ] = query
+            details[ 'period' ] = period
+            details[ 'phrase' ] = phrase
+            
+            HC.app.Write( 'export_folder', path, details )
+            
+            paths.add( path )
+            
+        
+        deletees = set( self._original_paths_to_details.keys() ) - paths
+        
+        for deletee in deletees: HC.app.Write( 'delete_export_folder', deletee )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
+    
+    def __init__( self, parent, path, query, period, phrase ):
+        
+        def InitialiseControls():
+            
+            self._path = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
+            raise Exception( 'need a predicate listbox and a read A/C for query' )
+            
+            self._period = wx.SpinCtrl( self )
+            
+            raise Exception( 'need a copy of the phrase stuff in the normal export window' )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            self._path.SetPath( path )
+            
+            raise Exception( 'set up query predicates' )
+            
+            self._period.SetRange( 3, 180 )
+            
+            self._period.SetValue( period / 60 )
+            
+            raise Exception( 'set up phrase' )
+            
+        
+        def ArrangeControls():
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            raise Exception( 'need better layout for these more complicated controls' )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'path:' ), FLAGS_MIXED )
+            gridbox.AddF( self._path, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'query:' ), FLAGS_MIXED )
+            gridbox.AddF( self._query, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'check period (minutes):' ), FLAGS_MIXED )
+            gridbox.AddF( self._period, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'export phrase:' ), FLAGS_MIXED )
+            gridbox.AddF( self._phrase, FLAGS_EXPAND_BOTH_WAYS )
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok, FLAGS_MIXED )
+            buttons.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( 640, y ) )
+            
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'edit export folder' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def GetInfo( self ):
+        
+        path = self._path.GetPath()
+        
+        raise Exception( 'fetch preds from query listbox' )
+        
+        period = self._period.GetValue() * 60
+        
+        phrase = self._phrase.GetValue()
+        
+        return ( path, query, period, phrase )
+        
     
 class DialogManageImageboards( ClientGUIDialogs.Dialog ):
     
@@ -1450,7 +1737,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             sites = HC.app.Read( 'imageboards' )
             
-            for ( name, imageboards ) in sites:
+            for ( name, imageboards ) in sites.items():
                 
                 page_info = ( self._Panel, ( self._sites, imageboards ), {} )
                 
@@ -1508,7 +1795,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if name == '': raise Exception( 'Please enter a nickname for the service.' )
                     
-                    self._edit_log.append( ( HC.ADD, name ) )
+                    self._edit_log.append( ( HC.SET, ( name, [] ) ) )
                     
                     page = self._Panel( self._sites, [] )
                     
@@ -1552,12 +1839,26 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         for ( name, page ) in self._sites.GetNameToPageDict().items():
             
-            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( name, page.GetChanges() ) ) )
+            if page.HasChanges(): self._edit_log.append( ( HC.SET, ( name, page.GetImageboards() ) ) )
             
         
         try:
             
-            if len( self._edit_log ) > 0: HC.app.Write( 'update_imageboards', self._edit_log )
+            for ( action, data ) in self._edit_log:
+                
+                if action == HC.DELETE:
+                    
+                    name = data
+                    
+                    HC.app.Write( 'delete_imageboard', name )
+                    
+                elif action == HC.SET:
+                    
+                    ( name, imageboards ) = data
+                    
+                    HC.app.Write( 'imageboard', name, imageboards )
+                    
+                
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -1592,7 +1893,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if not self._sites.NameExists( name ):
                         
-                        self._edit_log.append( ( HC.ADD, name ) )
+                        self._edit_log.append( ( HC.SET, ( name, [] ) ) )
                         
                         page = self._Panel( self._sites, [] )
                         
@@ -1626,8 +1927,6 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         def __init__( self, parent, imageboards ):
             
-            wx.Panel.__init__( self, parent )
-            
             def InitialiseControls():
                 
                 self._site_panel = ClientGUICommon.StaticBox( self, 'site' )
@@ -1647,8 +1946,6 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
             
             def PopulateControls():
-                
-                self._edit_log = []
                 
                 for imageboard in imageboards:
                     
@@ -1677,6 +1974,10 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 self.SetSizer( vbox )
                 
             
+            wx.Panel.__init__( self, parent )
+            
+            self._has_changes = False
+            
             InitialiseControls()
             
             PopulateControls()
@@ -1704,11 +2005,11 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                         
                         imageboard = CC.Imageboard( name, '', 60, [], {} )
                         
-                        self._edit_log.append( ( HC.ADD, name ) )
-                        
                         page = self._Panel( self._imageboards, imageboard )
                         
                         self._imageboards.AddPage( page, name, select = True )
+                        
+                        self._has_changes = True
                         
                     except Exception as e:
                         
@@ -1750,21 +2051,13 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 self._imageboards.DeleteCurrentPage()
                 
-            
-        
-        def GetChanges( self ):
-            
-            for page in self._imageboards.GetNameToPageDict().values():
+                self._has_changes = True
                 
-                if page.HasChanges(): self._edit_log.append( ( HC.EDIT, page.GetImageboard() ) )
-                
-            
-            return self._edit_log
             
         
         def GetImageboards( self ): return [ page.GetImageboard() for page in self._imageboards.GetNameToPageDict().values() ]
         
-        def HasChanges( self ): return len( self._edit_log ) > 0 or True in ( page.HasChanges() for page in self._imageboards.GetNameToPageDict().values() )
+        def HasChanges( self ): return self._has_changes or True in ( page.HasChanges() for page in self._imageboards.GetNameToPageDict().values() )
         
         def UpdateImageboard( self, imageboard ):
             
@@ -1774,7 +2067,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 new_imageboard = CC.Imageboard( name, '', 60, [], {} )
                 
-                self._edit_log.append( ( HC.ADD, name ) )
+                self._edit_log.append( ( HC.SET, ( name, new_imageboard ) ) )
                 
                 page = self._Panel( self._imageboards, new_imageboard )
                 
@@ -2153,9 +2446,9 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            self._original_import_folders = HC.app.Read( 'import_folders' )
+            self._original_paths_to_details = HC.app.Read( 'import_folders' )
             
-            for ( path, details ) in self._original_import_folders:
+            for ( path, details ) in self._original_paths_to_details.items():
                 
                 type = details[ 'type' ]
                 check_period = details[ 'check_period' ]
@@ -2294,23 +2587,27 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         client_data = self._import_folders.GetClientData()
         
-        original_paths_to_details = dict( self._original_import_folders )
-        
         import_folders = []
+        
+        paths = set()
         
         for ( path, type, check_period, local_tag ) in client_data:
             
-            if path in original_paths_to_details: details = original_paths_to_details[ path ]
+            if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
             else: details = { 'last_checked' : 0, 'cached_imported_paths' : set(), 'failed_imported_paths' : set() }
             
             details[ 'type' ] = type
             details[ 'check_period' ] = check_period
-            details[ 'local_tag'] = local_tag
+            details[ 'local_tag' ] = local_tag
             
-            import_folders.append( ( path, details ) )
+            HC.app.Write( 'import_folder', path, details )
+            
+            paths.add( path )
             
         
-        HC.app.Write( 'import_folders', import_folders )
+        deletees = set( self._original_paths_to_details.keys() ) - paths
+        
+        for deletee in deletees: HC.app.Write( 'delete_import_folder', deletee )
         
         self.EndModal( wx.ID_OK )
         
@@ -2826,7 +3123,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            gui_session_names = HC.app.Read( 'gui_sessions', name_only = True )
+            gui_sessions = HC.app.Read( 'gui_sessions' )
+            
+            gui_session_names = gui_sessions.keys()
             
             if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
             
@@ -3575,7 +3874,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         id = self._id.GetValue()
         password = self._password.GetValue()
         
-        HC.app.Write( 'pixiv_account', id, password )
+        HC.app.Write( 'pixiv_account', ( id, password ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -4508,7 +4807,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                 
                                 if register:
                                     
-                                    with ClientGUIDialogs.DialogRegisterService( self ) as dlg:
+                                    with ClientGUIDialogs.DialogRegisterService( self, service_type ) as dlg:
                                         
                                         if dlg.ShowModal() != wx.ID_OK: return
                                         
@@ -5009,29 +5308,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         def InitialiseControls():
             
             self._listbook = ClientGUICommon.ListBook( self )
-            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._listbook )
-            
-            self._deviant_art = ClientGUICommon.ListBook( self._listbook )
-            self._deviant_art.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._hentai_foundry = ClientGUICommon.ListBook( self._listbook )
-            self._hentai_foundry.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._giphy = ClientGUICommon.ListBook( self._listbook )
-            self._giphy.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._newgrounds = ClientGUICommon.ListBook( self._listbook )
-            self._newgrounds.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._pixiv = ClientGUICommon.ListBook( self._listbook )
-            self._pixiv.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._booru = ClientGUICommon.ListBook( self._listbook )
-            self._booru.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._tumblr = ClientGUICommon.ListBook( self._listbook )
-            self._tumblr.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -5055,32 +5332,12 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            types_to_listbooks = {}
-            
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART ] = self._deviant_art
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY ] = self._hentai_foundry
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_GIPHY ] = self._giphy
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_PIXIV ] = self._pixiv
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_BOORU ] = self._booru
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_TUMBLR ] = self._tumblr
-            types_to_listbooks[ HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ] = self._newgrounds
-            
-            for ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) in self._original_subscriptions:
+            for ( name, info ) in self._original_subscriptions.items():
                 
-                listbook = types_to_listbooks[ site_download_type ]
+                page = self._Panel( self._listbook, name, info )
                 
-                page = self._Panel( listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
+                self._listbook.AddPage( page, name )
                 
-                listbook.AddPage( page, name )
-                
-            
-            self._listbook.AddPage( self._deviant_art, 'deviant art' )
-            self._listbook.AddPage( self._hentai_foundry, 'hentai foundry' )
-            self._listbook.AddPage( self._giphy, 'giphy' )
-            self._listbook.AddPage( self._newgrounds, 'newgrounds' )
-            self._listbook.AddPage( self._pixiv, 'pixiv' )
-            self._listbook.AddPage( self._booru, 'booru' )
-            self._listbook.AddPage( self._tumblr, 'tumblr' )
             
         
         def ArrangeControls():
@@ -5123,23 +5380,18 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def _CheckCurrentSubscriptionIsValid( self ):
         
-        subs_listbook = self._listbook.GetCurrentPage()
+        panel = self._listbook.GetCurrentPage()
         
-        if subs_listbook is not None:
+        if panel is not None:
             
-            sub_panel = subs_listbook.GetCurrentPage()
+            name = panel.GetName()
+            old_name = self._listbook.GetCurrentName()
             
-            if sub_panel is not None:
+            if old_name is not None and name != old_name:
                 
-                name = sub_panel.GetName()
-                old_name = subs_listbook.GetCurrentName()
+                if self._listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
                 
-                if old_name is not None and name != old_name:
-                    
-                    if subs_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
-                    
-                    subs_listbook.RenamePage( old_name, name )
-                    
+                self._listbook.RenamePage( old_name, name )
                 
             
         
@@ -5154,53 +5406,13 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    subscription_listbook = self._listbook.GetCurrentPage()
-                    
-                    if subscription_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    if self._listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
                     
                     if name == '': raise Exception( 'Please enter a nickname for the subscription.' )
                     
-                    if subscription_listbook == self._deviant_art: site_download_type = HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART
-                    elif subscription_listbook == self._hentai_foundry: site_download_type = HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY
-                    elif subscription_listbook == self._giphy: site_download_type = HC.SITE_DOWNLOAD_TYPE_GIPHY
-                    elif subscription_listbook == self._pixiv: site_download_type = HC.SITE_DOWNLOAD_TYPE_PIXIV
-                    elif subscription_listbook == self._booru: site_download_type = HC.SITE_DOWNLOAD_TYPE_BOORU
-                    elif subscription_listbook == self._tumblr: site_download_type = HC.SITE_DOWNLOAD_TYPE_TUMBLR
-                    elif subscription_listbook == self._newgrounds: site_download_type = HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS
+                    page = self._Panel( self._listbook, name )
                     
-                    if site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV:
-                        
-                        ( id, password ) = HC.app.Read( 'pixiv_account' )
-                        
-                        if id == '' and password == '':
-                            
-                            wx.MessageBox( 'You need to set up your pixiv credentials before you can add a pixiv subscription!' )
-                            
-                            return
-                            
-                        
-                    
-                    if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_TUMBLR, HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ): query_type = 'artist'
-                    else: query_type = 'tags'
-                    
-                    if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: query_type = ( '', query_type )
-                    
-                    query = ''
-                    
-                    frequency_type = 86400
-                    frequency_number = 7
-                    
-                    advanced_tag_options = {}
-                    advanced_import_options = {} # blaaah not sure
-                    
-                    last_checked = None
-                    url_cache = set()
-                    
-                    paused = False
-                    
-                    page = self._Panel( subscription_listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-                    
-                    subscription_listbook.AddPage( page, name, select = True )
+                    self._listbook.AddPage( page, name, select = True )
                     
                 except Exception as e:
                     
@@ -5224,42 +5436,29 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             return
             
         
-        subscription_listbook = self._listbook.GetCurrentPage()
+        panel = self._listbook.GetCurrentPage()
         
-        if subscription_listbook is not None:
+        if sub_panel is not None:
             
-            sub_panel = subscription_listbook.GetCurrentPage()
+            ( name, info ) = panel.GetSubscription()
             
-            if sub_panel is not None:
+            try:
                 
-                name = subscription_listbook.GetCurrentName()
-                
-                info = sub_panel.GetInfo()
-                
-                ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = info
-                
-                advanced_tag_options = advanced_tag_options.items() # yaml parsing bug
-                
-                info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
-                
-                try:
+                with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
                     
-                    with wx.FileDialog( self, 'select where to export subscription', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
+                    if dlg.ShowModal() == wx.ID_OK:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
-                            
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( name, info ) ) )
                         
                     
-                except:
+                
+            except:
+                
+                with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.yaml', style = wx.FD_SAVE ) as dlg:
                     
-                    with wx.FileDialog( self, 'select where to export subscription', defaultFile = 'subscription.yaml', style = wx.FD_SAVE ) as dlg:
+                    if dlg.ShowModal() == wx.ID_OK:
                         
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( info ) )
-                            
+                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( name, info ) ) )
                         
                     
                 
@@ -5276,19 +5475,18 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             return
             
         
-        all_pages = []
+        all_pages = self._listbook.GetNameToPageDict().values()
         
-        all_pages.extend( self._deviant_art.GetNameToPageDict().values() )
-        all_pages.extend( self._hentai_foundry.GetNameToPageDict().values() )
-        all_pages.extend( self._giphy.GetNameToPageDict().values() )
-        all_pages.extend( self._pixiv.GetNameToPageDict().values() )
-        all_pages.extend( self._booru.GetNameToPageDict().values() )
-        all_pages.extend( self._tumblr.GetNameToPageDict().values() )
-        all_pages.extend( self._newgrounds.GetNameToPageDict().values() )
+        subscriptions = [ page.GetSubscription() for page in all_pages ]
         
-        subscriptions = [ page.GetInfo() for page in all_pages ]
-        
-        try: HC.app.Write( 'subscriptions', subscriptions )
+        try:
+            
+            for ( name, info ) in subscriptions: HC.app.Write( 'subscription', name, info )
+            
+            deletees = set( self._original_subscriptions.keys() ) - { name for ( name, info ) in subscriptions }
+            
+            for name in deletees: HC.app.Write( 'delete_subscription', name )
+            
         finally: self.EndModal( wx.ID_OK )
         
     
@@ -5305,22 +5503,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def EventRemove( self, event ):
         
-        subscription_listbook = self._listbook.GetCurrentPage()
+        panel = self._listbook.GetCurrentPage()
         
-        sub_panel = subscription_listbook.GetCurrentPage()
-        
-        if sub_panel is not None: subscription_listbook.DeleteCurrentPage()
-        
-    
-    def EventServiceChanging( self, event ):
-        
-        try: self._CheckCurrentSubscriptionIsValid()
-        except Exception as e:
-            
-            wx.MessageBox( HC.u( e ) )
-            
-            event.Veto()
-            
+        if panel is not None: self._listbook.DeleteCurrentPage()
         
     
     def Import( self, paths ):
@@ -5339,21 +5524,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 with open( path, 'rb' ) as f: file = f.read()
                 
-                ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache ) = yaml.safe_load( file )
+                ( name, info ) = yaml.safe_load( file )
                 
-                advanced_tag_options = dict( advanced_tag_options ) # yaml parsing bug
-                
-                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: services_listbook = self._booru
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART: services_listbook = self._deviant_art
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_GIPHY: services_listbook = self._giphy
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: services_listbook = self._hentai_foundry
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: services_listbook = self._pixiv
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: services_listbook = self._tumblr
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS: services_listbook = self._newgrounds
-                
-                self._listbook.SelectPage( services_listbook )
-                
-                if services_listbook.NameExists( name ):
+                if self._listbook.NameExists( name ):
                     
                     message = 'A service already exists with that name. Overwrite it?'
                     
@@ -5361,17 +5534,17 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            page = services_listbook.GetNameToPageDict()[ name ]
+                            page = self._listbook.GetNameToPageDict()[ name ]
                             
-                            page.Update( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                            page.Update( name, info )
                             
                         
                     
                 else:
                     
-                    page = self._Panel( services_listbook, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache )
+                    page = self._Panel( self._listbook, name, info )
                     
-                    services_listbook.AddPage( page, name, select = True )
+                    self._listbook.AddPage( page, name, select = True )
                     
                 
             except:
@@ -5383,7 +5556,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.ScrolledWindow ):
         
-        def __init__( self, parent, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ):
+        def __init__( self, parent, name, info = None ):
             
             def InitialiseControls():
                 
@@ -5391,17 +5564,27 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._name = wx.TextCtrl( self._name_panel )
                 
-                self._query_panel = ClientGUICommon.StaticBox( self, 'query' )
+                self._query_panel = ClientGUICommon.StaticBox( self, 'site and query' )
+                
+                self._site_type = ClientGUICommon.BetterChoice( self._query_panel )
+                self._site_type.Append( 'booru', HC.SITE_TYPE_BOORU )
+                self._site_type.Append( 'deviant art', HC.SITE_TYPE_DEVIANT_ART )
+                self._site_type.Append( 'giphy', HC.SITE_TYPE_GIPHY )
+                self._site_type.Append( 'hentai foundry', HC.SITE_TYPE_HENTAI_FOUNDRY )
+                self._site_type.Append( 'pixiv', HC.SITE_TYPE_PIXIV )
+                self._site_type.Append( 'tumblr', HC.SITE_TYPE_TUMBLR )
+                self._site_type.Append( 'newgrounds', HC.SITE_TYPE_NEWGROUNDS )
+                self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
                 
                 self._query = wx.TextCtrl( self._query_panel )
                 
                 self._booru_selector = wx.ListBox( self._query_panel )
                 
-                self._query_type = ClientGUICommon.RadioBox( self._query_panel, 'query type', ( ( 'artist', 'artist' ), ( 'tags', 'tags' ) ) )
+                self._query_type = ClientGUICommon.BetterChoice( self._query_panel )
+                self._query_type.Append( 'artist', 'artist' )
+                self._query_type.Append( 'tags', 'tags' )
                 
-                if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR, HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ): self._query_type.Hide()
-                
-                self._frequency_number = wx.SpinCtrl( self._query_panel )
+                self._frequency = wx.SpinCtrl( self._query_panel )
                 
                 self._frequency_type = wx.Choice( self._query_panel )
                 
@@ -5414,34 +5597,14 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 self._reset_cache_button = wx.Button( self._info_panel, label = '     reset cache on dialog ok     ' )
                 self._reset_cache_button.Bind( wx.EVT_BUTTON, self.EventResetCache )
                 
-                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU: namespaces = [ 'creator', 'series', 'character', '' ]
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_GIPHY: namespaces = [ '' ]
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_TUMBLR: namespaces = [ '' ]
-                elif site_download_type == HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
-                
-                self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, 'send tags to ', namespaces )
+                self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self )
                 
                 self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
                 
             
             def PopulateControls():
                 
-                if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
-                    
-                    boorus = HC.app.Read( 'boorus' )
-                    
-                    for booru in boorus: self._booru_selector.Append( booru.GetName(), booru )
-                    
-                else: self._booru_selector.Hide()
-                
-                #
-                
-                self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-                
-                self._SetControls( *self._original_info )
+                self._SetControls( name, info )
                 
             
             def ArrangeControls():
@@ -5453,25 +5616,26 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 hbox.AddF( wx.StaticText( self._query_panel, label = 'Check subscription every ' ), FLAGS_MIXED )
-                hbox.AddF( self._frequency_number, FLAGS_MIXED )
+                hbox.AddF( self._frequency, FLAGS_MIXED )
                 hbox.AddF( self._frequency_type, FLAGS_MIXED )
                 
+                self._query_panel.AddF( self._site_type, FLAGS_EXPAND_PERPENDICULAR )
                 self._query_panel.AddF( self._query, FLAGS_EXPAND_PERPENDICULAR )
                 self._query_panel.AddF( self._query_type, FLAGS_EXPAND_PERPENDICULAR )
                 self._query_panel.AddF( self._booru_selector, FLAGS_EXPAND_PERPENDICULAR )
                 self._query_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
-                if last_checked is None: last_checked_message = 'not yet initialised'
+                if info[ 'last_checked' ] is None: last_checked_message = 'not yet initialised'
                 else:
                     
                     now = HC.GetNow()
                     
-                    if last_checked < now: last_checked_message = HC.ConvertTimestampToPrettySync( last_checked )
-                    else: last_checked_message = 'due to error, update is delayed. next check in ' + HC.ConvertTimestampToPrettyPending( last_checked )
+                    if info[ 'last_checked' ] < now: last_checked_message = HC.ConvertTimestampToPrettySync( info[ 'last_checked' ] )
+                    else: last_checked_message = 'due to error, update is delayed. next check in ' + HC.ConvertTimestampToPrettyPending( info[ 'last_checked' ] )
                     
                 
                 self._info_panel.AddF( wx.StaticText( self._info_panel, label = last_checked_message ), FLAGS_EXPAND_PERPENDICULAR )
-                self._info_panel.AddF( wx.StaticText( self._info_panel, label = HC.u( len( url_cache ) ) + ' urls in cache' ), FLAGS_EXPAND_PERPENDICULAR )
+                self._info_panel.AddF( wx.StaticText( self._info_panel, label = HC.u( len( info[ 'url_cache' ] ) ) + ' urls in cache' ), FLAGS_EXPAND_PERPENDICULAR )
                 self._info_panel.AddF( self._paused, FLAGS_LONE_BUTTON )
                 self._info_panel.AddF( self._reset_cache_button, FLAGS_LONE_BUTTON )
                 
@@ -5488,6 +5652,24 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             wx.ScrolledWindow.__init__( self, parent )
             
+            if info is None:
+                
+                info = {}
+                
+                info[ 'site_type' ] = HC.SITE_TYPE_BOORU
+                info[ 'query_type' ] = ( 'safebooru', 'tags' )
+                info[ 'query' ] = ''
+                info[ 'frequency_type' ] = 86400
+                info[ 'frequency' ] = 7
+                info[ 'advanced_tag_options' ] = {}
+                info[ 'advanced_import_options' ] = {} # blaaah not sure
+                info[ 'last_checked' ] = None
+                info[ 'url_cache' ] = set()
+                info[ 'paused' ] = False
+                
+            
+            self._original_info = info
+            
             InitialiseControls()
             
             PopulateControls()
@@ -5501,13 +5683,70 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self.SetMinSize( ( 540, 620 ) )
             
         
-        def _SetControls( self, site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ):
+        def _PresentForSiteType( self ):
+            
+            site_type = self._site_type.GetChoice()
+            
+            if site_type in ( HC.SITE_TYPE_BOORU, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_GIPHY, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_NEWGROUNDS ): self._query_type.Hide()
+            else: self._query_type.Show()
+            
+            if site_type == HC.SITE_TYPE_BOORU:
+                
+                if self._booru_selector.GetCount() == 0:
+                    
+                    boorus = HC.app.Read( 'boorus' )
+                    
+                    for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
+                    
+                    self._booru_selector.Select( 0 )
+                    
+                
+                self._booru_selector.Show()
+                
+            else: self._booru_selector.Hide()
+            
+            if site_type == HC.SITE_TYPE_BOORU: namespaces = [ 'creator', 'series', 'character', '' ]
+            elif site_type == HC.SITE_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
+            elif site_type == HC.SITE_TYPE_GIPHY: namespaces = [ '' ]
+            elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
+            elif site_type == HC.SITE_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
+            elif site_type == HC.SITE_TYPE_TUMBLR: namespaces = [ '' ]
+            elif site_type == HC.SITE_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
+            
+            self._advanced_tag_options.SetNamespaces( namespaces )
+            
+            self.Layout()
+            
+        
+        def _SetControls( self, name, info ):
+            
+            site_type = info[ 'site_type' ]
+            query_type = info[ 'query_type' ]
+            query = info[ 'query' ]
+            frequency_type = info[ 'frequency_type' ]
+            frequency = info[ 'frequency' ]
+            advanced_tag_options = info[ 'advanced_tag_options' ]
+            advanced_import_options = info[ 'advanced_import_options' ]
+            last_checked = info[ 'last_checked' ]
+            url_cache = info[ 'url_cache' ]
+            paused = info[ 'paused' ]
+            
+            #
             
             self._name.SetValue( name )
             
+            self._site_type.SelectClientData( site_type )
+            
             self._query.SetValue( query )
             
-            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
+            if site_type == HC.SITE_TYPE_BOORU:
+                
+                if self._booru_selector.GetCount() == 0:
+                    
+                    boorus = HC.app.Read( 'boorus' )
+                    
+                    for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
+                    
                 
                 ( booru_name, query_type ) = query_type
                 
@@ -5515,21 +5754,10 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if index != wx.NOT_FOUND: self._booru_selector.Select( index )
                 
-                initial_index = 1
-                
-            else:
-                
-                self._booru_selector.Hide()
-                
-                if query_type == 'artist': initial_index = 0
-                elif query_type == 'tags': initial_index = 1
-                
             
-            self._query_type.SetSelection( initial_index )
+            self._query_type.SelectClientData( query_type )
             
-            if site_download_type in ( HC.SITE_DOWNLOAD_TYPE_BOORU, HC.SITE_DOWNLOAD_TYPE_DEVIANT_ART, HC.SITE_DOWNLOAD_TYPE_GIPHY, HC.SITE_DOWNLOAD_TYPE_TUMBLR, HC.SITE_DOWNLOAD_TYPE_NEWGROUNDS ): self._query_type.Hide()
-            
-            self._frequency_number.SetValue( frequency_number )
+            self._frequency.SetValue( frequency )
             
             index_to_select = None
             i = 0
@@ -5551,6 +5779,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._advanced_import_options.SetInfo( advanced_import_options )
             
+            self._PresentForSiteType()
+            
         
         def EventResetCache( self, event ):
             
@@ -5560,51 +5790,58 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._reset_cache_button.Disable()
             
         
-        def GetInfo( self ):
+        def EventSiteChanged( self, event ):
             
-            ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = self._original_info
+            self._PresentForSiteType()
+            
+        
+        def GetSubscription( self ):
             
             name = self._name.GetValue()
             
-            query_type = self._query_type.GetSelectedClientData()
+            info = dict( self._original_info )
             
-            if site_download_type == HC.SITE_DOWNLOAD_TYPE_BOORU:
+            info[ 'site_type' ] = self._site_type.GetChoice()
+            
+            if info[ 'site_type' ] in ( HC.SITE_TYPE_BOORU, HC.SITE_TYPE_GIPHY ): query_type = 'tags'
+            elif info[ 'site_type' ] in ( HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_TUMBLR ): query_type = 'artist'
+            else: query_type = self._query_type.GetChoice()
+            
+            if info[ 'site_type' ] == HC.SITE_TYPE_BOORU:
                 
                 booru_name = self._booru_selector.GetStringSelection()
                 
-                query_type = ( booru_name, query_type )
+                info[ 'query_type' ] = ( booru_name, query_type )
                 
+            else: info[ 'query_type' ] = query_type
             
-            query = self._query.GetValue()
+            info[ 'query' ] = self._query.GetValue()
             
-            frequency_number = self._frequency_number.GetValue()
-            frequency_type = self._frequency_type.GetClientData( self._frequency_type.GetSelection() )
+            info[ 'frequency' ] = self._frequency.GetValue()
+            info[ 'frequency_type' ] = self._frequency_type.GetClientData( self._frequency_type.GetSelection() )
             
-            advanced_tag_options = self._advanced_tag_options.GetInfo()
+            info[ 'advanced_tag_options' ] = self._advanced_tag_options.GetInfo()
             
-            advanced_import_options = self._advanced_import_options.GetInfo()
+            info[ 'advanced_import_options' ] = self._advanced_import_options.GetInfo()
             
             if self._reset_cache:
                 
-                last_checked = None
-                url_cache = set()
+                info[ 'last_checked' ] = None
+                info[ 'url_cache' ] = set()
                 
             
-            paused = self._paused.GetValue()
+            info[ 'paused' ] = self._paused.GetValue()
             
-            return ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
+            return ( name, info )
             
         
         def GetName( self ): return self._name.GetValue()
         
-        def Update( self, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ):
+        def Update( self, name, info ):
             
-            site_download_type = self._original_info[0]
-            name = self._original_info[1]
+            self._original_info = info
             
-            self._original_info = ( site_download_type, name, query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused )
-            
-            self._SetControls( *self._original_info )
+            self._SetControls( name, info )
             
         
     
@@ -6738,7 +6975,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._apply = wx.Button( self, label = 'Apply' )
+            self._apply = wx.Button( self, id = wx.ID_OK, label = 'Apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             

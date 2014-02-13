@@ -22,7 +22,6 @@ import threading
 import time
 import threading
 import traceback
-import urlparse
 import urllib
 import yaml
 import wx
@@ -974,152 +973,6 @@ class LocalRatings():
         
         if service_identifier in self._service_identifiers_to_ratings: del self._service_identifiers_to_ratings[ service_identifier ]
         
-    
-class ConnectionToService():
-    
-    def __init__( self, service_identifier, credentials ):
-        
-        self._service_identifier = service_identifier
-        self._credentials = credentials
-        
-        try:
-            
-            ( host, port ) = self._credentials.GetAddress()
-            
-            self._connection = HC.get_connection( host = host, port = port, service_identifier = self._service_identifier, accept_cookies = True )
-            
-            self._connection.connect()
-            
-        except:
-            
-            error_message = 'Could not connect to ' + self._service_identifier.GetName() + '.'
-            
-            if self._service_identifier is not None: HC.pubsub.pub( 'service_updates_delayed', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, error_message ) ] })
-            
-            raise Exception( error_message )
-            
-        
-    
-    def _GetHeaders( self, request ):
-        
-        headers = {}
-        
-        if request == 'init': pass
-        elif request in ( 'session_key', 'access_key_verification' ):
-            
-            if self._credentials.HasAccessKey():
-                
-                access_key = self._credentials.GetAccessKey()
-                
-                if access_key != '': headers[ 'Hydrus-Key' ] = access_key.encode( 'hex' )
-                
-            else: raise Exception( 'No access key!' )
-            
-        elif self._service_identifier.GetType() in HC.RESTRICTED_SERVICES:
-            
-            session_manager = HC.app.GetManager( 'hydrus_sessions' )
-            
-            session_key = session_manager.GetSessionKey( self._service_identifier )
-            
-            headers[ 'Cookie' ] = 'session_key=' + session_key.encode( 'hex' )
-            
-        
-        return headers
-        
-    
-    def _SendRequest( self, request_type, request, request_args = {} ):
-        
-        # prepare
-        
-        headers = self._GetHeaders( request )
-        
-        if request_type == HC.GET:
-            
-            request_type_string = 'GET'
-            
-            request_string = '/' + request
-            
-            if 'subject_identifier' in request_args:
-                
-                subject_identifier = request_args[ 'subject_identifier' ]
-                
-                del request_args[ 'subject_identifier' ]
-                
-                data = subject_identifier.GetData()
-                
-                if subject_identifier.HasAccessKey(): request_args[ 'subject_access_key' ] = data.encode( 'hex' )
-                elif subject_identifier.HasAccountId(): request_args[ 'subject_account_id' ] = data
-                elif subject_identifier.HasHash(): request_args[ 'subject_hash' ] = data.encode( 'hex' )
-                if subject_identifier.HasMapping():
-                    
-                    ( subject_hash, subject_tag ) = data
-                    
-                    request_args[ 'subject_hash' ] = data.encode( 'hex' )
-                    request_args[ 'subject_tag' ] = subject_tag.encode( 'hex' )
-                    
-                
-            
-            if 'title' in request_args:
-                
-                request_args[ 'title' ] = request_args[ 'title' ].encode( 'hex' )
-                
-            
-            if len( request_args ) > 0: request_string += '?' + '&'.join( [ key + '=' + HC.u( value ) for ( key, value ) in request_args.items() ] )
-            
-            body = None
-            
-        elif request_type == HC.POST:
-            
-            request_type_string = 'POST'
-            
-            request_string = '/' + request
-            
-            if request == 'file':
-                
-                content_type = HC.APPLICATION_OCTET_STREAM
-                
-                body = request_args[ 'file' ]
-                
-            else:
-                
-                content_type = HC.APPLICATION_YAML
-                
-                body = yaml.safe_dump( request_args )
-                
-            
-            headers[ 'Content-Type' ] = HC.mime_string_lookup[ content_type ]
-            
-        
-        # send
-        
-        try: response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
-        except HydrusExceptions.ForbiddenException as e:
-            
-            if HC.u( e ) == 'Session not found!':
-                
-                session_manager = HC.app.GetManager( 'hydrus_sessions' )
-                
-                session_manager.DeleteSessionKey( self._service_identifier )
-                
-                response = self._connection.request( request_type_string, request_string, headers = headers, body = body )
-                
-            else: raise e
-            
-        
-        return response
-        
-    
-    def Close( self ):
-        
-        try: self._connection.close()
-        except: pass
-        
-    
-    def Get( self, request, **kwargs ): return self._SendRequest( HC.GET, request, kwargs )
-    
-    def GetCookies( self ): return self._connection.GetCookies()
-    
-    def Post( self, request, **kwargs ): return self._SendRequest( HC.POST, request, kwargs )
     
 class CPRemoteRatingsServiceIdentifiers():
     
@@ -2114,7 +1967,8 @@ class Service( HC.HydrusYAMLBase ):
         
         host = self._info[ 'host' ]
         port = self._info[ 'port' ]
-        access_key = self._info[ 'access_key' ]
+        if 'access_key' in self._info: access_key = self._info[ 'access_key' ]
+        else: access_key = None
         
         credentials = Credentials( host, port, access_key )
         
@@ -2215,17 +2069,18 @@ class Service( HC.HydrusYAMLBase ):
             
         
     
-    def Request( self, method, command, request_args = {}, report_hooks = [], response_to_path = False, return_cookies = False ):
+    def Request( self, method, command, request_args = {}, request_headers = {}, report_hooks = [], response_to_path = False, return_cookies = False ):
         
         try:
             
             credentials = self.GetCredentials()
             
-            request_headers = {}
-            
-            if command == 'init': pass
+            if command in ( 'access_key', 'init' ): pass
             elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
             else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._service_identifier, request_headers )
+            
+            if command == 'backup': long_timeout = True
+            else: long_timeout = False
             
             path = '/' + command
             
@@ -2245,6 +2100,8 @@ class Service( HC.HydrusYAMLBase ):
                     
                     body = request_args[ 'file' ]
                     
+                    del request_args[ 'file' ]
+                    
                 else:
                     
                     content_type = HC.APPLICATION_YAML
@@ -2262,7 +2119,7 @@ class Service( HC.HydrusYAMLBase ):
             
             url = 'http://' + host + ':' + HC.u( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True )
+            ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True, long_timeout = long_timeout )
             
             HydrusNetworking.CheckHydrusVersion( self._service_identifier, response_headers )
             

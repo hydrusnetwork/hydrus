@@ -76,7 +76,7 @@ class TestClientDB( unittest.TestCase ):
         pin = 'pin'
         timeout = HC.GetNow() + 100000
         
-        self._write( '4chan_pass', token, pin, timeout )
+        self._write( '4chan_pass', ( token, pin, timeout ) )
         
         result = self._read( '4chan_pass' )
         
@@ -189,9 +189,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'boorus' )
         
-        read_boorus = { booru.GetName() : booru for booru in result }
-        
-        for name in CC.DEFAULT_BOORUS: self.assertEqual( read_boorus[ name ].GetData(), CC.DEFAULT_BOORUS[ name ].GetData() )
+        for name in CC.DEFAULT_BOORUS: self.assertEqual( result[ name ].GetData(), CC.DEFAULT_BOORUS[ name ].GetData() )
         
         #
     
@@ -206,9 +204,7 @@ class TestClientDB( unittest.TestCase ):
         
         booru = CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
         
-        edit_log = [ ( HC.ADD, 'blah' ), ( HC.EDIT, ( 'blah', booru ) ) ]
-        
-        self._write( 'update_boorus', edit_log )
+        self._write( 'booru', 'blah', booru )
         
         read_booru = self._read( 'booru', name )
         
@@ -216,9 +212,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        edit_log = [ ( HC.DELETE, 'blah' ) ]
-        
-        self._write( 'update_boorus', edit_log )
+        self._write( 'delete_booru', 'blah' )
         
         with self.assertRaises( Exception ):
             
@@ -275,7 +269,11 @@ class TestClientDB( unittest.TestCase ):
         
         favourite_custom_filter_actions = { 'a' : 'blah', 'b' : 'bleh' }
         
-        self._write( 'favourite_custom_filter_actions', favourite_custom_filter_actions )
+        for ( name, actions ) in favourite_custom_filter_actions.items(): self._write( 'favourite_custom_filter_actions', name, actions )
+        
+        self._write( 'favourite_custom_filter_actions', 'c', 'bluh' )
+        
+        self._write( 'delete_favourite_custom_filter_actions', 'c' )
         
         #
         
@@ -596,7 +594,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_imageboard( self ):
         
-        [ ( site_name_4chan, read_imageboards ) ] = self._read( 'imageboards' )
+        [ ( site_name_4chan, read_imageboards ) ] = self._read( 'imageboards' ).items()
         
         self.assertEqual( site_name_4chan, '4chan' )
         
@@ -647,35 +645,45 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import_folders( self ):
         
-        f1 = ( 'path1', { 'details' : 1 } )
-        f2a = ( 'path2', { 'details' : 2 } )
-        f2b = ( 'path2', { 'details' : 3 } )
+        path1 = 'path1'
+        path2 = 'path2'
+        
+        details1 = { 'details' : 1 }
+        details2 = { 'details' : 2 }
+        details3 = { 'details' : 3 }
         
         #
         
         result = self._read( 'import_folders' )
         
-        self.assertEqual( result, [] )
+        self.assertEqual( result, {} )
         
         #
         
-        self._write( 'import_folders', [ f1, f2a ] )
+        self._write( 'import_folder', path1, details1 )
+        self._write( 'import_folder', path2, details2 )
+        
+        result = self._read( 'import_folders' )
+        
+        self.assertItemsEqual( { path1 : details1, path2 : details2 }, result )
+        
+        #
+        
+        self._write( 'delete_import_folder', path1 )
+        
+        result = self._read( 'import_folders' )
+        
+        self.assertItemsEqual( { path2 : details2 }, result )
+        
+        #
+        
+        self._write( 'import_folder', path2, details3 )
         
         #
         
         result = self._read( 'import_folders' )
         
-        self.assertItemsEqual( [ f1, f2a ], result )
-        
-        #
-        
-        self._write( 'import_folder', *f2b )
-        
-        #
-        
-        result = self._read( 'import_folders' )
-        
-        self.assertItemsEqual( [ f1, f2b ], result )
+        self.assertItemsEqual( { path2 : details3 }, result )
         
     
     def test_init( self ):
@@ -886,7 +894,7 @@ class TestClientDB( unittest.TestCase ):
         pixiv_id = 123456
         password = 'password'
         
-        self._write( 'pixiv_account', pixiv_id, password )
+        self._write( 'pixiv_account', ( pixiv_id, password ) )
         
         result = self._read( 'pixiv_account' )
         

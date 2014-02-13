@@ -1,5 +1,6 @@
 from include import ClientConstants as CC
 from include import HydrusConstants as HC
+from include import HydrusNetworking
 from include import HydrusSessions
 from include import HydrusTags
 from include import TestClientConstants
@@ -28,6 +29,8 @@ class App( wx.App ):
     def OnInit( self ):
         
         HC.app = self
+        
+        HC.http = HydrusNetworking.HTTPConnectionManager()
         
         self._reads = {}
         
