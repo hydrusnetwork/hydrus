@@ -623,29 +623,29 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
 
             else:
             
-            if select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
-            else:
-                
-                inbox_media = { m for m in self._sorted_media if m.HasInbox() }
-                archive_media = { m for m in self._sorted_media if m not in inbox_media }
-                
-                if select_type == 'inbox':
-                    
-                    media_to_deselect = [ m for m in archive_media if m in self._selected_media ]
-                    media_to_select = [ m for m in inbox_media if m not in self._selected_media ]
-                    
-                elif select_type == 'archive':
-                    
-                    media_to_deselect = [ m for m in inbox_media if m in self._selected_media ]
-                    media_to_select = [ m for m in archive_media if m not in self._selected_media ]
-                    
-                
-            
-            if self._focussed_media in media_to_deselect: self._SetFocussedMedia( None )
-            
-            self._DeselectSelect( media_to_deselect, media_to_select )
-            
-            self._shift_focussed_media = None
+                if select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
+                else:
+
+                    inbox_media = { m for m in self._sorted_media if m.HasInbox() }
+                    archive_media = { m for m in self._sorted_media if m not in inbox_media }
+
+                    if select_type == 'inbox':
+
+                        media_to_deselect = [ m for m in archive_media if m in self._selected_media ]
+                        media_to_select = [ m for m in inbox_media if m not in self._selected_media ]
+
+                    elif select_type == 'archive':
+
+                        media_to_deselect = [ m for m in inbox_media if m in self._selected_media ]
+                        media_to_select = [ m for m in archive_media if m not in self._selected_media ]
+
+
+
+                if self._focussed_media in media_to_deselect: self._SetFocussedMedia( None )
+
+                self._DeselectSelect( media_to_deselect, media_to_select )
+
+                self._shift_focussed_media = None
             
         
     
