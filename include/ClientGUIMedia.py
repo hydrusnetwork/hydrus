@@ -614,29 +614,38 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         if select_type == 'all': self._DeselectSelect( [], self._sorted_media )
         else:
             
-            if select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
+            if select_type == 'invert':
+                _tmp_selected = set(self._selected_media)
+                _tmp_difference = HC.SortedList( self._sorted_media )
+
+                _tmp_difference.remove_items( _tmp_selected )
+                self._DeselectSelect( _tmp_selected, _tmp_difference )
+
             else:
-                
-                inbox_media = { m for m in self._sorted_media if m.HasInbox() }
-                archive_media = { m for m in self._sorted_media if m not in inbox_media }
-                
-                if select_type == 'inbox':
-                    
-                    media_to_deselect = [ m for m in archive_media if m in self._selected_media ]
-                    media_to_select = [ m for m in inbox_media if m not in self._selected_media ]
-                    
-                elif select_type == 'archive':
-                    
-                    media_to_deselect = [ m for m in inbox_media if m in self._selected_media ]
-                    media_to_select = [ m for m in archive_media if m not in self._selected_media ]
-                    
-                
             
-            if self._focussed_media in media_to_deselect: self._SetFocussedMedia( None )
-            
-            self._DeselectSelect( media_to_deselect, media_to_select )
-            
-            self._shift_focussed_media = None
+                if select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
+                else:
+
+                    inbox_media = { m for m in self._sorted_media if m.HasInbox() }
+                    archive_media = { m for m in self._sorted_media if m not in inbox_media }
+
+                    if select_type == 'inbox':
+
+                        media_to_deselect = [ m for m in archive_media if m in self._selected_media ]
+                        media_to_select = [ m for m in inbox_media if m not in self._selected_media ]
+
+                    elif select_type == 'archive':
+
+                        media_to_deselect = [ m for m in inbox_media if m in self._selected_media ]
+                        media_to_select = [ m for m in archive_media if m not in self._selected_media ]
+
+
+
+                if self._focussed_media in media_to_deselect: self._SetFocussedMedia( None )
+
+                self._DeselectSelect( media_to_deselect, media_to_select )
+
+                self._shift_focussed_media = None
             
         
     
@@ -1622,6 +1631,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
                     
                 
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
                 select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
                 
                 menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
@@ -1941,6 +1951,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
                         
                     
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
                     select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
                     
                     menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
