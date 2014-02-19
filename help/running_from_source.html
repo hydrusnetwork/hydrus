@@ -24,8 +24,13 @@
 				<li>and installing a recent version of wxPython, which is difficult and best done <a href="http://wiki.wxpython.org/CheckInstall">like so</a></li>
 			</ul></p>
 			<p>YMMV. Feel free to email me if you run into trouble or discover any neat tricks.</p>
-			<p>OS X 10.9 required a similar pattern to above, though wx was simpler. I use the cocoa package <a href="http://wxpython.org/download.php#osx">straight from wxPython's site</a>.</p>
-			<p>For Windows, you'll find <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">this</a> page very helpful. I have a fair bit of experience with Windows python, and I've compiled a couple of the weirder modules myself, so send me a mail if you need help.</a>
+			<p>OS X 10.9 requires a similar pattern to above, though wx is simpler. I use the cocoa package <a href="http://wxpython.org/download.php#osx">straight from wxPython's site</a>. One user reports that this worked for 10.7:</p>
+			<p><ul>
+				<li>sudo pip install beautifulsoup4 pyyaml python-potr hsaudiotag PyPDF2 flvlib pafy numpy pil lxml brew tap homebrew/homebrew-science</li>
+				<li>brew install opencv</li>
+				<li>export PYTHONPATH=/usr/local/lib/python2.7/site-packages:$PYTHONPATH</li>
+			</ul></p>
+			<p>For Windows, you'll find <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">this</a> page very helpful. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>Some people have encountered problems with wxPython 3.0, so I use 2.9.x in my official releases. Again, YMMV.</p>
 			<p>Once you have everything set up, client.pyw and server.pyw should look for and run off the database files just like the executables.</p>
 			<p>I develop hydrus on 64-bit Win 7, so the program is much more stable and reasonable on Windows. I am developing for Linux and OS X, but I do not have as much experience with them, so I would particularly appreciate your Linux/OS X bug reports and any informed suggestions.</p>
