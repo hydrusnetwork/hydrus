@@ -109,6 +109,16 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
         
     
+    def CurrentlyIdle( self ):
+        
+        if HC.GetNow() - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
+            
+            self._last_idle_time = HC.GetNow()
+            
+        
+        return HC.GetNow() - self._last_idle_time > 20 * 60 # 20 mins since last user-initiated db request
+        
+    
     def EventPubSub( self, event ):
         
         HC.busy_doing_pubsub = True
@@ -495,15 +505,7 @@ Once it is done, the client will restart.'''
     
     def TIMEREventMaintenance( self, event ):
         
-        if HC.GetNow() - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
-            
-            self._last_idle_time = HC.GetNow()
-            
-        
-        if HC.GetNow() - self._last_idle_time > 20 * 60: # 20 mins since last user-initiated db request
-            
-            self.MaintainDB()
-            
+        if self.CurrentlyIdle(): self.MaintainDB()
         
         HC.pubsub.pub( 'clear_closed_pages' )
         
@@ -513,7 +515,12 @@ Once it is done, the client will restart.'''
         while True:
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
-            elif HC.pubsub.NotBusy() and not HC.busy_doing_pubsub: return
+            elif HC.pubsub.NotBusy() and not HC.busy_doing_pubsub:
+                
+                if not self.CurrentlyIdle(): time.sleep( 1 )
+                
+                return
+                
             else: time.sleep( 0.0001 )
             
         

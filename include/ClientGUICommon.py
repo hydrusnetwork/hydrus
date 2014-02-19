@@ -514,7 +514,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_service_identifier, tag_service_identifier, media_callable ):
+    def __init__( self, parent, page_key, file_service_identifier, tag_service_identifier, media_callable = None ):
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
         
@@ -615,10 +615,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             if half_complete_tag == '': matches = [] # a query like 'namespace:'
             else:
                 
-                media = self._media_callable()
+                fetch_from_db = True
                 
-                # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
-                if media is None or not self._synchronised.IsOn():
+                if self._media_callable is not None:
+                    
+                    media = self._media_callable()
+                    
+                    # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
+                    if media is not None and self._synchronised.IsOn(): fetch_from_db = False
+                    
+                
+                if fetch_from_db:
                     
                     if len( search_text ) < num_first_letters:
                         
@@ -2344,7 +2351,7 @@ class PopupMessageFiles( PopupMessage ):
     
 class PopupMessageGauge( PopupMessage ):
     
-    def __init__( self, parent, job_key ):
+    def __init__( self, parent, job_key, show_cancel ):
         
         PopupMessage.__init__( self, parent )
         
@@ -2352,6 +2359,7 @@ class PopupMessageGauge( PopupMessage ):
         self._hashes = set()
         
         self._done = False
+        self._show_cancel = show_cancel
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2367,6 +2375,8 @@ class PopupMessageGauge( PopupMessage ):
         self._cancel_button = wx.Button( self, label = 'cancel' )
         self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
         self._cancel_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        if not show_cancel: self._cancel_button.Hide()
         
         hbox.AddF( self._gauge, FLAGS_EXPAND_BOTH_WAYS )
         hbox.AddF( self._cancel_button, FLAGS_MIXED )
@@ -2397,7 +2407,7 @@ class PopupMessageGauge( PopupMessage ):
     
     def EventDismiss( self, event ):
         
-        if not self._done:
+        if self._show_cancel and not self._done:
             
             import ClientGUIDialogs
             
@@ -2436,7 +2446,7 @@ class PopupMessageGauge( PopupMessage ):
             else:
                 
                 self._gauge.Show()
-                self._cancel_button.Show()
+                if self._show_cancel: self._cancel_button.Show()
                 
                 if range is None:
                     
@@ -2455,7 +2465,10 @@ class PopupMessageGauge( PopupMessage ):
                 
             
             if self._done: self._cancel_button.Hide()
-            else: self._cancel_button.Show()
+            else:
+                
+                if self._show_cancel: self._cancel_button.Show()
+                
             
             self._text.SetLabel( message )
             
@@ -2588,9 +2601,9 @@ class PopupMessageManager( wx.Frame ):
             
         elif message_type == HC.MESSAGE_TYPE_GAUGE:
             
-            job_key = info
+            ( job_key, show_cancel ) = info
             
-            window = PopupMessageGauge( self, job_key )
+            window = PopupMessageGauge( self, job_key, show_cancel )
             
         
         return window

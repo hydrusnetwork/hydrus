@@ -52,11 +52,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self.ImportFiles ) )
         
         self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 5 )
-        self._statusbar.SetStatusWidths( [ -1, -1, 100, 120, 50 ] )
+        self._statusbar.SetFieldsCount( 4 )
+        self._statusbar.SetStatusWidths( [ -1, 100, 120, 50 ] )
         
         self._statusbar_media = ''
-        self._statusbar_service = ''
         self._statusbar_inbox = ''
         self._statusbar_downloads = ''
         self._statusbar_db_locked = ''
@@ -99,7 +98,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         HC.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
         HC.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
-        HC.pubsub.sub( self, 'SetServiceStatus', 'service_status' )
         
         self.RefreshMenuBar()
         
@@ -135,7 +133,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             job_key = HC.JobKey()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, True ) ) )
             
             HC.pubsub.pub( 'message_gauge_info', job_key, 1, 0, u'gathering pending and petitioned' )
             
@@ -494,6 +492,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
+                HC.ShowText( 'Backup done!' )
+                
             
         
     
@@ -705,6 +705,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageContacts( self ) as dlg: dlg.ShowModal()
         
     
+    def _ManageExportFolders( self ):
+        
+        with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg: dlg.ShowModal()
+        
+    
     def _ManageImageboards( self ):
         
         with ClientGUIDialogsManage.DialogManageImageboards( self ) as dlg: dlg.ShowModal()
@@ -914,16 +919,35 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _PauseSync( self, sync_type ):
         
-        if sync_type == 'repo': HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
-        elif sync_type == 'subs': HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
-        elif sync_type == 'import_folders': HC.options[ 'pause_import_folders_sync' ] = not HC.options[ 'pause_import_folders_sync' ]
+        if sync_type == 'repo':
+            
+            HC.options[ 'pause_repo_sync' ] = not HC.options[ 'pause_repo_sync' ]
+            
+            HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+            
+        elif sync_type == 'subs':
+            
+            HC.options[ 'pause_subs_sync' ] = not HC.options[ 'pause_subs_sync' ]
+            
+            HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
+            
+        elif sync_type == 'export_folders':
+            
+            HC.options[ 'pause_export_folders_sync' ] = not HC.options[ 'pause_export_folders_sync' ]
+            
+            HC.pubsub.pub( 'notify_restart_export_folders_daemon' )
+            
+        elif sync_type == 'import_folders':
+            
+            HC.options[ 'pause_import_folders_sync' ] = not HC.options[ 'pause_import_folders_sync' ]
+            
+            HC.pubsub.pub( 'notify_restart_import_folders_daemon' )
+            
         
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
         
         self.RefreshMenuBar()
-        
-        HC.pubsub.pub( 'notify_new_subscriptions' ) # this pushes the daemon to restart if sleeping
         
     
     def _PostNews( self, service_identifier ):
@@ -951,10 +975,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._statusbar_media = media_status
         
         self._statusbar.SetStatusText( self._statusbar_media, number = 0 )
-        self._statusbar.SetStatusText( self._statusbar_service, number = 1 )
-        self._statusbar.SetStatusText( self._statusbar_inbox, number = 2 )
-        self._statusbar.SetStatusText( self._statusbar_downloads, number = 3 )
-        self._statusbar.SetStatusText( self._statusbar_db_locked, number = 4 )
+        self._statusbar.SetStatusText( self._statusbar_inbox, number = 1 )
+        self._statusbar.SetStatusText( self._statusbar_downloads, number = 2 )
+        self._statusbar.SetStatusText( self._statusbar_db_locked, number = 3 )
         
     
     def _RegenerateThumbnails( self ):
@@ -969,7 +992,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     job_key = HC.JobKey()
                     
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, False ) ) )
                     
                     HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, 'regenerating thumbnails - creating directories' )
                     
@@ -1082,6 +1105,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         HC.app.Write( 'gui_session', name, info )
         
+        HC.pubsub.pub( 'refresh_menu_bar' )
+        
     
     def _SetPassword( self ):
         
@@ -1143,7 +1168,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( job_key, url, message_string ) ).start()
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, True ) ) )
                 
             
         
@@ -1347,7 +1372,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 print( 'garbage: ' + HC.u( gc.garbage ) )
                 
             elif command == 'delete_all_closed_pages': self._DeleteAllClosedPages()
-            elif command == 'delete_gui_session': HC.app.Write( 'delete_gui_session', data )
+            elif command == 'delete_gui_session':
+                
+                HC.app.Write( 'delete_gui_session', data )
+                
+                HC.pubsub.pub( 'refresh_menu_bar' )
+                
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
@@ -1362,6 +1392,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_account_types': self._ManageAccountTypes( data )
             elif command == 'manage_boorus': self._ManageBoorus()
             elif command == 'manage_contacts': self._ManageContacts()
+            elif command == 'manage_export_folders': self._ManageExportFolders()
             elif command == 'manage_imageboards': self._ManageImageboards()
             elif command == 'manage_import_folders': self._ManageImportFolders()
             elif command == 'manage_namespace_blacklists': self._ManageNamespaceBlacklists()
@@ -1387,6 +1418,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'news': self._News( data )
             elif command == 'open_export_folder': self._OpenExportFolder()
             elif command == 'options': self._ManageOptions()
+            elif command == 'pause_export_folders_sync': self._PauseSync( 'export_folders' )
             elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
             elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
             elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
@@ -1548,8 +1580,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         file = wx.Menu()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_metadata' ), p( '&Import Metadata' ), p( 'Add YAML metadata.' ) )
+        file.AppendSeparator()
         file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open E&xport Folder' ), p( 'Open the export folder so you can easily access files you have exported.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
+        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open Quick E&xport Folder' ), p( 'Open the export folder so you can easily access the files you have exported.' ) )
         file.AppendSeparator()
         
         gui_sessions = HC.app.Read( 'gui_sessions' )
@@ -1731,14 +1765,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         submenu = wx.Menu()
         
+        pause_export_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_export_folders_sync' )
         pause_import_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_import_folders_sync' )
         pause_repo_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_repo_sync' )
         pause_subs_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_subs_sync' )
         
+        submenu.AppendCheckItem( pause_export_folders_sync_id, p( '&Export Folders Synchronisation' ), p( 'Pause the client\'s export folders.' ) )
         submenu.AppendCheckItem( pause_import_folders_sync_id, p( '&Import Folders Synchronisation' ), p( 'Pause the client\'s import folders.' ) )
         submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
         submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
         
+        submenu.Check( pause_export_folders_sync_id, HC.options[ 'pause_export_folders_sync' ] )
         submenu.Check( pause_import_folders_sync_id, HC.options[ 'pause_import_folders_sync' ] )
         submenu.Check( pause_repo_sync_id, HC.options[ 'pause_repo_sync' ] )
         submenu.Check( pause_subs_sync_id, HC.options[ 'pause_subs_sync' ] )
@@ -1892,16 +1929,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if self.IsShown():
             
             self._statusbar_inbox = status
-            
-            self._RefreshStatusBar()
-            
-        
-    
-    def SetServiceStatus( self, status ):
-        
-        if self.IsShown():
-            
-            self._statusbar_service = status
             
             self._RefreshStatusBar()
             

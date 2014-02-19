@@ -614,7 +614,11 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         if select_type == 'all': self._DeselectSelect( [], self._sorted_media )
         else:
             
-            if select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
+            if select_type == 'invert':
+                
+                ( media_to_deselect, media_to_select ) = ( self._selected_media, set( self._sorted_media ) - self._selected_media )
+                
+            elif select_type == 'none': ( media_to_deselect, media_to_select ) = ( self._selected_media, [] )
             else:
                 
                 inbox_media = { m for m in self._sorted_media if m.HasInbox() }
@@ -1599,6 +1603,9 @@ class MediaPanelThumbnails( MediaPanel ):
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() for media in self._selected_media )
         
+        media_has_inbox = True in ( media.HasInbox() for media in self._sorted_media )
+        media_has_archive = True in ( media.HasArchive() for media in self._sorted_media )
+        
         menu = wx.Menu()
         
         if thumbnail is None:
@@ -1614,9 +1621,14 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 select_menu = wx.Menu()
                 
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                if len( self._selected_media ) < len( self._sorted_media ):
+                    
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                    
                 
-                if selection_has_archive and selection_has_inbox:
+                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
+                
+                if media_has_archive and media_has_inbox:
                     
                     select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
                     select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
@@ -1935,7 +1947,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
                     
-                    if selection_has_archive and selection_has_inbox:
+                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
+                    
+                    if media_has_archive and media_has_inbox:
                         
                         select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
                         select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )

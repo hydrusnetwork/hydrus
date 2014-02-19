@@ -47,7 +47,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 103
+SOFTWARE_VERSION = 104
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -62,7 +62,8 @@ shutdown = False
 
 is_first_start = False
 is_db_updated = False
-repos_or_subs_changed = False
+repos_changed = False
+subs_changed = False
 
 http = None
 

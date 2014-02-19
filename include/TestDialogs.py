@@ -166,7 +166,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             
             result = dlg.ShowModal()
             
-            self.assertEqual( result, wx.ID_CANCEL )
+            self.assertEqual( result, wx.ID_OK )
             
         
     

@@ -112,12 +112,6 @@ class Dialog( wx.Dialog ):
         
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
-        # this button is important, as escape maps to it
-        # can't hide it, or the escape doesn't go through
-        self._dialog_cancel_button = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-        self.SetEscapeId( wx.ID_CANCEL )
-        self.SetAffirmativeId( wx.ID_OK )
-        
         self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
         
         if position == 'center': wx.CallAfter( self.Center )
@@ -297,9 +291,11 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         def InitialiseControls():
             
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
             register_message = 'I want to set up a new account. I have a registration key (a key starting with \'r\').'
             
-            self._register = wx.Button( self, id = wx.ID_OK, label = register_message )
+            self._register = wx.Button( self, label = register_message )
             self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
             
             setup_message = 'The account is already set up; I just want to add it to this client. I have a normal access key.'
@@ -468,6 +464,8 @@ class DialogFirstStart( Dialog ):
         
         def InitialiseControls():
             
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok!' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -534,7 +532,6 @@ class DialogGenerateNewAccounts( Dialog ):
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -591,8 +588,6 @@ class DialogGenerateNewAccounts( Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventOK( self, event ):
         
         num = self._num.GetValue()
@@ -625,6 +620,8 @@ class DialogInputCustomFilterAction( Dialog ):
     def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_identifier = None, action = 'archive' ):
         
         def InitialiseControls():
+            
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
             service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
@@ -1760,6 +1757,8 @@ class DialogInputFileSystemPredicate( Dialog ):
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS: NumWords()
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: FileService()
         
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        
     
     def EventMime( self, event ):
         
@@ -2096,7 +2095,7 @@ class DialogInputLocalFiles( Dialog ):
     
     def EventAddPaths( self, event ):
         
-        with wx.FileDialog( self, 'Select the files to add.', style=wx.FD_MULTIPLE ) as dlg:
+        with wx.FileDialog( self, 'Select the files to add.', style = wx.FD_MULTIPLE ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -2109,7 +2108,7 @@ class DialogInputLocalFiles( Dialog ):
     
     def EventAddFolder( self, event ):
         
-        with wx.DirDialog( self, 'Select a folder to add.', style=wx.DD_DIR_MUST_EXIST ) as dlg:
+        with wx.DirDialog( self, 'Select a folder to add.', style = wx.DD_DIR_MUST_EXIST ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -2673,6 +2672,8 @@ class DialogInputMessageSystemPredicate( Dialog ):
         elif self._type == 'system:to': To()
         elif self._type == 'system:numattachments': NumAttachments()
         
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        
     
     def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
@@ -2699,12 +2700,10 @@ class DialogInputNamespaceRegex( Dialog ):
             
             self._regex_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
             
-            self._ok = wx.Button( self, label = 'Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -2751,10 +2750,6 @@ class DialogInputNamespaceRegex( Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
-    
     def GetInfo( self ):
         
         namespace = self._namespace.GetValue()
@@ -2790,12 +2785,10 @@ class DialogInputNewAccountType( Dialog ):
             self._max_num_requests = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly requests' )
             self._max_num_requests.SetValue( max_num_requests )
             
-            self._apply = wx.Button( self, label = 'apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -2884,15 +2877,11 @@ class DialogInputNewAccountType( Dialog ):
             
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventCheckBox( self, event ):
         
         if self._max_num_requests_checkbox.GetValue(): self._max_num_requests.Disable()
         else: self._max_num_requests.Enable()
         
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def EventRemovePermission( self, event ):
         
@@ -2928,12 +2917,10 @@ class DialogInputNewFormField( Dialog ):
             
             self._editable = wx.CheckBox( self )
             
-            self._ok = wx.Button( self, label = 'Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )   
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -2998,10 +2985,6 @@ class DialogInputNewFormField( Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
-    
     def GetFormField( self ):
         
         name = self._name.GetValue()
@@ -3027,12 +3010,11 @@ class DialogInputShortcut( Dialog ):
             
             self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo' ] )
             
-            self._ok = wx.Button( self, label = 'Ok' )
+            self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
     
@@ -3075,10 +3057,6 @@ class DialogInputShortcut( Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
-    
     def GetInfo( self ):
         
         ( modifier, key ) = self._shortcut.GetValue()
@@ -3101,12 +3079,10 @@ class DialogInputUPnPMapping( Dialog ):
             self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
             self._description = wx.TextCtrl( self )
             
-            self._ok = wx.Button( self, label = 'Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
     
@@ -3166,10 +3142,6 @@ class DialogInputUPnPMapping( Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
-    
     def GetInfo( self ):
         
         external_port = self._external_port.GetValue()
@@ -3186,7 +3158,9 @@ class DialogMessage( Dialog ):
         
         def InitialiseControls():
             
-            self._ok = wx.Button( self, id = wx.ID_CANCEL, label = ok_label )
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = ok_label )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
         
@@ -3272,7 +3246,6 @@ class DialogModifyAccounts( Dialog ):
             self._superban.SetForegroundColour( ( 255, 255, 0 ) )
             
             self._exit = wx.Button( self, id = wx.ID_CANCEL, label = 'Exit' )
-            self._exit.Bind( wx.EVT_BUTTON, lambda event: self.EndModal( wx.ID_OK ) )
             
     
         def PopulateControls():
@@ -3447,7 +3420,6 @@ class DialogNews( Dialog ):
             self._next.Bind( wx.EVT_BUTTON, self.EventNext )
             
             self._done = wx.Button( self, id = wx.ID_CANCEL, label = 'Done' )
-            self._done.Bind( wx.EVT_BUTTON, self.EventOK )
             
     
         def PopulateControls():
@@ -3520,8 +3492,6 @@ class DialogNews( Dialog ):
         self._ShowNews()
         
     
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
-    
     def EventPrevious( self, event ):
         
         if self._current_news_position > 1: self._current_news_position -= 1
@@ -3534,6 +3504,8 @@ class DialogPageChooser( Dialog ):
     def __init__( self, parent ):
         
         def InitialiseControls():
+            
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
             self._button_hidden = wx.Button( self )
             self._button_hidden.Hide()
@@ -3783,12 +3755,10 @@ class DialogPathsToTagsRegex( Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._add_button = wx.Button( self, label = 'Import Files' )
-            self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._add_button = wx.Button( self, id = wx.ID_OK, label = 'Import Files' )
             self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Back to File Selection' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -3870,8 +3840,6 @@ class DialogPathsToTagsRegex( Dialog ):
         page.SetTagBoxFocus()
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventMenu( self, event ):
         
         action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -3884,8 +3852,6 @@ class DialogPathsToTagsRegex( Dialog ):
             else: event.Skip()
             
         
-    
-    def EventOK( self, event ): self.EndModal( wx.ID_OK )
     
     def EventServiceChanged( self, event ):
         
@@ -4290,121 +4256,6 @@ class DialogPathsToTagsRegex( Dialog ):
         def TagRemoved( self, tag ): self._RefreshFileList()
         
     
-class DialogProgress( Dialog ):
-    
-    def __init__( self, parent, job_key, cancel_event = None ):
-        
-        def InitialiseControls():
-            
-            self._status = wx.StaticText( self, label = 'initialising', style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-            self._gauge = ClientGUICommon.Gauge( self, range = 100 )
-            self._time_taken_so_far = wx.StaticText( self, label = 'initialising', style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-            self._time_left = wx.StaticText( self, label = 'initialising', style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-            
-            if cancel_event is not None:
-                
-                self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-                self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
-                
-            
-            self._time_started = None
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._status, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._gauge, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._time_taken_so_far, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._time_left, FLAGS_EXPAND_PERPENDICULAR )
-            
-            if cancel_event is not None: vbox.AddF( self._cancel, FLAGS_LONE_BUTTON )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 640: x = 640
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
-        Dialog.__init__( self, parent, 'progress', style = wx.SYSTEM_MENU | wx.CAPTION | wx.RESIZE_BORDER, position = 'center' )
-        
-        self._job_key = job_key
-        
-        self._cancel_event = cancel_event
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_UPDATE )
-        
-        self._timer = wx.Timer( self, id = ID_TIMER_UPDATE )
-        
-        self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
-        
-        HC.pubsub.sub( self, 'Update', 'progress_update' )
-        
-    
-    def _DisplayTimes( self ):
-        
-        value = self._gauge.GetValue()
-        range = self._gauge.GetRange()
-        
-        if self._time_started is not None:
-            
-            time_taken_so_far = time.clock() - self._time_started
-            
-            if value > 1: time_left = HC.ConvertTimeToPrettyTime( time_taken_so_far * ( float( range - value ) / float( value ) ) )
-            else: time_left = 'unknown'
-            
-            self._time_taken_so_far.SetLabel( 'elapsed: ' + HC.ConvertTimeToPrettyTime( time_taken_so_far ) )
-            
-            self._time_left.SetLabel( 'remaining: ' + time_left )
-            
-        
-    
-    def EventCancel( self, event ):
-        
-        self._cancel.Disable()
-        self._cancel_event.set()
-        
-    
-    def TIMEREvent( self, event ):
-        
-        value = self._gauge.GetValue()
-        range = self._gauge.GetRange()
-        
-        if value == range: self.EndModal( wx.OK )
-        else: self._DisplayTimes()
-        
-    
-    def Update( self, job_key, index, range, status ):
-        
-        if job_key == self._job_key:
-            
-            if self._time_started is None: self._time_started = time.clock()
-            
-            if range != self._gauge.GetRange(): self._gauge.SetRange( range )
-            
-            self._gauge.SetValue( index )
-            
-            self._status.SetLabel( status )
-            
-            self._DisplayTimes()
-            
-        
-    
 class DialogRegisterService( Dialog ):
     
     def __init__( self, parent, service_type ):
@@ -4525,6 +4376,8 @@ class DialogSelectBooru( Dialog ):
         
         def InitialiseControls():
             
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
             self._boorus = wx.ListBox( self, style = wx.LB_SORT )
             self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventDoubleClick )
             
@@ -4583,8 +4436,10 @@ class DialogSelectImageboard( Dialog ):
         
         def InitialiseControls():
             
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
             self._tree = wx.TreeCtrl( self )
-            self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventSelect )
+            self._tree.Bind( wx.EVT_TREE_ITEM_ACTIVATED, self.EventActivate )
             
         
         def PopulateControls():
@@ -4633,7 +4488,7 @@ class DialogSelectImageboard( Dialog ):
         ArrangeControls()
         
     
-    def EventSelect( self, event ):
+    def EventActivate( self, event ):
         
         item = self._tree.GetSelection()
         
@@ -4650,6 +4505,8 @@ class DialogSelectFromListOfStrings( Dialog ):
     def __init__( self, parent, title, list_of_strings ):
         
         def InitialiseControls():
+            
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
             self._strings = wx.ListBox( self, choices = list_of_strings )
             self._strings.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
@@ -4721,7 +4578,7 @@ class DialogSelectYoutubeURL( Dialog ):
             
             self._urls.SetMinSize( ( 360, 200 ) )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -4786,7 +4643,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( job_key, url, message_string ) ).start()
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, job_key ) )
+                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, True ) ) )
                 
             
         
@@ -4828,12 +4685,11 @@ class DialogSetupCustomFilterActions( Dialog ):
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -4961,8 +4817,6 @@ class DialogSetupCustomFilterActions( Dialog ):
                 
             
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventDeleteFavourite( self, event ):
         
@@ -5246,49 +5100,7 @@ class DialogSetupExport( Dialog ):
         
         directory = self._directory_picker.GetPath()
         
-        filename = ''
-        
-        for ( term_type, term ) in terms:
-            
-            tags_manager = media.GetTagsManager()
-            
-            if term_type == 'string': filename += term
-            elif term_type == 'namespace':
-                
-                tags = tags_manager.GetNamespaceSlice( ( term, ) )
-                
-                filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
-                
-            elif term_type == 'predicate':
-                
-                if term in ( 'tags', 'nn tags' ):
-                    
-                    current = tags_manager.GetCurrent()
-                    pending = tags_manager.GetPending()
-                    
-                    tags = list( current.union( pending ) )
-                    
-                    if term == 'nn tags': tags = [ tag for tag in tags if ':' not in tag ]
-                    else: tags = [ tag if ':' not in tag else tag.split( ':' )[1] for tag in tags ]
-                    
-                    tags.sort()
-                    
-                    filename += ', '.join( tags )
-                    
-                elif term == 'hash':
-                    
-                    hash = media.GetHash()
-                    
-                    filename += hash.encode( 'hex' )
-                    
-                
-            elif term_type == 'tag':
-                
-                if ':' in term: term = term.split( ':' )[1]
-                
-                if tags_manager.HasTag( term ): filename += term
-                
-            
+        filename = CC.GenerateExportFilename( media, terms )
         
         if self._export_to_zip.GetValue() == True: zip_path = self._zip_name.GetValue() + os.path.sep
         else: zip_path = ''
@@ -5304,77 +5116,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        try:
-            
-            terms = [ ( 'string', pattern ) ]
-            
-            new_terms = []
-            
-            for ( term_type, term ) in terms:
-                
-                if term_type == 'string':
-                    
-                    while '[' in term:
-                        
-                        ( pre, term ) = term.split( '[', 1 )
-                        
-                        ( namespace, term ) = term.split( ']', 1 )
-                        
-                        new_terms.append( ( 'string', pre ) )
-                        new_terms.append( ( 'namespace', namespace ) )
-                        
-                    
-                
-                new_terms.append( ( term_type, term ) )
-                
-            
-            terms = new_terms
-            
-            new_terms = []
-            
-            for ( term_type, term ) in terms:
-                
-                if term_type == 'string':
-                    
-                    while '{' in term:
-                        
-                        ( pre, term ) = term.split( '{', 1 )
-                        
-                        ( predicate, term ) = term.split( '}', 1 )
-                        
-                        new_terms.append( ( 'string', pre ) )
-                        new_terms.append( ( 'predicate', predicate ) )
-                        
-                    
-                
-                new_terms.append( ( term_type, term ) )
-                
-            
-            terms = new_terms
-            
-            new_terms = []
-            
-            for ( term_type, term ) in terms:
-                
-                if term_type == 'string':
-                    
-                    while '(' in term:
-                        
-                        ( pre, term ) = term.split( '(', 1 )
-                        
-                        ( tag, term ) = term.split( ')', 1 )
-                        
-                        new_terms.append( ( 'string', pre ) )
-                        new_terms.append( ( 'tag', tag ) )
-                        
-                    
-                
-                new_terms.append( ( term_type, term ) )
-                
-            
-            terms = new_terms
-            
-        except: raise Exception( 'Could not parse that pattern!' )
+        terms = CC.ParseExportPhrase( pattern )
         
         all_paths = set()
         
@@ -5556,6 +5298,8 @@ class DialogYesNo( Dialog ):
             
             self._no = wx.Button( self, id = wx.ID_NO, label = no_label )
             self._no.SetForegroundColour( ( 128, 0, 0 ) )
+            
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
     
         def PopulateControls():

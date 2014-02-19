@@ -69,12 +69,11 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             self._reauthenticate = wx.Button( self, label = 'reauthenticate' )
             self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
             
-            self._ok = wx.Button( self, label = 'Ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -136,8 +135,6 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         self._status.SetLabel( label )
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventOK( self, event ):
         
@@ -201,12 +198,11 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             self._delete = wx.Button( self._account_types_panel, label = 'delete' )
             self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
             
-            self._apply = wx.Button( self, label = 'apply' )
+            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -307,8 +303,6 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                 
             
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventDelete( self, event ):
         
@@ -416,12 +410,11 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK,  label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -504,8 +497,6 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                 
             
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventExport( self, event ):
         
@@ -912,12 +903,11 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -1097,8 +1087,6 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                 
             
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventContactChanged( self, event ):
         
@@ -1425,7 +1413,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             self._public_key.SetValue( public_key )
             
         
-        
+    
 class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -1450,7 +1438,6 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -1460,13 +1447,13 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             for ( path, details ) in self._original_paths_to_details.items():
                 
-                query = details[ 'query' ]
+                predicates = details[ 'predicates' ]
                 period = details[ 'period' ]
                 phrase = details[ 'phrase' ]
                 
-                ( pretty_query, pretty_period, pretty_phrase ) = self._GetPrettyVariables( query, period, phrase )
+                ( pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( predicates, period, phrase )
                 
-                self._import_folders.Append( ( path, pretty_query, pretty_period, pretty_phrase ), ( path, query, period, phrase ) )
+                self._export_folders.Append( ( path, pretty_predicates, pretty_period, pretty_phrase ), ( path, predicates, period, phrase ) )
                 
             
         
@@ -1509,38 +1496,37 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def _AddFolder( self, path ):
         
-        all_existing_client_data = self._import_folders.GetClientData()
+        all_existing_client_data = self._export_folders.GetClientData()
         
-        if path not in ( existing_path for ( existing_path, query, period, phrase ) in all_existing_client_data ):
+        if path not in ( existing_path for ( existing_path, predicates, period, phrase ) in all_existing_client_data ):
             
-            query = []
+            predicates = []
             period = 15 * 60
             phrase = '{hash}'
             
-            with DialogManageExportFoldersEdit( self, path, query, period, phrase ) as dlg:
+            with DialogManageExportFoldersEdit( self, path, predicates, period, phrase ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, query, period, phrase ) = dlg.GetInfo()
+                    ( path, predicates, period, phrase ) = dlg.GetInfo()
                     
-                    ( pretty_query, pretty_period, pretty_phrase ) = self._GetPrettyVariables( query, period, phrase )
+                    ( pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( predicates, period, phrase )
                     
-                    self._export_folders.Append( ( path, pretty_query, pretty_period, pretty_phrase ), ( path, query, period, phrase ) )
+                    self._export_folders.Append( ( path, pretty_predicates, pretty_period, pretty_phrase ), ( path, predicates, period, phrase ) )
                     
                 
             
         
     
-    def _GetPrettyVariables( self, query, period, phrase ):
+    def _GetPrettyVariables( self, predicates, period, phrase ):
         
-        raise Exception( 'do pretty query' )
-        pretty_query = 'pretty query' # just join the predicate tostrings
+        pretty_predicates = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in predicates )
         
         pretty_period = HC.u( period / 60 ) + ' minutes'
         
         pretty_phrase = phrase
         
-        return ( pretty_query, pretty_period, pretty_phrase )
+        return ( pretty_predicates, pretty_period, pretty_phrase )
         
     
     def EventAdd( self, event ):
@@ -1556,27 +1542,25 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventDelete( self, event ): self._export_folders.RemoveAllSelected()
     
     def EventEdit( self, event ):
         
-        indices = self._import_folders.GetAllSelected()
+        indices = self._export_folders.GetAllSelected()
         
         for index in indices:
             
-            ( path, type, check_period, local_tag ) = self._import_folders.GetClientData( index )
+            ( path, predicates, period, phrase ) = self._export_folders.GetClientData( index )
             
-            with DialogManageImportFoldersEdit( self, path, type, check_period, local_tag ) as dlg:
+            with DialogManageExportFoldersEdit( self, path, predicates, period, phrase ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, query, period, phrase ) = dlg.GetInfo()
+                    ( path, predicates, period, phrase ) = dlg.GetInfo()
                     
-                    ( pretty_query, pretty_period, pretty_phrase ) = self._GetPrettyVariables( query, period, phrase )
+                    ( pretty_predicates, pretty_period, pretty_phrase ) = self._GetPrettyVariables( predicates, period, phrase )
                     
-                    self._import_folders.UpdateRow( index, ( path, pretty_query, pretty_period, pretty_phrase ), ( path, query, period, phrase ) )
+                    self._export_folders.UpdateRow( index, ( path, pretty_predicates, pretty_period, pretty_phrase ), ( path, predicates, period, phrase ) )
                     
                 
             
@@ -1590,12 +1574,12 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         paths = set()
         
-        for ( path, query, period, phrase ) in client_data:
+        for ( path, predicates, period, phrase ) in client_data:
             
             if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
             else: details = { 'last_checked' : 0 }
             
-            details[ 'query' ] = query
+            details[ 'predicates' ] = predicates
             details[ 'period' ] = period
             details[ 'phrase' ] = phrase
             
@@ -1608,24 +1592,34 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for deletee in deletees: HC.app.Write( 'delete_export_folder', deletee )
         
+        HC.pubsub.pub( 'notify_new_export_folders' )
+        
         self.EndModal( wx.ID_OK )
         
     
 class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, path, query, period, phrase ):
+    def __init__( self, parent, path, predicates, period, phrase ):
         
         def InitialiseControls():
             
             self._path = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
-            raise Exception( 'need a predicate listbox and a read A/C for query' )
+            self._page_key = os.urandom( 32 )
+            
+            self._predicates_box = ClientGUICommon.TagsBoxPredicates( self, self._page_key, predicates )
+            
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
             
             self._period = wx.SpinCtrl( self )
             
-            raise Exception( 'need a copy of the phrase stuff in the normal export window' )
+            self._pattern = wx.TextCtrl( self )
+            
+            self._examples = wx.Button( self, label = 'pattern shortcuts' )
+            self._examples.Bind( wx.EVT_BUTTON, self.EventPatternShortcuts )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
@@ -1636,13 +1630,11 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             self._path.SetPath( path )
             
-            raise Exception( 'set up query predicates' )
-            
             self._period.SetRange( 3, 180 )
             
             self._period.SetValue( period / 60 )
             
-            raise Exception( 'set up phrase' )
+            self._pattern.SetValue( phrase )
             
         
         def ArrangeControls():
@@ -1651,16 +1643,24 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            raise Exception( 'need better layout for these more complicated controls' )
+            predicates_vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            predicates_vbox.AddF( self._predicates_box, FLAGS_EXPAND_BOTH_WAYS )
+            predicates_vbox.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
+            
+            phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            phrase_hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
+            phrase_hbox.AddF( self._examples, FLAGS_MIXED )
             
             gridbox.AddF( wx.StaticText( self, label = 'path:' ), FLAGS_MIXED )
             gridbox.AddF( self._path, FLAGS_EXPAND_BOTH_WAYS )
             gridbox.AddF( wx.StaticText( self, label = 'query:' ), FLAGS_MIXED )
-            gridbox.AddF( self._query, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( predicates_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             gridbox.AddF( wx.StaticText( self, label = 'check period (minutes):' ), FLAGS_MIXED )
             gridbox.AddF( self._period, FLAGS_EXPAND_BOTH_WAYS )
             gridbox.AddF( wx.StaticText( self, label = 'export phrase:' ), FLAGS_MIXED )
-            gridbox.AddF( self._phrase, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( phrase_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -1689,18 +1689,108 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         wx.CallAfter( self._ok.SetFocus )
         
+        HC.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
+        HC.pubsub.sub( self, 'RemovePredicate', 'remove_predicate' )
+        
+    
+    def AddPredicate( self, page_key, predicate ):
+        
+        if page_key == self._page_key:
+            
+            if self._predicates_box.HasPredicate( predicate ): self._predicates_box.RemovePredicate( predicate )
+            else: self._predicates_box.AddPredicate( predicate )
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        id = event.GetId()
+        
+        phrase = None
+        
+        if id == self.ID_HASH: phrase = r'{hash}'
+        if id == self.ID_TAGS: phrase = r'{tags}'
+        if id == self.ID_NN_TAGS: phrase = r'{nn tags}'
+        if id == self.ID_NAMESPACE: phrase = r'[...]'
+        if id == self.ID_TAG: phrase = r'(...)'
+        else: event.Skip()
+        
+        if phrase is not None:
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject( phrase )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
+    def EventOK( self, event ):
+        
+        phrase = self._pattern.GetValue()
+        
+        try: CC.ParseExportPhrase( phrase )
+        except:
+            
+            wx.MessageBox( 'Could not parse that export phrase!' )
+            
+            return
+            
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def EventPatternShortcuts( self, event ):
+        
+        menu = wx.Menu()
+        
+        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_HASH, r'the file\'s hash - {hash}' )
+        menu.Append( self.ID_TAGS, r'all the file\'s tags - {tags}' )
+        menu.Append( self.ID_NN_TAGS, r'all the file\'s non-namespaced tags - {nn tags}' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_NAMESPACE, r'all instances of a particular namespace - [...]' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_TAG, r'a particular tag, if the file has it - (...)' )
+        
+        self.PopupMenu( menu )
+        
+        menu.Destroy()
+        
     
     def GetInfo( self ):
         
         path = self._path.GetPath()
         
-        raise Exception( 'fetch preds from query listbox' )
+        predicates = self._predicates_box.GetPredicates()
         
         period = self._period.GetValue() * 60
         
-        phrase = self._phrase.GetValue()
+        phrase = self._pattern.GetValue()
         
-        return ( path, query, period, phrase )
+        return ( path, predicates, period, phrase )
+        
+    
+    def RemovePredicate( self, page_key, predicate ):
+        
+        if page_key == self._page_key:
+            
+            if self._predicates_box.HasPredicate( predicate ):
+                
+                self._predicates_box.RemovePredicate( predicate )
+                
+            
         
     
 class DialogManageImageboards( ClientGUIDialogs.Dialog ):
@@ -1722,12 +1812,11 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -1810,8 +1899,6 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
             
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventExport( self, event ):
         
@@ -2440,7 +2527,6 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -2557,8 +2643,6 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventDelete( self, event ): self._import_folders.RemoveAllSelected()
     
     def EventEdit( self, event ):
@@ -2608,6 +2692,8 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         deletees = set( self._original_paths_to_details.keys() ) - paths
         
         for deletee in deletees: HC.app.Write( 'delete_import_folder', deletee )
+        
+        HC.pubsub.pub( 'notify_new_import_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -2718,12 +2804,11 @@ class DialogManageNamespaceBlacklists( ClientGUIDialogs.Dialog ):
             self._tag_services = ClientGUICommon.ListBook( self )
             self._tag_services.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -2785,8 +2870,6 @@ class DialogManageNamespaceBlacklists( ClientGUIDialogs.Dialog ):
         
         page.SetTagBoxFocus()
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventOK( self, event ):
         
@@ -3087,12 +3170,11 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
-            self._ok = wx.Button( self, label = 'Save' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -3548,8 +3630,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     def _SortListCtrl( self ): self._shortcuts.SortListItems( 2 )
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventEditNamespaceColour( self, event ):
         
         result = self._namespace_colours.GetSelectedNamespaceColour()
@@ -3808,12 +3888,11 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             self._test = wx.Button( self, label = 'test' )
             self._test.Bind( wx.EVT_BUTTON, self.EventTest )
             
-            self._ok = wx.Button( self, label = 'Ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -3867,8 +3946,6 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventOK( self, event ):
         
         id = self._id.GetValue()
@@ -3920,12 +3997,11 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             for service_identifier in service_identifiers: self._panels.append( self._Panel( self, service_identifier, media ) )
             
-            self._apply = wx.Button( self, label = 'Apply' )
+            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -3970,8 +4046,6 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         self.RefreshAcceleratorTable()
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventMenu( self, event ):
         
         action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -3980,7 +4054,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             ( command, data ) = action
             
-            if command == 'manage_ratings': self.EventCancel( event )
+            if command == 'manage_ratings': self.EndModal( wx.ID_CANCEL )
             elif command == 'ok': self.EventOK( event )
             else: event.Skip()
             
@@ -4310,12 +4384,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
             self._remove.SetForegroundColour( ( 128, 0, 0 ) )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )        
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -4432,8 +4505,6 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         self._services_listbook.AddPage( page, name, select = True )
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventOK( self, event ):
         
@@ -4660,12 +4731,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -4859,8 +4929,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
             
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventExport( self, event ):
         
@@ -5321,12 +5389,11 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -5424,8 +5491,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventExport( self, event ):
         
         try: self._CheckCurrentSubscriptionIsValid()
@@ -5486,6 +5551,10 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             deletees = set( self._original_subscriptions.keys() ) - { name for ( name, info ) in subscriptions }
             
             for name in deletees: HC.app.Write( 'delete_subscription', name )
+            
+            HC.subs_changed = True
+            
+            HC.pubsub.pub( 'notify_new_subscriptions' )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -5737,6 +5806,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._site_type.SelectClientData( site_type )
             
+            self._PresentForSiteType()
+            
             self._query.SetValue( query )
             
             if site_type == HC.SITE_TYPE_BOORU:
@@ -5778,8 +5849,6 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._advanced_tag_options.SetInfo( advanced_tag_options )
             
             self._advanced_import_options.SetInfo( advanced_import_options )
-            
-            self._PresentForSiteType()
             
         
         def EventResetCache( self, event ):
@@ -5854,12 +5923,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -5936,8 +6004,6 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         page.SetTagBoxFocus()
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventMenu( self, event ):
         
@@ -6315,12 +6381,11 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -6397,8 +6462,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         page.SetTagBoxFocus()
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventMenu( self, event ):
         
@@ -6837,12 +6900,11 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
             self._down = wx.Button( self, label = u'\u2193' )
             self._down.Bind( wx.EVT_BUTTON, self.EventDown )
             
-            self._apply = wx.Button( self, label = 'apply' )
+            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -6900,8 +6962,6 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
         
         wx.CallAfter( self._apply.SetFocus )
         
-    
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
     
     def EventOK( self, event ):
         
@@ -6975,12 +7035,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
             
-            self._apply = wx.Button( self, id = wx.ID_OK, label = 'Apply' )
+            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
             self._apply.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-            self._cancel.Bind( wx.EVT_BUTTON, self.EventCancel )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
             self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
             
         
@@ -7049,8 +7108,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         page.SetTagBoxFocus()
         
     
-    def EventCancel( self, event ): self.EndModal( wx.ID_CANCEL )
-    
     def EventMenu( self, event ):
         
         action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -7059,7 +7116,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             ( command, data ) = action
             
-            if command == 'manage_tags': self.EventCancel( event )
+            if command == 'manage_tags': self.EndModal( wx.ID_CANCEL )
             elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'ok': self.EventOK( event )
             else: event.Skip()
@@ -7373,6 +7430,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
             self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 760, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'enabled', 80 ) ] )
             
             self._mappings_list_ctrl.SetMinSize( ( 760, 660 ) )
@@ -7389,7 +7448,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             self._remove = wx.Button( self, label = 'remove mapping' )
             self._remove.Bind( wx.EVT_BUTTON, self.EventRemoveMapping )
             
-            self._ok = wx.Button( self, label = 'ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
