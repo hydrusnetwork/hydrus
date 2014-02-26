@@ -288,7 +288,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
     def GetListCtrl( self ): return self
@@ -433,7 +433,7 @@ class ConversationPanel( wx.Panel ):
             
             self._drafts_vbox.Detach( draft_panel )
             
-            draft_panel.Close()
+            wx.CallAfter( draft_panel.Destroy )
             
             self._scrolling_messages_window.FitInside()
             
@@ -659,7 +659,7 @@ class DestinationPanel( wx.Panel ):
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
     def EventRetryMenu( self, event ):
@@ -670,7 +670,7 @@ class DestinationPanel( wx.Panel ):
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
     def EventUnreadMenu( self, event ):
@@ -681,7 +681,7 @@ class DestinationPanel( wx.Panel ):
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
     def SetStatus( self, status ):

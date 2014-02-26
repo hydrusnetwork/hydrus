@@ -1417,7 +1417,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 else: self._RedrawCanvas()
                 
-                old_canvas_bmp.Destroy()
+                wx.CallAfter( old_canvas_bmp.Destroy )
                 
             
             self._CleanCanvas()
@@ -1975,7 +1975,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if menu.GetMenuItemCount() > 0: self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
         event.Skip()
         
@@ -2307,7 +2307,7 @@ class Thumbnail( Selectable ):
         
         dc.DrawBitmap( hydrus_bmp, x_offset, y_offset )
         
-        hydrus_bmp.Destroy()
+        wx.CallAfter( hydrus_bmp.Destroy )
         
         collections_string = ''
         

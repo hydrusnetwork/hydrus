@@ -47,7 +47,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 104
+SOFTWARE_VERSION = 105
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -115,6 +115,7 @@ MESSAGE_TYPE_TEXT = 0
 MESSAGE_TYPE_ERROR = 1
 MESSAGE_TYPE_FILES = 2
 MESSAGE_TYPE_GAUGE = 3
+MESSAGE_TYPE_DB_ERROR = 4
 
 GET_DATA = 0
 POST_DATA = 1
@@ -1765,19 +1766,19 @@ class JobDatabase():
             elif shutdown: raise Exception( 'Application quit before db could serve result!' )
             
         
-        if issubclass( type( self._result ), Exception ):
+        if isinstance( self._result, Exception ):
             
-            etype = type( self._result )
-            
-            db_traceback = unicode( self._result )
-            
-            trace_list = traceback.format_stack()
-            
-            my_trace = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
-            
-            full_message = os.linesep.join( ( 'GUI Thread:', my_trace, 'DB Thread:', db_traceback ) )
-            
-            raise HydrusExceptions.DBException( full_message )
+            if isinstance( self._result, HydrusExceptions.DBException ):
+                
+                ( gumpf, db_traceback ) = self._result.GetTracebacks()
+                
+                trace_list = traceback.format_stack()
+                
+                caller_traceback = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
+                
+                raise HydrusExceptions.DBException( u( self._result ), caller_traceback, db_traceback )
+                
+            else: raise self._result
             
         else: return self._result
         
@@ -1931,10 +1932,43 @@ class Message():
         self._message_type = message_type
         self._info = info
         
+        self._closed = False
+        
+        self._lock = threading.Lock()
+        
     
-    def GetInfo( self ): return self._info
+    def Close( self ): self._closed = True
+    
+    def GetInfo( self, name ):
+        
+        with self._lock: return self._info[ name ]
+        
     
     def GetType( self ): return self._message_type
+    
+    def HasInfo( self, name ):
+        
+        with self._lock: return name in self._info
+        
+    
+    def IsClosed( self ): return self._closed
+    
+    def SetInfo( self, name, value ):
+        
+        with self._lock: self._info[ name ] = value
+        
+    
+class MessageGauge( Message ):
+    
+    def __init__( self, message_type, text ):
+        
+        info = {}
+        
+        info[ 'mode' ] = 'text'
+        info[ 'text' ] = text
+        
+        Message.__init__( self, message_type, info )
+        
     
 class Predicate( HydrusYAMLBase ):
     

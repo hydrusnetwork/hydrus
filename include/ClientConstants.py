@@ -318,7 +318,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         trace = ''.join( trace_list )
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } ) )
         
     except:
         
@@ -753,33 +753,30 @@ def ParseExportPhrase( phrase ):
     
 def ShowExceptionClient( e ):
     
-    if not wx.Thread_IsMain():
+    if isinstance( e, HydrusExceptions.DBException ):
         
-        ( etype, value, tb ) = sys.exc_info()
+        ( caller_traceback, db_traceback ) = e.GetTracebacks()
         
-        if etype is not None: e = type( e )( os.linesep.join( traceback.format_exception( etype, value, tb ) ) )
+        info = {}
         
-    
-    etype = type( e )
-    
-    if etype == HydrusExceptions.DBException:
+        info[ 'text' ] = HC.u( e )
+        info[ 'caller_traceback' ] = caller_traceback
+        info[ 'db_traceback' ] = db_traceback
         
-        value = ''
-        
-        trace = HC.u( e )
+        message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, info )
         
     else:
         
-        value = HC.u( e )
+        ( etype, value, tb ) = sys.exc_info()
         
-        trace_list = traceback.format_stack()
+        trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
-        trace = ''.join( trace_list )
+        message = HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } )
         
     
-    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+    HC.pubsub.pub( 'message', message )
     
-def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, text ) )
+def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
 
 class AutocompleteMatches():
     

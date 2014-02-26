@@ -309,7 +309,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
         finally:
             
-            try: self._splash.Destroy()
+            try: wx.CallAfter( self._splash.Destroy )
             except: pass
             
         

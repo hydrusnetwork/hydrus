@@ -1025,7 +1025,7 @@ class ImportArgsGenerator():
             
             if result == 'new':
                 
-                ( temp_path, service_identifiers_to_tags, url ) = self._GetArgs()
+                ( name, temp_path, service_identifiers_to_tags, url ) = self._GetArgs()
                 
                 self._job_key.SetVariable( 'status', 'importing' )
                 
@@ -1055,6 +1055,7 @@ class ImportArgsGenerator():
             
             self._job_key.SetVariable( 'result', 'failed' )
             
+            HC.ShowText( 'Problem importing ' + name + '!' )
             HC.ShowException( e )
             
             time.sleep( 2 )
@@ -1109,7 +1110,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
         
-        return ( temp_path, service_identifiers_to_tags, url )
+        return ( url, temp_path, service_identifiers_to_tags, url )
         
     
     def _CheckCurrentStatus( self ):
@@ -1206,7 +1207,7 @@ class ImportArgsGeneratorHDD( ImportArgsGenerator ):
             if pretty_path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ pretty_path ]
             
         
-        return ( path, service_identifiers_to_tags, None )
+        return ( path, path, service_identifiers_to_tags, None )
         
     
 class ImportArgsGeneratorThread( ImportArgsGenerator ):
@@ -1241,7 +1242,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
         
-        return ( temp_path, service_identifiers_to_tags, url )
+        return ( url, temp_path, service_identifiers_to_tags, url )
         
     
     def _CheckCurrentStatus( self ):
@@ -1281,7 +1282,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         service_identifiers_to_tags = {}
         
-        return ( temp_path, service_identifiers_to_tags, url )
+        return ( url, temp_path, service_identifiers_to_tags, url )
         
     
     def _CheckCurrentStatus( self ):
@@ -1747,30 +1748,46 @@ class ImportController():
         threading.Thread( target = self.MainLoop ).start()
         
     
-def THREADDownloadURL( job_key, url, message_string ):
+def THREADDownloadURL( message, url, url_string ):
     
     try:
         
         def hook( range, value ):
             
-            if range is None: message = message_string + ' - ' + HC.ConvertIntToBytes( value )
-            else: message = message_string + ' - ' + HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
+            if range is None: text = url_string + ' - ' + HC.ConvertIntToBytes( value )
+            else: text = url_string + ' - ' + HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
             
-            wx.CallAfter( HC.pubsub.pub, 'message_gauge_info', job_key, range, value, message )
+            message.SetInfo( 'range', range )
+            message.SetInfo( 'value', value )
+            message.SetInfo( 'text', text )
             
         
+        message.SetInfo( 'range', None )
+        message.SetInfo( 'value', None )
+        message.SetInfo( 'mode', 'gauge' )
         temp_path = HC.http.Request( HC.GET, url, response_to_path = True, report_hooks = [ hook ] )
         
-        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'importing ' + message_string )
+        message.SetInfo( 'range', None )
+        message.SetInfo( 'value', None )
+        message.SetInfo( 'text', 'importing ' + url_string )
+        message.SetInfo( 'mode', 'gauge' )
         
         ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
         
-        if result in ( 'successful', 'redundant' ): HC.pubsub.pub( 'message_gauge_show_file_button', job_key, message_string, { hash } )
-        elif result == 'deleted': HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'File was already deleted!' )
+        if result in ( 'successful', 'redundant' ):
+            
+            message.SetInfo( 'hashes', { hash } )
+            message.SetInfo( 'mode', 'files' )
+            
+        elif result == 'deleted':
+            
+            message.SetInfo( 'text', 'File was already deleted!' )
+            message.SetInfo( 'mode', 'text' )
+            
         
     except Exception as e:
         
-        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'Error with ' + message_string + '!' )
+        message.Close()
         
         HC.ShowException( e )
         

@@ -3619,7 +3619,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     for ( post, timestamp ) in news_rows:
                         
-                        if now - timestamp < 86400 * 7: self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post ) )
+                        if now - timestamp < 86400 * 7:
+                            
+                            text = service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post
+                            
+                            self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
+                            
                         
                     
                 elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
@@ -6762,7 +6767,9 @@ class DB( ServiceDB ):
                 
                 ( etype, value, tb ) = sys.exc_info()
                 
-                new_e = type( e )( os.linesep.join( traceback.format_exception( etype, value, tb ) ) )
+                db_traceback = os.linesep.join( traceback.format_exception( etype, value, tb ) )
+                
+                new_e = HydrusExceptions.DBException( HC.u( e ), 'Unknown Caller, probably GUI.', db_traceback )
                 
                 if job.IsSynchronous(): job.PutResult( new_e )
                 else: HC.ShowException( new_e )
@@ -7048,9 +7055,9 @@ def DAEMONCheckImportFolders():
                                 
                                 details[ 'failed_imported_paths' ].add( path )
                                 
-                                message = 'Import folder failed to import a file: ' + os.linesep + path + os.linesep + traceback.format_exc()
+                                message = 'Import folder failed to import ' + path + ':' + os.linesep + traceback.format_exc()
                                 
-                                HC.Message( HC.MESSAGE_TYPE_ERROR, Exception( message ) )
+                                HC.ShowText( message )
                                 
                                 should_action = False
                                 
@@ -7071,9 +7078,9 @@ def DAEMONCheckImportFolders():
                     
                     if len( successful_hashes ) > 0:
                         
-                        message_text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
+                        text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
                         
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, ( message_text, successful_hashes ) ) )
+                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, { 'text' : text, 'hashes' : successful_hashes } ) )
                         
                     
                     details[ 'last_checked' ] = now
@@ -7496,137 +7503,141 @@ def DAEMONSynchroniseRepositories():
                 try: service = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
                 
-                job_key = HC.JobKey()
-                
-                if service.CanUpdate(): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, False ) ) )
-                
-                HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, u'checking ' + name + ' repository' )
-                
-                while service.CanUpdate():
+                if service.CanUpdate():
                     
-                    while HC.options[ 'pause_repo_sync' ]:
+                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' repository' )
+                    
+                    HC.pubsub.pub( 'message', message )
+                    
+                    while service.CanUpdate():
                         
-                        HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, u'Repository synchronisation paused' )
-                        
-                        time.sleep( 5 )
+                        while HC.options[ 'pause_repo_sync' ]:
+                            
+                            message.SetInfo( 'text', 'Repository synchronisation paused' )
+                            
+                            time.sleep( 5 )
+                            
+                            if HC.shutdown: raise Exception( 'Application shutting down!' )
+                            
+                            if HC.repos_changed:
+                                
+                                message.Close()
+                                
+                                HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                
+                                return
+                                
+                            
                         
                         if HC.shutdown: raise Exception( 'Application shutting down!' )
                         
-                        if HC.repos_changed:
+                        now = HC.GetNow()
+                        
+                        first_begin = service.GetFirstBegin()
+                        
+                        next_begin = service.GetNextBegin()
+                        
+                        if first_begin == 0:
                             
-                            HC.pubsub.pub( 'message_gauge_failed', job_key )
+                            range = None
+                            value = 0
                             
-                            HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                            update_index_string = 'initial update'
                             
-                            return
+                        else:
+                            
+                            range = ( ( now - first_begin ) / HC.UPDATE_DURATION ) + 1
+                            value = ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1
+                            
+                            update_index_string = 'update ' + HC.u( value )
                             
                         
-                    
-                    if HC.shutdown: raise Exception( 'Application shutting down!' )
-                    
-                    now = HC.GetNow()
-                    
-                    first_begin = service.GetFirstBegin()
-                    
-                    next_begin = service.GetNextBegin()
-                    
-                    if first_begin == 0:
+                        prefix_string = name + ' ' + update_index_string + ': '
                         
-                        range = None
-                        value = 0
+                        message.SetInfo( 'range', range )
+                        message.SetInfo( 'value', value )
+                        message.SetInfo( 'text', prefix_string + 'downloading and parsing' )
+                        message.SetInfo( 'mode', 'gauge' )
                         
-                        update_index_string = 'initial update'
+                        update = service.Request( HC.GET, 'update', { 'begin' : next_begin } )
                         
-                    else:
-                        
-                        range = ( ( now - first_begin ) / HC.UPDATE_DURATION ) + 1
-                        value = ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1
-                        
-                        update_index_string = 'update ' + HC.u( value )
-                        
-                    
-                    prefix_string = name + ' ' + update_index_string + ': '
-                    
-                    HC.pubsub.pub( 'message_gauge_info', job_key, range, value, prefix_string + 'downloading and parsing' )
-                    
-                    update = service.Request( HC.GET, 'update', { 'begin' : next_begin } )
-                    
-                    if service_type == HC.TAG_REPOSITORY:
-                        
-                        HC.pubsub.pub( 'message_gauge_info', job_key, range, value, prefix_string + 'generating tags' )
-                        
-                        HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
-                        
-                    
-                    i = 0
-                    num_content_updates = update.GetNumContentUpdates()
-                    content_updates = []
-                    current_weight = 0
-                    
-                    for content_update in update.IterateContentUpdates():
-                        
-                        content_updates.append( content_update )
-                        
-                        current_weight += len( content_update.GetHashes() )
-                        
-                        i += 1
-                        
-                        if current_weight > 50:
+                        if service_type == HC.TAG_REPOSITORY:
                             
-                            while HC.options[ 'pause_repo_sync' ]:
+                            message.SetInfo( 'text', prefix_string + 'generating tags' )
+                            
+                            HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
+                            
+                        
+                        i = 0
+                        num_content_updates = update.GetNumContentUpdates()
+                        content_updates = []
+                        current_weight = 0
+                        
+                        for content_update in update.IterateContentUpdates():
+                            
+                            content_updates.append( content_update )
+                            
+                            current_weight += len( content_update.GetHashes() )
+                            
+                            i += 1
+                            
+                            if current_weight > 50:
                                 
-                                HC.pubsub.pub( 'message_gauge_info', job_key, range, value, u'Repository synchronisation paused' )
-                                
-                                time.sleep( 5 )
-                                
-                                if HC.shutdown: raise Exception( 'Application shutting down!' )
-                                
-                                if HC.repos_changed:
+                                while HC.options[ 'pause_repo_sync' ]:
                                     
-                                    HC.pubsub.pub( 'message_gauge_failed', job_key )
+                                    message.SetInfo( 'text', 'Repository synchronisation paused' )
                                     
-                                    HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                    time.sleep( 5 )
                                     
-                                    return
+                                    if HC.shutdown: raise Exception( 'Application shutting down!' )
+                                    
+                                    if HC.repos_changed:
+                                        
+                                        message.Close()
+                                        
+                                        HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                        
+                                        return
+                                        
                                     
                                 
-                            
-                            HC.pubsub.pub( 'message_gauge_info', job_key, range, value, prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
-                            
-                            HC.app.WaitUntilGoodTimeToUseGUIThread()
-                            
-                            time.sleep( 0.0001 )
-                            
-                            HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
-                            
-                            content_updates = []
-                            current_weight = 0
+                                message.SetInfo( 'text', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
+                                
+                                HC.app.WaitUntilGoodTimeToUseGUIThread()
+                                
+                                time.sleep( 0.0001 )
+                                
+                                HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                
+                                content_updates = []
+                                current_weight = 0
+                                
                             
                         
+                        if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                        
+                        message.SetInfo( 'text', prefix_string + 'processing service info' )
+                        
+                        service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
+                        
+                        service_identifiers_to_service_updates = { service_identifier : service_updates }
+                        
+                        HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
+                        
+                        HC.pubsub.pub( 'notify_new_pending' )
+                        
+                        time.sleep( 0.10 )
+                        
+                        try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                        except: break
+                        
                     
-                    if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                    message.Close()
                     
-                    HC.pubsub.pub( 'message_gauge_info', job_key, range, value, prefix_string + 'processing service info' )
-                    
-                    service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
-                    
-                    service_identifiers_to_service_updates = { service_identifier : service_updates }
-                    
-                    HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
-                    
-                    HC.pubsub.pub( 'notify_new_pending' )
-                    
-                    time.sleep( 0.10 )
-                    
-                    try: service = HC.app.ReadDaemon( 'service', service_identifier )
-                    except: break
-                    
-                
-                HC.pubsub.pub( 'message_gauge_failed', job_key )
                 
             except Exception as e:
                 
-                HC.pubsub.pub( 'message_gauge_failed', job_key )
+                message.Close()
                 
                 message = 'Failed to update ' + name + ':' + os.linesep + os.linesep + HC.u( e )
                 
@@ -7670,11 +7681,9 @@ def DAEMONSynchroniseSubscriptions():
                 
                 try:
                     
-                    job_key = HC.JobKey()
+                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' subscription' )
                     
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, False ) ) )
-                    
-                    HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, u'checking ' + name + ' subscription' )
+                    HC.pubsub.pub( 'message', message )
                     
                     do_tags = len( advanced_tag_options ) > 0
                     
@@ -7740,7 +7749,7 @@ def DAEMONSynchroniseSubscriptions():
                         
                         while HC.options[ 'pause_subs_sync' ]:
                             
-                            HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, u'subscriptions paused' )
+                            message.SetInfo( 'text', 'subscriptions paused' )
                             
                             time.sleep( 5 )
                             
@@ -7748,7 +7757,7 @@ def DAEMONSynchroniseSubscriptions():
                             
                             if HC.subs_changed:
                                 
-                                HC.pubsub.pub( 'message_gauge_failed', job_key )
+                                message.Close()
                                 
                                 HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
@@ -7774,7 +7783,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 all_url_args.extend( fresh_url_args )
                                 
-                                HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, u'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
+                                message.SetInfo( 'text', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
                                 
                             
                         
@@ -7782,6 +7791,10 @@ def DAEMONSynchroniseSubscriptions():
                         
                         if len( downloaders ) == 0: break
                         
+                    
+                    message.SetInfo( 'range', len( all_url_args ) )
+                    message.SetInfo( 'value', 0 )
+                    message.SetInfo( 'mode', 'gauge' )
                     
                     all_url_args.reverse() # to do oldest first, which means we can save incrementally
                     
@@ -7795,7 +7808,7 @@ def DAEMONSynchroniseSubscriptions():
                         
                         while HC.options[ 'pause_subs_sync' ]:
                             
-                            HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, u'subscriptions paused' )
+                            message.SetInfo( 'text', 'subscriptions paused' )
                             
                             time.sleep( 5 )
                             
@@ -7803,7 +7816,7 @@ def DAEMONSynchroniseSubscriptions():
                             
                             if HC.subs_changed:
                                 
-                                HC.pubsub.pub( 'message_gauge_failed', job_key )
+                                message.Close()
                                 
                                 HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
@@ -7821,7 +7834,8 @@ def DAEMONSynchroniseSubscriptions():
                             
                             x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
                             
-                            HC.pubsub.pub( 'message_gauge_info', job_key, len( all_url_args ), i, name + ': ' + x_out_of_y + ' : checking url status' )
+                            message.SetInfo( 'value', i )
+                            message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : checking url status' )
                             
                             ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
                             
@@ -7833,7 +7847,7 @@ def DAEMONSynchroniseSubscriptions():
                                     
                                     try:
                                         
-                                        HC.pubsub.pub( 'message_gauge_info', job_key, len( all_url_args ), i, name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                        message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
                                         
                                         tags = downloader.GetTags( *url_args )
                                         
@@ -7850,7 +7864,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 num_new += 1
                                 
-                                HC.pubsub.pub( 'message_gauge_info', job_key, len( all_url_args ), i, name + ': ' + x_out_of_y + ' : downloading file' )
+                                message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : downloading file' )
                                 
                                 if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
                                 else:
@@ -7862,7 +7876,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 service_identifiers_to_tags = HydrusDownloading.ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options )
                                 
-                                HC.pubsub.pub( 'message_gauge_info', job_key, len( all_url_args ), i, name + ': ' + x_out_of_y + ' : importing file' )
+                                message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : importing file' )
                                 
                                 ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, url = url )
                                 
@@ -7901,21 +7915,25 @@ def DAEMONSynchroniseSubscriptions():
                     
                     if len( successful_hashes ) > 0:
                         
-                        message_text = HC.u( len( successful_hashes ) ) + ' files imported from ' + name
+                        text = HC.u( len( successful_hashes ) ) + ' files imported from ' + name
                         
-                        HC.pubsub.pub( 'message_gauge_show_file_button', job_key, message_text, successful_hashes )
+                        message.SetInfo( 'text', text )
+                        message.SetInfo( 'hashes', successful_hashes )
+                        message.SetInfo( 'mode', 'files' )
                         
-                    else: HC.pubsub.pub( 'message_gauge_failed', job_key )
+                    else: message.Close()
                     
                     last_checked = now
                     
                 except Exception as e:
                     
+                    message.Close()
+                    
                     last_checked = now + HC.UPDATE_DURATION
                     
-                    message = 'Problem with ' + name + ' ' + traceback.format_exc()
+                    text = 'Problem with ' + name + ' ' + traceback.format_exc()
                     
-                    HC.ShowText( message )
+                    HC.ShowText( text )
                     
                     time.sleep( 3 )
                     

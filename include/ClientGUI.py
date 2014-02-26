@@ -133,9 +133,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             job_key = HC.JobKey()
             
-            HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, True ) ) )
+            message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'gathering pending and petitioned' )
             
-            HC.pubsub.pub( 'message_gauge_info', job_key, 1, 0, u'gathering pending and petitioned' )
+            HC.pubsub.pub( 'message', message )
             
             result = HC.app.Read( 'pending', service_identifier )
             
@@ -159,7 +159,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 i = 1
                 
-                HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
+                message.SetInfo( 'job_key', job_key )
+                message.SetInfo( 'range', gauge_range )
+                message.SetInfo( 'value', i )
+                message.SetInfo( 'text', 'connecting to repository' )
+                message.SetInfo( 'mode', 'cancelable gauge' )
                 
                 good_hashes = []
                 
@@ -167,15 +171,20 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for media_result in media_results:
                     
-                    if job_key.IsCancelled(): return
+                    if job_key.IsCancelled():
+                        
+                        message.Close()
+                        
+                        return
+                        
                     
                     i += 1
                     
                     hash = media_result.GetHash()
-                    
                     mime = media_result.GetMime()
                     
-                    HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'Uploading file ' + HC.ConvertIntToPrettyString( i ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
+                    message.SetInfo( 'value', i )
+                    message.SetInfo( 'text', 'Uploading file ' + HC.ConvertIntToPrettyString( i ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
                     
                     try:
                         
@@ -213,7 +222,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     i += 1
                     
-                    HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'uploading petitions' )
+                    message.SetInfo( 'value', i )
+                    message.SetInfo( 'text', 'uploading petitions' )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
@@ -236,15 +246,24 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 i = 1
                 
-                HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'connecting to repository' )
+                message.SetInfo( 'range', gauge_range )
+                message.SetInfo( 'value', i )
+                message.SetInfo( 'text', 'connecting to repository' )
+                message.SetInfo( 'mode', 'cancelable gauge' )
                 
                 for update in updates:
                     
-                    if job_key.IsCancelled(): return
+                    if job_key.IsCancelled():
+                        
+                        message.Close()
+                        
+                        return
+                        
                     
                     i += 1
                     
-                    HC.pubsub.pub( 'message_gauge_info', job_key, gauge_range, i, u'posting update' )
+                    message.SetInfo( 'value', i )
+                    message.SetInfo( 'text', 'posting update' )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
@@ -260,7 +279,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         except Exception as e: HC.ShowException( e )
         
-        HC.pubsub.pub( 'message_gauge_info', job_key, None, None, u'upload done!' )
+        message.SetInfo( 'text', 'upload done' )
+        message.SetInfo( 'mode', 'text' )
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -557,7 +577,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         page.CleanBeforeDestroy()
         
-        page.Destroy()
+        wx.CallAfter( page.Destroy )
         
     
     def _FetchIP( self, service_identifier ):
@@ -990,11 +1010,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 def do_it():
                     
-                    job_key = HC.JobKey()
+                    message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'regenerating thumbnails - creating directories' } )
                     
-                    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, False ) ) )
-                    
-                    HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, 'regenerating thumbnails - creating directories' )
+                    HC.pubsub.pub( 'message', message )
                     
                     if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
                     
@@ -1017,10 +1035,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                if i % 100 == 0:
-                                    
-                                    HC.pubsub.pub( 'message_gauge_info', job_key, None, 0, 'regenerating thumbnails - ' + HC.ConvertIntToPrettyString( i ) + ' done' )
-                                    
+                                if i % 100 == 0: message.SetInfo( 'text', 'regenerating thumbnails - ' + HC.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 i += 1
                                 
@@ -1048,7 +1063,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         except: continue
                         
                     
-                    HC.pubsub.pub( 'message_gauge_info', job_key, None, None, 'regenerating thumbnails - done' )
+                    message.SetInfo( 'text', 'done regenerating thumbnails' )
                     
                 
                 threading.Thread( target = do_it ).start()
@@ -1056,11 +1071,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _ReviewServices( self ):
-        
-        try: FrameReviewServices()
-        except: wx.MessageBox( traceback.format_exc() )
-        
+    def _ReviewServices( self ): FrameReviewServices()
     
     def _SaveGUISession( self, name = None ):
         
@@ -1162,13 +1173,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url = dlg.GetValue()
                 
-                job_key = HC.JobKey()
+                url_string = url
                 
-                message_string = url
+                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string )
                 
-                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( job_key, url, message_string ) ).start()
+                HC.pubsub.pub( 'message', message )
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, True ) ) )
+                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( message, url, url_string ) ).start()
                 
             
         
@@ -1311,7 +1322,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         HC.app.MaintainDB()
         
-        self.Destroy()
+        wx.CallAfter( self.Destroy )
         
     
     def EventFocus( self, event ):
@@ -1759,7 +1770,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         if total_num_pending > 0: menu.Append( pending, p( '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')' ) )
-        else: pending.Destroy()
+        else: wx.CallAfter( pending.Destroy )
         
         services = wx.Menu()
         
@@ -1899,7 +1910,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self.SetMenuBar( menu )
         
-        if old_menu is not None: old_menu.Destroy()
+        if old_menu is not None: wx.CallAfter( old_menu.Destroy )
         
     
     def RefreshStatusBar( self ): self._RefreshStatusBar()

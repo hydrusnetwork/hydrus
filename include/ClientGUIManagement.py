@@ -158,7 +158,7 @@ class CaptchaControl( wx.Panel ):
             
             dc.DrawBitmap( hydrus_bmp, 0, 0 )
             
-            hydrus_bmp.Destroy()
+            wx.CallAfter( hydrus_bmp.Destroy )
             
             self._refresh_button.SetLabel( 'get new captcha' )
             self._refresh_button.Enable()

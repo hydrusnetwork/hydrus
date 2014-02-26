@@ -4637,13 +4637,13 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 ( url, title ) = self._info[ ( extension, resolution ) ]
                 
-                job_key = HC.JobKey()
+                url_string = title + ' ' + resolution + ' ' + extension
                 
-                message_string = title + ' ' + resolution + ' ' + extension
+                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string )
                 
-                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( job_key, url, message_string ) ).start()
+                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( message, url, url_string ) ).start()
                 
-                HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_GAUGE, ( job_key, True ) ) )
+                HC.pubsub.pub( 'message', message )
                 
             
         
@@ -4968,12 +4968,6 @@ class DialogSetupCustomFilterActions( Dialog ):
     
 class DialogSetupExport( Dialog ):
     
-    ID_HASH = 0
-    ID_TAGS = 1
-    ID_NN_TAGS = 2
-    ID_NAMESPACE = 3
-    ID_TAG = 4
-    
     def __init__( self, parent, flat_media ):
         
         def InitialiseControls():
@@ -5003,8 +4997,7 @@ class DialogSetupExport( Dialog ):
             self._update = wx.Button( self, label = 'update' )
             self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
             
-            self._examples = wx.Button( self, label = 'pattern shortcuts' )
-            self._examples.Bind( wx.EVT_BUTTON, self.EventPatternShortcuts )
+            self._examples = ClientGUICommon.ExportPatternButton( self )
             
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
@@ -5090,8 +5083,6 @@ class DialogSetupExport( Dialog ):
         
         wx.CallAfter( self.EventSelectPath, None )
         wx.CallAfter( self.EventRecalcPaths, None )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
         
         wx.CallAfter( self._export.SetFocus )
         
@@ -5201,58 +5192,6 @@ class DialogSetupExport( Dialog ):
                     
                 
             
-        
-    
-    def EventMenu( self, event ):
-        
-        id = event.GetId()
-        
-        phrase = None
-        
-        if id == self.ID_HASH: phrase = r'{hash}'
-        if id == self.ID_TAGS: phrase = r'{tags}'
-        if id == self.ID_NN_TAGS: phrase = r'{nn tags}'
-        if id == self.ID_NAMESPACE: phrase = r'[...]'
-        if id == self.ID_TAG: phrase = r'(...)'
-        else: event.Skip()
-        
-        if phrase is not None:
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.TextDataObject( phrase )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
-        
-    
-    def EventPatternShortcuts( self, event ):
-        
-        menu = wx.Menu()
-        
-        menu.Append( -1, 'click on a phrase to copy to clipboard' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_HASH, r'the file\'s hash - {hash}' )
-        menu.Append( self.ID_TAGS, r'all the file\'s tags - {tags}' )
-        menu.Append( self.ID_NN_TAGS, r'all the file\'s non-namespaced tags - {nn tags}' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_NAMESPACE, r'all instances of a particular namespace - [...]' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_TAG, r'a particular tag, if the file has it - (...)' )
-        
-        self.PopupMenu( menu )
-        
-        menu.Destroy()
         
     
     def EventOpenLocation( self, event ):

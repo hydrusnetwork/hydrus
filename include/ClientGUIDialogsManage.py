@@ -1615,8 +1615,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             self._pattern = wx.TextCtrl( self )
             
-            self._examples = wx.Button( self, label = 'pattern shortcuts' )
-            self._examples.Bind( wx.EVT_BUTTON, self.EventPatternShortcuts )
+            self._examples = ClientGUICommon.ExportPatternButton( self )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -1702,33 +1701,6 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventMenu( self, event ):
-        
-        id = event.GetId()
-        
-        phrase = None
-        
-        if id == self.ID_HASH: phrase = r'{hash}'
-        if id == self.ID_TAGS: phrase = r'{tags}'
-        if id == self.ID_NN_TAGS: phrase = r'{nn tags}'
-        if id == self.ID_NAMESPACE: phrase = r'[...]'
-        if id == self.ID_TAG: phrase = r'(...)'
-        else: event.Skip()
-        
-        if phrase is not None:
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.TextDataObject( phrase )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
-        
-    
     def EventOK( self, event ):
         
         phrase = self._pattern.GetValue()
@@ -1742,31 +1714,6 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
         self.EndModal( wx.ID_OK )
-        
-    
-    def EventPatternShortcuts( self, event ):
-        
-        menu = wx.Menu()
-        
-        menu.Append( -1, 'click on a phrase to copy to clipboard' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_HASH, r'the file\'s hash - {hash}' )
-        menu.Append( self.ID_TAGS, r'all the file\'s tags - {tags}' )
-        menu.Append( self.ID_NN_TAGS, r'all the file\'s non-namespaced tags - {nn tags}' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_NAMESPACE, r'all instances of a particular namespace - [...]' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_TAG, r'a particular tag, if the file has it - (...)' )
-        
-        self.PopupMenu( menu )
-        
-        menu.Destroy()
         
     
     def GetInfo( self ):
@@ -4591,7 +4538,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 if 'port' in self._options: self._port = wx.SpinCtrl( self._options_panel, min = 1, max = 65535 )
                 if 'max_monthly_data' in self._options: self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max monthly data (MB)', multiplier = 1048576 )
                 if 'max_storage' in self._options: self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max storage (MB)', multiplier = 1048576 )
-                if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel, label = '' )
+                if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel )
                 if 'message' in self._options: self._message = wx.TextCtrl( self._options_panel )
                 if 'upnp' in self._options: self._upnp = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'external port', none_phrase = 'do not forward port', max = 65535 )
                 
@@ -7165,7 +7112,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             def InitialiseControls():
                 
-                self._tags_box = ClientGUICommon.TagsBoxManage( self, self.AddTag, self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags )
+                self._tags_box = ClientGUICommon.TagsBoxManageWithShowDeleted( self, self.AddTag, self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags )
                 
                 self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
                 

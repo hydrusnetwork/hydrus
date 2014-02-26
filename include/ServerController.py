@@ -34,7 +34,7 @@ class Controller( wx.App ):
     
     def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
-    def EventExit( self, event ): self._tbicon.Destroy()
+    def EventExit( self, event ): wx.CallAfter( self._tbicon.Destroy )
     
     def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
     
