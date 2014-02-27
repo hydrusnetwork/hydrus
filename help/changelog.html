@@ -8,9 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 105</h3></li>
+				<ul>
+					<li>complete rewrite of message data handling and display</li>
+					<li>hidden gauge messages will now display correctly</li>
+					<li>fixed error-display bugs in the log page</li>
+					<li>massively improved how database errors are generated and displayed</li>
+					<li>improved and streamlined how other errors are generated and displayed</li>
+					<li>improved the way all gui elements are deleted from memory</li>
+					<li>fixed the frequent segfault in os x and linux when closing popup messages</li>
+					<li>fixed the common segfault in os x and linux when refreshing a query</li>
+					<li>fixed the occasional segfault in os x and linux when closing a page</li>
+					<li>fixed pattern shortcut buttons</li>
+					<li>the 'show deleted' checkbox on manage tags dialog makes a return</li>
+					<li>neatened several checkboxes so clicking the label text clicks the checkbox</li>
+				</ul>
+				<li><h3>version 104</h3></li>
+				<ul>
+					<li>first version of export folders is ready</li>
+					<li>cleaned up all ok and cancel dialog behaviour</li>
+					<li>cleaned up some misc dialog button code</li>
+					<li>fixed up some ugly db yaml pubsub stuff</li>
+					<li>fixed a juddering 100% CPU loop in the subscriptions code</li>
+					<li>subs and repo sync will now put up a popup gauge</li>
+					<li>repo sync will now pause mid-update on repository pause</li>
+					<li>services->pause->stuff will poke daemons to restart more reliably</li>
+					<li>removed the service status area of the statusbar</li>
+					<li>fixed 'subscriptions forgetting their tag options' bug</li>
+					<li>added select invert, thanks to @fluffy_cub for contribution</li>
+					<li>fixed a slight logic bug with display of select archive/inbox</li>
+					<li>added better instructions on how to run in OS X from source, thanks to user steenuil for contribution</li>
+				</ul>
 				<li><h3>version 103</h3></li>
 				<ul>
-					<li>fixed a virctual size issue with expanding collapsible panes inside scrolling windows :S</li>
+					<li>fixed a virtual size issue with expanding collapsible panes inside scrolling windows :S</li>
 					<li>fixed images not showing on first zoom switch</li>
 					<li>improved touch and feel of image/flash scanbar</li>
 					<li>subscriptions dialog is now flattened</li>

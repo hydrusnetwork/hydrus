@@ -19,6 +19,7 @@ ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
 ID_TIMER_DROPDOWN_HIDE = wx.NewId()
 ID_TIMER_AC_LAG = wx.NewId()
+ID_TIMER_POPUP = wx.NewId()
 
 # Zooms
 
@@ -447,7 +448,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
     def EventMenu( self, event ):
@@ -509,12 +510,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_service_identifier, tag_service_identifier, media_callable ):
+    def __init__( self, parent, page_key, file_service_identifier, tag_service_identifier, media_callable = None ):
         
         AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
         
@@ -615,10 +616,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             if half_complete_tag == '': matches = [] # a query like 'namespace:'
             else:
                 
-                media = self._media_callable()
+                fetch_from_db = True
                 
-                # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
-                if media is None or not self._synchronised.IsOn():
+                if self._media_callable is not None:
+                    
+                    media = self._media_callable()
+                    
+                    # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
+                    if media is not None and self._synchronised.IsOn(): fetch_from_db = False
+                    
+                
+                if fetch_from_db:
                     
                     if len( search_text ) < num_first_letters:
                         
@@ -1138,6 +1146,126 @@ class ChoiceSort( BetterChoice ):
         if self._page_key is not None: self._BroadcastSort()
         
     
+class ExportPatternButton( wx.Button ):
+    
+    ID_HASH = 0
+    ID_TAGS = 1
+    ID_NN_TAGS = 2
+    ID_NAMESPACE = 3
+    ID_TAG = 4
+    
+    def __init__( self, parent ):
+        
+        wx.Button.__init__( self, parent, label = 'pattern shortcuts' )
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+    
+    def EventButton( self, event ):
+        
+        menu = wx.Menu()
+        
+        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
+        menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
+        menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
+        menu.Append( self.ID_REGEX_ANY, r'any character - .' )
+        menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
+        menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
+        menu.Append( self.ID_REGEX_END, r'end of line - $' )
+        menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
+        menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
+        menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
+        menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
+        menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
+        menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
+        menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
+        menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
+        menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
+        menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
+        menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
+        menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
+        menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
+        menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
+        menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
+        
+        self.PopupMenu( menu )
+        
+        wx.CallAfter( menu.Destroy )
+        
+    
+    def EventMenu( self, event ):
+        
+        id = event.GetId()
+        
+        phrase = None
+        
+        if id == self.ID_HASH: phrase = r'{hash}'
+        if id == self.ID_TAGS: phrase = r'{tags}'
+        if id == self.ID_NN_TAGS: phrase = r'{nn tags}'
+        if id == self.ID_NAMESPACE: phrase = r'[...]'
+        if id == self.ID_TAG: phrase = r'(...)'
+        else: event.Skip()
+        
+        if phrase is not None:
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject( phrase )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
+    def EventButton( self, event ):
+        
+        menu = wx.Menu()
+        
+        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_HASH, r'the file\'s hash - {hash}' )
+        menu.Append( self.ID_TAGS, r'all the file\'s tags - {tags}' )
+        menu.Append( self.ID_NN_TAGS, r'all the file\'s non-namespaced tags - {nn tags}' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_NAMESPACE, r'all instances of a particular namespace - [...]' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( self.ID_TAG, r'a particular tag, if the file has it - (...)' )
+        
+        self.PopupMenu( menu )
+        
+        wx.CallAfter( menu.Destroy )
+        
+    
 class FileDropTarget( wx.FileDropTarget ):
     
     def __init__( self, callable ):
@@ -1461,7 +1589,12 @@ class ListBook( wx.Panel ):
             
             panel_info = self._list_box.GetClientData( selection )
             
-            if type( panel_info ) != tuple: self._panel_sizer.Remove( panel_info )
+            if type( panel_info ) != tuple:
+                
+                self._panel_sizer.Detach( panel_info )
+                
+                wx.CallAfter( panel_info.Destroy )
+                
             
             self._list_box.Delete( selection )
             
@@ -1838,7 +1971,7 @@ class ListBox( wx.ScrolledWindow ):
             
             self.PopupMenu( menu )
             
-            menu.Destroy()
+            wx.CallAfter( menu.Destroy )
             
         
         event.Skip()
@@ -2212,7 +2345,7 @@ class OnOffButton( wx.Button ):
     
     def IsOn( self ): return self._on
     
-class PopupMessage( wx.Window ):
+class PopupWindow( wx.Window ):
     
     def __init__( self, parent ):
         
@@ -2221,16 +2354,15 @@ class PopupMessage( wx.Window ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
     
-    def EventDismiss( self, event ):
-        
-        self.GetParent().Dismiss( self )
-        
+    def Dismiss( self ): self.GetParent().Dismiss( self )
     
-class PopupMessageDismissAll( PopupMessage ):
+    def EventDismiss( self, event ): self.Dismiss()
+    
+class PopupDismissAll( PopupWindow ):
     
     def __init__( self, parent ):
         
-        PopupMessage.__init__( self, parent )
+        PopupWindow.__init__( self, parent )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2251,13 +2383,120 @@ class PopupMessageDismissAll( PopupMessage ):
     
     def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HC.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
     
+class PopupMessage( PopupWindow ):
+    
+    def __init__( self, parent, message ):
+        
+        PopupWindow.__init__( self, parent )
+        
+        self._message = message
+        
+    
+    def IsClosed( self ): return self._message.IsClosed()
+    
+    def Update( self ): pass
+    
+class PopupMessageDBError( PopupMessage ):
+    
+    def __init__( self, parent, message ):
+        
+        PopupMessage.__init__( self, parent, message )
+        
+        text = message.GetInfo( 'text' )
+        caller_traceback = message.GetInfo( 'caller_traceback' )
+        db_traceback = message.GetInfo( 'db_traceback' )
+        
+        self._copy_text = 'DBException: ' + text + os.linesep + os.linesep + caller_traceback + os.linesep + os.linesep + db_traceback
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        error = wx.StaticText( self, label = 'DBException', style = wx.ALIGN_CENTER )
+        error.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        text = wx.StaticText( self, label = HC.u( text ) )
+        text.Wrap( 380 )
+        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._show_caller_tb_button = wx.Button( self, label = 'show caller traceback' )
+        self._show_caller_tb_button.Bind( wx.EVT_BUTTON, self.EventShowCallerButton )
+        self._show_caller_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._caller_tb_text = wx.StaticText( self, label = caller_traceback )
+        self._caller_tb_text.Wrap( 380 )
+        self._caller_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._caller_tb_text.Hide()
+        
+        self._show_db_tb_button = wx.Button( self, label = 'show db traceback' )
+        self._show_db_tb_button.Bind( wx.EVT_BUTTON, self.EventShowDBButton )
+        self._show_db_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        self._db_tb_text = wx.StaticText( self, label = db_traceback )
+        self._db_tb_text.Wrap( 380 )
+        self._db_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._db_tb_text.Hide()
+        
+        self._copy_tb_button = wx.Button( self, label = 'copy tracebacks' )
+        self._copy_tb_button.Bind( wx.EVT_BUTTON, self.EventCopyButton )
+        self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        vbox.AddF( error, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_caller_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._caller_tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_db_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._db_tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._copy_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def EventCopyButton( self, event ): HC.pubsub.pub( 'clipboard', 'text', self._copy_text )
+    
+    def EventShowCallerButton( self, event ):
+        
+        if self._caller_tb_text.IsShown():
+            
+            self._show_caller_tb_button.SetLabel( 'show caller traceback' )
+            
+            self._caller_tb_text.Hide()
+            
+        else:
+            
+            self._show_caller_tb_button.SetLabel( 'hide caller traceback' )
+            
+            self._caller_tb_text.Show()
+            
+        
+        self.GetParent().MakeSureEverythingFits()
+        
+    
+    def EventShowDBButton( self, event ):
+        
+        if self._db_tb_text.IsShown():
+            
+            self._show_db_tb_button.SetLabel( 'show db traceback' )
+            
+            self._db_tb_text.Hide()
+            
+        else:
+            
+            self._show_db_tb_button.SetLabel( 'hide db traceback' )
+            
+            self._db_tb_text.Show()
+            
+        
+        self.GetParent().MakeSureEverythingFits()
+        
+    
 class PopupMessageError( PopupMessage ):
     
-    def __init__( self, parent, etype, value, trace ):
+    def __init__( self, parent, message ):
         
-        PopupMessage.__init__( self, parent )
+        PopupMessage.__init__( self, parent, message )
         
-        self._copy_text = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + trace
+        ( etype, value, trace ) = message.GetInfo( 'error' )
+        
+        self._copy_text = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + os.linesep + trace
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2280,10 +2519,9 @@ class PopupMessageError( PopupMessage ):
         self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._tb_text.Hide()
         
-        self._copy_tb_button = wx.Button( self, label = 'copy info' )
+        self._copy_tb_button = wx.Button( self, label = 'copy traceback' )
         self._copy_tb_button.Bind( wx.EVT_BUTTON, self.EventCopyButton )
         self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._copy_tb_button.Hide()
         
         vbox.AddF( error, FLAGS_EXPAND_PERPENDICULAR )
         if len( HC.u( value ) ) > 0: vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
@@ -2303,14 +2541,12 @@ class PopupMessageError( PopupMessage ):
             self._show_tb_button.SetLabel( 'show traceback' )
             
             self._tb_text.Hide()
-            self._copy_tb_button.Hide()
             
         else:
             
             self._show_tb_button.SetLabel( 'hide traceback' )
             
             self._tb_text.Show()
-            self._copy_tb_button.Show()
             
         
         self.GetParent().MakeSureEverythingFits()
@@ -2318,15 +2554,15 @@ class PopupMessageError( PopupMessage ):
     
 class PopupMessageFiles( PopupMessage ):
     
-    def __init__( self, parent, message_string, hashes ):
+    def __init__( self, parent, message ):
         
-        PopupMessage.__init__( self, parent )
+        PopupMessage.__init__( self, parent, message )
         
-        self._hashes = hashes
+        text = message.GetInfo( 'text' )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        button = wx.Button( self, label = message_string )
+        button = wx.Button( self, label = text )
         button.Bind( wx.EVT_BUTTON, self.EventButton )
         button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
@@ -2337,19 +2573,16 @@ class PopupMessageFiles( PopupMessage ):
     
     def EventButton( self, event ):
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._hashes )
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._message.GetInfo( 'hashes' ) )
         
         HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
         
     
 class PopupMessageGauge( PopupMessage ):
     
-    def __init__( self, parent, job_key ):
+    def __init__( self, parent, message ):
         
-        PopupMessage.__init__( self, parent )
-        
-        self._job_key = job_key
-        self._hashes = set()
+        PopupMessage.__init__( self, parent, message )
         
         self._done = False
         
@@ -2375,126 +2608,122 @@ class PopupMessageGauge( PopupMessage ):
         self._show_file_button.Bind( wx.EVT_BUTTON, self.EventShowFileButton )
         self._show_file_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        self._show_file_button.Hide()
-        
         vbox.AddF( self._text, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_file_button, FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
-        HC.pubsub.sub( self, 'Failed', 'message_gauge_failed' )
-        HC.pubsub.sub( self, 'SetInfo', 'message_gauge_info' )
-        HC.pubsub.sub( self, 'ShowFileButton', 'message_gauge_show_file_button' )
-        
     
-    def EventCancelButton( self, event ):
+    def Dismiss( self ):
         
-        self._job_key.Cancel()
-        
-        self.GetParent().Dismiss( self )
-        
-    
-    def EventDismiss( self, event ):
-        
-        if not self._done:
+        if not self._message.IsClosed() and self._message.GetInfo( 'mode' ) == 'cancelable gauge':
             
             import ClientGUIDialogs
             
             with ClientGUIDialogs.DialogYesNo( self, 'Do you want to continue in the background, or stop right now?', yes_label = 'continue', no_label = 'stop' ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_NO: self._job_key.Cancel()
+                result = dlg.ShowModal()
+                
+                if result == wx.ID_CANCEL: return
+                elif result == wx.ID_NO: self._message.GetInfo( 'job_key' ).Cancel()
                 
             
         
-        self.GetParent().Dismiss( self )
+        PopupMessage.Dismiss( self )
+        
+    
+    def EventCancelButton( self, event ):
+        
+        if self._message.GetInfo( 'mode' ) == 'cancelable gauge':
+            
+            job_key = self._message.GetInfo( 'job_key' )
+            
+            job_key.Cancel()
+            
+            self._cancel_button.Disable()
+            
         
     
     def EventShowFileButton( self, event ):
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._hashes )
+        hashes = self._message.GetInfo( 'hashes' )
+        
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
         
         HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
         
     
-    def Failed( self, job_key ):
+    def Update( self ):
         
-        if job_key == self._job_key: self.GetParent().Dismiss( self )
+        mode = self._message.GetInfo( 'mode' )
+        text = self._message.GetInfo( 'text' )
         
-    
-    def SetInfo( self, job_key, range, value, message ):
-        
-        if job_key == self._job_key:
+        if mode == 'files':
             
-            if value is None:
+            self._text.Hide()
+            self._cancel_button.Hide()
+            self._gauge.Hide()
+            self._show_file_button.Show()
+            
+            if self._show_file_button.GetLabel() != text: self._show_file_button.SetLabel( text )
+            
+        else:
+            
+            self._text.Show()
+            
+            if self._text.GetLabel() != text: self._text.SetLabel( text )
+            
+            if mode == 'text':
                 
-                self._done = True
-                
-                self._gauge.Hide()
                 self._cancel_button.Hide()
+                self._gauge.Hide()
+                self._show_file_button.Hide()
                 
-            else:
+            elif mode in ( 'gauge', 'cancelable gauge' ):
                 
+                if mode == 'cancelable gauge': self._cancel_button.Show()
+                else: self._cancel_button.Hide()
                 self._gauge.Show()
-                self._cancel_button.Show()
+                self._show_file_button.Hide()
                 
-                if range is None:
-                    
-                    self._gauge.Pulse()
-                    
-                    byte_info = HC.ConvertIntToBytes( value )
-                    
+                range = self._message.GetInfo( 'range' )
+                value = self._message.GetInfo( 'value' )
+            
+                if range is None or value is None: self._gauge.Pulse()
                 else:
-                    
-                    if range == value: self._done = True
-                    else: self._done = False
                     
                     self._gauge.SetRange( range )
                     self._gauge.SetValue( value )
                     
                 
             
-            if self._done: self._cancel_button.Hide()
-            else: self._cancel_button.Show()
-            
-            self._text.SetLabel( message )
-            
-            self.GetParent().MakeSureEverythingFits()
-            
-        
-    
-    def ShowFileButton( self, job_key, message, hashes ):
-        
-        if job_key == self._job_key:
-            
-            self._done = True
-            
-            self._show_file_button.SetLabel( message )
-            self._hashes = hashes
-            
-            self._text.Hide()
-            self._gauge.Hide()
-            self._show_file_button.Show()
-            
-            self.GetParent().MakeSureEverythingFits()
-            
         
     
 class PopupMessageText( PopupMessage ):
     
-    def __init__( self, parent, message_string ):
+    def __init__( self, parent, message ):
         
-        PopupMessage.__init__( self, parent )
+        PopupMessage.__init__( self, parent, message )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        text = wx.StaticText( self, label = message_string )
-        text.Wrap( 380 )
-        text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        text = message.GetInfo( 'text' )
         
-        vbox.AddF( text, FLAGS_EXPAND_PERPENDICULAR )
+        self._text = wx.StaticText( self, label = text )
+        self._text.Wrap( 380 )
+        self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
+        vbox.AddF( self._text, FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+    
+    def Update( self ):
+        
+        text = self._message.GetInfo( 'text' )
+        
+        if self._text.GetLabel() != text: self._text.SetLabel( text )
         
     
 class PopupMessageManager( wx.Frame ):
@@ -2511,7 +2740,7 @@ class PopupMessageManager( wx.Frame ):
         
         self._message_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._dismiss_all = PopupMessageDismissAll( self )
+        self._dismiss_all = PopupDismissAll( self )
         self._dismiss_all.Hide()
         
         vbox.AddF( self._message_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2535,6 +2764,12 @@ class PopupMessageManager( wx.Frame ):
         sys.excepthook = CC.CatchExceptionClient
         HC.ShowException = CC.ShowExceptionClient
         HC.ShowText = CC.ShowTextClient
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_POPUP )
+        
+        self._timer = wx.Timer( self, id = ID_TIMER_POPUP )
+        
+        self._timer.Start( 500, wx.TIMER_CONTINUOUS )
         
     
     def _CheckPending( self ):
@@ -2566,32 +2801,16 @@ class PopupMessageManager( wx.Frame ):
     def _CreateMessageWindow( self, message ):
         
         message_type = message.GetType()
-        info = message.GetInfo()
         
-        if message_type == HC.MESSAGE_TYPE_TEXT:
-            
-            message_string = info
-            
-            window = PopupMessageText( self, message_string )
-            
-        elif message_type == HC.MESSAGE_TYPE_ERROR:
-            
-            ( etype, value, trace ) = info
-            
-            window = PopupMessageError( self, etype, value, trace )
-            
-        elif message_type == HC.MESSAGE_TYPE_FILES:
-            
-            ( message_string, hashes ) = info
-            
-            window = PopupMessageFiles( self, message_string, hashes )
-            
-        elif message_type == HC.MESSAGE_TYPE_GAUGE:
-            
-            job_key = info
-            
-            window = PopupMessageGauge( self, job_key )
-            
+        if message_type == HC.MESSAGE_TYPE_TEXT: c = PopupMessageText
+        elif message_type == HC.MESSAGE_TYPE_ERROR: c = PopupMessageError
+        elif message_type == HC.MESSAGE_TYPE_DB_ERROR: c = PopupMessageDBError
+        elif message_type == HC.MESSAGE_TYPE_FILES: c = PopupMessageFiles
+        elif message_type == HC.MESSAGE_TYPE_GAUGE: c = PopupMessageGauge
+        
+        window = c( self, message )
+        
+        window.Update()
         
         return window
         
@@ -2599,28 +2818,24 @@ class PopupMessageManager( wx.Frame ):
     def _PrintMessage( self, message ):
         
         message_type = message.GetType()
-        info = message.GetInfo()
         
-        if message_type == HC.MESSAGE_TYPE_TEXT:
-            
-            message_string = HC.u( info )
-            
+        if message_type == HC.MESSAGE_TYPE_TEXT: message_string = HC.u( message.GetInfo( 'text' ) )
         elif message_type == HC.MESSAGE_TYPE_ERROR:
             
-            ( etype, value, trace ) = info
+            ( etype, value, trace ) = message.GetInfo( 'error' )
             
-            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + HC.u( trace )
+            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + os.linesep + trace
             
-        elif message_type == HC.MESSAGE_TYPE_FILES:
+        elif message_type == HC.MESSAGE_TYPE_DB_ERROR:
             
-            ( message_string, hashes ) = info
+            text = message.GetInfo( 'text' )
+            caller_traceback = message.GetInfo( 'caller_traceback' )
+            db_traceback = message.GetInfo( 'db_traceback' )
             
-            message_string = HC.u( message_string )
+            message_string = 'DBException: ' + text + os.linesep + os.linesep + caller_traceback + os.linesep + os.linesep + db_traceback
             
-        elif message_type == HC.MESSAGE_TYPE_GAUGE:
-            
-            return
-            
+        elif message_type == HC.MESSAGE_TYPE_FILES: message_string = HC.u( message.GetInfo( 'text' ) )
+        elif message_type == HC.MESSAGE_TYPE_GAUGE: return
         
         try: print( message_string )
         except: print( repr( message_string ) )
@@ -2649,11 +2864,15 @@ class PopupMessageManager( wx.Frame ):
     
     def AddMessage( self, message ):
         
-        self._PrintMessage( message )
-        
-        self._pending_messages.append( message )
-        
-        self._CheckPending()
+        try:
+            
+            self._PrintMessage( message )
+            
+            self._pending_messages.append( message )
+            
+            self._CheckPending()
+            
+        except: print( traceback.format_exc() )
         
     
     def CleanBeforeDestroy( self ):
@@ -2667,7 +2886,7 @@ class PopupMessageManager( wx.Frame ):
         
         self._message_vbox.Detach( window )
         
-        window.Destroy()
+        wx.CallAfter( window.Destroy )
         
         self._SizeAndPositionAndShow()
         
@@ -2696,6 +2915,21 @@ class PopupMessageManager( wx.Frame ):
         
     
     def MakeSureEverythingFits( self ): self._SizeAndPositionAndShow()
+    
+    def TIMEREvent( self, event ):
+        
+        sizer_items = self._message_vbox.GetChildren()
+        
+        for sizer_item in sizer_items:
+            
+            message_window = sizer_item.GetWindow()
+            
+            if message_window.IsClosed(): self.Dismiss( message_window )
+            else: message_window.Update()
+            
+        
+        self.MakeSureEverythingFits()
+        
     
 class RegexButton( wx.Button ):
     
@@ -2783,7 +3017,7 @@ class RegexButton( wx.Button ):
         
         self.PopupMenu( menu )
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
     
     def EventMenu( self, event ):
@@ -3322,9 +3556,9 @@ class AdvancedImportOptions( AdvancedOptions ):
         
         panel = self._panel
         
-        self._auto_archive = wx.CheckBox( panel )
+        self._auto_archive = wx.CheckBox( panel, label = 'archive all imports' )
         
-        self._exclude_deleted = wx.CheckBox( panel )
+        self._exclude_deleted = wx.CheckBox( panel, label = 'exclude already deleted files' )
         
         self._min_size = NoneableSpinCtrl( panel, 'minimum size (KB): ', multiplier = 1024 )
         self._min_size.SetValue( 5120 )
@@ -3332,20 +3566,10 @@ class AdvancedImportOptions( AdvancedOptions ):
         self._min_resolution = NoneableSpinCtrl( panel, 'minimum resolution: ', num_dimensions = 2 )
         self._min_resolution.SetValue( ( 50, 50 ) )
         
-        hbox1 = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox1.AddF( self._auto_archive, FLAGS_MIXED )
-        hbox1.AddF( wx.StaticText( panel, label = ' archive all imports' ), FLAGS_MIXED )
-        
-        hbox2 = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox2.AddF( self._exclude_deleted, FLAGS_MIXED )
-        hbox2.AddF( wx.StaticText( panel, label = ' exclude already deleted files' ), FLAGS_MIXED )
-        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( hbox1, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( hbox2, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._auto_archive, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._exclude_deleted, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._min_size, FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._min_resolution, FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3426,27 +3650,26 @@ class AdvancedTagOptions( AdvancedOptions ):
                 
                 outer_gridbox.AddF( wx.StaticText( panel, label = service_identifier.GetName() ), FLAGS_MIXED )
             
-                gridbox = wx.FlexGridSizer( 0, 2 )
-                
-                gridbox.AddGrowableCol( 1, 1 )
+                vbox = wx.BoxSizer( wx.VERTICAL )
                 
                 for namespace in self._namespaces:
                     
-                    if namespace == '': text = wx.StaticText( panel, label = 'no namespace' )
-                    else: text = wx.StaticText( panel, label = namespace )
+                    if namespace == '': label = 'no namespace'
+                    else: label = namespace
                     
-                    namespace_checkbox = wx.CheckBox( panel )
+                    namespace_checkbox = wx.CheckBox( panel, label = label )
+                    
                     if service_identifier in self._initial_settings and namespace in self._initial_settings[ service_identifier ]: namespace_checkbox.SetValue( True )
                     else: namespace_checkbox.SetValue( False )
+                    
                     namespace_checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
                     
                     self._service_identifiers_to_checkbox_info[ service_identifier ].append( ( namespace, namespace_checkbox ) )
                     
-                    gridbox.AddF( text, FLAGS_MIXED )
-                    gridbox.AddF( namespace_checkbox, FLAGS_EXPAND_BOTH_WAYS )
+                    vbox.AddF( namespace_checkbox, FLAGS_EXPAND_BOTH_WAYS )
                     
                 
-                outer_gridbox.AddF( gridbox, FLAGS_MIXED )
+                outer_gridbox.AddF( vbox, FLAGS_MIXED )
                 
             
             self._vbox.AddF( outer_gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3739,7 +3962,7 @@ class TagsBox( ListBox ):
             
             self.PopupMenu( menu )
             
-            menu.Destroy()
+            wx.CallAfter( menu.Destroy )
             
         
         event.Skip()
@@ -4211,6 +4434,8 @@ class TagsBoxManage( TagsBox ):
         
         self._callable = callable
         
+        self._show_deleted = False
+        
         self._current_tags = set( current_tags )
         self._deleted_tags = set( deleted_tags )
         self._pending_tags = set( pending_tags )
@@ -4250,7 +4475,11 @@ class TagsBoxManage( TagsBox ):
                 if tag in self._deleted_tags: prefix = HC.ConvertStatusToPrefix( HC.DELETED_PENDING )
                 else: prefix = HC.ConvertStatusToPrefix( HC.PENDING )
                 
-            else: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
+            else:
+                
+                if self._show_deleted: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
+                else: continue
+                
             
             tag_string = prefix + tag
             
@@ -4265,6 +4494,13 @@ class TagsBoxManage( TagsBox ):
         self._ordered_strings.sort()
         
         self._TextsHaveChanged()
+        
+    
+    def HideDeleted( self ):
+        
+        self._show_deleted = False
+        
+        self._RebuildTagStrings()
         
     
     def PetitionTag( self, tag ):
@@ -4294,6 +4530,42 @@ class TagsBoxManage( TagsBox ):
         
         self._RebuildTagStrings()
         
+    
+    def ShowDeleted( self ):
+        
+        self._show_deleted = True
+        
+        self._RebuildTagStrings()
+        
+    
+class TagsBoxManageWithShowDeleted( StaticBox ):
+    
+    def __init__( self, parent, callable, current_tags, deleted_tags, pending_tags, petitioned_tags ):
+        
+        StaticBox.__init__( self, parent, 'tags' )
+        
+        self._tags_box = TagsBoxManage( self, callable, current_tags, deleted_tags, pending_tags, petitioned_tags )
+        
+        self._show_deleted = wx.CheckBox( self, label = 'show deleted' )
+        self._show_deleted.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
+        
+        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
+        self.AddF( self._show_deleted, FLAGS_LONE_BUTTON )
+        
+    
+    def EventShowDeleted( self, event ):
+        
+        if self._show_deleted.GetValue() == True: self._tags_box.ShowDeleted()
+        else: self._tags_box.HideDeleted()
+        
+    
+    def PetitionTag( self, tag ): self._tags_box.PetitionTag( tag )
+    
+    def PendTag( self, tag ): self._tags_box.PendTag( tag )
+    
+    def RescindPetition( self, tag ): self._tags_box.RescindPetition( tag )
+    
+    def RescindPend( self, tag ): self._tags_box.RescindPend( tag )
     
 class TagsBoxNamespaces( TagsBox ):
     

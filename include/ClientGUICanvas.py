@@ -1412,7 +1412,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         self._menu_open = False
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
         event.Skip()
         
@@ -1756,7 +1756,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         self._menu_open = False
         
-        menu.Destroy()
+        wx.CallAfter( menu.Destroy )
         
         event.Skip()
         
@@ -3804,7 +3804,7 @@ class Image( wx.Window ):
             
             dc.DrawBitmap( hydrus_bmp, 0, 0 )
             
-            hydrus_bmp.Destroy()
+            wx.CallAfter( hydrus_bmp.Destroy )
             
             dc.SetUserScale( 1.0, 1.0 )
             

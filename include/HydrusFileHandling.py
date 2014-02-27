@@ -41,8 +41,7 @@ def GetFileInfo( path, hash ):
     
     if mime in HC.IMAGES:
         
-        try: image_container = HydrusImageHandling.RenderImage( path, hash )
-        except: raise HydrusExceptions.ForbiddenException( 'Could not load that file as an image.' )
+        image_container = HydrusImageHandling.RenderImage( path, hash )
         
         ( width, height ) = image_container.GetSize()
         

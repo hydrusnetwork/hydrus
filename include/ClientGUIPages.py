@@ -137,27 +137,36 @@ class PageLog( PageBase, wx.Panel ):
         if timestamp is None: timestamp = HC.GetNow()
         
         message_type = message.GetType()
-        info = message.GetInfo()
         
         if message_type == HC.MESSAGE_TYPE_TEXT:
             
             message_type_string = 'message'
             
-            message_string = info
+            message_string = message.GetInfo( 'text' )
             
         elif message_type == HC.MESSAGE_TYPE_ERROR:
             
             message_type_string = 'error'
             
-            exception = info
+            ( etype, value, trace ) = message.GetInfo( 'error' )
             
-            message_string = HC.u( exception )
+            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + HC.u( trace )
+            
+        elif message_type == HC.MESSAGE_TYPE_DB_ERROR:
+            
+            message_type_string = 'db error'
+            
+            text = message.GetInfo( 'text' )
+            caller_traceback = message.GetInfo( 'caller_traceback' )
+            db_traceback = message.GetInfo( 'db_traceback' )
+            
+            message_string = text + os.linesep + caller_traceback + os.linesep + db_traceback
             
         elif message_type == HC.MESSAGE_TYPE_FILES:
             
             message_type_string = 'files'
             
-            ( message_string, hashes ) = info
+            message_string = message.GetInfo( 'text' )
             
         else: return # gauge
         
@@ -305,7 +314,7 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
             
             self.ReplaceWindow( self._media_panel, new_panel )
             
-            self._media_panel.Destroy()
+            wx.CallAfter( self._media_panel.Destroy )
             
             self._media_panel = new_panel
             

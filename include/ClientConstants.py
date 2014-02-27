@@ -286,6 +286,7 @@ CLIENT_DEFAULT_OPTIONS[ 'confirm_client_exit' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
 CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = SORT_BY_LEXICOGRAPHIC_ASC
 
+CLIENT_DEFAULT_OPTIONS[ 'pause_export_folders_sync' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'pause_import_folders_sync' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'pause_repo_sync' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'pause_subs_sync' ] = False
@@ -317,7 +318,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         trace = ''.join( trace_list )
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } ) )
         
     except:
         
@@ -416,6 +417,54 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
     
     return m.get()
+    
+def GenerateExportFilename( media, terms ):
+
+    filename = ''
+    
+    for ( term_type, term ) in terms:
+        
+        tags_manager = media.GetTagsManager()
+        
+        if term_type == 'string': filename += term
+        elif term_type == 'namespace':
+            
+            tags = tags_manager.GetNamespaceSlice( ( term, ) )
+            
+            filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
+            
+        elif term_type == 'predicate':
+            
+            if term in ( 'tags', 'nn tags' ):
+                
+                current = tags_manager.GetCurrent()
+                pending = tags_manager.GetPending()
+                
+                tags = list( current.union( pending ) )
+                
+                if term == 'nn tags': tags = [ tag for tag in tags if ':' not in tag ]
+                else: tags = [ tag if ':' not in tag else tag.split( ':' )[1] for tag in tags ]
+                
+                tags.sort()
+                
+                filename += ', '.join( tags )
+                
+            elif term == 'hash':
+                
+                hash = media.GetHash()
+                
+                filename += hash.encode( 'hex' )
+                
+            
+        elif term_type == 'tag':
+            
+            if ':' in term: term = term.split( ':' )[1]
+            
+            if tags_manager.HasTag( term ): filename += term
+            
+        
+    
+    return filename
     
 def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
@@ -626,35 +675,108 @@ def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_I
     
     return ( current, deleted, pending, petitioned )
     
+def ParseExportPhrase( phrase ):
+    
+    try:
+        
+        terms = [ ( 'string', phrase ) ]
+        
+        new_terms = []
+        
+        for ( term_type, term ) in terms:
+            
+            if term_type == 'string':
+                
+                while '[' in term:
+                    
+                    ( pre, term ) = term.split( '[', 1 )
+                    
+                    ( namespace, term ) = term.split( ']', 1 )
+                    
+                    new_terms.append( ( 'string', pre ) )
+                    new_terms.append( ( 'namespace', namespace ) )
+                    
+                
+            
+            new_terms.append( ( term_type, term ) )
+            
+        
+        terms = new_terms
+        
+        new_terms = []
+        
+        for ( term_type, term ) in terms:
+            
+            if term_type == 'string':
+                
+                while '{' in term:
+                    
+                    ( pre, term ) = term.split( '{', 1 )
+                    
+                    ( predicate, term ) = term.split( '}', 1 )
+                    
+                    new_terms.append( ( 'string', pre ) )
+                    new_terms.append( ( 'predicate', predicate ) )
+                    
+                
+            
+            new_terms.append( ( term_type, term ) )
+            
+        
+        terms = new_terms
+        
+        new_terms = []
+        
+        for ( term_type, term ) in terms:
+            
+            if term_type == 'string':
+                
+                while '(' in term:
+                    
+                    ( pre, term ) = term.split( '(', 1 )
+                    
+                    ( tag, term ) = term.split( ')', 1 )
+                    
+                    new_terms.append( ( 'string', pre ) )
+                    new_terms.append( ( 'tag', tag ) )
+                    
+                
+            
+            new_terms.append( ( term_type, term ) )
+            
+        
+        terms = new_terms
+        
+    except: raise Exception( 'Could not parse that phrase!' )
+    
+    return terms
+    
 def ShowExceptionClient( e ):
     
-    if not wx.Thread_IsMain():
+    if isinstance( e, HydrusExceptions.DBException ):
         
-        ( etype, value, tb ) = sys.exc_info()
+        ( caller_traceback, db_traceback ) = e.GetTracebacks()
         
-        if etype is not None: e = type( e )( os.linesep.join( traceback.format_exception( etype, value, tb ) ) )
+        info = {}
         
-    
-    etype = type( e )
-    
-    if etype == HydrusExceptions.DBException:
+        info[ 'text' ] = HC.u( e )
+        info[ 'caller_traceback' ] = caller_traceback
+        info[ 'db_traceback' ] = db_traceback
         
-        value = ''
-        
-        trace = HC.u( e )
+        message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, info )
         
     else:
         
-        value = HC.u( e )
+        ( etype, value, tb ) = sys.exc_info()
         
-        trace_list = traceback.format_stack()
+        trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
-        trace = ''.join( trace_list )
+        message = HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } )
         
     
-    HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, ( etype, value, trace ) ) )
+    HC.pubsub.pub( 'message', message )
     
-def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, text ) )
+def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
 
 class AutocompleteMatches():
     
