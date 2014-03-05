@@ -1776,6 +1776,7 @@ def THREADDownloadURL( message, url, url_string ):
         
         if result in ( 'successful', 'redundant' ):
             
+            message.SetInfo( 'text', url_string )
             message.SetInfo( 'hashes', { hash } )
             message.SetInfo( 'mode', 'files' )
             

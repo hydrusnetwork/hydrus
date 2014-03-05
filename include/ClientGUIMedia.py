@@ -909,7 +909,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         HC.pubsub.sub( self, 'NewThumbnails', 'new_thumbnails' )
         HC.pubsub.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
-        HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'options_updated' )
+        HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         HC.pubsub.sub( self, 'WaterfallThumbnail', 'waterfall_thumbnail' )
         
     

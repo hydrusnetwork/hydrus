@@ -1321,22 +1321,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if service_type in HC.REMOTE_SERVICES:
             
-            info[ 'last_error' ] = 0
+            if 'last_error' not in info: info[ 'last_error' ] = 0
             
         
         if service_type in HC.RESTRICTED_SERVICES:
             
-            account = HC.GetUnknownAccount()
-            
-            account.MakeStale()
-            
-            info[ 'account' ] = account
+            if 'account' not in info:
+                
+                account = HC.GetUnknownAccount()
+                
+                account.MakeStale()
+                
+                info[ 'account' ] = account
+                
             
         
         if service_type in HC.REPOSITORIES:
             
-            info[ 'first_begin' ] = 0
-            info[ 'next_begin' ] = 0
+            if 'first_timestamp' not in info: info[ 'first_timestamp' ] = None
+            if 'next_download_timestamp' not in info: info[ 'next_download_timestamp' ] = 0
+            if 'next_processing_timestamp' not in info: info[ 'next_processing_timestamp' ] = 0
             
         
         c.execute( 'INSERT INTO services ( service_key, service_type, name, info ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, info ) )
@@ -3627,18 +3631,32 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                         
                     
-                elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
+                elif action == HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP:
                     
-                    ( begin, end ) = row
-                    
-                    next_begin = end + 1
+                    next_download_timestamp = row
                     
                     ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
-                    if info[ 'first_begin' ] == 0: update = { 'first_begin' : next_begin, 'next_begin' : next_begin }
-                    else: update = { 'next_begin' : next_begin }
+                    if next_download_timestamp > info[ 'next_download_timestamp' ]:
+                        
+                        if info[ 'first_timestamp' ] is None: update = { 'first_timestamp' : next_download_timestamp, 'next_download_timestamp' : next_download_timestamp }
+                        else: update = { 'next_download_timestamp' : next_download_timestamp }
+                        
+                        self._UpdateServiceInfo( c, service_id, update )
+                        
                     
-                    self._UpdateServiceInfo( c, service_id, update )
+                elif action == HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP:
+                    
+                    next_processing_timestamp = row
+                    
+                    ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    
+                    if next_processing_timestamp > info[ 'next_processing_timestamp' ]:
+                        
+                        update = { 'next_processing_timestamp' : next_processing_timestamp }
+                        
+                        self._UpdateServiceInfo( c, service_id, update )
+                        
                     
                 
             
@@ -3700,19 +3718,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _ResetService( self, c, service_identifier ):
         
+        service_name = service_identifier.GetName()
+        service_type = service_identifier.GetType()
+        
         service_id = self._GetServiceId( c, service_identifier )
         
         service = self._GetService( c, service_id )
         
         info = service.GetInfo()
-        
-        service_key = os.urandom( 32 )
-        
-        service_type = service_identifier.GetType()
-        
-        service_name = service_identifier.GetName()
-        
-        new_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, service_name )
         
         c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
@@ -3723,9 +3736,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             self._RecalcCombinedMappings( c )
             
         
-        self._AddService( c, new_service_identifier, info )
+        if service_type in HC.REPOSITORIES:
+            
+            info[ 'next_processing_timestamp' ] = 0
+            
+            self.pub( 'notify_restart_repo_sync_daemon' )
+            
         
-        self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, new_service_identifier ) ] } )
+        self._AddService( c, service_identifier, info )
+        
+        self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET ) ] } )
         self.pub( 'notify_new_pending' )
         self.pub( 'permissions_are_stale' )
         HC.ShowText( 'reset ' + service_name )
@@ -3757,7 +3777,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._RecalcCombinedMappings( c )
         
-        service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+        service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
         
         service_identifiers_to_service_updates = { HC.COMBINED_TAG_SERVICE_IDENTIFIER : [ service_update ] }
         
@@ -4189,11 +4209,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     client_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, 'deleted service' )
                     
-                    service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, client_service_identifier )
+                    service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                     
                     service_identifiers_to_service_updates = { client_service_identifier : [ service_update ] }
                     
                     self.pub_service_updates( service_identifiers_to_service_updates )
+                    
+                    if service_type in HC.REPOSITORIES:
+                        
+                        service_key_hex = service_key.encode( 'hex' )
+                        
+                        all_update_filenames = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+                        
+                        for filename in all_update_filenames:
+                            
+                            if filename.startswith( service_key_hex ):
+                                
+                                os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
+                                
+                            
+                        
                     
                     recalc_combined_mappings = True
                     
@@ -4252,13 +4287,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
-                service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET, service_identifier )
+                service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                 
                 service_identifiers_to_service_updates = { service_identifier : [ service_update ] }
                 
                 self.pub_service_updates( service_identifiers_to_service_updates )
                 
                 service_type = service_identifier.GetType()
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    service_key = service_identifier.GetKey()
+                    
+                    service_key_hex = service_key.encode( 'hex' )
+                    
+                    all_update_filenames = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+                    
+                    for filename in all_update_filenames:
+                        
+                        if filename.startswith( service_key_hex ):
+                            
+                            os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
+                            
+                        
+                    
                 
                 if service_type == HC.TAG_REPOSITORY: recalc_combined_mappings = True
                 
@@ -4463,6 +4515,7 @@ class DB( ServiceDB ):
             
             if not os.path.exists( HC.CLIENT_FILES_DIR ): os.mkdir( HC.CLIENT_FILES_DIR )
             if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
+            if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
             
             hex_chars = '0123456789abcdef'
             
@@ -4678,8 +4731,7 @@ class DB( ServiceDB ):
             self.pub( 'thumbnail_resize' )
             
         
-        self.pub( 'refresh_menu_bar' )
-        self.pub( 'options_updated' )
+        self.pub( 'notify_new_options' )
         
     
     def _SetPassword( self, c, password ):
@@ -4980,6 +5032,30 @@ class DB( ServiceDB ):
             c.execute( 'DROP TABLE imageboard_sites;' )
             c.execute( 'DROP TABLE imageboards;' )
             c.execute( 'DROP TABLE subscriptions;' )
+            
+        
+        if version == 105:
+            
+            if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
+            
+            result = c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.REPOSITORIES ) + ';' ).fetchall()
+            
+            for ( service_id, info ) in result:
+                
+                first_begin = info[ 'first_begin' ]
+                if first_begin == 0: first_begin = None
+                
+                next_begin = info[ 'next_begin' ]
+                
+                info[ 'first_timestamp' ] = first_begin
+                info[ 'next_download_timestamp' ] = 0
+                info[ 'next_processing_timestamp' ] = next_begin
+                
+                del info[ 'first_begin' ]
+                del info[ 'next_begin' ]
+                
+                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -7497,19 +7573,19 @@ def DAEMONSynchroniseRepositories():
             try:
                 
                 name = service_identifier.GetName()
-                
                 service_type = service_identifier.GetType()
+                service_key = service_identifier.GetServiceKey()
                 
                 try: service = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
                 
-                if service.CanUpdate():
+                if service.CanDownloadUpdate():
                     
                     message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' repository' )
                     
                     HC.pubsub.pub( 'message', message )
                     
-                    while service.CanUpdate():
+                    while service.CanDownloadUpdate():
                         
                         while HC.options[ 'pause_repo_sync' ]:
                             
@@ -7533,11 +7609,9 @@ def DAEMONSynchroniseRepositories():
                         
                         now = HC.GetNow()
                         
-                        first_begin = service.GetFirstBegin()
+                        ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = service.GetTimestamps()
                         
-                        next_begin = service.GetNextBegin()
-                        
-                        if first_begin == 0:
+                        if first_timestamp is None:
                             
                             range = None
                             value = 0
@@ -7546,8 +7620,8 @@ def DAEMONSynchroniseRepositories():
                             
                         else:
                             
-                            range = ( ( now - first_begin ) / HC.UPDATE_DURATION ) + 1
-                            value = ( ( next_begin - first_begin ) / HC.UPDATE_DURATION ) + 1
+                            range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                            value = ( ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                             
                             update_index_string = 'update ' + HC.u( value )
                             
@@ -7556,10 +7630,85 @@ def DAEMONSynchroniseRepositories():
                         
                         message.SetInfo( 'range', range )
                         message.SetInfo( 'value', value )
-                        message.SetInfo( 'text', prefix_string + 'downloading and parsing' )
+                        message.SetInfo( 'text', prefix_string + 'downloading' )
                         message.SetInfo( 'mode', 'gauge' )
                         
-                        update = service.Request( HC.GET, 'update', { 'begin' : next_begin } )
+                        update = service.Request( HC.GET, 'update', { 'begin' : next_download_timestamp } )
+                        
+                        update_path = CC.GetUpdatePath( service_key, value )
+                        
+                        with open( update_path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
+                        
+                        ( begin, end ) = update.GetBeginEnd()
+                        
+                        next_download_timestamp = end + 1
+                        
+                        service_updates = [ HC.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP, next_download_timestamp ) ]
+                        
+                        service_identifiers_to_service_updates = { service_identifier : service_updates }
+                        
+                        HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
+                        
+                        time.sleep( 0.10 )
+                        
+                        try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                        except: break
+                        
+                    
+                    message.Close()
+                    
+                
+                if service.CanProcessUpdate():
+                    
+                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'processing ' + name + ' repository' )
+                    
+                    HC.pubsub.pub( 'message', message )
+                    
+                    while service.CanProcessUpdate():
+                        
+                        while HC.options[ 'pause_repo_sync' ]:
+                            
+                            message.SetInfo( 'text', 'Repository synchronisation paused' )
+                            
+                            time.sleep( 5 )
+                            
+                            if HC.shutdown: raise Exception( 'Application shutting down!' )
+                            
+                            if HC.repos_changed:
+                                
+                                message.Close()
+                                
+                                HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                
+                                return
+                                
+                            
+                        
+                        if HC.shutdown: raise Exception( 'Application shutting down!' )
+                        
+                        now = HC.GetNow()
+                        
+                        ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = service.GetTimestamps()
+                        
+                        range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                        
+                        if next_processing_timestamp == 0: value = 0
+                        else: value = ( ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
+                        
+                        update_index_string = 'update ' + HC.u( value )
+                        
+                        prefix_string = name + ' ' + update_index_string + ': '
+                        
+                        message.SetInfo( 'range', range )
+                        message.SetInfo( 'value', value )
+                        message.SetInfo( 'text', prefix_string + 'processing' )
+                        message.SetInfo( 'mode', 'gauge' )
+                        
+                        update_path = CC.GetUpdatePath( service_key, value )
+                        
+                        with open( update_path, 'rb' ) as f: update_yaml = f.read()
+                        
+                        update = yaml.safe_load( update_yaml )
                         
                         if service_type == HC.TAG_REPOSITORY:
                             
@@ -7620,6 +7769,12 @@ def DAEMONSynchroniseRepositories():
                         
                         service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
                         
+                        ( begin, end ) = update.GetBeginEnd()
+                        
+                        next_processing_timestamp = end + 1
+                        
+                        service_updates.append( HC.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP, next_processing_timestamp ) )
+                        
                         service_identifiers_to_service_updates = { service_identifier : service_updates }
                         
                         HC.app.WriteSynchronous( 'service_updates', service_identifiers_to_service_updates )
@@ -7636,6 +7791,8 @@ def DAEMONSynchroniseRepositories():
                     
                 
             except Exception as e:
+                
+                print( traceback.format_exc() )
                 
                 message.Close()
                 

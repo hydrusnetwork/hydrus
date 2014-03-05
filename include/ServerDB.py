@@ -183,7 +183,7 @@ class FileDB():
         
         news = c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
         
-        service_data[ HC.SERVICE_UPDATE_NEXT_BEGIN ] = ( begin, end )
+        service_data[ HC.SERVICE_UPDATE_BEGIN_END ] = ( begin, end )
         service_data[ HC.SERVICE_UPDATE_NEWS ] = news
         
         #
@@ -676,7 +676,7 @@ class TagDB():
         
         news_rows = c.execute( 'SELECT news, timestamp FROM news WHERE service_id = ? AND timestamp BETWEEN ? AND ?;', ( service_id, begin, end ) ).fetchall()
         
-        service_data[ HC.SERVICE_UPDATE_NEXT_BEGIN ] = ( begin, end )
+        service_data[ HC.SERVICE_UPDATE_BEGIN_END ] = ( begin, end )
         service_data[ HC.SERVICE_UPDATE_NEWS ] = news_rows
         
         return HC.ServerToClientUpdate( service_data, content_data, hash_ids_to_hashes )

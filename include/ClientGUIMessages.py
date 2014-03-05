@@ -82,7 +82,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         HC.pubsub.sub( self, 'InboxConversation', 'inbox_conversation_gui' )
         HC.pubsub.sub( self, 'DeleteConversation', 'delete_conversation_gui' )
         HC.pubsub.sub( self, 'UpdateMessageStatuses', 'message_statuses_gui' )
-        HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'options_updated' )
+        HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         
     
     def RefreshAcceleratorTable( self ):
