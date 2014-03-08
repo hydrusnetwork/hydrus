@@ -640,6 +640,10 @@ def GetThumbnailPath( hash, full_size = True ):
     
     return path
     
+def GetUpdatePath( service_key, number ):
+    
+    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( number ) + '.yaml'
+    
 def IterateAllFilePaths():
     
     hex_chars = '0123456789abcdef'
@@ -1055,6 +1059,7 @@ class CDPPFileServiceIdentifiers():
     def ResetService( self, service_identifier ):
         
         self._current.discard( service_identifier )
+        self._pending.discard( service_identifier )
         self._deleted.discard( service_identifier )
         self._petitioned.discard( service_identifier )
         
@@ -1160,7 +1165,7 @@ class CPRemoteRatingsServiceIdentifiers():
             
             ( current, pending ) = self._service_identifiers_to_cp[ service_identifier ]
             
-            self._service_identifiers_to_cp[ service_identifier ] = ( None, pending )
+            self._service_identifiers_to_cp[ service_identifier ] = ( None, None )
             
         
     
@@ -2079,7 +2084,14 @@ class Service( HC.HydrusYAMLBase ):
     
     def CanDownload( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
     
-    def CanUpdate( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError() and self.HasUpdateDue()
+    def CanDownloadUpdate( self ):
+        
+        update_due = self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 < HC.GetNow()
+        
+        return self.CanDownload() and update_due
+        
+    
+    def CanProcessUpdate( self ): return self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
     
     def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
     
@@ -2097,17 +2109,11 @@ class Service( HC.HydrusYAMLBase ):
         return credentials
         
     
-    def GetFirstBegin( self ): return self._info[ 'first_begin' ]
-    
     def GetInfo( self ): return self._info
     
     def GetLikeDislike( self ): return ( self._info[ 'like' ], self._info[ 'dislike' ] )
     
     def GetLowerUpper( self ): return ( self._info[ 'lower' ], self._info[ 'upper' ] )
-    
-    def GetNextBegin( self ): return self._info[ 'next_begin' ]
-    
-    def GetServiceIdentifier( self ): return self._service_identifier
     
     def GetRecentErrorPending( self ):
         
@@ -2115,27 +2121,27 @@ class Service( HC.HydrusYAMLBase ):
         else: return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
         
     
+    def GetServiceIdentifier( self ): return self._service_identifier
+    
+    def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
+    
     def GetUpdateStatus( self ):
         
         if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): return 'updates on hold'
         else:
             
-            if self.CanUpdate(): return HC.ConvertTimestampToPrettySync( self._info[ 'next_begin' ] )
-            else:
-                
-                if self.HasRecentError(): return 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
-                else: return 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._info[ 'next_begin' ] + HC.UPDATE_DURATION + 1800 )
-                
+            if self.CanDownloadUpdate(): return 'downloading ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
+            elif self.CanProcessUpdate(): return 'processing ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
+            elif self.HasRecentError(): return 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
+            else: return 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
             
         
     
     def HasRecentError( self ):
         
-        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return self._info[ 'last_error' ] + 600 > HC.GetNow()
+        if 'account' in self._info and self._info[ 'account' ].HasPermission( HC.GENERAL_ADMIN ): return self._info[ 'last_error' ] + 900 > HC.GetNow()
         else: return self._info[ 'last_error' ] + 3600 * 4 > HC.GetNow()
         
-    
-    def HasUpdateDue( self ): return self._info[ 'next_begin' ] + HC.UPDATE_DURATION + 1800 < HC.GetNow()
     
     def IsInitialised( self ):
         
@@ -2158,12 +2164,9 @@ class Service( HC.HydrusYAMLBase ):
                     if action == HC.SERVICE_UPDATE_ERROR: self._info[ 'last_error' ] = HC.GetNow()
                     elif action == HC.SERVICE_UPDATE_RESET:
                         
-                        self._service_identifier = row
-                        
                         self._info[ 'last_error' ] = 0
                         
-                        if 'first_begin' in self._info: self._info[ 'first_begin' ] = 0
-                        if 'next_begin' in self._info: self._info[ 'next_begin' ] = 0
+                        if 'next_processing_timestamp' in self._info: self._info[ 'next_processing_timestamp' ] = 0
                         
                     elif action == HC.SERVICE_UPDATE_ACCOUNT:
                         
@@ -2178,13 +2181,25 @@ class Service( HC.HydrusYAMLBase ):
                         
                         self._info[ 'account' ].RequestMade( num_bytes )
                         
-                    elif action == HC.SERVICE_UPDATE_NEXT_BEGIN:
+                    elif action == HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP:
                         
-                        ( begin, end ) = row
+                        next_download_timestamp = row
                         
-                        next_begin = end + 1
+                        if next_download_timestamp > self._info[ 'next_download_timestamp' ]:
+                            
+                            if self._info[ 'first_timestamp' ] is None: self._info[ 'first_timestamp' ] = next_download_timestamp
+                            
+                            self._info[ 'next_download_timestamp' ] = next_download_timestamp
+                            
                         
-                        self.SetNextBegin( next_begin )
+                    elif action == HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP:
+                        
+                        next_processing_timestamp = row
+                        
+                        if next_processing_timestamp > self._info[ 'next_processing_timestamp' ]:
+                            
+                            self._info[ 'next_processing_timestamp' ] = next_processing_timestamp
+                            
                         
                     
                 
@@ -2285,16 +2300,6 @@ class Service( HC.HydrusYAMLBase ):
         self._info[ 'port' ] = port
         
         if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
-        
-    
-    def SetNextBegin( self, next_begin ):
-        
-        if next_begin > self._info[ 'next_begin' ]:
-            
-            if self._info[ 'first_begin' ] == 0: self._info[ 'first_begin' ] = next_begin
-            
-            self._info[ 'next_begin' ] = next_begin
-            
         
     
 class ThumbnailCache():
@@ -2533,7 +2538,7 @@ class UndoManager():
         
         self._current_index += 1
         
-        HC.pubsub.pub( 'refresh_menu_bar' )
+        HC.pubsub.pub( 'notify_new_undo' )
         
     
     def GetUndoRedoStrings( self ):
@@ -2581,7 +2586,7 @@ class UndoManager():
             
             HC.app.WriteSynchronous( action, *args, **kwargs )
             
-            HC.pubsub.pub( 'refresh_menu_bar' )
+            HC.pubsub.pub( 'notify_new_undo' )
             
         
     
@@ -2595,7 +2600,7 @@ class UndoManager():
             
             HC.app.WriteSynchronous( action, *args, **kwargs )
             
-            HC.pubsub.pub( 'refresh_menu_bar' )
+            HC.pubsub.pub( 'notify_new_undo' )
             
         
     

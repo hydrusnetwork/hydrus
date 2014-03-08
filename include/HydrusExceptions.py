@@ -1,3 +1,4 @@
+class CantRenderWithCVException( Exception ): pass
 class DBException( Exception ):
     
     def __init__( self, text, caller_traceback, db_traceback ):

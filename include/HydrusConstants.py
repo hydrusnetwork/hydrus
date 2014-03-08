@@ -39,6 +39,7 @@ SERVER_FILES_DIR = DB_DIR + os.path.sep + 'server_files'
 CLIENT_THUMBNAILS_DIR = DB_DIR + os.path.sep + 'client_thumbnails'
 SERVER_THUMBNAILS_DIR = DB_DIR + os.path.sep + 'server_thumbnails'
 SERVER_MESSAGES_DIR = DB_DIR + os.path.sep + 'server_messages'
+CLIENT_UPDATES_DIR = DB_DIR + os.path.sep + 'client_updates'
 SERVER_UPDATES_DIR = DB_DIR + os.path.sep + 'server_updates'
 LOGS_DIR = BASE_DIR + os.path.sep + 'logs'
 STATIC_DIR = BASE_DIR + os.path.sep + 'static'
@@ -47,7 +48,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 105
+SOFTWARE_VERSION = 106
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -223,11 +224,13 @@ SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS = 20
 SERVICE_UPDATE_ACCOUNT = 0
 SERVICE_UPDATE_DELETE_PENDING = 1
 SERVICE_UPDATE_ERROR = 2
-SERVICE_UPDATE_NEXT_BEGIN = 3
+SERVICE_UPDATE_BEGIN_END = 3
 SERVICE_UPDATE_RESET = 4
 SERVICE_UPDATE_REQUEST_MADE = 5
 SERVICE_UPDATE_LAST_CHECK = 6
 SERVICE_UPDATE_NEWS = 7
+SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP = 8
+SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP = 9
 
 ADD = 0
 DELETE = 1
@@ -2403,10 +2406,11 @@ class ServerToClientUpdate( HydrusYAMLBase ):
         self._hash_ids_to_hashes = hash_ids_to_hashes
         
     
-    def _GetContentData( data_type, action ):
+    def GetBeginEnd( self ):
         
-        if data_type in self._content_data and action in self._content_data[ data_type ]: return self._content_data[ data_type ][ action ]
-        else: return []
+        ( begin, end ) = self._service_data[ SERVICE_UPDATE_BEGIN_END ]
+        
+        return ( begin, end )
         
     
     def GetContentDataIterator( self, data_type, action ):
@@ -2454,7 +2458,7 @@ class ServerToClientUpdate( HydrusYAMLBase ):
     
     def IterateServiceUpdates( self ):
         
-        service_types = [ SERVICE_UPDATE_NEWS, SERVICE_UPDATE_NEXT_BEGIN ]
+        service_types = [ SERVICE_UPDATE_NEWS ]
         
         for service_type in service_types:
             

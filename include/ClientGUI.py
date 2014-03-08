@@ -43,6 +43,10 @@ FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
+#
+
+MENU_ORDER = [ 'file', 'undo', 'view', 'download', 'database', 'pending', 'services', 'admin', 'help' ]
+
 class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def __init__( self ):
@@ -89,17 +93,20 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.sub( self, 'NewPageQuery', 'new_page_query' )
         HC.pubsub.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
         HC.pubsub.sub( self, 'NewSimilarTo', 'new_similar_to' )
-        HC.pubsub.sub( self, 'RefreshMenuBar', 'refresh_menu_bar' )
-        HC.pubsub.sub( self, 'RefreshMenuBar', 'notify_new_pending' )
-        HC.pubsub.sub( self, 'RefreshMenuBar', 'notify_new_permissions' )
-        HC.pubsub.sub( self, 'RefreshMenuBar', 'notify_new_services' )
-        HC.pubsub.sub( self, 'RefreshAcceleratorTable', 'options_updated' )
+        HC.pubsub.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        HC.pubsub.sub( self, 'NotifyNewPending', 'notify_new_pending' )
+        HC.pubsub.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
+        HC.pubsub.sub( self, 'NotifyNewServices', 'notify_new_services' )
+        HC.pubsub.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
+        HC.pubsub.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         HC.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
         HC.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         HC.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
         HC.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
         
-        self.RefreshMenuBar()
+        self._menus = {}
+        
+        self._InitialiseMenubar()
         
         self._RefreshStatusBar()
         
@@ -549,7 +556,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if self._notebook.GetPageCount() == 0: self._focus_holder.SetFocus()
         
-        self.RefreshMenuBar()
+        HC.pubsub.pub( 'notify_new_undo' )
         
     
     def _DeleteAllClosedPages( self ):
@@ -560,7 +567,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         self._focus_holder.SetFocus()
         
-        self.RefreshMenuBar()
+        HC.pubsub.pub( 'notify_new_undo' )
         
     
     def _DeletePending( self, service_identifier ):
@@ -602,6 +609,379 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 wx.MessageBox( message + os.linesep + 'This has been written to the log.' )
                 
             
+        
+    
+    def _GenerateMenuInfo( self, name ):
+        
+        menu = wx.Menu()
+        
+        p = HC.app.PrepStringForDisplay
+        
+        def file():
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_metadata' ), p( '&Import Metadata' ), p( 'Add YAML metadata.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open Quick E&xport Folder' ), p( 'Open the export folder so you can easily access the files you have exported.' ) )
+            menu.AppendSeparator()
+            
+            gui_sessions = HC.app.Read( 'gui_sessions' )
+            
+            gui_session_names = gui_sessions.keys()
+            
+            sessions = wx.Menu()
+            
+            if len( gui_session_names ) > 0:
+                
+                load = wx.Menu()
+                
+                for name in gui_session_names:
+                    
+                    load.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'load_gui_session', name ), name )
+                    
+                
+                sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
+                
+            
+            sessions.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'save_gui_session' ), p( 'Save Current' ) )
+            
+            if len( gui_session_names ) > 0:
+                
+                delete = wx.Menu()
+                
+                for name in gui_session_names:
+                    
+                    delete.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_gui_session', name ), name )
+                    
+                
+                sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
+                
+            
+            menu.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
+            
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options' ), p( '&Options' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'exit' ), p( '&Exit' ) )
+            
+            return ( menu, p( '&File' ), True )
+            
+        
+        def undo():
+            
+            have_closed_pages = len( self._closed_pages ) > 0
+            
+            undo_manager = HC.app.GetManager( 'undo' )
+            
+            ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
+            
+            have_undo_stuff = undo_string is not None or redo_string is not None
+            
+            if have_closed_pages or have_undo_stuff:
+                
+                show = True
+                
+                did_undo_stuff = False
+                
+                if undo_string is not None:
+                    
+                    did_undo_stuff = True
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undo' ), undo_string )
+                    
+                
+                if redo_string is not None:
+                    
+                    did_undo_stuff = True
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'redo' ), redo_string )
+                    
+                
+                if have_closed_pages:
+                    
+                    if did_undo_stuff: menu.AppendSeparator()
+                    
+                    undo_pages = wx.Menu()
+                    
+                    undo_pages.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_all_closed_pages' ), 'clear all' )
+                    
+                    undo_pages.AppendSeparator()
+                    
+                    args = []
+                    
+                    for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
+                        
+                        args.append( ( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                        
+                    
+                    args.reverse() # so that recently closed are at the top
+                    
+                    for a in args: undo_pages.Append( *a )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( 'Closed Pages' ), undo_pages )
+                    
+                
+            else: show = False
+            
+            return ( menu, p( '&Undo' ), show )
+            
+        
+        def view():
+            
+            services = HC.app.Read( 'services' )
+            
+            tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
+            
+            petition_resolve_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
+            
+            file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
+            
+            file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories ]
+            petition_resolve_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
+            
+            menu = wx.Menu()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+            for s_i in file_service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', s_i ), p( 'New ' + s_i.GetName() + ' Search' ), p( 'Open a new search tab for ' + s_i.GetName() + '.' ) )
+            if len( petition_resolve_tag_service_identifiers ) > 0 or len( petition_resolve_file_service_identifiers ) > 0:
+                
+                menu.AppendSeparator()
+                for s_i in petition_resolve_tag_service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', s_i ), p( s_i.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + s_i.GetName() ) )
+                for s_i in petition_resolve_file_service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', s_i ), p( s_i.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + s_i.GetName() ) )
+                
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( '&New Booru Download Page' ), p( 'Open a new tab to download files from a booru.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_log_page' ), p( '&New Log Page' ), p( 'Open a new tab to show recently logged events.' ) )
+            
+            return ( menu, p( '&View' ), True )
+            
+        
+        def download():
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
+            
+            return ( menu, p( 'Do&wnload' ), True )
+            
+        
+        def database():
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
+            
+            return ( menu, p( '&Database' ), True )
+            
+        
+        def pending():
+            
+            nums_pending = HC.app.Read( 'nums_pending' )
+            
+            total_num_pending = 0
+            
+            for ( service_identifier, info ) in nums_pending.items():
+                
+                service_type = service_identifier.GetType()
+                
+                if service_type == HC.TAG_REPOSITORY:
+                    
+                    num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
+                    num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
+                    
+                elif service_type == HC.FILE_REPOSITORY:
+                    
+                    num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_FILES ]
+                    num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
+                    
+                
+                if num_pending + num_petitioned > 0:
+                    
+                    submenu = wx.Menu()
+                    
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_identifier ), p( '&Upload' ), p( 'Upload ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_identifier ), p( '&Forget' ), p( 'Clear ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( service_identifier.GetName() + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + '/' + HC.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
+                    
+                
+                total_num_pending += num_pending + num_petitioned
+                
+            
+            show = total_num_pending > 0
+            
+            return ( menu, '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')', show )
+            
+        
+        def services():
+            
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) )
+            
+            tag_service_identifiers = [ s_i for s_i in service_identifiers if s_i.GetType() == HC.TAG_REPOSITORY ]
+            file_service_identifiers = [ s_i for s_i in service_identifiers if s_i.GetType() == HC.FILE_REPOSITORY ]
+            
+            submenu = wx.Menu()
+            
+            pause_export_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_export_folders_sync' )
+            pause_import_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_import_folders_sync' )
+            pause_repo_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_repo_sync' )
+            pause_subs_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_subs_sync' )
+            
+            submenu.AppendCheckItem( pause_export_folders_sync_id, p( '&Export Folders Synchronisation' ), p( 'Pause the client\'s export folders.' ) )
+            submenu.AppendCheckItem( pause_import_folders_sync_id, p( '&Import Folders Synchronisation' ), p( 'Pause the client\'s import folders.' ) )
+            submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
+            submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
+            
+            submenu.Check( pause_export_folders_sync_id, HC.options[ 'pause_export_folders_sync' ] )
+            submenu.Check( pause_import_folders_sync_id, HC.options[ 'pause_import_folders_sync' ] )
+            submenu.Check( pause_repo_sync_id, HC.options[ 'pause_repo_sync' ] )
+            submenu.Check( pause_subs_sync_id, HC.options[ 'pause_subs_sync' ] )
+            
+            menu.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
+            
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_namespace_blacklists' ), p( '&Manage Namespace Blacklists' ), p( 'Set which kinds of tags you want to see from which services.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
+            menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( 'Manage Local UPnP' ) )
+            menu.AppendSeparator()
+            submenu = wx.Menu()
+            for s_i in tag_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
+            for s_i in file_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
+            menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
+            
+            return ( menu, p( '&Services' ), True )
+            
+        
+        def admin():
+            
+            services = HC.app.Read( 'services' )
+            
+            tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
+            admin_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
+            
+            file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
+            admin_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
+            
+            servers_admin = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.SERVER_ADMIN ]
+            server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
+            
+            if len( admin_tag_service_identifiers ) > 0 or len( admin_file_service_identifiers ) > 0 or len( server_admin_identifiers ) > 0:
+                
+                show = True
+                
+                for s_i in admin_tag_service_identifiers:
+                    
+                    submenu = wx.Menu()
+                    
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
+                    
+                
+                for s_i in admin_file_service_identifiers:
+                    
+                    submenu = wx.Menu()
+                    
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fetch_ip', s_i ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
+                    
+                
+                for s_i in server_admin_identifiers:
+                    
+                    submenu = wx.Menu()
+                    
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', s_i ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
+                    
+                
+            else: show = False
+            
+            return( menu, p( '&Admin' ), show )
+            
+        
+        def help():
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help' ), p( '&Help' ) )
+            dont_know = wx.Menu()
+            dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
+            dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
+            menu.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
+            links = wx.Menu()
+            tumblr = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tumblr' ), p( 'Tumblr' ) )
+            tumblr.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'tumblr.png' ) )
+            twitter = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'twitter' ), p( 'Twitter' ) )
+            twitter.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'twitter.png' ) )
+            site = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'site' ), p( 'Site' ) )
+            site.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png' ) )
+            forum = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'forum' ), p( 'Forum' ) )
+            forum.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png' ) )
+            links.AppendItem( tumblr )
+            links.AppendItem( twitter )
+            links.AppendItem( site )
+            links.AppendItem( forum )
+            menu.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
+            debug = wx.Menu()
+            debug.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
+            menu.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_about' ), p( '&About' ) )
+            
+            return ( menu, p( '&Help' ), True )
+            
+        
+        if name == 'file': return file()
+        elif name == 'undo': return undo()
+        elif name == 'view': return view()
+        elif name == 'download': return download()
+        elif name == 'database': return database()
+        elif name == 'pending': return pending()
+        elif name == 'services': return services()
+        elif name == 'admin': return admin()
+        elif name == 'help': return help()
         
     
     def _GenerateNewAccounts( self, service_identifier ):
@@ -660,6 +1040,22 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     except Exception as e: HC.ShowException( e )
                     
                 
+        
+    
+    def _InitialiseMenubar( self ):
+        
+        self._menubar = wx.MenuBar()
+        
+        self.SetMenuBar( self._menubar )
+        
+        for name in MENU_ORDER:
+            
+            ( menu, label, show ) = self._GenerateMenuInfo( name )
+            
+            if show: self._menubar.Append( menu, label )
+            
+            self._menus[ name ] = ( menu, label, show )
+            
         
     
     def _LoadGUISession( self, name ):
@@ -967,8 +1363,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
         
-        self.RefreshMenuBar()
-        
     
     def _PostNews( self, service_identifier ):
         
@@ -1116,7 +1510,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         HC.app.Write( 'gui_session', name, info )
         
-        HC.pubsub.pub( 'refresh_menu_bar' )
+        HC.pubsub.pub( 'notify_new_sessions' )
         
     
     def _SetPassword( self ):
@@ -1224,7 +1618,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._notebook.InsertPage( index, page, name, True )
         
-        self.RefreshMenuBar()
+        HC.pubsub.pub( 'notify_new_undo' )
         
     
     def _UploadPending( self, service_identifier ):
@@ -1260,7 +1654,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._closed_pages = new_closed_pages
         
-        if len( old_closed_pages ) != len( new_closed_pages ): self.RefreshMenuBar()
+        if len( old_closed_pages ) != len( new_closed_pages ): HC.pubsub.pub( 'notify_new_undo' )
         
     
     def DoFirstStart( self ):
@@ -1387,7 +1781,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HC.app.Write( 'delete_gui_session', data )
                 
-                HC.pubsub.pub( 'refresh_menu_bar' )
+                HC.pubsub.pub( 'notify_new_sessions' )
                 
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
@@ -1547,6 +1941,32 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ), None ) ] )
     
+    def NotifyNewOptions( self ):
+        
+        self.RefreshAcceleratorTable()
+        
+        self.RefreshMenu( 'services' )
+        
+    
+    def NotifyNewPending( self ): self.RefreshMenu( 'pending' )
+    
+    def NotifyNewPermissions( self ):
+        
+        self.RefreshMenu( 'view' )
+        self.RefreshMenu( 'admin' )
+        
+    
+    def NotifyNewServices( self ):
+        
+        self.RefreshMenu( 'view' )
+        self.RefreshMenu( 'services' )
+        self.RefreshMenu( 'admin' )
+        
+    
+    def NotifyNewSessions( self ): self.RefreshMenu( 'file' )
+    
+    def NotifyNewUndo( self ): self.RefreshMenu( 'undo' )
+    
     def RefreshAcceleratorTable( self ):
         
         interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'ratings_filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'undo', 'redo' ]
@@ -1558,359 +1978,41 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
-    def RefreshMenuBar( self ):
+    def RefreshMenu( self, name ):
         
-        p = HC.app.PrepStringForDisplay
+        ( menu, label, show ) = self._GenerateMenuInfo( name )
         
-        services = HC.app.Read( 'services' )
+        ( old_menu, old_label, old_show ) = self._menus[ name ]
         
-        tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
-        
-        tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories ]
-        download_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.GET_DATA ) ]
-        petition_resolve_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
-        admin_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
-        
-        file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
-        
-        file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories ]
-        download_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GET_DATA ) ]
-        petition_resolve_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
-        admin_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
-        
-        message_depots = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.MESSAGE_DEPOT ]
-        
-        admin_message_depots = [ message_depot.GetServiceIdentifier() for message_depot in message_depots if message_depot.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
-        
-        servers_admin = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.SERVER_ADMIN ]
-        
-        server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
-        
-        menu = wx.MenuBar()
-        
-        file = wx.Menu()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_files' ), p( '&Import Files' ), p( 'Add new files to the database.' ) )
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'import_metadata' ), p( '&Import Metadata' ), p( 'Add YAML metadata.' ) )
-        file.AppendSeparator()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_import_folders' ), p( 'Manage Import Folders' ), p( 'Manage folders from which the client can automatically import.' ) )
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_export_folders' ), p( 'Manage Export Folders' ), p( 'Manage folders to which the client can automatically export.' ) )
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_export_folder' ), p( 'Open Quick E&xport Folder' ), p( 'Open the export folder so you can easily access the files you have exported.' ) )
-        file.AppendSeparator()
-        
-        gui_sessions = HC.app.Read( 'gui_sessions' )
-        
-        gui_session_names = gui_sessions.keys()
-        
-        sessions = wx.Menu()
-        
-        if len( gui_session_names ) > 0:
+        if old_show:
             
-            load = wx.Menu()
+            old_menu_index = self._menubar.FindMenu( old_label )
             
-            for name in gui_session_names:
-                
-                load.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'load_gui_session', name ), name )
-                
+            if show: self._menubar.Replace( old_menu_index, menu, label )
+            else: self._menubar.Remove( old_menu_index )
             
-            sessions.AppendMenu( CC.ID_NULL, p( 'Load' ), load )
+        else:
             
-        
-        sessions.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'save_gui_session' ), p( 'Save Current' ) )
-        
-        if len( gui_session_names ) > 0:
-            
-            delete = wx.Menu()
-            
-            for name in gui_session_names:
+            if show:
                 
-                delete.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_gui_session', name ), name )
+                insert_index = 0
                 
-            
-            sessions.AppendMenu( CC.ID_NULL, p( 'Delete' ), delete )
-            
-        
-        file.AppendMenu( CC.ID_NULL, p( 'Sessions' ), sessions )
-        
-        file.AppendSeparator()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'options' ), p( '&Options' ) )
-        file.AppendSeparator()
-        file.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'exit' ), p( '&Exit' ) )
-        
-        menu.Append( file, p( '&File' ) )
-        
-        have_closed_pages = len( self._closed_pages ) > 0
-        
-        undo_manager = HC.app.GetManager( 'undo' )
-        
-        ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
-        
-        have_undo_stuff = undo_string is not None or redo_string is not None
-        
-        if have_closed_pages or have_undo_stuff:
-            
-            undo = wx.Menu()
-            
-            did_undo_stuff = False
-            
-            if undo_string is not None:
-                
-                did_undo_stuff = True
-                
-                undo.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'undo' ), undo_string )
-                
-            
-            if redo_string is not None:
-                
-                did_undo_stuff = True
-                
-                undo.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'redo' ), redo_string )
-                
-            
-            if have_closed_pages:
-                
-                if did_undo_stuff: undo.AppendSeparator()
-                
-                undo_pages = wx.Menu()
-                
-                undo_pages.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_all_closed_pages' ), 'clear all' )
-                
-                undo_pages.AppendSeparator()
-                
-                args = []
-                
-                for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
+                for temp_name in MENU_ORDER:
                     
-                    args.append( ( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unclose_page', i ), name + ' - ' + page.GetPrettyStatus() ) )
+                    if temp_name == name: break
+                    
+                    ( temp_menu, temp_label, temp_show ) = self._menus[ temp_name ]
+                    
+                    if temp_show: insert_index += 1
                     
                 
-                args.reverse() # so that recently closed are at the top
-                
-                for a in args: undo_pages.Append( *a )
-                
-                undo.AppendMenu( CC.ID_NULL, p( 'Closed Pages' ), undo_pages )
+                self._menubar.Insert( insert_index, menu, label )
                 
             
-            menu.Append( undo, p( '&Undo' ) )
-            
         
-        view = wx.Menu()
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_hide_splitters' ), p( 'Show/Hide Splitters' ), p( 'Show or hide the current page\'s splitters.' ) )
-        view.AppendSeparator()
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
-        view.AppendSeparator()
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
-        for s_i in file_service_identifiers: view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', s_i ), p( 'New ' + s_i.GetName() + ' Search' ), p( 'Open a new search tab for ' + s_i.GetName() + '.' ) )
-        if len( petition_resolve_tag_service_identifiers ) > 0 or len( petition_resolve_file_service_identifiers ) > 0:
-            
-            view.AppendSeparator()
-            for s_i in petition_resolve_tag_service_identifiers: view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', s_i ), p( s_i.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + s_i.GetName() ) )
-            for s_i in petition_resolve_file_service_identifiers: view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', s_i ), p( s_i.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + s_i.GetName() ) )
-            
-        view.AppendSeparator()
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( '&New Booru Download Page' ), p( 'Open a new tab to download files from a booru.' ) )
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
-        view.AppendSeparator()
-        view.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_log_page' ), p( '&New Log Page' ), p( 'Open a new tab to show recently logged events.' ) )
+        self._menus[ name ] = ( menu, label, show )
         
-        menu.Append( view, p( '&View' ) )
-        
-        download = wx.Menu()
-        download.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_youtube_download' ), p( '&A YouTube Video' ), p( 'Enter a YouTube URL and choose which formats you would like to download' ) )
-        download.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'start_url_download' ), p( '&A Raw URL' ), p( 'Enter a normal URL and attempt to import whatever is returned' ) )
-        
-        menu.Append( download, p( 'Do&wnload' ) )
-        
-        database = wx.Menu()
-        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'set_password' ), p( 'Set a &Password' ), p( 'Set a password for the database so only you can access it.' ) )
-        database.AppendSeparator()
-        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_database' ), p( 'Create Database Backup' ), p( 'Back the database up to an external location.' ) )
-        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
-        database.AppendSeparator()
-        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
-        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
-        database.AppendSeparator()
-        database.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
-        
-        menu.Append( database, p( '&Database' ) )
-        
-        nums_pending = HC.app.Read( 'nums_pending' )
-        
-        pending = wx.Menu()
-        
-        total_num_pending = 0
-        
-        for ( service_identifier, info ) in nums_pending.items():
-            
-            service_type = service_identifier.GetType()
-            
-            if service_type == HC.TAG_REPOSITORY:
-                
-                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS ]
-                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS ] + info[ HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ]
-                
-            elif service_type == HC.FILE_REPOSITORY:
-                
-                num_pending = info[ HC.SERVICE_INFO_NUM_PENDING_FILES ]
-                num_petitioned = info[ HC.SERVICE_INFO_NUM_PETITIONED_FILES ]
-                
-            
-            if num_pending + num_petitioned > 0:
-                
-                submenu = wx.Menu()
-                
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_identifier ), p( '&Upload' ), p( 'Upload ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_identifier ), p( '&Forget' ), p( 'Clear ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
-                
-                pending.AppendMenu( CC.ID_NULL, p( service_identifier.GetName() + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + '/' + HC.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
-                
-            
-            total_num_pending += num_pending + num_petitioned
-            
-        
-        if total_num_pending > 0: menu.Append( pending, p( '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')' ) )
-        else: wx.CallAfter( pending.Destroy )
-        
-        services = wx.Menu()
-        
-        submenu = wx.Menu()
-        
-        pause_export_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_export_folders_sync' )
-        pause_import_folders_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_import_folders_sync' )
-        pause_repo_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_repo_sync' )
-        pause_subs_sync_id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'pause_subs_sync' )
-        
-        submenu.AppendCheckItem( pause_export_folders_sync_id, p( '&Export Folders Synchronisation' ), p( 'Pause the client\'s export folders.' ) )
-        submenu.AppendCheckItem( pause_import_folders_sync_id, p( '&Import Folders Synchronisation' ), p( 'Pause the client\'s import folders.' ) )
-        submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
-        submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
-        
-        submenu.Check( pause_export_folders_sync_id, HC.options[ 'pause_export_folders_sync' ] )
-        submenu.Check( pause_import_folders_sync_id, HC.options[ 'pause_import_folders_sync' ] )
-        submenu.Check( pause_repo_sync_id, HC.options[ 'pause_repo_sync' ] )
-        submenu.Check( pause_subs_sync_id, HC.options[ 'pause_subs_sync' ] )
-        
-        services.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
-        
-        services.AppendSeparator()
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
-        services.AppendSeparator()
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_namespace_blacklists' ), p( '&Manage Namespace Blacklists' ), p( 'Set which kinds of tags you want to see from which services.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
-        services.AppendSeparator()
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_4chan_pass' ), p( 'Manage &4chan Pass' ), p( 'Set up your 4chan pass, so you can dump without having to fill in a captcha.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
-        services.AppendSeparator()
-        services.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( 'Manage Local UPnP' ) )
-        services.AppendSeparator()
-        submenu = wx.Menu()
-        for s_i in tag_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
-        for s_i in file_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
-        services.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
-        
-        menu.Append( services, p( '&Services' ) )
-        
-        if len( admin_tag_service_identifiers ) > 0 or len( admin_file_service_identifiers ) > 0 or len( server_admin_identifiers ) > 0:
-            
-            admin = wx.Menu()
-            
-            for s_i in admin_tag_service_identifiers:
-                
-                submenu = wx.Menu()
-                
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
-                submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
-                submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
-                
-                admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
-                
-            
-            for s_i in admin_file_service_identifiers:
-                
-                submenu = wx.Menu()
-                
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fetch_ip', s_i ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
-                submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
-                submenu.AppendSeparator()
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
-                
-                admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
-                
-            
-            for s_i in admin_message_depots:
-                
-                submenu = wx.Menu()
-                
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                
-                admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
-                
-            
-            for s_i in server_admin_identifiers:
-                
-                submenu = wx.Menu()
-                
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
-                submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', s_i ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
-                
-                admin.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
-                
-            
-            menu.Append( admin, p( '&Admin' ) )
-            
-        
-        help = wx.Menu()
-        help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help' ), p( '&Help' ) )
-        dont_know = wx.Menu()
-        dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_repo_setup' ), p( 'Just set up some repositories for me, please' ) )
-        dont_know.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'auto_server_setup' ), p( 'Just set up the server on this computer, please' ) )
-        help.AppendMenu( wx.ID_NONE, p( 'I don\'t know what I am doing' ), dont_know )
-        links = wx.Menu()
-        tumblr = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'tumblr' ), p( 'Tumblr' ) )
-        tumblr.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'tumblr.png' ) )
-        twitter = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'twitter' ), p( 'Twitter' ) )
-        twitter.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'twitter.png' ) )
-        site = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'site' ), p( 'Site' ) )
-        site.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png' ) )
-        forum = wx.MenuItem( links, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'forum' ), p( 'Forum' ) )
-        forum.SetBitmap( wx.Bitmap( HC.STATIC_DIR + os.path.sep + 'file_repository_small.png' ) )
-        links.AppendItem( tumblr )
-        links.AppendItem( twitter )
-        links.AppendItem( site )
-        links.AppendItem( forum )
-        help.AppendMenu( wx.ID_NONE, p( 'Links' ), links )
-        debug = wx.Menu()
-        debug.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'debug_garbage' ), p( 'Garbage' ) )
-        help.AppendMenu( wx.ID_NONE, p( 'Debug' ), debug )
-        help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_shortcuts' ), p( '&Shortcuts' ) )
-        help.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'help_about' ), p( '&About' ) )
-        
-        menu.Append( help, p( '&Help' ) )
-        
-        old_menu = self.GetMenuBar()
-        
-        self.SetMenuBar( menu )
-        
-        if old_menu is not None: wx.CallAfter( old_menu.Destroy )
+        wx.CallAfter( old_menu.Destroy )
         
     
     def RefreshStatusBar( self ): self._RefreshStatusBar()
@@ -2349,8 +2451,14 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 account_type = account.GetAccountType()
                 
-                self._account_type.SetLabel( account_type.ConvertToString() )
-                self._account_type.Wrap( 400 )
+                account_type_string = account_type.ConvertToString()
+                
+                if self._account_type.GetLabel() != account_type_string:
+                    
+                    self._account_type.SetLabel( account_type_string )
+                    
+                    self._account_type.Wrap( 400 )
+                    
                 
                 if service_type in HC.REPOSITORIES:
                     
@@ -2370,10 +2478,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                         self._age_text.SetLabel( account.GetExpiryString() )
                         
-                        first_begin = self._service.GetFirstBegin()
-                        next_begin = self._service.GetNextBegin()
+                        ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = self._service.GetTimestamps()
                         
-                        if first_begin == 0:
+                        if first_timestamp is None:
                             
                             num_updates = 0
                             num_updates_downloaded = 0
@@ -2382,8 +2489,8 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                             
                         else:
                             
-                            num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
-                            num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
+                            num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
+                            num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
                             
                             self._updates.SetRange( num_updates )
                             self._updates.SetValue( num_updates_downloaded )
@@ -2545,7 +2652,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventServiceReset( self, event ):
             
-            message = 'This will remove all cached information for ' + self._service_identifier.GetName() + ' from the database. It will take a minute for the database to finish the operation, during which time the gui may freeze.'
+            message = 'This will remove all the information for ' + self._service_identifier.GetName() + ' from the database, so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui may freeze.' + os.linesep + os.linesep + 'If you do not know what this is, you probably want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
@@ -2566,8 +2673,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                         ( action, row ) = service_update.ToTuple()
                         
-                        if action == HC.SERVICE_UPDATE_RESET: self._service_identifier = row
-                        
                         if action in ( HC.SERVICE_UPDATE_ACCOUNT, HC.SERVICE_UPDATE_REQUEST_MADE ): wx.CallLater( 600, self._DisplayAccountInfo )
                         else:
                             wx.CallLater( 200, self._DisplayService )
@@ -2581,18 +2686,17 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             now = HC.GetNow()
             
-            first_begin = self._service.GetFirstBegin()
-            next_begin = self._service.GetNextBegin()
+            ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = self._service.GetTimestamps()
             
-            if first_begin == 0:
+            if first_timestamp is None:
                 
                 num_updates = 0
                 num_updates_downloaded = 0
                 
             else:
                 
-                num_updates = ( now - first_begin ) / HC.UPDATE_DURATION
-                num_updates_downloaded = ( next_begin - first_begin ) / HC.UPDATE_DURATION
+                num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
+                num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
                 
             
             self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )

@@ -3,6 +3,7 @@ import numpy.core.multiarray # important this comes before cv!
 import cv
 import cv2
 import HydrusConstants as HC
+import HydrusExceptions
 import os
 from PIL import Image as PILImage
 import shutil
@@ -57,7 +58,7 @@ def EfficientlyThumbnailImage( pil_image, ( x, y ) ):
     
     pil_image.thumbnail( ( x, y ), PILImage.ANTIALIAS )
     
-def GenerateAnimatedFrame( pil_image, pil_frame, target_resolution, canvas ):
+def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
     
     if 'duration' not in pil_image.info: duration = 40 # 25 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
     else:
@@ -67,7 +68,7 @@ def GenerateAnimatedFrame( pil_image, pil_frame, target_resolution, canvas ):
         if duration == 0: duration = 40
         
     
-    current_frame = EfficientlyResizeImage( pil_frame, target_resolution )
+    current_frame = EfficientlyResizeImage( pil_image, target_resolution )
     
     if pil_image.mode == 'P' and 'transparency' in pil_image.info:
         
@@ -187,52 +188,32 @@ def GeneratePerceptualHash( path ):
     
 def GeneratePILImage( path ): return PILImage.open( path )
 
-def GenerateResolutionAndFrames( path ):
+def GenerateResolutionAndNumFrames( path ):
     
-    # generate first frame with usual pil generation method
-    frames = [GeneratePILImage(path)]
+    pil_image = GeneratePILImage( path )
     
-    # remove all frames if this is an animated gif
-    if 'version' in frames[0].info:
-        if frames[0].info['version'] == "GIF89a":
-            frames = []
+    ( x, y ) = pil_image.size
     
-    # generate pil images with openCV video capture pre-processing
-    if len(frames) < 1:
-        cv_image = cv2.VideoCapture( path )
-        cv_image.set(cv2.cv.CV_CAP_PROP_CONVERT_RGB, True)
+    try:
+        
+        pil_image.seek( 1 )
+        pil_image.seek( 0 )
+        
+        num_frames = 1
         
         while True:
-            flag, frame = cv_image.read()
-            if not flag:
-                break
-        
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-            img = PILImage.fromarray(rgb, "RGBA")
-            frames.append(img)
-        
-    # if frames are empty this means, that openCV could not render the animated GIF
-    # try it with PIL and throw exception if it does not work
-    if len(frames) < 1:
-        pil_image = GeneratePILImage( path )
-        imagePalette = pil_image.getpalette()
             
-        while True:
             try:
-                pil_image.putpalette( imagePalette )
-                pil_frame = PILImage.new("RGBA", pil_image.size)
-                pil_frame.paste(pil_image)
                 
-                frames.append( pil_frame )
                 pil_image.seek( pil_image.tell() + 1 )
+                num_frames += 1
                 
-            # this is actually not an error, but the end of the file
-            except EOFError, e:
-                break
+            except: break
             
         
-    return frames[0].size, frames
+    except: num_frames = 1
     
+    return ( ( x, y ), num_frames )
     
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
@@ -286,11 +267,11 @@ def RenderImage( path, hash, target_resolution = None, synchronous = True ):
     
     try:
         
-        ( original_resolution, frames ) = GenerateResolutionAndFrames( path )
+        ( original_resolution, num_frames ) = GenerateResolutionAndNumFrames( path )
         
         if target_resolution is None: target_resolution = original_resolution
         
-        image_container = RenderedImageContainer( hash, original_resolution, target_resolution, frames )
+        image_container = RenderedImageContainer( hash, original_resolution, target_resolution, num_frames )
         
         if image_container.IsAnimated(): renderer = AnimatedFrameRenderer( image_container, path, target_resolution )
         else: renderer = StaticFrameRenderer( image_container, path, target_resolution )
@@ -300,28 +281,106 @@ def RenderImage( path, hash, target_resolution = None, synchronous = True ):
         
         return image_container
         
-    except: raise Exception( 'Attempted to render the image, but it was either formatted slightly incorrectly or PIL could not handle it; look up PIL in the hydrus help for more info.' )
+    except Exception as e:
+        
+        raise Exception( 'Attempted to render the image, but received an error. It was likely either formatted slightly incorrectly or PIL could not handle it; look up PIL in the hydrus help for more info. Here is the exact error:' + os.linesep + os.linesep + HC.u( e ) )
+        
     
 class FrameRenderer():
     
     def __init__( self, image_container, path, target_resolution ):
         
         self._image_container = image_container
-        self._pil_image = GeneratePILImage( path )
+        self._path = path
         self._target_resolution = target_resolution
         
     
 class AnimatedFrameRenderer( FrameRenderer ):
     
-    def GetFrames( self ):
+    def _GetFramesCV( self ):
+        
+        # this code initially written by @fluffy_cub
+        
+        cv_image = cv2.VideoCapture( self._path )
+        cv_image.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
+        
+        no_frames_yet = False
+        
+        while True:
+            
+            ( retval, frame ) = cv_image.read()
+            
+            if not retval:
+                
+                if no_frames_yet: raise HydrusExceptions.CantRenderWithCVException()
+                else: break
+                
+            else:
+                
+                rgb_data = cv2.cvtColor( frame, cv2.COLOR_BGR2RGBA )
+                
+                pil_frame = PILImage.fromarray( rgb_data, 'RGBA' )
+                
+                pil_frame = EfficientlyResizeImage( pil_frame, self._target_resolution )
+                
+                duration = 40 # will have to use pil to get accurate duration, as cv assumes 25fps
+                
+                yield ( GenerateHydrusBitmapFromPILImage( pil_frame ), duration )
+                
+            
+        
+    
+    def _GetFramesPIL( self ):
+        
+        pil_image = GeneratePILImage( self._path )
         
         canvas = None
-        frames = self._image_container.GetFrameImages()
         
-        for frame in frames:
-            ( canvas, duration ) = GenerateAnimatedFrame( self._pil_image, frame, self._target_resolution, canvas )
-            yield( GenerateHydrusBitmapFromPILImage( canvas ), duration )
-
+        global_palette = pil_image.palette
+        
+        dirty = pil_image.palette.dirty
+        mode = pil_image.palette.mode
+        rawmode = pil_image.palette.rawmode
+        
+        # believe it or not, doing this actually fixed a couple of gifs!
+        pil_image.seek( 1 )
+        pil_image.seek( 0 )
+        
+        while True:
+            
+            ( canvas, duration ) = GenerateAnimatedFrame( pil_image, self._target_resolution, canvas )
+            
+            yield ( GenerateHydrusBitmapFromPILImage( canvas ), duration )
+            
+            try:
+                
+                pil_image.seek( pil_image.tell() + 1 )
+                
+                if pil_image.palette == global_palette: # for some reason, when we fall back to global palette (no local-frame palette), we reset bunch of important variables!
+                    
+                    pil_image.palette.dirty = dirty
+                    pil_image.palette.mode = mode
+                    pil_image.palette.rawmode = rawmode
+                    
+                
+            except: break
+            
+        
+    
+    def GetFrames( self ):
+    
+        for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
+        
+        '''
+        try:
+            
+            for ( frame, duration ) in self._GetFramesCV(): yield ( frame, duration )
+            
+        except HydrusExceptions.CantRenderWithCVException:
+            
+            for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
+            
+        '''
     
     def Render( self ):
         
@@ -339,7 +398,12 @@ class AnimatedFrameRenderer( FrameRenderer ):
     
 class StaticFrameRenderer( FrameRenderer ):
     
-    def GetFrame( self ): return GenerateHydrusBitmapFromPILImage( EfficientlyResizeImage( self._pil_image, self._target_resolution ) )
+    def GetFrame( self ):
+        
+        pil_image = GeneratePILImage( self._path )
+        
+        return GenerateHydrusBitmapFromPILImage( EfficientlyResizeImage( pil_image, self._target_resolution ) )
+        
     
     def Render( self ): self._image_container.AddFrame( self.GetFrame() )
     
@@ -375,13 +439,12 @@ class HydrusBitmap():
     
 class RenderedImageContainer():
     
-    def __init__( self, hash, original_resolution, my_resolution, frames ):
+    def __init__( self, hash, original_resolution, my_resolution, num_frames ):
         
         self._hash = hash
         self._original_resolution = original_resolution
         self._my_resolution = my_resolution
-        self._num_frames = len(frames)
-        self._frame_images = frames
+        self._num_frames = num_frames
         
         ( original_width, original_height ) = original_resolution
         
@@ -406,8 +469,6 @@ class RenderedImageContainer():
         
         if duration is not None: self._durations.append( duration )
         
-    def GetFrameImages( self ):
-        return self._frame_images
     
     def GetDuration( self, index ): return self._durations[ index ]
     
