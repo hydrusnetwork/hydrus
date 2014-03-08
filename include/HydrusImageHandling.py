@@ -194,6 +194,22 @@ def GenerateResolutionAndNumFrames( path ):
     
     ( x, y ) = pil_image.size
     
+    # first try to read from cv2
+    try:
+        cv_image = cv2.VideoCapture( path )
+
+        num_frames = 0
+        while True:
+            retval, image = cv_image.read()
+
+            if not retval:
+                if num_frames == 0: raise HydrusExceptions.CantRenderWithCVException()
+                else: break
+
+            num_frames += 1
+
+    except HydrusExceptions.CantRenderWithCVException():
+
     try:
         
         pil_image.seek( 1 )
@@ -303,6 +319,7 @@ class AnimatedFrameRenderer( FrameRenderer ):
         
         cv_image = cv2.VideoCapture( self._path )
         cv_image.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
+        fps = cv_image.get( cv2.cv.CV_CAP_PROP_FPS )
         
         no_frames_yet = False
         
@@ -323,7 +340,8 @@ class AnimatedFrameRenderer( FrameRenderer ):
                 
                 pil_frame = EfficientlyResizeImage( pil_frame, self._target_resolution )
                 
-                duration = 40 # will have to use pil to get accurate duration, as cv assumes 25fps
+                # while reading images openCV uses 100 fps, this may vary in video streams
+                duration = fps # will have to use pil to get accurate duration, as cv assumes 25fps
                 
                 yield ( GenerateHydrusBitmapFromPILImage( pil_frame ), duration )
                 
@@ -369,9 +387,8 @@ class AnimatedFrameRenderer( FrameRenderer ):
     
     def GetFrames( self ):
     
-        for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
+        #for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
         
-        '''
         try:
             
             for ( frame, duration ) in self._GetFramesCV(): yield ( frame, duration )
@@ -380,7 +397,6 @@ class AnimatedFrameRenderer( FrameRenderer ):
             
             for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
             
-        '''
     
     def Render( self ):
         
