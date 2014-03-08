@@ -210,24 +210,24 @@ def GenerateResolutionAndNumFrames( path ):
 
     except HydrusExceptions.CantRenderWithCVException():
 
-    try:
-        
-        pil_image.seek( 1 )
-        pil_image.seek( 0 )
-        
-        num_frames = 1
-        
-        while True:
+        try:
             
-            try:
-                
-                pil_image.seek( pil_image.tell() + 1 )
-                num_frames += 1
-                
-            except: break
+            pil_image.seek( 1 )
+            pil_image.seek( 0 )
             
-        
-    except: num_frames = 1
+            num_frames = 1
+            
+            while True:
+                
+                try:
+                    
+                    pil_image.seek( pil_image.tell() + 1 )
+                    num_frames += 1
+                    
+                except: break
+                
+            
+        except: num_frames = 1
     
     return ( ( x, y ), num_frames )
     
