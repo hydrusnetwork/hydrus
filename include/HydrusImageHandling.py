@@ -70,16 +70,8 @@ def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
     
     current_frame = EfficientlyResizeImage( pil_image, target_resolution )
     
-    if pil_image.mode == 'P' and 'transparency' in pil_image.info:
-        
-        # I think gif problems are around here somewhere; the transparency info is not converted to RGBA properly, so it starts drawing colours when it should draw nothing
-        
-        current_frame = current_frame.convert( 'RGBA' )
-        
-        if canvas is None: canvas = current_frame
-        else: canvas.paste( current_frame, None, current_frame ) # yeah, use the rgba image as its own mask, wut.
-        
-    else: canvas = current_frame
+    if canvas is None: canvas = current_frame
+    else: canvas.paste( current_frame )
     
     return ( canvas, duration )
     
@@ -194,22 +186,6 @@ def GenerateResolutionAndNumFrames( path ):
     
     ( x, y ) = pil_image.size
     
-    # first try to read from cv2
-    try:
-        cv_image = cv2.VideoCapture( path )
-
-        num_frames = 0
-        while True:
-            retval, image = cv_image.read()
-
-            if not retval:
-                if num_frames == 0: raise HydrusExceptions.CantRenderWithCVException()
-                else: break
-
-            num_frames += 1
-
-    except HydrusExceptions.CantRenderWithCVException():
-
         try:
             
             pil_image.seek( 1 )
@@ -313,73 +289,40 @@ class FrameRenderer():
     
 class AnimatedFrameRenderer( FrameRenderer ):
     
-    def _GetFramesCV( self ):
-        
-        # this code initially written by @fluffy_cub
-        
-        cv_image = cv2.VideoCapture( self._path )
-        cv_image.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
-        fps = cv_image.get( cv2.cv.CV_CAP_PROP_FPS )
-        
-        no_frames_yet = False
-        
-        while True:
-            
-            ( retval, frame ) = cv_image.read()
-            
-            if not retval:
-                
-                if no_frames_yet: raise HydrusExceptions.CantRenderWithCVException()
-                else: break
-                
-            else:
-                
-                rgb_data = cv2.cvtColor( frame, cv2.COLOR_BGR2RGBA )
-                
-                pil_frame = PILImage.fromarray( rgb_data, 'RGBA' )
-                
-                pil_frame = EfficientlyResizeImage( pil_frame, self._target_resolution )
-                
-                # while reading images openCV uses 100 fps, this may vary in video streams
-                duration = fps # will have to use pil to get accurate duration, as cv assumes 25fps
-                
-                yield ( GenerateHydrusBitmapFromPILImage( pil_frame ), duration )
-                
-            
-        
-    
     def _GetFramesPIL( self ):
         
         pil_image = GeneratePILImage( self._path )
         
         canvas = None
         
-        global_palette = pil_image.palette
-        
-        dirty = pil_image.palette.dirty
-        mode = pil_image.palette.mode
-        rawmode = pil_image.palette.rawmode
-        
-        # believe it or not, doing this actually fixed a couple of gifs!
-        pil_image.seek( 1 )
-        pil_image.seek( 0 )
-        
         while True:
             
-            ( canvas, duration ) = GenerateAnimatedFrame( pil_image, self._target_resolution, canvas )
+            try:
+                if 'transparency' in pil_image.info:
+                    # it is possible that the first frame of an image is RGB and every other frame RGBA
+                    if not canvas is None and canvas.mode == "RGB":
+                        canvas = canvas.convert( "RGBA" )
             
+                    pil_canvas = pil_image.convert( "RGBA" )
+
+                else:
+                    pil_canvas = pil_image.convert( "RGB" )
+                
+                pil_canvas.info = pil_image.info
+                
+            except:
+                # skip corrupt images in a gif ( e.g. images, which cannot be converted to neither RGBA nor RGB )
+                if not canvas is None: pil_canvas = canvas
+                else: pil_canvas = PILImage.new( "RGBA", pil_image.size )
+                
+                pil_canvas.info['duration'] = 1
+            
+            ( canvas, duration ) = GenerateAnimatedFrame( pil_canvas, self._target_resolution, canvas )
             yield ( GenerateHydrusBitmapFromPILImage( canvas ), duration )
-            
+
             try:
                 
                 pil_image.seek( pil_image.tell() + 1 )
-                
-                if pil_image.palette == global_palette: # for some reason, when we fall back to global palette (no local-frame palette), we reset bunch of important variables!
-                    
-                    pil_image.palette.dirty = dirty
-                    pil_image.palette.mode = mode
-                    pil_image.palette.rawmode = rawmode
-                    
                 
             except: break
             
@@ -387,15 +330,15 @@ class AnimatedFrameRenderer( FrameRenderer ):
     
     def GetFrames( self ):
     
-        #for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
+        for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
         
-        try:
+        #try:
             
-            for ( frame, duration ) in self._GetFramesCV(): yield ( frame, duration )
+            #for ( frame, duration ) in self._GetFramesCV(): yield ( frame, duration )
             
-        except HydrusExceptions.CantRenderWithCVException:
+        #except HydrusExceptions.CantRenderWithCVException:
             
-            for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
+        #    for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
             
     
     def Render( self ):
