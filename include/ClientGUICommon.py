@@ -271,7 +271,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     def EventSetFocus( self, event ):
 
         self._ShowDropdownIfFocussed()
-        #wx.CallAfter(self.SetFocus)
+        
         event.Skip()
         
     
