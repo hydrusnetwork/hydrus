@@ -36,7 +36,7 @@ class App( wx.App ):
         
         self._reads[ 'hydrus_sessions' ] = []
         self._reads[ 'messaging_sessions' ] = []
-        self._reads[ 'namespace_blacklists' ] = []
+        self._reads[ 'tag_censorship' ] = []
         self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
@@ -52,7 +52,7 @@ class App( wx.App ):
         self._managers = {}
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
-        self._managers[ 'namespace_blacklists' ] = HydrusTags.NamespaceBlacklistsManager()
+        self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
         self._managers[ 'undo' ] = CC.UndoManager()

@@ -82,7 +82,7 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
 def GetYoutubeFormats( youtube_url ):
     
     try: p = pafy.Pafy( youtube_url )
-    except: raise Exception( 'Could not fetch video info from youtube!' )
+    except Exception as e: raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HC.u( e ) )
     
     info = { ( s.extension, s.resolution ) : ( s.url, s.title ) for s in p.streams if s.extension in ( 'flv', 'mp4' ) }
     

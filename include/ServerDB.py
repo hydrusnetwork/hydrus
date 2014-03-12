@@ -979,7 +979,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             c.execute( 'UPDATE account_map SET used_bytes = ?, used_requests = ?;', ( 0, 0 ) )
             
-            self.pub( 'update_all_session_accounts' )
+            self.pub_after_commit( 'update_all_session_accounts' )
             
         
     
@@ -1750,7 +1750,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
             
         
-        for ( service_identifier, options ) in modified_services.items(): self.pub( 'restart_service', service_identifier, options )
+        for ( service_identifier, options ) in modified_services.items(): self.pub_after_commit( 'restart_service', service_identifier, options )
         
         return service_identifiers_to_access_keys
         
@@ -1965,8 +1965,8 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
         
-        self.pub( 'restart_service', service_identifier )
-        self.pub( 'notify_new_options' )
+        self.pub_after_commit( 'restart_service', service_identifier )
+        self.pub_after_commit( 'notify_new_options' )
         
     
     def _UnbanKey( self, c, service_id, account_id ): c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
@@ -2653,7 +2653,7 @@ class DB( ServiceDB ):
             
         
     
-    def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
+    def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
     def MainLoop( self ):
         

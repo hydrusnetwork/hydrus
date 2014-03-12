@@ -329,7 +329,7 @@ class HTTPConnection():
         elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
         
         try: self._connection.connect()
-        except: raise Exception( 'Could not connect to ' + self._host + '!' )
+        except: raise Exception( 'Could not connect to ' + HC.u( self._host ) + '!' )
         
     
     def _WriteResponseToPath( self, response, report_hooks ):

@@ -1472,6 +1472,9 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            intro = 'Here you can set the client to regularly export a certain query to a particular location.'
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._export_folders, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
@@ -1603,19 +1606,35 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._path = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            self._path_box = ClientGUICommon.StaticBox( self, 'export path' )
+            
+            self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
+            
+            #
+            
+            self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
             
             self._page_key = os.urandom( 32 )
             
-            self._predicates_box = ClientGUICommon.TagsBoxPredicates( self, self._page_key, predicates )
+            self._predicates_box = ClientGUICommon.TagsBoxPredicates( self._query_box, self._page_key, predicates )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
             
-            self._period = wx.SpinCtrl( self )
+            #
             
-            self._pattern = wx.TextCtrl( self )
+            self._period_box = ClientGUICommon.StaticBox( self, 'export period (minutes)' )
             
-            self._examples = ClientGUICommon.ExportPatternButton( self )
+            self._period = wx.SpinCtrl( self._period_box )
+            
+            #
+            
+            self._phrase_box = ClientGUICommon.StaticBox( self, 'filenames' )
+            
+            self._pattern = wx.TextCtrl( self._phrase_box )
+            
+            self._examples = ClientGUICommon.ExportPatternButton( self._phrase_box )
+            
+            #
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -1638,28 +1657,19 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         def ArrangeControls():
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            self._path_box.AddF( self._path, FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddGrowableCol( 1, 1 )
+            self._query_box.AddF( self._predicates_box, FLAGS_EXPAND_BOTH_WAYS )
+            self._query_box.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
             
-            predicates_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            predicates_vbox.AddF( self._predicates_box, FLAGS_EXPAND_BOTH_WAYS )
-            predicates_vbox.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._period_box.AddF( self._period, FLAGS_EXPAND_PERPENDICULAR )
             
             phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             phrase_hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
             phrase_hbox.AddF( self._examples, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self, label = 'path:' ), FLAGS_MIXED )
-            gridbox.AddF( self._path, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'query:' ), FLAGS_MIXED )
-            gridbox.AddF( predicates_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'check period (minutes):' ), FLAGS_MIXED )
-            gridbox.AddF( self._period, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'export phrase:' ), FLAGS_MIXED )
-            gridbox.AddF( phrase_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._phrase_box.AddF( phrase_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -1668,14 +1678,17 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._path_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._query_box, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._period_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._phrase_box, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
             
-            self.SetInitialSize( ( 640, y ) )
+            self.SetInitialSize( ( 480, y ) )
             
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'edit export folder' )
@@ -2508,6 +2521,9 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            intro = 'Here you can set the client to regularly check certain folders for new files to import.'
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._import_folders, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
@@ -2651,9 +2667,15 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._path = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            self._path_box = ClientGUICommon.StaticBox( self, 'import path' )
             
-            self._type = ClientGUICommon.BetterChoice( self )
+            self._path = wx.DirPickerCtrl( self._path_box, style = wx.DIRP_USE_TEXTCTRL )
+            
+            #
+            
+            self._type_box = ClientGUICommon.StaticBox( self, 'type of import folder' )
+            
+            self._type = ClientGUICommon.BetterChoice( self._type_box )
             self._type.Append( 'delete', HC.IMPORT_FOLDER_TYPE_DELETE )
             self._type.Append( 'synchronise', HC.IMPORT_FOLDER_TYPE_SYNCHRONISE )
             message = '''delete - try to import all files in folder and delete them if they succeed
@@ -2661,10 +2683,20 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
 synchronise - try to import all new files in folder'''
             self._type.SetToolTipString( message )
             
-            self._check_period = wx.SpinCtrl( self )
+            #
             
-            self._local_tag = wx.TextCtrl( self )
+            self._period_box = ClientGUICommon.StaticBox( self, 'check period (minutes)' )
+            
+            self._check_period = wx.SpinCtrl( self._period_box )
+            
+            #
+            
+            self._local_tag_box = ClientGUICommon.StaticBox( self, 'local tag to give to all imports' )
+            
+            self._local_tag = wx.TextCtrl( self._local_tag_box )
             self._local_tag.SetToolTipString( 'add this tag on the local tag service to anything imported from the folder' )
+            
+            #
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -2688,18 +2720,13 @@ synchronise - try to import all new files in folder'''
         
         def ArrangeControls():
             
-            gridbox = wx.FlexGridSizer( 0, 2 )
+            self._path_box.AddF( self._path, FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddGrowableCol( 1, 1 )
+            self._type_box.AddF( self._type, FLAGS_EXPAND_PERPENDICULAR )
             
-            gridbox.AddF( wx.StaticText( self, label = 'path:' ), FLAGS_MIXED )
-            gridbox.AddF( self._path, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'type:' ), FLAGS_MIXED )
-            gridbox.AddF( self._type, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'check period (minutes):' ), FLAGS_MIXED )
-            gridbox.AddF( self._check_period, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( wx.StaticText( self, label = 'local tag:' ), FLAGS_MIXED )
-            gridbox.AddF( self._local_tag, FLAGS_EXPAND_BOTH_WAYS )
+            self._period_box.AddF( self._check_period, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._local_tag_box.AddF( self._local_tag, FLAGS_EXPAND_PERPENDICULAR )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -2708,7 +2735,10 @@ synchronise - try to import all new files in folder'''
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._path_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._type_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._period_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._local_tag_box, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
@@ -2740,180 +2770,6 @@ synchronise - try to import all new files in folder'''
         local_tag = self._local_tag.GetValue()
         
         return ( path, type, check_period, local_tag )
-        
-    
-class DialogManageNamespaceBlacklists( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent ):
-        
-        def InitialiseControls():
-            
-            self._tag_services = ClientGUICommon.ListBook( self )
-            self._tag_services.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-            
-            for service_identifier in service_identifiers:
-                
-                page = self._Panel( self._tag_services, service_identifier )
-                
-                name = service_identifier.GetName()
-                
-                self._tag_services.AddPage( page, name )
-                
-            
-            default_tag_repository = HC.options[ 'default_tag_repository' ]
-            
-            self._tag_services.Select( default_tag_repository.GetName() )
-            
-        
-        def ArrangeControls():
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._ok, FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._tag_services, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-            self.SetInitialSize( ( 550, 680 ) )
-            
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'namespace blacklists' )
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        interested_actions = [ 'set_search_focus' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
-        
-    
-    def _SetSearchFocus( self ):
-        
-        page = self._tag_services.GetCurrentPage()
-        
-        page.SetTagBoxFocus()
-        
-    
-    def EventOK( self, event ):
-        
-        try:
-            
-            info = [ page.GetInfo() for page in self._tag_services.GetNameToPageDict().values() if page.HasInfo() ]
-            
-            HC.app.Write( 'namespace_blacklists', info )
-            
-        finally: self.EndModal( wx.ID_OK )
-        
-    
-    def EventServiceChanged( self, event ):
-        
-        page = self._tag_services.GetCurrentPage()
-        
-        wx.CallAfter( page.SetTagBoxFocus )
-        
-    
-    class _Panel( wx.Panel ):
-        
-        def __init__( self, parent, service_identifier ):
-            
-            def InitialiseControls():
-                
-                choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
-                
-                self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
-                
-                self._namespaces = ClientGUICommon.TagsBoxNamespaces( self )
-                
-                self._namespace_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-                self._namespace_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
-                
-            
-            def PopulateControls():
-                
-                ( blacklist, namespaces ) = HC.app.Read( 'namespace_blacklists', self._service_identifier )
-                
-                if blacklist: self._blacklist.SetSelection( 0 )
-                else: self._blacklist.SetSelection( 1 )
-                
-                for namespace in namespaces: self._namespaces.AddNamespace( namespace )
-                
-            
-            def ArrangeControls():
-                
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                vbox.AddF( self._blacklist, FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._namespaces, FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( self._namespace_input, FLAGS_EXPAND_PERPENDICULAR )
-                
-                self.SetSizer( vbox )
-                
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._service_identifier = service_identifier
-            
-            InitialiseControls()
-            
-            PopulateControls()
-            
-            ArrangeControls()
-            
-        
-        def EventKeyDownNamespace( self, event ):
-            
-            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-                
-                namespace = self._namespace_input.GetValue()
-                
-                self._namespaces.AddNamespace( namespace )
-                
-                self._namespace_input.SetValue( '' )
-                
-            else: event.Skip()
-            
-        
-        def GetInfo( self ):
-            
-            blacklist = self._blacklist.GetSelectedClientData()
-            
-            namespaces = self._namespaces.GetClientData()
-            
-            return ( self._service_identifier, blacklist, namespaces )
-            
-        
-        def HasInfo( self ):
-            
-            ( service_identifier, blacklist, namespaces ) = self.GetInfo()
-            
-            return len( namespaces ) > 0
-            
-        
-        def SetTagBoxFocus( self ): self._namespace_input.SetFocus()
         
     
 class DialogManageOptions( ClientGUIDialogs.Dialog ):
@@ -5646,7 +5502,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     now = HC.GetNow()
                     
-                    if info[ 'last_checked' ] < now: last_checked_message = HC.ConvertTimestampToPrettySync( info[ 'last_checked' ] )
+                    if info[ 'last_checked' ] < now: last_checked_message = 'updated to ' + HC.ConvertTimestampToPrettySync( info[ 'last_checked' ] )
                     else: last_checked_message = 'due to error, update is delayed. next check in ' + HC.ConvertTimestampToPrettyPending( info[ 'last_checked' ] )
                     
                 
@@ -5859,6 +5715,187 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self._SetControls( name, info )
             
+        
+    
+class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
+    
+    def __init__( self, parent ):
+        
+        def InitialiseControls():
+            
+            self._tag_services = ClientGUICommon.ListBook( self )
+            self._tag_services.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            
+            for service_identifier in service_identifiers:
+                
+                page = self._Panel( self._tag_services, service_identifier )
+                
+                name = service_identifier.GetName()
+                
+                self._tag_services.AddPage( page, name )
+                
+            
+            default_tag_repository = HC.options[ 'default_tag_repository' ]
+            
+            self._tag_services.Select( default_tag_repository.GetName() )
+            
+        
+        def ArrangeControls():
+            
+            buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            buttons.AddF( self._ok, FLAGS_SMALL_INDENT )
+            buttons.AddF( self._cancel, FLAGS_SMALL_INDENT )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            intro = 'Here you can set which tags or classes of tags you do not want to see.'
+            intro += os.linesep
+            intro += "Input ':' for all namespaced tags, and '' for all unnamespaced tags."
+            intro += os.linesep
+            intro += 'You may have to refresh your current queries to see any changes.'
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_services, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            self.SetInitialSize( ( 350, 480 ) )
+            
+        
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'tag censorship' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        interested_actions = [ 'set_search_focus' ]
+        
+        entries = []
+        
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        
+        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        
+    
+    def _SetSearchFocus( self ):
+        
+        page = self._tag_services.GetCurrentPage()
+        
+        page.SetTagBoxFocus()
+        
+    
+    def EventOK( self, event ):
+        
+        try:
+            
+            info = [ page.GetInfo() for page in self._tag_services.GetNameToPageDict().values() if page.HasInfo() ]
+            
+            HC.app.Write( 'tag_censorship', info )
+            
+        finally: self.EndModal( wx.ID_OK )
+        
+    
+    def EventServiceChanged( self, event ):
+        
+        page = self._tag_services.GetCurrentPage()
+        
+        wx.CallAfter( page.SetTagBoxFocus )
+        
+    
+    class _Panel( wx.Panel ):
+        
+        def __init__( self, parent, service_identifier ):
+            
+            def InitialiseControls():
+                
+                choice_pairs = [ ( 'blacklist', True ), ( 'whitelist', False ) ]
+                
+                self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
+                
+                self._tags = ClientGUICommon.TagsBoxCensorship( self )
+                
+                self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+                self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
+                
+            
+            def PopulateControls():
+                
+                ( blacklist, tags ) = HC.app.Read( 'tag_censorship', self._service_identifier )
+                
+                if blacklist: self._blacklist.SetSelection( 0 )
+                else: self._blacklist.SetSelection( 1 )
+                
+                for tag in tags: self._tags.AddTag( tag )
+                
+            
+            def ArrangeControls():
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._blacklist, FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( self._tag_input, FLAGS_EXPAND_PERPENDICULAR )
+                
+                self.SetSizer( vbox )
+                
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._service_identifier = service_identifier
+            
+            InitialiseControls()
+            
+            PopulateControls()
+            
+            ArrangeControls()
+            
+        
+        def EventKeyDownTag( self, event ):
+            
+            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+                
+                tag = self._tag_input.GetValue()
+                
+                self._tags.AddTag( tag )
+                
+                self._tag_input.SetValue( '' )
+                
+            else: event.Skip()
+            
+        
+        def GetInfo( self ):
+            
+            blacklist = self._blacklist.GetSelectedClientData()
+            
+            tags = self._tags.GetClientData()
+            
+            return ( self._service_identifier, blacklist, tags )
+            
+        
+        def HasInfo( self ):
+            
+            ( service_identifier, blacklist, tags ) = self.GetInfo()
+            
+            return len( tags ) > 0
+            
+        
+        def SetTagBoxFocus( self ): self._tag_input.SetFocus()
         
     
 class DialogManageTagParents( ClientGUIDialogs.Dialog ):
@@ -6835,9 +6872,10 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            message = 'When services dispute over a file\'s tags,' + os.linesep + 'higher services will overrule those below.'
+            intro = 'Unless otherwise specified, the lists of tags you see are a merge of all your different repositories\' data. If two services dispute over whether a file should have a tag, the higher here will overrule those below. Changing the precedence may lock up your client for several minutes while the combined tags cache is recalculated.'
             
-            self._explain = wx.StaticText( self, label = message )
+            self._explain = wx.StaticText( self, label = intro )
+            self._explain.Wrap( 300 )
             
             self._tag_services = wx.ListBox( self )
             
@@ -6894,7 +6932,7 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
             
             ( x, y ) = self.GetEffectiveMinSize()
             
-            if y < 400: y = 400
+            if y < 300: y = 300
             
             self.SetInitialSize( ( x, y ) )
             

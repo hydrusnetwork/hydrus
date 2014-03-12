@@ -756,9 +756,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             ( operator, tag ) = predicate.GetValue()
             
-            namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
+            tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
             
-            result = namespace_blacklists_manager.FilterTags( self._tag_service_identifier, ( tag, ) )
+            result = tag_censorship_manager.FilterTags( self._tag_service_identifier, ( tag, ) )
             
             if len( result ) > 0:
                 
@@ -766,7 +766,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
                 parents = tag_parents_manager.GetParents( self._tag_service_identifier, tag )
                 
-                parents = namespace_blacklists_manager.FilterTags( self._tag_service_identifier, parents )
+                parents = tag_censorship_manager.FilterTags( self._tag_service_identifier, parents )
                 
                 self._chosen_tag_callable( tag, parents )
                 
@@ -1162,69 +1162,17 @@ class ExportPatternButton( wx.Button ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
-    def EventButton( self, event ):
-        
-        menu = wx.Menu()
-        
-        menu.Append( -1, 'click on a phrase to copy to clipboard' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
-        menu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
-        menu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
-        menu.Append( self.ID_REGEX_ANY, r'any character - .' )
-        menu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
-        menu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
-        menu.Append( self.ID_REGEX_END, r'end of line - $' )
-        menu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
-        menu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
-        menu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
-        menu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
-        menu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
-        menu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
-        menu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
-        menu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
-        menu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
-        menu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
-        menu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
-        menu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
-        menu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-        menu.Append( self.ID_REGEX_NUMBER_EXT, r'...0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' )
-        menu.Append( self.ID_REGEX_AUTHOR, r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^\\][\w\s]*(?=\s-)' )
-        
-        self.PopupMenu( menu )
-        
-        wx.CallAfter( menu.Destroy )
-        
-    
     def EventMenu( self, event ):
         
         id = event.GetId()
         
         phrase = None
         
-        if id == self.ID_HASH: phrase = r'{hash}'
-        if id == self.ID_TAGS: phrase = r'{tags}'
-        if id == self.ID_NN_TAGS: phrase = r'{nn tags}'
-        if id == self.ID_NAMESPACE: phrase = r'[...]'
-        if id == self.ID_TAG: phrase = r'(...)'
+        if id == self.ID_HASH: phrase = '{hash}'
+        if id == self.ID_TAGS: phrase = '{tags}'
+        if id == self.ID_NN_TAGS: phrase = '{nn tags}'
+        if id == self.ID_NAMESPACE: phrase = '[...]'
+        if id == self.ID_TAG: phrase = '(...)'
         else: event.Skip()
         
         if phrase is not None:
@@ -1249,17 +1197,17 @@ class ExportPatternButton( wx.Button ):
         
         menu.AppendSeparator()
         
-        menu.Append( self.ID_HASH, r'the file\'s hash - {hash}' )
-        menu.Append( self.ID_TAGS, r'all the file\'s tags - {tags}' )
-        menu.Append( self.ID_NN_TAGS, r'all the file\'s non-namespaced tags - {nn tags}' )
+        menu.Append( self.ID_HASH, 'the file\'s hash - {hash}' )
+        menu.Append( self.ID_TAGS, 'all the file\'s tags - {tags}' )
+        menu.Append( self.ID_NN_TAGS, 'all the file\'s non-namespaced tags - {nn tags}' )
         
         menu.AppendSeparator()
         
-        menu.Append( self.ID_NAMESPACE, r'all instances of a particular namespace - [...]' )
+        menu.Append( self.ID_NAMESPACE, 'all instances of a particular namespace - [...]' )
         
         menu.AppendSeparator()
         
-        menu.Append( self.ID_TAG, r'a particular tag, if the file has it - (...)' )
+        menu.Append( self.ID_TAG, 'a particular tag, if the file has it - (...)' )
         
         self.PopupMenu( menu )
         
@@ -3968,6 +3916,12 @@ class TagsBox( ListBox ):
         event.Skip()
         
     
+    def GetSelectedTag( self ):
+        
+        if self._current_selected_index is not None: return self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+        else: return None
+        
+    
 class TagsBoxActiveOnly( TagsBox ):
     
     has_counts = True
@@ -4067,6 +4021,42 @@ class TagsBoxActiveOnly( TagsBox ):
             
             if len( predicates ) > 0: self._Select( 0 )
             
+        
+    
+class TagsBoxCensorship( TagsBox ):
+    
+    def _Activate( self, s, term ): self.RemoveTag( term )
+    
+    def _GetTagString( self, tag ):
+        
+        if tag == '': return 'unnamespaced'
+        elif tag == ':': return 'namespaced'
+        else: return tag
+        
+    
+    def AddTag( self, tag ):
+        
+        tag_string = self._GetTagString( tag )
+        
+        if tag_string in self._strings_to_terms: self.RemoveTag( tag )
+        else:
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+            self._TextsHaveChanged()
+            
+        
+    
+    def RemoveTag( self, tag ):
+        
+        tag_string = self._GetTagString( tag )
+        
+        self._ordered_strings.remove( tag_string )
+        
+        del self._strings_to_terms[ tag_string ]
+        
+        self._TextsHaveChanged()
         
     
 class TagsBoxColourOptions( TagsBox ):
@@ -4559,6 +4549,8 @@ class TagsBoxManageWithShowDeleted( StaticBox ):
         else: self._tags_box.HideDeleted()
         
     
+    def GetSelectedTag( self ): return self._tags_box.GetSelectedTag()
+    
     def PetitionTag( self, tag ): self._tags_box.PetitionTag( tag )
     
     def PendTag( self, tag ): self._tags_box.PendTag( tag )
@@ -4566,37 +4558,6 @@ class TagsBoxManageWithShowDeleted( StaticBox ):
     def RescindPetition( self, tag ): self._tags_box.RescindPetition( tag )
     
     def RescindPend( self, tag ): self._tags_box.RescindPend( tag )
-    
-class TagsBoxNamespaces( TagsBox ):
-    
-    def _Activate( self, s, term ): self.RemoveNamespace( term )
-    
-    def AddNamespace( self, namespace ):
-        
-        if namespace == '': namespace_string = 'unnamespaced'
-        else: namespace_string = namespace + ':'
-        
-        if namespace_string in self._strings_to_terms: self.RemoveNamespace( namespace )
-        else:
-            
-            self._ordered_strings.append( namespace_string )
-            self._strings_to_terms[ namespace_string ] = namespace
-            
-            self._TextsHaveChanged()
-            
-        
-    
-    def RemoveNamespace( self, namespace ):
-        
-        if namespace == '': namespace_string = 'unnamespaced'
-        else: namespace_string = namespace + ':'
-        
-        self._ordered_strings.remove( namespace_string )
-        
-        del self._strings_to_terms[ namespace_string ]
-        
-        self._TextsHaveChanged()
-        
     
 class TagsBoxPredicates( TagsBox ):
     
