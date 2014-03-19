@@ -7,6 +7,7 @@ import ClientConstants as CC
 import ClientConstantsMessages
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIMixins
 import collections
 import HydrusNATPunch
 import itertools
@@ -5761,19 +5762,19 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            intro = 'Here you can set which tags or classes of tags you do not want to see.'
-            intro += os.linesep
-            intro += "Input ':' for all namespaced tags, and '' for all unnamespaced tags."
-            intro += os.linesep
-            intro += 'You may have to refresh your current queries to see any changes.'
+            intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and '' for all unnamespaced tags. You may have to refresh your current queries to see any changes."
             
-            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
+            st = wx.StaticText( self, label = intro )
+            
+            st.Wrap( 350 )
+            
+            vbox.AddF( st, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._tag_services, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
             
             self.SetSizer( vbox )
             
-            self.SetInitialSize( ( 350, 480 ) )
+            self.SetInitialSize( ( -1, 480 ) )
             
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag censorship' )
@@ -6038,11 +6039,13 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
                 
-                self._child_text = wx.StaticText( self )
-                self._parent_text = wx.StaticText( self )
+                removed_callable = lambda tag: 1
                 
-                self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetChild, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
-                self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetParent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._children = ClientGUICommon.TagsBoxFlat( self, removed_callable )
+                self._parents = ClientGUICommon.TagsBoxFlat( self, removed_callable )
+                
+                self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 
                 self._add = wx.Button( self, label = 'add' )
                 self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -6060,15 +6063,17 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 self._tag_parents.SortListItems( 2 )
                 
-                if tag is not None: self.SetChild( tag )
+                if tag is not None: self.AddChild( tag )
                 
             
             def ArrangeControls():
                 
-                text_box = wx.BoxSizer( wx.HORIZONTAL )
+                intro = 'Files with a tag on the left will also be given the tag on the right.'
                 
-                text_box.AddF( self._child_text, FLAGS_EXPAND_BOTH_WAYS )
-                text_box.AddF( self._parent_text, FLAGS_EXPAND_BOTH_WAYS )
+                tags_box = wx.BoxSizer( wx.HORIZONTAL )
+                
+                tags_box.AddF( self._children, FLAGS_EXPAND_BOTH_WAYS )
+                tags_box.AddF( self._parents, FLAGS_EXPAND_BOTH_WAYS )
                 
                 input_box = wx.BoxSizer( wx.HORIZONTAL )
                 
@@ -6077,9 +6082,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
+                vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( self._tag_parents, FLAGS_EXPAND_BOTH_WAYS )
                 vbox.AddF( self._add, FLAGS_LONE_BUTTON )
-                vbox.AddF( text_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                vbox.AddF( tags_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 vbox.AddF( input_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 self.SetSizer( vbox )
@@ -6103,9 +6109,6 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
             
             self._pairs_to_reasons = {}
-            
-            self._current_parent = None
-            self._current_child = None
             
             InitialiseControls()
             
@@ -6245,7 +6248,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if HydrusTags.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
                     
-                    wx.MessageBox( 'Adding that pair would create a loop!' )
+                    wx.MessageBox( 'Adding ' + potential_child + '->' + potential_parent + ' would create a loop!' )
                     
                     return False
                     
@@ -6256,8 +6259,32 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def _SetButtonStatus( self ):
             
-            if self._current_parent is None or self._current_child is None: self._add.Disable()
+            if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0: self._add.Disable()
             else: self._add.Enable()
+            
+        
+        def AddChild( self, tag, parents = [] ):
+            
+            if tag is not None:
+                
+                if tag in self._parents.GetTags(): self._parents.AddTag( tag )
+                
+                self._children.AddTag( tag )
+                
+                self._SetButtonStatus()
+                
+            
+        
+        def AddParent( self, tag, parents = [] ):
+            
+            if tag is not None:
+                
+                if tag in self._children.GetTags(): self._children.AddTag( tag )
+                
+                self._parents.AddTag( tag )
+                
+                self._SetButtonStatus()
+                
             
         
         def EventActivated( self, event ):
@@ -6276,13 +6303,15 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def EventAddButton( self, event ):
             
-            if self._current_child is not None and self._current_parent is not None:
-                
-                self._AddPair( self._current_child, self._current_parent )
-                
-                self.SetChild( None )
-                self.SetParent( None )
-                
+            children = self._children.GetTags()
+            parents = self._parents.GetTags()
+            
+            for ( child, parent ) in itertools.product( children, parents ): self._AddPair( child, parent )
+            
+            self._children.SetTags( [] )
+            self._parents.SetTags( [] )
+            
+            self._SetButtonStatus()
             
         
         def EventItemSelected( self, event ):
@@ -6325,33 +6354,9 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             return ( self._service_identifier, content_updates )
             
         
-        def SetChild( self, tag, parents = [] ):
-            
-            if tag is not None and tag == self._current_parent: self.SetParent( None )
-            
-            self._current_child = tag
-            
-            if tag is None: self._child_text.SetLabel( '' )
-            else: self._child_text.SetLabel( tag )
-            
-            self._SetButtonStatus()
-            
-        
-        def SetParent( self, tag, parents = [] ):
-            
-            if tag is not None and tag == self._current_child: self.SetChild( None )
-            
-            self._current_parent = tag
-            
-            if tag is None: self._parent_text.SetLabel( '' )
-            else: self._parent_text.SetLabel( tag )
-            
-            self._SetButtonStatus()
-            
-        
         def SetTagBoxFocus( self ):
             
-            if self._current_child is None: self._child_input.SetFocus()
+            if len( self._children.GetTags() ) == 0: self._child_input.SetFocus()
             else: self._parent_input.SetFocus()
             
         
@@ -6496,10 +6501,12 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
                 self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
                 
-                self._old_text = wx.StaticText( self )
-                self._new_text = wx.StaticText( self )
+                removed_callable = lambda tags: 1
                 
-                self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetOld, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._old_siblings = ClientGUICommon.TagsBoxFlat( self, removed_callable )
+                self._new_sibling = wx.StaticText( self )
+                
+                self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
                 
                 self._add = wx.Button( self, label = 'add' )
@@ -6518,15 +6525,23 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 self._tag_siblings.SortListItems( 2 )
                 
-                if tag is not None: self.SetOld( tag )
+                if tag is not None: self.AddOld( tag )
                 
             
             def ArrangeControls():
                 
+                intro = 'Tags on the left will be replaced by those on the right.'
+                
+                new_sibling_box = wx.BoxSizer( wx.VERTICAL )
+                
+                new_sibling_box.AddF( ( 10, 10 ), FLAGS_EXPAND_BOTH_WAYS )
+                new_sibling_box.AddF( self._new_sibling, FLAGS_EXPAND_PERPENDICULAR )
+                new_sibling_box.AddF( ( 10, 10 ), FLAGS_EXPAND_BOTH_WAYS )
+                
                 text_box = wx.BoxSizer( wx.HORIZONTAL )
                 
-                text_box.AddF( self._old_text, FLAGS_EXPAND_BOTH_WAYS )
-                text_box.AddF( self._new_text, FLAGS_EXPAND_BOTH_WAYS )
+                text_box.AddF( self._old_siblings, FLAGS_EXPAND_BOTH_WAYS )
+                text_box.AddF( new_sibling_box, FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 input_box = wx.BoxSizer( wx.HORIZONTAL )
                 
@@ -6535,6 +6550,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
+                vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( self._tag_siblings, FLAGS_EXPAND_BOTH_WAYS )
                 vbox.AddF( self._add, FLAGS_LONE_BUTTON )
                 vbox.AddF( text_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -6562,7 +6578,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._pairs_to_reasons = {}
             
-            self._current_old = None
             self._current_new = None
             
             InitialiseControls()
@@ -6570,8 +6585,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             PopulateControls()
             
             ArrangeControls()
-            
-            if tag is not None: self.SetOld( tag )
             
         
         def _AddPair( self, old, new ):
@@ -6718,7 +6731,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     if next_new == potential_old:
                         
-                        wx.MessageBox( 'Adding that pair would create a loop!' )
+                        wx.MessageBox( 'Adding ' + potential_old + '->' + potential_new + ' would create a loop!' )
                         
                         return False
                         
@@ -6730,8 +6743,54 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def _SetButtonStatus( self ):
             
-            if self._current_new is None or self._current_old is None: self._add.Disable()
+            if self._current_new is None or len( self._old_siblings.GetTags() ) == 0: self._add.Disable()
             else: self._add.Enable()
+            
+        
+        def AddOld( self, old, parents = [] ):
+            
+            if old is not None:
+                
+                current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                
+                current_olds = { current_old for ( current_old, current_new ) in current_pairs }
+                
+                # test for ambiguity
+                
+                while old in current_olds:
+                    
+                    olds_to_news = dict( current_pairs )
+                    
+                    new = olds_to_news[ old ]
+                    
+                    message = 'There already is a relationship set for ' + old + '! It goes to ' + new + '.'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I want to overwrite it', no_label = 'do nothing' ) as dlg:
+                        
+                        if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                            
+                            if dlg.ShowModal() != wx.ID_YES: return
+                            
+                            self._AddPair( old, new )
+                            
+                        
+                    
+                    current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
+                    
+                    current_olds = { current_old for ( current_old, current_new ) in current_pairs }
+                    
+                
+            
+            #
+            
+            if old is not None:
+                
+                if old == self._current_new: self.SetNew( None )
+                
+                self._old_siblings.AddTag( old )
+                
+            
+            self._SetButtonStatus()
             
         
         def EventActivated( self, event ):
@@ -6750,12 +6809,14 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def EventAddButton( self, event ):
             
-            if self._current_old is not None and self._current_new is not None:
+            if self._current_new is not None and len( self._old_siblings.GetTags() ) > 0:
                 
-                self._AddPair( self._current_old, self._current_new )
+                for old in self._old_siblings.GetTags(): self._AddPair( old, self._current_new )
                 
-                self.SetOld( None )
+                self._old_siblings.SetTags( [] )
                 self.SetNew( None )
+                
+                self._SetButtonStatus()
                 
             
         
@@ -6803,65 +6864,22 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def SetNew( self, new, parents = [] ):
             
-            if new is not None and new == self._current_old: self.SetOld( None )
+            if new is None: self._new_sibling.SetLabel( '' )
+            else:
+                
+                if new in self._old_siblings.GetTags(): self._old_siblings.AddTag( new )
+                
+                self._new_sibling.SetLabel( new )
+                
             
             self._current_new = new
-            
-            if new is None: self._new_text.SetLabel( '' )
-            else: self._new_text.SetLabel( new )
-            
-            self._SetButtonStatus()
-            
-        
-        def SetOld( self, old, parents = [] ):
-            
-            if old is not None:
-                
-                current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
-                
-                current_olds = { current_old for ( current_old, current_new ) in current_pairs }
-                
-                # test for ambiguity
-                
-                while old in current_olds:
-                    
-                    olds_to_news = dict( current_pairs )
-                    
-                    new = olds_to_news[ old ]
-                    
-                    message = 'There already is a relationship set for ' + old + '! It goes to ' + new + '.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I want to overwrite it', no_label = 'do nothing' ) as dlg:
-                        
-                        if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
-                            
-                            if dlg.ShowModal() != wx.ID_YES: return
-                            
-                            self._AddPair( old, new )
-                            
-                        
-                    
-                    current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] )
-                    
-                    current_olds = { current_old for ( current_old, current_new ) in current_pairs }
-                    
-                
-            
-            #
-            
-            if old is not None and old == self._current_new: self.SetNew( None )
-            
-            self._current_old = old
-            
-            if old is None: self._old_text.SetLabel( '' )
-            else: self._old_text.SetLabel( old )
             
             self._SetButtonStatus()
             
         
         def SetTagBoxFocus( self ):
             
-            if self._current_old is None: self._old_input.SetFocus()
+            if len( self._old_siblings.GetTags() ) == 0: self._old_input.SetFocus()
             else: self._new_input.SetFocus()
             
         
@@ -7150,7 +7168,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             def InitialiseControls():
                 
-                self._tags_box = ClientGUICommon.TagsBoxManageWithShowDeleted( self, self.AddTag, self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags )
+                self._tags_box_sorter = ClientGUICommon.TagsBoxCountsSorter( self, 'tags' )
+                
+                self._tags_box = ClientGUICommon.TagsBoxCountsSimple( self._tags_box_sorter, self.AddTag )
+                
+                self._tags_box_sorter.SetTagsBox( self._tags_box )
+                
+                self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
+                self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
+                
+                self._tags_box_sorter.AddF( self._show_deleted_checkbox, FLAGS_LONE_BUTTON )
                 
                 self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
                 
@@ -7166,7 +7193,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                pass
+                self._tags_box.ChangeTagRepository( self._tag_service_identifier )
+                
+                self._tags_box.SetTagsByMedia( self._media )
                 
             
             def ArrangeControls():
@@ -7187,7 +7216,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                vbox.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( self._tags_box_sorter, FLAGS_EXPAND_BOTH_WAYS )
                 vbox.AddF( self._add_tag_box, FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( copy_paste_hbox, FLAGS_BUTTON_SIZERS )
                 vbox.AddF( self._modify_mappers, FLAGS_BUTTON_SIZERS )
@@ -7213,12 +7242,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 self._account = service.GetAccount()
                 
             
-            tags_managers = [ m.GetTagsManager() for m in media ]
+            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )
             
-            ( self._current_tags, self._deleted_tags, self._pending_tags, self._petitioned_tags ) = CC.IntersectTags( tags_managers, tag_service_identifier )
+            media_results = HC.app.Read( 'media_results', self._file_service_identifier, hashes )
             
-            self._current_tags.sort()
-            self._pending_tags.sort()
+            # this should now be a nice clean copy of the original media
+            self._media = [ ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results ]
+            
+            tags_managers = [ m.GetTagsManager() for m in self._media ]
             
             InitialiseControls()
             
@@ -7229,100 +7260,74 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def _AddTag( self, tag, only_add = False ):
             
+            tag_managers = [ m.GetTagsManager() for m in self._media ]
+            
+            num_files = len( self._media )
+            
+            num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_identifier ) ] )
+            
+            choices = []
+            
             if self._i_am_local_tag_service:
                 
-                if tag in self._pending_tags:
-                    
-                    if only_add: return
-                    
-                    self._pending_tags.remove( tag )
-                    
-                    self._tags_box.RescindPend( tag )
-                    
-                elif tag in self._petitioned_tags:
-                    
-                    self._petitioned_tags.remove( tag )
-                    
-                    self._tags_box.RescindPetition( tag )
-                    
-                elif tag in self._current_tags:
-                    
-                    if only_add: return
-                    
-                    self._petitioned_tags.append( tag )
-                    
-                    self._tags_box.PetitionTag( tag )
-                    
-                else:
-                    
-                    self._pending_tags.append( tag )
-                    
-                    self._tags_box.PendTag( tag )
-                    
-                
-                self._content_updates = []
-                
-                self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, self._hashes ) ) for tag in self._pending_tags ] )
-                self._content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, self._hashes ) ) for tag in self._petitioned_tags ] )
+                if num_current < num_files: choices.append( ( 'add ' + tag, HC.CONTENT_UPDATE_ADD ) )
+                if num_current > 0: choices.append( ( 'delete ' + tag, HC.CONTENT_UPDATE_DELETE ) )
                 
             else:
                 
-                if tag in self._pending_tags:
+                num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_identifier ) ] )
+                num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_identifier ) ] )
+                
+                if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag, HC.CONTENT_UPDATE_PENDING ) )
+                if num_current > num_petitioned: choices.append( ( 'petition ' + tag, HC.CONTENT_UPDATE_PETITION ) )
+                if num_pending > 0: choices.append( ( 'rescind pending ' + tag, HC.CONTENT_UPDATE_RESCIND_PENDING ) )
+                if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag, HC.CONTENT_UPDATE_RESCIND_PETITION ) )
+                
+            
+            if len( choices ) > 1:
+                
+                intro = 'What would you like to do?'
+                
+                with ClientGUIDialogs.DialogButtonChoice( self, intro, choices ) as dlg:
                     
-                    if only_add: return
-                    
-                    self._pending_tags.remove( tag )
-                    
-                    self._tags_box.RescindPend( tag )
-                    
-                    self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, ( tag, self._hashes ) ) )
-                    
-                elif tag in self._petitioned_tags:
-                    
-                    self._petitioned_tags.remove( tag )
-                    
-                    self._tags_box.RescindPetition( tag )
-                    
-                    self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, ( tag, self._hashes ) ) )
-                    
-                elif tag in self._current_tags:
-                    
-                    if only_add: return
-                    
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ):
-                        
-                        self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, self._hashes, 'admin' ) ) )
-                        
-                        self._petitioned_tags.append( tag )
-                        
-                        self._tags_box.PetitionTag( tag )
-                        
-                    elif self._account.HasPermission( HC.POST_PETITIONS ):
-                        
-                        message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
-                        
-                        with wx.TextEntryDialog( self, message ) as dlg:
-                            
-                            if dlg.ShowModal() == wx.ID_OK:
-                                
-                                self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, self._hashes, dlg.GetValue() ) ) )
-                                
-                                self._petitioned_tags.append( tag )
-                                
-                                self._tags_box.PetitionTag( tag )
-                                
-                            
-                        
-                    
-                else:
-                    
-                    self._content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( tag, self._hashes ) ) )
-                    
-                    self._pending_tags.append( tag )
-                    
-                    self._tags_box.PendTag( tag )
+                    if dlg.ShowModal() == wx.ID_OK: choice = dlg.GetData()
+                    else: return
                     
                 
+            else: [ ( text, choice ) ] = choices
+            
+            if choice == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) )
+            elif choice == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) )
+            elif choice == HC.CONTENT_UPDATE_PENDING: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) and tag not in m.GetTagsManager().GetPending( self._tag_service_identifier ) )
+            elif choice == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_identifier ) )
+            elif choice == HC.CONTENT_UPDATE_RESCIND_PENDING: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_identifier ) )
+            elif choice == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_identifier ) )
+            
+            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
+            
+            if choice == HC.CONTENT_UPDATE_PETITION:
+                
+                if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                else:
+                    
+                    message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
+                    
+                    with wx.TextEntryDialog( self, message ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
+                        else: return
+                        
+                    
+                
+                content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice, ( tag, hashes, reason ) )
+                
+            else: content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice, ( tag, hashes ) )
+            
+            for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_identifier, content_update )
+            
+            self._content_updates.append( content_update )
+            
+            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
         def AddTag( self, tag, parents = [] ):
@@ -7340,7 +7345,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if wx.TheClipboard.Open():
                 
-                tags = self._current_tags + self._pending_tags
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( self._media, self._tag_service_identifier )
+                
+                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
                 
                 text = yaml.safe_dump( tags )
                 
@@ -7357,7 +7364,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             tag = self._tags_box.GetSelectedTag()
             
-            if tag is not None and tag in self._current_tags or tag in self._petitioned_tags:
+            if tag is not None:
                 
                 subject_identifiers = [ HC.AccountIdentifier( hash = hash, tag = tag ) for hash in self._hashes ]
                 
@@ -7381,20 +7388,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                     tags = yaml.safe_load( text )
                     
-                    tags = [ tag for tag in tags if tag not in self._current_tags and tag not in self._pending_tags ]
-                    
-                    for tag in tags: self.AddTag( tag )
+                    for tag in tags: self._AddTag( tag, only_add = True )
                     
                 except: wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
             else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
-        def EventTagsBoxAction( self, event ):
+        def EventShowDeleted( self, event ):
             
-            tag = self._tags_box.GetSelectedTag()
-            
-            if tag is not None: self.AddTag( tag )
+            self._tags_box.SetShow( 'deleted', self._show_deleted_checkbox.GetValue() )
             
         
         def GetContentUpdates( self ): return ( self._tag_service_identifier, self._content_updates )

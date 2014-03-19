@@ -1538,6 +1538,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
         
+        HC.ShowText( 'orphaned files deleted' )
+        
     
     def _DeletePending( self, c, service_identifier ):
         

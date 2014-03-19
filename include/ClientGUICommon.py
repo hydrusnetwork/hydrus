@@ -4137,34 +4137,29 @@ class TagsBoxColourOptions( TagsBox ):
             
         
     
-class TagsBoxCPP( TagsBox ):
+class TagsBoxCounts( TagsBox ):
     
     has_counts = True
     
-    def __init__( self, parent, page_key ):
+    def __init__( self, parent ):
         
         TagsBox.__init__( self, parent, min_height = 200 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
-        self._page_key = page_key
-        
-        self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
         self._last_media = None
         
+        self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+        
         self._current_tags_to_count = collections.Counter()
+        self._deleted_tags_to_count = collections.Counter()
         self._pending_tags_to_count = collections.Counter()
         self._petitioned_tags_to_count = collections.Counter()
         
-        HC.pubsub.sub( self, 'SetTagsByMedia', 'new_tags_selection' )
-        HC.pubsub.sub( self, 'ChangeTagRepository', 'change_tag_repository' )
-        
-    
-    def _Activate( self, s, term ):
-        
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ), None )
-        
-        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        self._show_current = True
+        self._show_deleted = False
+        self._show_pending = True
+        self._show_petitioned = True
         
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
@@ -4177,11 +4172,12 @@ class TagsBoxCPP( TagsBox ):
         
         siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
-        all_current = ( tag for tag in self._current_tags_to_count if self._current_tags_to_count[ tag ] > 0 )
-        all_pending = ( tag for tag in self._pending_tags_to_count if self._pending_tags_to_count[ tag ] > 0 )
-        all_petitioned = ( tag for tag in self._petitioned_tags_to_count if self._petitioned_tags_to_count[ tag ] > 0 )
+        all_tags = set()
         
-        all_tags = set( itertools.chain( all_current, all_pending, all_petitioned ) )
+        if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
+        if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
+        if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
+        if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
         
         self._ordered_strings = []
         self._strings_to_terms = {}
@@ -4190,9 +4186,10 @@ class TagsBoxCPP( TagsBox ):
             
             tag_string = tag
             
-            if tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-            if tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-            if tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HC.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
             
             sibling = siblings_manager.GetSibling( tag )
             
@@ -4225,14 +4222,11 @@ class TagsBoxCPP( TagsBox ):
         self._TextsHaveChanged()
         
     
-    def ChangeTagRepository( self, page_key, service_identifier ):
+    def ChangeTagRepository( self, service_identifier ):
         
-        if page_key == self._page_key:
-            
-            self._tag_service_identifier = service_identifier
-            
-            if self._last_media is not None: self.SetTagsByMedia( self._page_key, self._last_media )
-            
+        self._tag_service_identifier = service_identifier
+        
+        if self._last_media is not None: self.SetTagsByMedia( self._last_media )
         
     
     def SetSort( self, sort ):
@@ -4242,70 +4236,120 @@ class TagsBoxCPP( TagsBox ):
         self._SortTags()
         
     
-    def SetTags( self, current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ):
+    def SetTags( self, current_tags_to_count = collections.Counter(), deleted_tags_to_count = collections.Counter(), pending_tags_to_count = collections.Counter(), petitioned_tags_to_count = collections.Counter() ):
         
         siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
         current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
         
         self._current_tags_to_count = current_tags_to_count
+        self._deleted_tags_to_count = deleted_tags_to_count
         self._pending_tags_to_count = pending_tags_to_count
         self._petitioned_tags_to_count = petitioned_tags_to_count
         
         self._RecalcStrings()
         
     
-    def SetTagsByMedia( self, page_key, media, force_reload = False ):
+    def SetShow( self, type, value ):
         
-        if page_key == self._page_key:
-            
-            media = set( media )
-            
-            if force_reload:
-                
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_identifier )
-                
-                self.SetTags( current_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
-                
-            else:
-                
-                if self._last_media is None: ( removees, adds ) = ( set(), media )
-                else:
-                    
-                    removees = self._last_media.difference( media )
-                    adds = media.difference( self._last_media )
-                    
-                
-                siblings_manager = HC.app.GetManager( 'tag_siblings' )
-                
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_identifier )
-                
-                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-                
-                self._current_tags_to_count.subtract( current_tags_to_count )
-                self._pending_tags_to_count.subtract( pending_tags_to_count )
-                self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
-                
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_identifier )
-                
-                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-                
-                self._current_tags_to_count.update( current_tags_to_count )
-                self._pending_tags_to_count.update( pending_tags_to_count )
-                self._petitioned_tags_to_count.update( petitioned_tags_to_count )
-                
-            
-            self._last_media = media
-            
-            self._RecalcStrings()
-            
+        if type == 'current': self._show_current = value
+        elif type == 'deleted': self._show_deleted = value
+        elif type == 'pending': self._show_pending = value
+        elif type == 'petitioned': self._show_petitioned = value
+        
+        self._RecalcStrings()
         
     
-class TagsBoxCPPWithSorter( StaticBox ):
+    def SetTagsByMedia( self, media, force_reload = False ):
+        
+        media = set( media )
+        
+        if force_reload:
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_identifier )
+            
+            self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+            
+        else:
+            
+            if self._last_media is None: ( removees, adds ) = ( set(), media )
+            else:
+                
+                removees = self._last_media.difference( media )
+                adds = media.difference( self._last_media )
+                
+            
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_identifier )
+            
+            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+            
+            self._current_tags_to_count.subtract( current_tags_to_count )
+            self._deleted_tags_to_count.subtract( deleted_tags_to_count )
+            self._pending_tags_to_count.subtract( pending_tags_to_count )
+            self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_identifier )
+            
+            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+            
+            self._current_tags_to_count.update( current_tags_to_count )
+            self._deleted_tags_to_count.update( deleted_tags_to_count )
+            self._pending_tags_to_count.update( pending_tags_to_count )
+            self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+            
+        
+        self._last_media = media
+        
+        self._RecalcStrings()
+        
+    
+class TagsBoxCPP( TagsBoxCounts ):
     
     def __init__( self, parent, page_key ):
         
-        StaticBox.__init__( self, parent, 'selection tags' )
+        TagsBoxCounts.__init__( self, parent )
+        
+        self._page_key = page_key
+        
+        HC.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        
+    
+    def _Activate( self, s, term ):
+        
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ), None )
+        
+        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
+    
+    def ChangeTagRepositoryPubsub( self, page_key, service_identifier ):
+        
+        if page_key == self._page_key: self.ChangeTagRepository( service_identifier )
+        
+    
+    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
+        
+        if page_key == self._page_key: self.SetTagsByMedia( media, force_reload = force_reload )
+        
+    
+class TagsBoxCountsSimple( TagsBoxCounts ):
+    
+    def __init__( self, parent, callable ):
+        
+        TagsBoxCounts.__init__( self, parent )
+        
+        self._callable = callable
+        
+    
+    def _Activate( self, s, term ): self._callable( term )
+    
+class TagsBoxCountsSorter( StaticBox ):
+    
+    def __init__( self, parent, title ):
+        
+        StaticBox.__init__( self, parent, title )
         
         self._sorter = wx.Choice( self )
         
@@ -4321,11 +4365,10 @@ class TagsBoxCPPWithSorter( StaticBox ):
         
         self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
         
-        self._tags_box = TagsBoxCPP( self, page_key )
-        
         self.AddF( self._sorter, FLAGS_EXPAND_PERPENDICULAR )
-        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
         
+    
+    def ChangeTagRepository( self, service_identifier ): self._tags_box.ChangeTagRepository( service_identifier )
     
     def EventSort( self, event ):
         
@@ -4338,6 +4381,15 @@ class TagsBoxCPPWithSorter( StaticBox ):
             self._tags_box.SetSort( sort )
             
         
+    
+    def SetTagsBox( self, tags_box ):
+        
+        self._tags_box = tags_box
+        
+        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
+        
+    
+    def SetTagsByMedia( self, media, force_reload = False ): self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
     
 class TagsBoxFlat( TagsBox ):
     
@@ -4394,7 +4446,7 @@ class TagsBoxFlat( TagsBox ):
             
         
     
-    def AddTag( self, tag, parents ):
+    def AddTag( self, tag, parents = [] ):
         
         if tag in self._tags: self._tags.discard( tag )
         else:
@@ -4411,7 +4463,9 @@ class TagsBoxFlat( TagsBox ):
     
     def SetTags( self, tags ):
         
-        self._tags = tags
+        self._tags = set()
+        
+        for tag in tags: self._tags.add( tag )
         
         self._RecalcTags()
         

@@ -570,6 +570,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.pub( 'notify_new_undo' )
         
     
+    def _DeleteOrphans( self ):
+        
+        message = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will appear when it is done.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_orphans' )
+            
+        
+    
     def _DeletePending( self, service_identifier ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service_identifier.GetName() + '?' ) as dlg:
@@ -781,6 +791,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
@@ -1628,7 +1639,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous, optimising most operations. If you have a large database, it will take some time. A popup message will appear when it is done.'
+        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will appear when it is done.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -1783,6 +1794,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HC.pubsub.pub( 'notify_new_sessions' )
                 
+            elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )

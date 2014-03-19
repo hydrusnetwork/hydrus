@@ -281,6 +281,77 @@ class DialogAdvancedContentUpdate( Dialog ):
         self._specific_tag.SetLabel( tag )
         
     
+class DialogButtonChoice( Dialog ):
+    
+    def __init__( self, parent, intro, choices ):
+        
+        def InitialiseControls():
+            
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
+            self._buttons = []
+            self._ids_to_data = {}
+            
+            i = 0
+            
+            for ( text, data ) in choices:
+                
+                self._buttons.append( wx.Button( self, label = text, id = i ) )
+                
+                self._ids_to_data[ i ] = data
+                
+                i += 1
+                
+            
+        
+        def PopulateControls():
+            
+            pass
+            
+        
+        def ArrangeControls():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
+            
+            for button in self._buttons: vbox.AddF( button, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'choose what to do', position = 'center' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+        wx.CallAfter( self._buttons[0].SetFocus )
+        
+    
+    def EventButton( self, event ):
+        
+        id = event.GetId()
+        
+        if id == wx.ID_CANCEL: self.EndModal( wx.ID_CANCEL )
+        else:
+            
+            self._data = self._ids_to_data[ id ]
+            
+            self.EndModal( wx.ID_OK )
+            
+        
+    
+    def GetData( self ): return self._data
+    
 class DialogChooseNewServiceMethod( Dialog ):
     
     def __init__( self, parent ):
@@ -4940,7 +5011,12 @@ class DialogSetupExport( Dialog ):
         
         def InitialiseControls():
             
-            self._tags_box = ClientGUICommon.TagsBoxCPPWithSorter( self, self._page_key )
+            self._tags_box = ClientGUICommon.TagsBoxCountsSorter( self, 'files\' tags' )
+            
+            t = ClientGUICommon.TagsBoxCounts( self._tags_box )
+            
+            self._tags_box.SetTagsBox( t )
+            
             self._tags_box.SetMinSize( ( 220, 300 ) )
             
             self._paths = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ] )
@@ -5053,8 +5129,6 @@ class DialogSetupExport( Dialog ):
             
         
         Dialog.__init__( self, parent, 'setup export' )
-        
-        self._page_key = os.urandom( 32 )
         
         InitialiseControls()
         
@@ -5218,7 +5292,7 @@ class DialogSetupExport( Dialog ):
             all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in [ self._paths.GetClientData( index ) for index in indices ] ]
             
         
-        HC.pubsub.pub( 'new_tags_selection', self._page_key, all_media )
+        self._tags_box.SetTagsByMedia( all_media )
         
     
 class DialogYesNo( Dialog ):
