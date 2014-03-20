@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 108</h3></li>
+				<ul>
+					<li>added 'database->delete orphan files' for manual firing of this maintenance routine</li>
+					<li>improved redirect location parsing--should fix the booru 'Could not connect to None!' errors</li>
+					<li>fixed 4chan thread downloader's erroneous 'still working' warning when trying to close while paused</li>
+					<li>added multiple additions to manage tag parents dialog</li>
+					<li>added multiple additions to manage tag siblings dialog</li>
+					<li>generic improvements to both dialogs</li>
+					<li>manage tags dialog now shows all the selection's tags combined, not just the tag intersection</li>
+					<li>multiple improvements to manage tags dialog</li>
+					<li>reworked some tagsbox classes to be more flexible</li>
+					<li>improved dialogsetupexport's use of tagsbox</li>
+				</ul>
+				<li><h3>version 107</h3></li>
+				<ul>
+					<li>converted 'namespace blacklists' to more general 'tag censorship'</li>
+					<li>tag censorship now accepts unnamespaced tag bans</li>
+					<li>tag censorship now accepts all namespaced tags bans</li>
+					<li>tag censorship now permits bans for all tag services</li>
+					<li>fixed several small bugs carried over from the namespace blacklists code</li>
+					<li>added a bit about tag censorship to help, under advanced.html</li>
+					<li>fixed youtube downloading</li>
+					<li>file import dialog now ignores dupe paths</li>
+					<li>improved update status text in review services window</li>
+					<li>fixed erroneous capital P on pending menu</li>
+					<li>fixed shortcut input dialog's ok button</li>
+					<li>fixed modify tags dialog's admin modify button</li>
+					<li>added several bits of explanation text to advanced dialogs</li>
+					<li>added more helpful timestamp to news dialog</li>
+					<li>neatened export dialog's layout</li>
+					<li>corrected some double-escaped backslashes in the export filename pattern button menu</li>
+					<li>fixed modify accounts dialog's http request</li>
+					<li>improved grammar in db pubsub code</li>
+				</ul>
 				<li><h3>version 106</h3></li>
 				<ul>
 					<li>download by raw url now sends the correct text to the popup on successful import</li>

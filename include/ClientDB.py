@@ -61,7 +61,7 @@ class FileDB():
         
         hashes = { hash for ( hash, thumbnail ) in thumbnails }
         
-        self.pub( 'new_thumbnails', hashes )
+        self.pub_after_commit( 'new_thumbnails', hashes )
         
     
     def _CopyFiles( self, c, hashes ):
@@ -97,7 +97,7 @@ class FileDB():
                 except Exception as e: error_messages.add( HC.u( e ) )
                 
             
-            self.pub( 'clipboard', 'paths', paths )
+            self.pub_after_commit( 'clipboard', 'paths', paths )
             
             if len( error_messages ) > 0: raise Exception( 'Some of the file exports failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
             
@@ -288,7 +288,7 @@ class MessageDB():
             
             message = ClientConstantsMessages.Message( message_key, contact_from, destinations, timestamp, body, attachment_hashes, inbox )
             
-            self.pub( 'new_message', conversation_key, message )
+            self.pub_after_commit( 'new_message', conversation_key, message )
             
         
         if serverside_message_key is not None:
@@ -353,8 +353,8 @@ class MessageDB():
         
         c.execute( 'DELETE FROM message_inbox WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' )
         
-        self.pub( 'archive_conversation_data', conversation_key )
-        self.pub( 'archive_conversation_gui', conversation_key )
+        self.pub_after_commit( 'archive_conversation_data', conversation_key )
+        self.pub_after_commit( 'archive_conversation_gui', conversation_key )
         
         self._DoStatusNumInbox( c )
         
@@ -388,8 +388,8 @@ class MessageDB():
         c.execute( 'DELETE FROM message_bodies WHERE docid IN ' + splayed_message_ids + ';' )
         c.execute( 'DELETE FROM conversation_subjects WHERE docid IN ' + splayed_message_ids + ';' )
         
-        self.pub( 'delete_conversation_data', conversation_key )
-        self.pub( 'delete_conversation_gui', conversation_key )
+        self.pub_after_commit( 'delete_conversation_data', conversation_key )
+        self.pub_after_commit( 'delete_conversation_gui', conversation_key )
         
         self._DoStatusNumInbox( c )
         
@@ -402,9 +402,9 @@ class MessageDB():
         c.execute( 'DELETE FROM message_bodies WHERE docid = ?;', ( message_id, ) )
         c.execute( 'DELETE FROM conversation_subjects WHERE docid = ?;', ( message_id, ) )
         
-        self.pub( 'delete_draft_data', draft_key )
-        self.pub( 'delete_draft_gui', draft_key )
-        self.pub( 'notify_check_messages' )
+        self.pub_after_commit( 'delete_draft_data', draft_key )
+        self.pub_after_commit( 'delete_draft_gui', draft_key )
+        self.pub_after_commit( 'notify_check_messages' )
         
     
     def _DoMessageQuery( self, c, query_key, search_context ):
@@ -498,7 +498,7 @@ class MessageDB():
         
         conversations = self._GetConversations( c, search_context, query_message_ids )
         
-        self.pub( 'message_query_done', query_key, conversations )
+        self.pub_after_commit( 'message_query_done', query_key, conversations )
         
     
     def _DoStatusNumInbox( self, c ):
@@ -510,7 +510,7 @@ class MessageDB():
         if num_inbox == 0: inbox_string = 'message inbox empty'
         else: inbox_string = HC.u( num_inbox ) + ' in message inbox'
         
-        self.pub( 'inbox_status', inbox_string )
+        self.pub_after_commit( 'inbox_status', inbox_string )
         
     
     def _DraftMessage( self, c, draft_message ):
@@ -545,7 +545,7 @@ class MessageDB():
         
         c.executemany( 'INSERT INTO message_attachments ( message_id, hash_id ) VALUES ( ?, ? );', [ ( message_id, hash_id ) for hash_id in hash_ids ] )
         
-        self.pub( 'draft_saved', draft_key, draft_message )
+        self.pub_after_commit( 'draft_saved', draft_key, draft_message )
         
     
     def _FlushMessageStatuses( self, c ):
@@ -571,8 +571,8 @@ class MessageDB():
             
             status_updates = [ ( contact_key, self._GetStatus( c, status_id ) ) for ( contact_key, status_id ) in status_infos ]
             
-            self.pub( 'message_statuses_data', message_key, status_updates )
-            self.pub( 'message_statuses_gui', message_key, status_updates )
+            self.pub_after_commit( 'message_statuses_data', message_key, status_updates )
+            self.pub_after_commit( 'message_statuses_gui', message_key, status_updates )
             
         
     
@@ -1021,8 +1021,8 @@ class MessageDB():
         
         c.executemany( 'INSERT OR IGNORE INTO message_inbox ( message_id ) VALUES ( ? );', inserts )
         
-        self.pub( 'inbox_conversation_data', conversation_key )
-        self.pub( 'inbox_conversation_gui', conversation_key )
+        self.pub_after_commit( 'inbox_conversation_data', conversation_key )
+        self.pub_after_commit( 'inbox_conversation_gui', conversation_key )
         
         self._DoStatusNumInbox( c )
         
@@ -1065,7 +1065,7 @@ class MessageDB():
                 
             
         
-        self.pub( 'notify_new_contacts' )
+        self.pub_after_commit( 'notify_new_contacts' )
         
     
     def _UpdateMessageStatuses( self, c, message_key, status_updates ):
@@ -1084,9 +1084,9 @@ class MessageDB():
         
         c.executemany( 'UPDATE message_destination_map SET status_id = ? WHERE contact_id_to = ? AND message_id = ?;', [ ( status_id, contact_id, message_id ) for ( contact_id, status_id ) in updates ] )
         
-        self.pub( 'message_statuses_data', message_key, status_updates )
-        self.pub( 'message_statuses_gui', message_key, status_updates )
-        self.pub( 'notify_check_messages' )
+        self.pub_after_commit( 'message_statuses_data', message_key, status_updates )
+        self.pub_after_commit( 'message_statuses_gui', message_key, status_updates )
+        self.pub_after_commit( 'notify_check_messages' )
         
     
 class RatingDB():
@@ -1146,8 +1146,8 @@ class RatingDB():
         c.executemany( 'INSERT INTO ratings ( service_id, hash_id, count, rating, score ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, self._GetHashId( c, hash ), count, rating, HC.CalculateScoreFromRating( count, rating ) ) for ( hash, count, rating ) in ratings if count > 0 ] )
         
         # these need count and score in
-        #self.pub( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
-        #self.pub( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
+        #self.pub_after_commit( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
+        #self.pub_after_commit( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
         
     
 class TagDB():
@@ -1470,7 +1470,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._UpdateAutocompleteTagCacheFromFiles( c, service_id, actual_hash_ids_i_can_delete, -1 )
         
-        self.pub( 'notify_new_pending' )
+        self.pub_after_commit( 'notify_new_pending' )
         
     
     def _DeleteHydrusSessionKey( self, c, service_identifier ):
@@ -1538,6 +1538,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
         
+        HC.ShowText( 'orphaned files deleted' )
+        
     
     def _DeletePending( self, c, service_identifier ):
         
@@ -1564,11 +1566,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
             
         
-        self.pub( 'notify_new_pending' )
-        self.pub( 'notify_new_siblings' )
-        self.pub( 'notify_new_parents' )
+        self.pub_after_commit( 'notify_new_pending' )
+        self.pub_after_commit( 'notify_new_siblings' )
+        self.pub_after_commit( 'notify_new_parents' )
         
-        self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
+        self.pub_service_updates_after_commit( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
     def _DeleteYAMLDump( self, c, dump_type, dump_name = None ):
@@ -1739,9 +1741,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         tags = { tag for ( tag, num_tags ) in tag_info }
         
-        namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
+        tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
         
-        filtered_tags = namespace_blacklists_manager.FilterTags( tag_service_identifier, tags )
+        filtered_tags = tag_censorship_manager.FilterTags( tag_service_identifier, tags )
         
         predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), num_tags ) for ( tag, num_tags ) in tag_info if tag in filtered_tags ]
         
@@ -1904,9 +1906,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if num_tags_zero or num_tags_nonzero or len( tag_predicates ) > 0:
             
-            namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
+            tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
             
-            ( blacklist, namespaces ) = namespace_blacklists_manager.GetInfo( tag_service_identifier )
+            ( blacklist, tags ) = tag_censorship_manager.GetInfo( tag_service_identifier )
+            
+            namespaces = [ tag for tag in tags if ':' in tag ]
             
             if len( namespaces ) == 0: namespace_predicate = ''
             else:
@@ -2145,7 +2149,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetHashIdsFromTag( self, c, file_service_identifier, tag_service_identifier, tag, include_current_tags, include_pending_tags ):
         
-        # this does siblings and blacklists too!
+        # this does siblings and censorship too!
         
         statuses = []
         
@@ -2163,9 +2167,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         tags = siblings_manager.GetAllSiblings( tag )
         
-        namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
+        tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
         
-        tags = namespace_blacklists_manager.FilterTags( tag_service_identifier, tags )
+        tags = tag_censorship_manager.FilterTags( tag_service_identifier, tags )
         
         hash_ids = set()
         
@@ -2402,31 +2406,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         ( mime, ) = result
         
         return mime
-        
-    
-    def _GetNamespaceBlacklists( self, c, service_identifier = None ):
-        
-        if service_identifier is None:
-            
-            result = []
-            
-            for ( service_id, blacklist, namespaces ) in c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall():
-                
-                service_identifier = self._GetServiceIdentifier( c, service_id )
-                
-                result.append( ( service_identifier, blacklist, namespaces ) )
-                
-            
-        else:
-            
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            result = c.execute( 'SELECT blacklist, namespaces FROM namespace_blacklists WHERE service_id = ?;', ( service_id, ) ).fetchone()
-            
-            if result is None: result = ( True, [] )
-            
-        
-        return result
         
     
     def _GetNews( self, c, service_identifier ):
@@ -2828,6 +2807,31 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return shutdown_timestamps
         
     
+    def _GetTagCensorship( self, c, service_identifier = None ):
+        
+        if service_identifier is None:
+            
+            result = []
+            
+            for ( service_id, blacklist, tags ) in c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall():
+                
+                service_identifier = self._GetServiceIdentifier( c, service_id )
+                
+                result.append( ( service_identifier, blacklist, tags ) )
+                
+            
+        else:
+            
+            service_id = self._GetServiceId( c, service_identifier )
+            
+            result = c.execute( 'SELECT blacklist, tags FROM tag_censorship WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            if result is None: result = ( True, [] )
+            
+        
+        return result
+        
+    
     def _GetTagParents( self, c, service_identifier = None ):
         
         if service_identifier is None:
@@ -3021,7 +3025,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 c.execute( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) )
                 
-                self.pub_content_updates( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
+                self.pub_content_updates_after_commit( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
                 
             
             can_add = False
@@ -3084,7 +3088,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
-            self.pub_content_updates( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ content_update ] } )
+            self.pub_content_updates_after_commit( { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ content_update ] } )
             
             ( md5, sha1 ) = HydrusFileHandling.GetMD5AndSHA1FromPath( path )
             
@@ -3343,7 +3347,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             c.execute( 'DROP TABLE temp_operation;' )
                             
-                            self.pub( 'notify_new_pending' )
+                            self.pub_after_commit( 'notify_new_pending' )
                             
                         else:
                             
@@ -3452,7 +3456,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, existing_hashes ) )
                                 
-                                self.pub_content_updates( { service_identifier : [ special_content_update ] } )
+                                self.pub_content_updates_after_commit( { service_identifier : [ special_content_update ] } )
                                 
                             
                         elif action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
@@ -3484,7 +3488,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( parent_tag, existing_hashes ) )
                                 
-                                self.pub_content_updates( { service_identifier : [ special_content_update ] } )
+                                self.pub_content_updates_after_commit( { service_identifier : [ special_content_update ] } )
                                 
                             
                             notify_new_pending = True
@@ -3563,17 +3567,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if notify_new_downloads: self.pub( 'notify_new_downloads' )
-        if notify_new_pending: self.pub( 'notify_new_pending' )
-        if notify_new_parents: self.pub( 'notify_new_parents' )
+        if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
+        if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
+        if notify_new_parents: self.pub_after_commit( 'notify_new_parents' )
         if notify_new_siblings:
             
-            self.pub( 'notify_new_siblings' )
-            self.pub( 'notify_new_parents' )
+            self.pub_after_commit( 'notify_new_siblings' )
+            self.pub_after_commit( 'notify_new_parents' )
             
-        if notify_new_thumbnails: self.pub( 'notify_new_thumbnails' )
+        if notify_new_thumbnails: self.pub_after_commit( 'notify_new_thumbnails' )
         
-        self.pub_content_updates( service_identifiers_to_content_updates )
+        self.pub_content_updates_after_commit( service_identifiers_to_content_updates )
         
     
     def _ProcessServiceUpdates( self, c, service_identifiers_to_service_updates ):
@@ -3627,7 +3631,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             text = service_identifier.GetName() + ' at ' + time.ctime( timestamp ) + ':' + os.linesep + os.linesep + post
                             
-                            self.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
+                            self.pub_after_commit( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
                             
                         
                     
@@ -3660,7 +3664,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 
             
-            self.pub_service_updates( service_identifiers_to_service_updates )
+            self.pub_service_updates_after_commit( service_identifiers_to_service_updates )
             
         
         for ( service_id, nums_bytes ) in HC.BuildKeyToListDict( requests_made ).items():
@@ -3674,7 +3678,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
             
         
-        if do_new_permissions: self.pub( 'notify_new_permissions' )
+        if do_new_permissions: self.pub_after_commit( 'notify_new_permissions' )
         
     
     def _RebuildTagServicePrecedenceCache( self, c ):
@@ -3740,29 +3744,29 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             info[ 'next_processing_timestamp' ] = 0
             
-            self.pub( 'notify_restart_repo_sync_daemon' )
+            self.pub_after_commit( 'notify_restart_repo_sync_daemon' )
             
         
         self._AddService( c, service_identifier, info )
         
-        self.pub_service_updates( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET ) ] } )
-        self.pub( 'notify_new_pending' )
-        self.pub( 'permissions_are_stale' )
+        self.pub_service_updates_after_commit( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET ) ] } )
+        self.pub_after_commit( 'notify_new_pending' )
+        self.pub_after_commit( 'permissions_are_stale' )
         HC.ShowText( 'reset ' + service_name )
         
     
-    def _SetNamespaceBlacklists( self, c, info ):
+    def _SetTagCensorship( self, c, info ):
         
-        c.execute( 'DELETE FROM namespace_blacklists;' )
+        c.execute( 'DELETE FROM tag_censorship;' )
         
-        for ( service_identifier, blacklist, namespaces ) in info:
+        for ( service_identifier, blacklist, tags ) in info:
             
             service_id = self._GetServiceId( c, service_identifier )
             
-            c.execute( 'INSERT OR IGNORE INTO namespace_blacklists ( service_id, blacklist, namespaces ) VALUES ( ?, ?, ? );', ( service_id, blacklist, namespaces ) )
+            c.execute( 'INSERT OR IGNORE INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
             
         
-        self.pub( 'notify_new_namespace_blacklists' )
+        self.pub_after_commit( 'notify_new_tag_censorship' )
         
     
     def _SetTagServicePrecedence( self, c, service_identifiers ):
@@ -3781,7 +3785,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service_identifiers_to_service_updates = { HC.COMBINED_TAG_SERVICE_IDENTIFIER : [ service_update ] }
         
-        self.pub_service_updates( service_identifiers_to_service_updates )
+        self.pub_service_updates_after_commit( service_identifiers_to_service_updates )
         
     
     def _SetYAMLDump( self, c, dump_type, dump_name, data ):
@@ -4213,7 +4217,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     service_identifiers_to_service_updates = { client_service_identifier : [ service_update ] }
                     
-                    self.pub_service_updates( service_identifiers_to_service_updates )
+                    self.pub_service_updates_after_commit( service_identifiers_to_service_updates )
                     
                     if service_type in HC.REPOSITORIES:
                         
@@ -4261,8 +4265,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             self._RecalcCombinedMappings( c )
             
         
-        self.pub( 'notify_new_pending' )
-        self.pub( 'notify_new_services' )
+        self.pub_after_commit( 'notify_new_pending' )
+        self.pub_after_commit( 'notify_new_services' )
         
     
     def _UpdateServices( self, c, edit_log ):
@@ -4291,7 +4295,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service_identifiers_to_service_updates = { service_identifier : [ service_update ] }
                 
-                self.pub_service_updates( service_identifiers_to_service_updates )
+                self.pub_service_updates_after_commit( service_identifiers_to_service_updates )
                 
                 service_type = service_identifier.GetType()
                 
@@ -4346,8 +4350,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             self._RecalcCombinedMappings( c )
             
         
-        self.pub( 'notify_new_pending' )
-        self.pub( 'notify_new_services' )
+        self.pub_after_commit( 'notify_new_pending' )
+        self.pub_after_commit( 'notify_new_services' )
         
     
     def _UpdateServiceInfo( self, c, service_id, update ):
@@ -4617,8 +4621,6 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX messages_contact_id_from_index ON messages ( contact_id_from );' )
             c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
             
-            c.execute( 'CREATE TABLE namespace_blacklists ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, namespaces TEXT_YAML );' )
-            
             c.execute( 'CREATE TABLE namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX namespaces_namespace_index ON namespaces ( namespace );' )
             
@@ -4644,6 +4646,8 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT );' )
             c.execute( 'CREATE UNIQUE INDEX statuses_status_index ON statuses ( status );' )
+            
+            c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
             
             c.execute( 'CREATE TABLE tag_service_precedence ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, precedence INTEGER );' )
             
@@ -4728,10 +4732,10 @@ class DB( ServiceDB ):
             
             for path in thumbnail_paths: os.remove( path )
             
-            self.pub( 'thumbnail_resize' )
+            self.pub_after_commit( 'thumbnail_resize' )
             
         
-        self.pub( 'notify_new_options' )
+        self.pub_after_commit( 'notify_new_options' )
         
     
     def _SetPassword( self, c, password ):
@@ -5056,6 +5060,28 @@ class DB( ServiceDB ):
                 
                 c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                 
+            
+        
+        if version == 106:
+            
+            c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
+            
+            result = c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall()
+            
+            for ( service_id, blacklist, namespaces ) in result:
+                
+                tags = [ namespace + ':' for namespace in namespaces ]
+                
+                if ':' in tags: # don't want to change ''!
+                    
+                    tags.remove( ':' )
+                    tags.append( '' )
+                    
+                
+                c.execute( 'INSERT INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
+                
+            
+            c.execute( 'DROP TABLE namespace_blacklists;' )
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6680,18 +6706,18 @@ class DB( ServiceDB ):
     
     def GetLoopFinished( self ): return self._loop_finished
     
-    def pub( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
+    def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
-    def pub_content_updates( self, service_identifiers_to_content_updates ):
+    def pub_content_updates_after_commit( self, service_identifiers_to_content_updates ):
         
-        self.pub( 'content_updates_data', service_identifiers_to_content_updates )
-        self.pub( 'content_updates_gui', service_identifiers_to_content_updates )
+        self.pub_after_commit( 'content_updates_data', service_identifiers_to_content_updates )
+        self.pub_after_commit( 'content_updates_gui', service_identifiers_to_content_updates )
         
     
-    def pub_service_updates( self, service_identifiers_to_service_updates ):
+    def pub_service_updates_after_commit( self, service_identifiers_to_service_updates ):
         
-        self.pub( 'service_updates_data', service_identifiers_to_service_updates )
-        self.pub( 'service_updates_gui', service_identifiers_to_service_updates )
+        self.pub_after_commit( 'service_updates_data', service_identifiers_to_service_updates )
+        self.pub_after_commit( 'service_updates_gui', service_identifiers_to_service_updates )
         
     
     def MainLoop( self ):
@@ -6724,7 +6750,6 @@ class DB( ServiceDB ):
                 elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
                 elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( c, *args, **kwargs )
                 elif action == 'messages_to_send': result = self._GetMessagesToSend( c, *args, **kwargs )
-                elif action == 'namespace_blacklists': result = self._GetNamespaceBlacklists( c, *args, **kwargs )
                 elif action == 'news': result = self._GetNews( c, *args, **kwargs )
                 elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
                 elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
@@ -6738,6 +6763,7 @@ class DB( ServiceDB ):
                 elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
                 elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
                 elif action == 'subscriptions': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+                elif action == 'tag_censorship': result = self._GetTagCensorship( c, *args, **kwargs )
                 elif action == 'tag_service_precedence': result = self._tag_service_precedence
                 elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
                 elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
@@ -6789,7 +6815,6 @@ class DB( ServiceDB ):
                 elif action == 'message': result = self._AddMessage( c, *args, **kwargs )
                 elif action == 'message_info_since': result = self._AddMessageInfoSince( c, *args, **kwargs )
                 elif action == 'message_statuses': result = self._UpdateMessageStatuses( c, *args, **kwargs )
-                elif action == 'namespace_blacklists': result = self._SetNamespaceBlacklists( c, *args, **kwargs )
                 elif action == 'pixiv_account': result = self._SetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
                 elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
                 elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
@@ -6797,6 +6822,7 @@ class DB( ServiceDB ):
                 elif action == 'set_password': result = self._SetPassword( c, *args, **kwargs )
                 elif action == 'set_tag_service_precedence': result = self._SetTagServicePrecedence( c, *args, **kwargs )
                 elif action == 'subscription': result = self._SetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+                elif action == 'tag_censorship': result = self._SetTagCensorship( c, *args, **kwargs )
                 elif action == 'tag_parents': result = self._UpdateTagParents( c, *args, **kwargs )
                 elif action == 'tag_siblings': result = self._UpdateTagSiblings( c, *args, **kwargs )
                 elif action == 'thumbnails': result = self._AddThumbnails( c, *args, **kwargs )

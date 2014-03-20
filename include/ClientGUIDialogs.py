@@ -88,10 +88,6 @@ def SelectServiceIdentifier( permission = None, service_types = HC.ALL_SERVICES,
             
         
     
-def ShowMessage( parent, message ):
-    
-    with DialogMessage( parent, message ) as dlg: dlg.ShowModal()
-    
 class Dialog( wx.Dialog ):
     
     def __init__( self, parent, title, style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER, position = 'topleft' ):
@@ -182,7 +178,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time. They are not currently undoable. You may need to refresh your existing searches to see their effect.' 
+            message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable. You may need to refresh your existing searches to see their effect.' 
             
             st = wx.StaticText( self, label = message )
             
@@ -202,7 +198,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = 'set tag: ' ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'set specific tag or namespace: ' ), FLAGS_MIXED )
             hbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
             hbox.AddF( self._specific_tag, FLAGS_EXPAND_BOTH_WAYS )
             
@@ -285,6 +281,77 @@ class DialogAdvancedContentUpdate( Dialog ):
         self._specific_tag.SetLabel( tag )
         
     
+class DialogButtonChoice( Dialog ):
+    
+    def __init__( self, parent, intro, choices ):
+        
+        def InitialiseControls():
+            
+            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+            
+            self._buttons = []
+            self._ids_to_data = {}
+            
+            i = 0
+            
+            for ( text, data ) in choices:
+                
+                self._buttons.append( wx.Button( self, label = text, id = i ) )
+                
+                self._ids_to_data[ i ] = data
+                
+                i += 1
+                
+            
+        
+        def PopulateControls():
+            
+            pass
+            
+        
+        def ArrangeControls():
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
+            
+            for button in self._buttons: vbox.AddF( button, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'choose what to do', position = 'center' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+        wx.CallAfter( self._buttons[0].SetFocus )
+        
+    
+    def EventButton( self, event ):
+        
+        id = event.GetId()
+        
+        if id == wx.ID_CANCEL: self.EndModal( wx.ID_CANCEL )
+        else:
+            
+            self._data = self._ids_to_data[ id ]
+            
+            self.EndModal( wx.ID_OK )
+            
+        
+    
+    def GetData( self ): return self._data
+    
 class DialogChooseNewServiceMethod( Dialog ):
     
     def __init__( self, parent ):
@@ -293,12 +360,12 @@ class DialogChooseNewServiceMethod( Dialog ):
             
             self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
-            register_message = 'I want to set up a new account. I have a registration key (a key starting with \'r\').'
+            register_message = 'I want to initialise a new account with the server. I have a registration key (a key starting with \'r\').'
             
             self._register = wx.Button( self, label = register_message )
             self._register.Bind( wx.EVT_BUTTON, self.EventRegister )
             
-            setup_message = 'The account is already set up; I just want to add it to this client. I have a normal access key.'
+            setup_message = 'The account is already initialised; I just want to add it to this client. I have a normal access key.'
             
             self._setup = wx.Button( self, id = wx.ID_OK, label = setup_message )
             
@@ -521,7 +588,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         def InitialiseControls():
             
-            self._num = wx.SpinCtrl( self, min=1, max=10000 )
+            self._num = wx.SpinCtrl( self, min = 1, max = 10000, size = ( 80, -1 ) )
             
             self._account_types = wx.Choice( self, size = ( 400, -1 ) )
             
@@ -555,9 +622,12 @@ class DialogGenerateNewAccounts( Dialog ):
         def ArrangeControls():
             
             ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
-            ctrl_box.AddF( self._num, FLAGS_SMALL_INDENT )
-            ctrl_box.AddF( self._account_types, FLAGS_SMALL_INDENT )
-            ctrl_box.AddF( self._lifetime, FLAGS_SMALL_INDENT )
+            
+            ctrl_box.AddF( wx.StaticText( self, label = 'generate' ), FLAGS_MIXED )
+            ctrl_box.AddF( self._num, FLAGS_MIXED )
+            ctrl_box.AddF( self._account_types, FLAGS_MIXED )
+            ctrl_box.AddF( wx.StaticText( self, label = 'accounts, to expire in' ), FLAGS_MIXED )
+            ctrl_box.AddF( self._lifetime, FLAGS_MIXED )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             b_box.AddF( self._ok, FLAGS_MIXED )
@@ -2018,6 +2088,8 @@ class DialogInputLocalFiles( Dialog ):
         self._processing_queue = []
         self._currently_parsing = False
         
+        self._current_paths = set()
+        
         self._job_key = HC.JobKey()
         
         if len( paths ) > 0: self._AddPathsToList( paths )
@@ -2081,7 +2153,12 @@ class DialogInputLocalFiles( Dialog ):
             pretty_path = zip_path + os.path.sep + name
             
         
-        self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
+        if ( path_type, path_info ) not in self._current_paths:
+            
+            self._current_paths.add( ( path_type, path_info ) )
+            
+            self._paths_list.Append( ( pretty_path, HC.mime_string_lookup[ mime ], pretty_size ), ( ( path_type, path_info ), mime, size ) )
+            
         
     
     def DoneParsing( self ):
@@ -2177,7 +2254,12 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def EventRemovePaths( self, event ): self._paths_list.RemoveAllSelected()
+    def EventRemovePaths( self, event ):
+        
+        self._paths_list.RemoveAllSelected()
+        
+        self._current_paths = set( self._GetPathsInfo() )
+        
     
     def EventTags( self, event ):
         
@@ -2727,6 +2809,9 @@ class DialogInputNamespaceRegex( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            intro = 'Put the namespace (e.g. page) on the left.' + os.linesep + 'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + 'All files will be tagged with "namespace:regex".'
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( control_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._shortcuts, FLAGS_LONE_BUTTON )
             vbox.AddF( self._regex_link, FLAGS_LONE_BUTTON )
@@ -3011,7 +3096,6 @@ class DialogInputShortcut( Dialog ):
             self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'ratings_filter', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'previous', 'next', 'first', 'last', 'undo', 'redo' ] )
             
             self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
-            self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -3150,52 +3234,6 @@ class DialogInputUPnPMapping( Dialog ):
         description = self._description.GetValue()
         
         return ( external_port, protocol_type, internal_port, description )
-        
-    
-class DialogMessage( Dialog ):
-    
-    def __init__( self, parent, message, ok_label = 'ok' ):
-        
-        def InitialiseControls():
-            
-            self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            self._ok = wx.Button( self, id = wx.ID_OK, label = ok_label )
-            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            pass
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            text = wx.StaticText( self, label = HC.u( message ) )
-            
-            text.Wrap( 480 )
-            
-            vbox.AddF( text, FLAGS_BIG_INDENT )
-            vbox.AddF( self._ok, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
-        Dialog.__init__( self, parent, 'message', position = 'center' )
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        wx.CallAfter( self._ok.SetFocus )
         
     
 class DialogModifyAccounts( Dialog ):
@@ -3340,7 +3378,7 @@ class DialogModifyAccounts( Dialog ):
         Dialog.__init__( self, parent, 'modify account' )
         
         self._service = HC.app.Read( 'service', service_identifier )
-        self._subject_identifiers = set( subject_identifiers )
+        self._subject_identifiers = list( subject_identifiers )
         
         InitialiseControls()
         
@@ -3479,7 +3517,7 @@ class DialogNews( Dialog ):
             
             ( news, timestamp ) = self._newslist[ self._current_news_position - 1 ]
             
-            self._news.SetValue( time.ctime( timestamp ) + ':' + os.linesep + os.linesep + news )
+            self._news.SetValue( time.ctime( timestamp ) + ' (' + HC.ConvertTimestampToPrettyAgo( timestamp ) + '):' + os.linesep + os.linesep + news )
             
             self._news_position.SetValue( HC.ConvertIntToPrettyString( self._current_news_position ) + ' / ' + HC.ConvertIntToPrettyString( len( self._newslist ) ) )
             
@@ -4575,6 +4613,7 @@ class DialogSelectYoutubeURL( Dialog ):
         def InitialiseControls():
             
             self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', 150 ) ] )
+            self._urls.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventOK )
             
             self._urls.SetMinSize( ( 360, 200 ) )
             
@@ -4972,32 +5011,46 @@ class DialogSetupExport( Dialog ):
         
         def InitialiseControls():
             
-            self._tags_box = ClientGUICommon.TagsBoxCPPWithSorter( self, self._page_key )
+            self._tags_box = ClientGUICommon.TagsBoxCountsSorter( self, 'files\' tags' )
+            
+            t = ClientGUICommon.TagsBoxCounts( self._tags_box )
+            
+            self._tags_box.SetTagsBox( t )
+            
             self._tags_box.SetMinSize( ( 220, 300 ) )
             
-            self._paths = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'path', -1 ) ] )
+            self._paths = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ] )
             self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
             self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
             self._paths.SetMinSize( ( 740, 360 ) )
             
-            self._directory_picker = wx.DirPickerCtrl( self )
+            self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
+            
+            self._directory_picker = wx.DirPickerCtrl( self._export_path_box )
             self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
             
-            self._open_location = wx.Button( self, label = 'open this location' )
+            self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
             self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
             
-            self._zip_name = wx.TextCtrl( self )
+            self._zip_box = ClientGUICommon.StaticBox( self, 'zip' )
             
-            self._export_to_zip = wx.CheckBox( self, label = 'export to zip' )
+            self._export_to_zip = wx.CheckBox( self._zip_box, label = 'export to zip' )
+            self._export_to_zip.Bind( wx.EVT_CHECKBOX, self.EventExportToZipCheckbox )
             
-            self._export_encrypted = wx.CheckBox( self, label = 'encrypt zip' )
+            self._zip_name = wx.TextCtrl( self._zip_box )
+            self._zip_name.Disable()
             
-            self._pattern = wx.TextCtrl( self )
+            self._export_encrypted = wx.CheckBox( self._zip_box, label = 'encrypt zip' )
+            self._export_encrypted.Disable()
             
-            self._update = wx.Button( self, label = 'update' )
+            self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
+            
+            self._pattern = wx.TextCtrl( self._filenames_box )
+            
+            self._update = wx.Button( self._filenames_box, label = 'update' )
             self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
             
-            self._examples = ClientGUICommon.ExportPatternButton( self )
+            self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
             
             self._export = wx.Button( self, label = 'export' )
             self._export.Bind( wx.EVT_BUTTON, self.EventExport )
@@ -5036,32 +5089,36 @@ class DialogSetupExport( Dialog ):
             top_hbox.AddF( self._tags_box, FLAGS_EXPAND_PERPENDICULAR )
             top_hbox.AddF( self._paths, FLAGS_EXPAND_BOTH_WAYS )
             
-            destination_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            destination_hbox.AddF( self._directory_picker, FLAGS_EXPAND_BOTH_WAYS )
-            destination_hbox.AddF( self._open_location, FLAGS_MIXED )
+            hbox.AddF( self._directory_picker, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._open_location, FLAGS_MIXED )
             
-            zip_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            self._export_path_box.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            zip_hbox.AddF( self._zip_name, FLAGS_EXPAND_BOTH_WAYS )
-            zip_hbox.AddF( self._export_to_zip, FLAGS_MIXED )
-            zip_hbox.AddF( self._export_encrypted, FLAGS_MIXED )
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            pattern_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._update, FLAGS_MIXED )
+            hbox.AddF( self._examples, FLAGS_MIXED )
             
-            pattern_hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
-            pattern_hbox.AddF( self._update, FLAGS_MIXED )
-            pattern_hbox.AddF( self._examples, FLAGS_MIXED )
-            pattern_hbox.AddF( self._export, FLAGS_MIXED )
+            self._filenames_box.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._export_to_zip, FLAGS_MIXED )
+            hbox.AddF( self._zip_name, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._export_encrypted, FLAGS_MIXED )
+            
+            self._zip_box.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( top_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( destination_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( zip_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( pattern_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._export_path_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._filenames_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._zip_box, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._export, FLAGS_LONE_BUTTON )
             vbox.AddF( self._cancel, FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
@@ -5072,8 +5129,6 @@ class DialogSetupExport( Dialog ):
             
         
         Dialog.__init__( self, parent, 'setup export' )
-        
-        self._page_key = os.urandom( 32 )
         
         InitialiseControls()
         
@@ -5194,6 +5249,20 @@ class DialogSetupExport( Dialog ):
             
         
     
+    def EventExportToZipCheckbox( self, event ):
+        
+        if self._export_to_zip.GetValue() == True:
+            
+            self._zip_name.Enable()
+            self._export_encrypted.Enable()
+            
+        else:
+            
+            self._zip_name.Disable()
+            self._export_encrypted.Disable()
+            
+        
+    
     def EventOpenLocation( self, event ):
         
         directory = self._directory_picker.GetPath()
@@ -5223,7 +5292,7 @@ class DialogSetupExport( Dialog ):
             all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in [ self._paths.GetClientData( index ) for index in indices ] ]
             
         
-        HC.pubsub.pub( 'new_tags_selection', self._page_key, all_media )
+        self._tags_box.SetTagsByMedia( all_media )
         
     
 class DialogYesNo( Dialog ):

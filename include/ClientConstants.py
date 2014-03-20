@@ -2127,14 +2127,38 @@ class Service( HC.HydrusYAMLBase ):
     
     def GetUpdateStatus( self ):
         
-        if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): return 'updates on hold'
+        account = self._info[ 'account' ]
+        
+        now = HC.GetNow()
+        first_timestamp = self._info[ 'first_timestamp' ]
+        next_download_timestamp = self._info[ 'next_download_timestamp' ]
+        next_processing_timestamp = self._info[ 'next_processing_timestamp' ]
+        
+        if first_timestamp is None:
+            
+            num_updates = 0
+            num_updates_downloaded = 0
+            num_updates_processed = 0
+            
         else:
             
-            if self.CanDownloadUpdate(): return 'downloading ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
-            elif self.CanProcessUpdate(): return 'processing ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
-            elif self.HasRecentError(): return 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
-            else: return 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+            num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
+            num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
+            num_updates_processed = ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION
             
+        
+        downloaded_text = HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates )
+        
+        if not self._info[ 'account' ].HasPermission( HC.GET_DATA ): status = 'updates on hold'
+        else:
+            
+            if self.CanDownloadUpdate(): status = 'downloaded up to ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_download_timestamp' ] )
+            elif self.CanProcessUpdate(): status = 'processed up to ' + HC.ConvertTimestampToPrettySync( self._info[ 'next_processing_timestamp' ] )
+            elif self.HasRecentError(): status = 'due to a previous error, update is delayed - next check ' + self.GetRecentErrorPending()
+            else: status = 'fully synchronised - next update ' + HC.ConvertTimestampToPrettyPending( self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 )
+            
+        
+        return downloaded_text + ' - ' + status
         
     
     def HasRecentError( self ):
