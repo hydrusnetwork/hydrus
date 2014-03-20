@@ -439,13 +439,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            try:
-                
-                with ClientGUIDialogsManage.DialogManageTags( None, self._file_service_identifier, self._selected_media ) as dlg: dlg.ShowModal()
-                
-                self.SetFocus()
-                
-            except: wx.MessageBox( traceback.format_exc() )
+            with ClientGUIDialogsManage.DialogManageTags( None, self._file_service_identifier, self._selected_media ) as dlg: dlg.ShowModal()
+            
+            self.SetFocus()
             
         
     

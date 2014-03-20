@@ -98,13 +98,17 @@ def ParseURL( url ):
         
         parse_result = urlparse.urlparse( url )
         
-        ( scheme, host, port ) = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+        scheme = parse_result.scheme
+        hostname = parse_result.hostname
+        port = parse_result.port
         
-        parse_result = urlparse.urlparse( url )
-        
-        location = ( parse_result.scheme, parse_result.hostname, parse_result.port )
+        if hostname is None: location = None
+        else: location = ( scheme, hostname, port )
         
         path = parse_result.path
+        
+        # this happens when parsing 'index.html' rather than 'hostname/index.html' or '/index.html'
+        if not path.startswith( '/' ): path = '/' + path
         
         query = parse_result.query
         
@@ -142,6 +146,8 @@ class HTTPConnectionManager():
                 ( new_method, new_url ) = redirect_info
                 
                 ( new_location, new_path, new_query ) = ParseURL( new_url )
+                
+                if new_location is None: new_location = location
                 
                 if new_query != '': new_path_and_query = new_path + '?' + new_query
                 else: new_path_and_query = new_path
@@ -329,7 +335,7 @@ class HTTPConnection():
         elif self._scheme == 'https': self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
         
         try: self._connection.connect()
-        except: raise Exception( 'Could not connect to ' + self._host + '!' )
+        except: raise Exception( 'Could not connect to ' + HC.u( self._host ) + '!' )
         
     
     def _WriteResponseToPath( self, response, report_hooks ):

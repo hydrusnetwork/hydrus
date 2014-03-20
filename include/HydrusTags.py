@@ -62,6 +62,24 @@ def BuildSimpleChildrenToParents( pairs ):
     
     return simple_children_to_parents
     
+def CensorshipMatch( tag, censorship ):
+    
+    if ':' in censorship:
+        
+        if censorship == ':': return ':' in tag # ':' - all namespaced tags
+        else: return tag.startswith( censorship ) # 'series:' - namespaced tag
+        
+    else:
+        
+        if censorship == '': return ':' not in tag # '' - all non namespaced tags
+        else: # 'table' - normal tag, or namespaced version of same
+            
+            if ':' in tag: ( namespace, tag ) = tag.split( ':', 1 )
+            
+            return tag == censorship
+            
+        
+    
 def CollapseTagSiblingChains( processed_siblings ):
     
     # now to collapse chains
@@ -229,108 +247,13 @@ def MergeTagsManagers( tag_service_precedence, tags_managers ):
     
     return TagsManagerSimple( merged_service_identifiers_to_statuses_to_tags )
     
-class NamespaceBlacklistsManager():
-    
-    def __init__( self ):
-        
-        self.RefreshData()
-        
-        HC.pubsub.sub( self, 'RefreshData', 'notify_new_namespace_blacklists' )
-        
-    
-    def _GetPredicate( self, service_identifier ):
-        
-        ( blacklist, namespaces ) = self._service_identifiers_to_blacklists[ service_identifier ]
-        
-        tag_matches = lambda tag: True in ( tag.startswith( namespace ) for namespace in namespaces )
-        
-        if blacklist: predicate = lambda tag: not tag_matches( tag )
-        else: predicate = tag_matches
-        
-        return predicate
-        
-    
-    def GetInfo( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_predicates: return self._service_identifiers_to_predicates[ service_identifier ]
-        else: return ( True, set() )
-        
-    
-    def RefreshData( self ):
-        
-        info = HC.app.Read( 'namespace_blacklists' )
-        
-        self._service_identifiers_to_predicates = {}
-        
-        for ( service_identifier, blacklist, namespaces ) in info:
-            
-            unnamespaced = '' in namespaces
-            
-            ns = [ namespace for namespace in namespaces if namespace != '' ]
-            
-            namespaced_match = lambda tag: True in ( tag.startswith( namespace ) for namespace in ns )
-            
-            if unnamespaced:
-                
-                unnamespaced_match = lambda tag: ':' not in tag
-                
-                if len( ns ) > 0: tag_match = lambda tag: unnamespaced_match( tag ) or namespaced_match( tag )
-                else: tag_match = unnamespaced_match
-                
-            else:
-                
-                tag_match = namespaced_match
-                
-            
-            if blacklist: predicate = lambda tag: not tag_match( tag )
-            else: predicate = tag_match
-            
-            self._service_identifiers_to_predicates[ service_identifier ] = predicate
-            
-        
-    
-    def FilterServiceidentifiersToStatusesToTags( self, service_identifiers_to_statuses_to_tags ):
-        
-        filtered_service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
-        
-        for ( service_identifier, statuses_to_tags ) in service_identifiers_to_statuses_to_tags.items():
-            
-            if service_identifier in self._service_identifiers_to_predicates:
-                
-                predicate = self._service_identifiers_to_predicates[ service_identifier ]
-                
-                for ( status, tags ) in statuses_to_tags.items():
-                    
-                    tags = { tag for tag in tags if predicate( tag ) }
-                    
-                    filtered_service_identifiers_to_statuses_to_tags[ service_identifier ][ status ] = tags
-                    
-                
-            else: filtered_service_identifiers_to_statuses_to_tags[ service_identifier ] = statuses_to_tags
-            
-        
-        return filtered_service_identifiers_to_statuses_to_tags
-        
-    
-    def FilterTags( self, service_identifier, tags ):
-        
-        if service_identifier in self._service_identifiers_to_predicates:
-            
-            predicate = self._service_identifiers_to_predicates[ service_identifier ]
-            
-            tags = { tag for tag in tags if predicate( tag ) }
-            
-        
-        return tags
-        
-    
 class TagsManagerSimple():
     
     def __init__( self, service_identifiers_to_statuses_to_tags ):
         
-        namespace_blacklists_manager = HC.app.GetManager( 'namespace_blacklists' )
+        tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
         
-        service_identifiers_to_statuses_to_tags = namespace_blacklists_manager.FilterServiceidentifiersToStatusesToTags( service_identifiers_to_statuses_to_tags )
+        service_identifiers_to_statuses_to_tags = tag_censorship_manager.FilterServiceidentifiersToStatusesToTags( service_identifiers_to_statuses_to_tags )
         
         self._service_identifiers_to_statuses_to_tags = service_identifiers_to_statuses_to_tags
         
@@ -579,6 +502,82 @@ class TagsManager( TagsManagerSimple ):
             
             self._RecalcCombined()
             
+        
+    
+class TagCensorshipManager():
+    
+    def __init__( self ):
+        
+        self.RefreshData()
+        
+        HC.pubsub.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
+        
+    
+    def GetInfo( self, service_identifier ):
+        
+        if service_identifier in self._service_identifiers_to_predicates: return self._service_identifiers_to_predicates[ service_identifier ]
+        else: return ( True, set() )
+        
+    
+    def RefreshData( self ):
+        
+        info = HC.app.Read( 'tag_censorship' )
+        
+        self._service_identifiers_to_predicates = {}
+        
+        for ( service_identifier, blacklist, censorships ) in info:
+            
+            tag_matches = lambda tag: True in ( CensorshipMatch( tag, censorship ) for censorship in censorships )
+            
+            if blacklist: predicate = lambda tag: not tag_matches( tag )
+            else: predicate = tag_matches
+            
+            self._service_identifiers_to_predicates[ service_identifier ] = predicate
+            
+        
+    
+    def FilterServiceidentifiersToStatusesToTags( self, service_identifiers_to_statuses_to_tags ):
+        
+        filtered_service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        
+        for ( service_identifier, statuses_to_tags ) in service_identifiers_to_statuses_to_tags.items():
+            
+            for s_i in ( HC.COMBINED_TAG_SERVICE_IDENTIFIER, service_identifier ):
+                
+                if s_i in self._service_identifiers_to_predicates:
+                    
+                    combined_predicate = self._service_identifiers_to_predicates[ s_i ]
+                    
+                    tuples = statuses_to_tags.items()
+                    
+                    for ( status, tags ) in tuples:
+                        
+                        tags = { tag for tag in tags if combined_predicate( tag ) }
+                        
+                        statuses_to_tags[ status ] = tags
+                        
+                    
+                
+            
+            filtered_service_identifiers_to_statuses_to_tags[ service_identifier ] = statuses_to_tags
+            
+        
+        return filtered_service_identifiers_to_statuses_to_tags
+        
+    
+    def FilterTags( self, service_identifier, tags ):
+        
+        for s_i in ( HC.COMBINED_TAG_SERVICE_IDENTIFIER, service_identifier ):
+            
+            if s_i in self._service_identifiers_to_predicates:
+                
+                predicate = self._service_identifiers_to_predicates[ s_i ]
+                
+                tags = { tag for tag in tags if predicate( tag ) }
+                
+            
+        
+        return tags
         
     
 class TagParentsManager():

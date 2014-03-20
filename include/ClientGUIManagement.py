@@ -375,7 +375,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        tags_box = ClientGUICommon.TagsBoxCPPWithSorter( self, self._page_key )
+        tags_box = ClientGUICommon.TagsBoxCountsSorter( self, 'selection tags' )
+        
+        t = ClientGUICommon.TagsBoxCPP( tags_box, self._page_key )
+        
+        tags_box.SetTagsBox( t )
         
         sizer.AddF( tags_box, FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1786,6 +1790,19 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         if page_key == self._page_key: self._thread_input.SetFocus()
         
     
+    def TestAbleToClose( self ):
+        
+        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        
+        if import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsPaused():
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO: raise Exception()
+                
+            
+        
+    
 class ManagementPanelPetitions( ManagementPanel ):
     
     def __init__( self, parent, page, page_key, file_service_identifier, petition_service_identifier, starting_from_session = False ):
@@ -2017,8 +2034,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         HC.pubsub.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         HC.pubsub.sub( self, 'AddPredicate', 'add_predicate' )
-        HC.pubsub.sub( self, 'ChangeFileRepository', 'change_file_repository' )
-        HC.pubsub.sub( self, 'ChangeTagRepository', 'change_tag_repository' )
+        HC.pubsub.sub( self, 'ChangeFileRepositoryPubsub', 'change_file_repository' )
+        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
         HC.pubsub.sub( self, 'IncludeCurrent', 'notify_include_current' )
         HC.pubsub.sub( self, 'IncludePending', 'notify_include_pending' )
         HC.pubsub.sub( self, 'SearchImmediately', 'notify_search_immediately' )
@@ -2094,7 +2111,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ChangeFileRepository( self, page_key, service_identifier ):
+    def ChangeFileRepositoryPubsub( self, page_key, service_identifier ):
         
         if page_key == self._page_key:
             
@@ -2104,7 +2121,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ChangeTagRepository( self, page_key, service_identifier ):
+    def ChangeTagRepositoryPubsub( self, page_key, service_identifier ):
         
         if page_key == self._page_key:
             

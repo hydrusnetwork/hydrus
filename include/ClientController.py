@@ -244,7 +244,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             self._managers = {}
             
             self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
-            self._managers[ 'namespace_blacklists' ] = HydrusTags.NamespaceBlacklistsManager()
+            self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
             self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
             self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
             self._managers[ 'undo' ] = CC.UndoManager()

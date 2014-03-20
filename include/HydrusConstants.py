@@ -48,7 +48,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 106
+SOFTWARE_VERSION = 108
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1004,11 +1004,11 @@ def ConvertTimestampToPrettySync( timestamp ):
     if years == 1: y = '1 year'
     else: y = u( years ) + ' years'
     
-    if years > 0: return 'updated to ' + ' '.join( ( y, mo ) ) + ' ago'
-    elif months > 0: return 'updated to ' + ' '.join( ( mo, d ) ) + ' ago'
-    elif days > 0: return 'updated to ' + ' '.join( ( d, h ) ) + ' ago'
-    elif hours > 0: return 'updated to ' + ' '.join( ( h, m ) ) + ' ago'
-    else: return 'updated to ' + ' '.join( ( m, s ) ) + ' ago'
+    if years > 0: return ' '.join( ( y, mo ) ) + ' ago'
+    elif months > 0: return ' '.join( ( mo, d ) ) + ' ago'
+    elif days > 0: return ' '.join( ( d, h ) ) + ' ago'
+    elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
+    else: return ' '.join( ( m, s ) ) + ' ago'
     
 def ConvertTimestampToPrettyTime( timestamp ): return time.strftime( '%Y/%m/%d %H:%M:%S', time.localtime( timestamp ) )
 

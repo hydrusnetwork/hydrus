@@ -812,34 +812,34 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_num_words, None )
         
     
-    def test_namespace_blacklists( self ):
+    def test_tag_censorship( self ):
         
-        result = self._read( 'namespace_blacklists' )
+        result = self._read( 'tag_censorship' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'namespace_blacklists', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
         
         self.assertEqual( result, ( True, [] ) )
         
         #
         
-        namespace_blacklists = []
+        info = []
         
-        namespace_blacklists.append( ( HC.LOCAL_TAG_SERVICE_IDENTIFIER, False, [ '', 'series' ] ) )
-        namespace_blacklists.append( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, True, [ '' ] ) ) # bit dodgy, but whatever!
+        info.append( ( HC.LOCAL_TAG_SERVICE_IDENTIFIER, False, [ ':', 'series:' ] ) )
+        info.append( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, True, [ ':' ] ) ) # bit dodgy, but whatever!
         
-        self._write( 'namespace_blacklists', namespace_blacklists )
+        self._write( 'tag_censorship', info )
         
         #
         
-        result = self._read( 'namespace_blacklists' )
+        result = self._read( 'tag_censorship' )
         
-        self.assertItemsEqual( result, namespace_blacklists )
+        self.assertItemsEqual( result, info )
         
-        result = self._read( 'namespace_blacklists', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
         
-        self.assertEqual( result, ( False, [ '', 'series' ] ) )
+        self.assertEqual( result, ( False, [ ':', 'series:' ] ) )
         
     
     def test_news( self ):

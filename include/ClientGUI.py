@@ -570,6 +570,16 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.pub( 'notify_new_undo' )
         
     
+    def _DeleteOrphans( self ):
+        
+        message = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will appear when it is done.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_orphans' )
+            
+        
+    
     def _DeletePending( self, service_identifier ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service_identifier.GetName() + '?' ) as dlg:
@@ -781,6 +791,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'restore_database' ), p( 'Restore Database Backup' ), p( 'Restore the database from an external location.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
@@ -824,7 +835,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             show = total_num_pending > 0
             
-            return ( menu, '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')', show )
+            return ( menu, p( '&Pending (' + HC.ConvertIntToPrettyString( total_num_pending ) + ')' ), show )
             
         
         def services():
@@ -857,9 +868,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
             menu.AppendSeparator()
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_namespace_blacklists' ), p( '&Manage Namespace Blacklists' ), p( 'Set which kinds of tags you want to see from which services.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
@@ -1136,11 +1147,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageNamespaceBlacklists( self ):
-        
-        with ClientGUIDialogsManage.DialogManageNamespaceBlacklists( self ) as dlg: dlg.ShowModal()
-        
-    
     def _ManageOptions( self ):
         
         with ClientGUIDialogsManage.DialogManageOptions( self ) as dlg: dlg.ShowModal()
@@ -1180,6 +1186,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             with ClientGUIDialogsManage.DialogManageSubscriptions( self ) as dlg: dlg.ShowModal()
             
         finally: HC.options[ 'pause_subs_sync' ] = original_pause_status
+        
+    
+    def _ManageTagCensorship( self ):
+        
+        with ClientGUIDialogsManage.DialogManageTagCensorship( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageTagParents( self ):
@@ -1628,7 +1639,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous, optimising most operations. If you have a large database, it will take some time. A popup message will appear when it is done.'
+        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will appear when it is done.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -1783,6 +1794,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HC.pubsub.pub( 'notify_new_sessions' )
                 
+            elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
@@ -1800,11 +1812,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_export_folders': self._ManageExportFolders()
             elif command == 'manage_imageboards': self._ManageImageboards()
             elif command == 'manage_import_folders': self._ManageImportFolders()
-            elif command == 'manage_namespace_blacklists': self._ManageNamespaceBlacklists()
             elif command == 'manage_pixiv_account': self._ManagePixivAccount()
             elif command == 'manage_server_services': self._ManageServer( data )
             elif command == 'manage_services': self._ManageServices()
             elif command == 'manage_subscriptions': self._ManageSubscriptions()
+            elif command == 'manage_tag_censorship': self._ManageTagCensorship()
             elif command == 'manage_tag_parents': self._ManageTagParents()
             elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
             elif command == 'manage_tag_siblings': self._ManageTagSiblings()
@@ -2496,7 +2508,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                             self._updates.SetValue( num_updates_downloaded )
                             
                         
-                        self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
+                        self._updates_text.SetLabel( self._service.GetUpdateStatus() )
                         
                         ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
                         ( used_bytes, used_requests ) = account.GetUsedData()
@@ -2682,25 +2694,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
-        def TIMEREventUpdates( self, event ):
-            
-            now = HC.GetNow()
-            
-            ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = self._service.GetTimestamps()
-            
-            if first_timestamp is None:
-                
-                num_updates = 0
-                num_updates_downloaded = 0
-                
-            else:
-                
-                num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
-                num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
-                
-            
-            self._updates_text.SetLabel( HC.ConvertIntToPrettyString( num_updates_downloaded ) + '/' + HC.ConvertIntToPrettyString( num_updates ) + ' - ' + self._service.GetUpdateStatus() )
-            
+        def TIMEREventUpdates( self, event ): self._updates_text.SetLabel( self._service.GetUpdateStatus() )
         
     
 class FrameSplash( ClientGUICommon.Frame ):

@@ -82,7 +82,7 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
 def GetYoutubeFormats( youtube_url ):
     
     try: p = pafy.Pafy( youtube_url )
-    except: raise Exception( 'Could not fetch video info from youtube!' )
+    except Exception as e: raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HC.u( e ) )
     
     info = { ( s.extension, s.resolution ) : ( s.url, s.title ) for s in p.streams if s.extension in ( 'flv', 'mp4' ) }
     
@@ -1304,217 +1304,6 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         else: return ( status, None )
         
     
-class ImportQueueGenerator():
-    
-    def __init__( self, job_key, item ):
-        
-        self._job_key = job_key
-        self._item = item
-        
-    
-    def __call__( self ):
-        
-        queue = self._item
-        
-        self._job_key.SetVariable( 'queue', queue )
-        
-        self._job_key.Finish()
-        
-    
-class ImportQueueGeneratorGallery( ImportQueueGenerator ):
-    
-    def __init__( self, job_key, item, downloaders_factory ):
-        
-        ImportQueueGenerator.__init__( self, job_key, item )
-        
-        self._downloaders_factory = downloaders_factory
-        
-    
-    def __call__( self ):
-        
-        try:
-            
-            raw_query = self._item
-            
-            downloaders = list( self._downloaders_factory( raw_query ) )
-            
-            downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
-            
-            total_urls_found = 0
-            
-            while True:
-                
-                downloaders_to_remove = []
-                
-                for downloader in downloaders:
-                    
-                    if self._job_key.IsPaused():
-                        
-                        self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
-                        
-                        self._job_key.WaitOnPause()
-                        
-                    
-                    if self._job_key.IsCancelled(): break
-                    
-                    self._job_key.SetVariable( 'status', 'found ' + HC.u( total_urls_found ) + ' urls' )
-                    
-                    page_of_url_args = downloader.GetAnotherPage()
-                    
-                    total_urls_found += len( page_of_url_args )
-                    
-                    if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
-                    else:
-                        
-                        queue = self._job_key.GetVariable( 'queue' )
-                        
-                        queue = list( queue )
-                        
-                        queue.extend( page_of_url_args )
-                        
-                        self._job_key.SetVariable( 'queue', queue )
-                        
-                    
-                
-                for downloader in downloaders_to_remove: downloaders.remove( downloader )
-                
-                if len( downloaders ) == 0: break
-                
-                if self._job_key.IsPaused():
-                    
-                    self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
-                    
-                    self._job_key.WaitOnPause()
-                    
-                
-                if self._job_key.IsCancelled(): break
-                
-            
-            self._job_key.SetVariable( 'status', '' )
-            
-        except Exception as e:
-            
-            self._job_key.SetVariable( 'status', HC.u( e ) )
-            
-            HC.ShowException( e )
-            
-            time.sleep( 2 )
-            
-        finally: self._job_key.Finish()
-        
-    
-class ImportQueueGeneratorURLs( ImportQueueGenerator ):
-    
-    def __call__( self ):
-        
-        try:
-            
-            url = self._item
-            
-            self._job_key.SetVariable( 'status', 'Connecting to address' )
-            
-            try: html = HC.http.Request( HC.GET, url )
-            except: raise Exception( 'Could not download that url' )
-            
-            self._job_key.SetVariable( 'status', 'parsing html' )
-            
-            try: urls = ParsePageForURLs( html, url )
-            except: raise Exception( 'Could not parse that URL\'s html' )
-            
-            queue = urls
-            
-            self._job_key.SetVariable( 'queue', queue )
-            
-        except Exception as e:
-            
-            self._job_key.SetVariable( 'status', HC.u( e ) )
-            
-            HC.ShowException( e )
-            
-            time.sleep( 2 )
-            
-        finally: self._job_key.Finish()
-        
-    
-class ImportQueueGeneratorThread( ImportQueueGenerator ):
-    
-    def __call__( self ):
-        
-        try:
-            
-            ( board, thread_id ) = self._item
-            
-            last_thread_check = 0
-            image_infos_already_added = set()
-            
-            while True:
-            
-                if self._job_key.IsPaused():
-                    
-                    self._job_key.SetVariable( 'status', 'paused' )
-                    
-                    self._job_key.WaitOnPause()
-                    
-                
-                if self._job_key.IsCancelled(): break
-                
-                thread_time = self._job_key.GetVariable( 'thread_time' )
-                
-                if thread_time < 30: thread_time = 30
-                
-                next_thread_check = last_thread_check + thread_time
-                
-                if next_thread_check < HC.GetNow():
-                    
-                    self._job_key.SetVariable( 'status', 'checking thread' )
-                    
-                    url = 'http://api.4chan.org/' + board + '/res/' + thread_id + '.json'
-                    
-                    try:
-                        
-                        raw_json = HC.http.Request( HC.GET, url )
-                        
-                        json_dict = json.loads( raw_json )
-                        
-                        posts_list = json_dict[ 'posts' ]
-                        
-                        image_infos = [ ( post[ 'md5' ].decode( 'base64' ), board, HC.u( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
-                        
-                        image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in image_infos_already_added ]
-                        
-                        image_infos_already_added.update( image_infos_i_can_add )
-                        
-                        if len( image_infos_i_can_add ) > 0:
-                            
-                            queue = self._job_key.GetVariable( 'queue' )
-                            
-                            queue = list( queue )
-                            
-                            queue.extend( image_infos_i_can_add )
-                            
-                            self._job_key.SetVariable( 'queue', queue )
-                            
-                        
-                    except HydrusExceptions.NotFoundException: raise Exception( 'Thread 404' )
-                    
-                    last_thread_check = HC.GetNow()
-                    
-                else: self._job_key.SetVariable( 'status', 'rechecking thread ' + HC.ConvertTimestampToPrettyPending( next_thread_check ) )
-                
-                
-            
-        except Exception as e:
-            
-            self._job_key.SetVariable( 'status', HC.u( e ) )
-            
-            HC.ShowException( e )
-            
-            time.sleep( 2 )
-            
-        finally: self._job_key.Finish()
-        
-    
-    
 class ImportController():
     
     def __init__( self, import_args_generator_factory, import_queue_generator_factory, page_key = None ):
@@ -1746,6 +1535,216 @@ class ImportController():
     def StartThread( self ):
         
         threading.Thread( target = self.MainLoop ).start()
+        
+    
+class ImportQueueGenerator():
+    
+    def __init__( self, job_key, item ):
+        
+        self._job_key = job_key
+        self._item = item
+        
+    
+    def __call__( self ):
+        
+        queue = self._item
+        
+        self._job_key.SetVariable( 'queue', queue )
+        
+        self._job_key.Finish()
+        
+    
+class ImportQueueGeneratorGallery( ImportQueueGenerator ):
+    
+    def __init__( self, job_key, item, downloaders_factory ):
+        
+        ImportQueueGenerator.__init__( self, job_key, item )
+        
+        self._downloaders_factory = downloaders_factory
+        
+    
+    def __call__( self ):
+        
+        try:
+            
+            raw_query = self._item
+            
+            downloaders = list( self._downloaders_factory( raw_query ) )
+            
+            downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
+            
+            total_urls_found = 0
+            
+            while True:
+                
+                downloaders_to_remove = []
+                
+                for downloader in downloaders:
+                    
+                    if self._job_key.IsPaused():
+                        
+                        self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
+                        
+                        self._job_key.WaitOnPause()
+                        
+                    
+                    if self._job_key.IsCancelled(): break
+                    
+                    self._job_key.SetVariable( 'status', 'found ' + HC.u( total_urls_found ) + ' urls' )
+                    
+                    page_of_url_args = downloader.GetAnotherPage()
+                    
+                    total_urls_found += len( page_of_url_args )
+                    
+                    if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
+                    else:
+                        
+                        queue = self._job_key.GetVariable( 'queue' )
+                        
+                        queue = list( queue )
+                        
+                        queue.extend( page_of_url_args )
+                        
+                        self._job_key.SetVariable( 'queue', queue )
+                        
+                    
+                
+                for downloader in downloaders_to_remove: downloaders.remove( downloader )
+                
+                if len( downloaders ) == 0: break
+                
+                if self._job_key.IsPaused():
+                    
+                    self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
+                    
+                    self._job_key.WaitOnPause()
+                    
+                
+                if self._job_key.IsCancelled(): break
+                
+            
+            self._job_key.SetVariable( 'status', '' )
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'status', HC.u( e ) )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+        finally: self._job_key.Finish()
+        
+    
+class ImportQueueGeneratorURLs( ImportQueueGenerator ):
+    
+    def __call__( self ):
+        
+        try:
+            
+            url = self._item
+            
+            self._job_key.SetVariable( 'status', 'Connecting to address' )
+            
+            try: html = HC.http.Request( HC.GET, url )
+            except: raise Exception( 'Could not download that url' )
+            
+            self._job_key.SetVariable( 'status', 'parsing html' )
+            
+            try: urls = ParsePageForURLs( html, url )
+            except: raise Exception( 'Could not parse that URL\'s html' )
+            
+            queue = urls
+            
+            self._job_key.SetVariable( 'queue', queue )
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'status', HC.u( e ) )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+        finally: self._job_key.Finish()
+        
+    
+class ImportQueueGeneratorThread( ImportQueueGenerator ):
+    
+    def __call__( self ):
+        
+        try:
+            
+            ( board, thread_id ) = self._item
+            
+            last_thread_check = 0
+            image_infos_already_added = set()
+            
+            while True:
+            
+                if self._job_key.IsPaused():
+                    
+                    self._job_key.SetVariable( 'status', 'paused' )
+                    
+                    self._job_key.WaitOnPause()
+                    
+                
+                if self._job_key.IsCancelled(): break
+                
+                thread_time = self._job_key.GetVariable( 'thread_time' )
+                
+                if thread_time < 30: thread_time = 30
+                
+                next_thread_check = last_thread_check + thread_time
+                
+                if next_thread_check < HC.GetNow():
+                    
+                    self._job_key.SetVariable( 'status', 'checking thread' )
+                    
+                    url = 'http://api.4chan.org/' + board + '/res/' + thread_id + '.json'
+                    
+                    try:
+                        
+                        raw_json = HC.http.Request( HC.GET, url )
+                        
+                        json_dict = json.loads( raw_json )
+                        
+                        posts_list = json_dict[ 'posts' ]
+                        
+                        image_infos = [ ( post[ 'md5' ].decode( 'base64' ), board, HC.u( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
+                        
+                        image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in image_infos_already_added ]
+                        
+                        image_infos_already_added.update( image_infos_i_can_add )
+                        
+                        if len( image_infos_i_can_add ) > 0:
+                            
+                            queue = self._job_key.GetVariable( 'queue' )
+                            
+                            queue = list( queue )
+                            
+                            queue.extend( image_infos_i_can_add )
+                            
+                            self._job_key.SetVariable( 'queue', queue )
+                            
+                        
+                    except HydrusExceptions.NotFoundException: raise Exception( 'Thread 404' )
+                    
+                    last_thread_check = HC.GetNow()
+                    
+                else: self._job_key.SetVariable( 'status', 'rechecking thread ' + HC.ConvertTimestampToPrettyPending( next_thread_check ) )
+                
+                
+            
+        except Exception as e:
+            
+            self._job_key.SetVariable( 'status', HC.u( e ) )
+            
+            HC.ShowException( e )
+            
+            time.sleep( 2 )
+            
+        finally: self._job_key.Finish()
         
     
 def THREADDownloadURL( message, url, url_string ):

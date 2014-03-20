@@ -158,18 +158,6 @@ class TestNonDBDialogs( unittest.TestCase ):
             
         
     
-    def test_dialog_message( self ):
-        
-        with ClientGUIDialogs.DialogMessage( None, 'hello' ) as dlg:
-            
-            HitButton( dlg._ok )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_OK )
-            
-        
-    
     def test_select_from_list_of_strings( self ):
         
         with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
