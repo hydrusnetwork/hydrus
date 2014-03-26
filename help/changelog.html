@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 109</h3></li>
+				<ul>
+					<li>started processed_mappings table. for now, it mirrors normal mappings table</li>
+					<li>improved manage tags dialog logic</li>
+					<li>fixed only_add issue for parent tags</li>
+					<li>fixed an important tags box surplus tags display bug when focus repository was changed</li>
+					<li>fixed petitioned tag counts in tag boxes, as long as 'all known tags' is not selected</li>
+					<li>fixed occasional zero tag count in tags box</li>
+					<li>added petitioned tags to normal media fetch, not sure why they were missing</li>
+					<li>fixed a random error when trying to refresh a 'open selection in new page' page</li>
+					<li>improved help to reflect new manage tags dialog</li>
+					<li>cleaned up an annoying spam-text-to-console issue when running test.py</li>
+					<li>reworked the way the server clean/create update daemons interface with the database</li>
+					<li>improved how updates are stored and fetched in the server db--no longer needs a db hit to fetch</li>
+					<li>harmonised client db's update naming convention to the server's</li>
+					<li>improved server db to update the same new-ish way client db does it</li>
+				</ul>
 				<li><h3>version 108</h3></li>
 				<ul>
 					<li>added 'database->delete orphan files' for manual firing of this maintenance routine</li>

@@ -2280,6 +2280,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash_ids_to_tags = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, ( status, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( status, tag ) ) ) for ( hash_id, service_id, namespace, tag, status ) in c.execute( 'SELECT hash_id, service_id, namespace, tag, status FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
+        hash_ids_to_petitioned_tags = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, ( HC.PETITIONED, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( HC.PETITIONED, tag ) ) ) for ( hash_id, service_id, namespace, tag ) in c.execute( 'SELECT hash_id, service_id, namespace, tag FROM namespaces, ( tags, mapping_petitions USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
+        
+        for ( hash_id, tag_data ) in hash_ids_to_petitioned_tags.items(): hash_ids_to_tags[ hash_id ].extend( tag_data )
+        
         hash_ids_to_current_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
         hash_ids_to_deleted_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
@@ -3337,6 +3341,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                     for ( namespace_id, tag_id, hash_ids ) in advanced_mappings_ids:
                                         
                                         c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
+                                        c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
                                         
                                     
                                     c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
@@ -3695,6 +3700,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence DESC;' ) ]
         
         c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
+        c.execute( 'DELETE FROM processed_mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
         
         first_round = True
         
@@ -3712,6 +3718,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             first_round = False
             
+        
+        c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
         
         c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
         
@@ -3834,10 +3842,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             deletable_hash_ids = existing_hash_ids.intersection( appropriate_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, old_status ) )
+            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, old_status ) )
             
             num_old_deleted = self._GetRowCount( c )
             
             c.execute( 'UPDATE mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( appropriate_hash_ids ) + ' AND status = ?;', ( new_status, service_id, namespace_id, tag_id, old_status ) )
+            c.execute( 'UPDATE processed_mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( appropriate_hash_ids ) + ' AND status = ?;', ( new_status, service_id, namespace_id, tag_id, old_status ) )
             
             num_old_made_new = self._GetRowCount( c )
             
@@ -3906,6 +3916,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             deletable_hash_ids.update( search_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ';', ( self._combined_tag_service_id, namespace_id, tag_id ) )
+            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ';', ( self._combined_tag_service_id, namespace_id, tag_id ) )
             
             UpdateAutocompleteTagCacheFromCombinedCurrentTags( namespace_id, tag_id, deletable_hash_ids, -1 )
             
@@ -3918,6 +3929,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             deletable_hash_ids = set( hash_ids ).difference( existing_other_precedence_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.PENDING ) )
+            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.PENDING ) )
             
             UpdateAutocompleteTagCacheFromCombinedPendingTags( namespace_id, tag_id, deletable_hash_ids, -1 )
             
@@ -3931,6 +3943,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             new_hash_ids = set( hash_ids ).difference( arguing_higher_precedence_hash_ids ).difference( existing_combined_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.CURRENT ) for hash_id in new_hash_ids ] )
+            c.executemany( 'INSERT OR IGNORE INTO processed_mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.CURRENT ) for hash_id in new_hash_ids ] )
             
             UpdateAutocompleteTagCacheFromCombinedCurrentTags( namespace_id, tag_id, new_hash_ids, 1 )
             
@@ -3942,6 +3955,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             new_hash_ids = set( hash_ids ).difference( existing_combined_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for hash_id in new_hash_ids ] )
+            c.executemany( 'INSERT OR IGNORE INTO processed_mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for hash_id in new_hash_ids ] )
             
             UpdateAutocompleteTagCacheFromCombinedPendingTags( namespace_id, tag_id, new_hash_ids, 1 )
             
@@ -3949,6 +3963,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         def DeletePending( namespace_id, tag_id, hash_ids ):
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
+            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
             
             num_deleted = self._GetRowCount( c )
             
@@ -3976,6 +3991,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             new_hash_ids = set( hash_ids ).difference( existing_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
+            c.executemany( 'INSERT OR IGNORE INTO processed_mappings VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
             
             num_rows_added = self._GetRowCount( c )
             
@@ -4630,6 +4646,13 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
             
+            c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+            c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
+            c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
+            
             c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
             
             c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
@@ -4805,239 +4828,6 @@ class DB( ServiceDB ):
         
         self._UpdateDBOld( c, version )
         
-        if version == 91:
-            
-            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
-            
-            HC.options[ 'num_autocomplete_chars' ] = 2
-            
-            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
-            
-        
-        if version == 93:
-            
-            c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
-            
-        
-        if version == 94:
-            
-            # I changed a variable name in account, so old yaml dumps need to be refreshed
-            
-            unknown_account = HC.GetUnknownAccount()
-            
-            c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
-            
-            for ( name, info ) in c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall():
-                
-                for ( page_name, c_text, args, kwargs ) in info:
-                    
-                    if 'do_query' in kwargs: del kwargs[ 'do_query' ]
-                    
-                
-                c.execute( 'UPDATE gui_sessions SET info = ? WHERE name = ?;', ( info, name ) )
-                
-            
-        
-        if version == 95:
-            
-            c.execute( 'COMMIT' )
-            
-            c.execute( 'PRAGMA foreign_keys = OFF;' )
-            
-            c.execute( 'BEGIN IMMEDIATE' )
-            
-            service_basic_info = c.execute( 'SELECT service_id, service_key, type, name FROM services;' ).fetchall()
-            service_address_info = c.execute( 'SELECT service_id, host, port, last_error FROM addresses;' ).fetchall()
-            service_account_info = c.execute( 'SELECT service_id, access_key, account FROM accounts;' ).fetchall()
-            service_repository_info = c.execute( 'SELECT service_id, first_begin, next_begin FROM repositories;' ).fetchall()
-            service_ratings_like_info = c.execute( 'SELECT service_id, like, dislike FROM ratings_like;' ).fetchall()
-            service_ratings_numerical_info = c.execute( 'SELECT service_id, lower, upper FROM ratings_numerical;' ).fetchall()
-            
-            service_address_info = { service_id : ( host, port, last_error ) for ( service_id, host, port, last_error ) in service_address_info }
-            service_account_info = { service_id : ( access_key, account ) for ( service_id, access_key, account ) in service_account_info }
-            service_repository_info = { service_id : ( first_begin, next_begin ) for ( service_id, first_begin, next_begin ) in service_repository_info }
-            service_ratings_like_info = { service_id : ( like, dislike ) for ( service_id, like, dislike ) in service_ratings_like_info }
-            service_ratings_numerical_info = { service_id : ( lower, upper ) for ( service_id, lower, upper ) in service_ratings_numerical_info }
-            
-            c.execute( 'DROP TABLE services;' )
-            c.execute( 'DROP TABLE addresses;' )
-            c.execute( 'DROP TABLE accounts;' )
-            c.execute( 'DROP TABLE repositories;' )
-            c.execute( 'DROP TABLE ratings_like;' )
-            c.execute( 'DROP TABLE ratings_numerical;' )
-            
-            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
-            c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
-            
-            services = []
-            
-            for ( service_id, service_key, service_type, name ) in service_basic_info:
-                
-                info = {}
-                
-                if service_id in service_address_info:
-                    
-                    ( host, port, last_error ) = service_address_info[ service_id ]
-                    
-                    info[ 'host' ] = host
-                    info[ 'port' ] = port
-                    info[ 'last_error' ] = last_error
-                    
-                
-                if service_id in service_account_info:
-                    
-                    ( access_key, account ) = service_account_info[ service_id ]
-                    
-                    info[ 'access_key' ] = access_key
-                    info[ 'account' ] = account
-                    
-                
-                if service_id in service_repository_info:
-                    
-                    ( first_begin, next_begin ) = service_repository_info[ service_id ]
-                    
-                    info[ 'first_begin' ] = first_begin
-                    info[ 'next_begin' ] = next_begin
-                    
-                
-                if service_id in service_ratings_like_info:
-                    
-                    ( like, dislike ) = service_ratings_like_info[ service_id ]
-                    
-                    info[ 'like' ] = like
-                    info[ 'dislike' ] = dislike
-                    
-                
-                if service_id in service_ratings_numerical_info:
-                    
-                    ( lower, upper ) = service_ratings_numerical_info[ service_id ]
-                    
-                    info[ 'lower' ] = lower
-                    info[ 'upper' ] = upper
-                    
-                
-                c.execute( 'INSERT INTO services ( service_id, service_key, service_type, name, info ) VALUES ( ?, ?, ?, ?, ? );',  ( service_id, sqlite3.Binary( service_key ), service_type, name, info ) )
-                
-            
-            c.execute( 'COMMIT' )
-            
-            c.execute( 'PRAGMA foreign_keys = ON;' )
-            
-            c.execute( 'BEGIN IMMEDIATE' )
-            
-        
-        if version == 95:
-            
-            for ( service_id, info ) in c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
-                
-                if 'account' in info:
-                    
-                    info[ 'account' ].MakeStale()
-                    
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                    
-                
-            
-        
-        if version == 101:
-            
-            c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
-            
-            inserts = []
-            
-            # singles
-            
-            data = c.execute( 'SELECT token, pin, timeout FROM fourchan_pass;' ).fetchone()
-            
-            if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, '4chan_pass', data ) )
-            
-            data = c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
-            
-            if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, 'pixiv_account', data ) )
-            
-            # boorus
-            
-            data = c.execute( 'SELECT name, booru FROM boorus;' ).fetchall()
-            
-            inserts.extend( ( ( YAML_DUMP_ID_BOORU, name, booru ) for ( name, booru ) in data ) )
-            
-            # favourite custom filter actions
-            
-            data = c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' )
-            
-            inserts.extend( ( ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, name, actions ) for ( name, actions ) in data ) )
-            
-            # gui sessions
-            
-            data = c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
-            
-            inserts.extend( ( ( YAML_DUMP_ID_GUI_SESSION, name, info ) for ( name, info ) in data ) )
-            
-            # imageboards
-            
-            all_imageboards = []
-            
-            all_sites = c.execute( 'SELECT site_id, name FROM imageboard_sites;' ).fetchall()
-            
-            for ( site_id, name ) in all_sites:
-                
-                imageboards = [ imageboard for ( imageboard, ) in c.execute( 'SELECT imageboard FROM imageboards WHERE site_id = ? ORDER BY name;', ( site_id, ) ) ]
-                
-                inserts.append( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) )
-                
-            
-            # import folders
-            
-            data = c.execute( 'SELECT path, details FROM import_folders;' )
-            
-            inserts.extend( ( ( YAML_DUMP_ID_IMPORT_FOLDER, path, details ) for ( path, details ) in data ) )
-            
-            # subs
-            
-            subs = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' )            
-            
-            names = set()
-            
-            for ( site_download_type, name, old_info ) in subs:
-                
-                if name in names: name = name + str( site_download_type )
-                
-                ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = old_info
-                
-                info = {}
-                
-                info[ 'site_type' ] = site_download_type
-                info[ 'query_type' ] = query_type
-                info[ 'query' ] = query
-                info[ 'frequency_type' ] = frequency_type
-                info[ 'frequency' ] = frequency_number
-                info[ 'advanced_tag_options' ] = advanced_tag_options
-                info[ 'advanced_import_options' ] = advanced_import_options
-                info[ 'last_checked' ] = last_checked
-                info[ 'url_cache' ] = url_cache
-                info[ 'paused' ] = paused
-                
-                inserts.append( ( YAML_DUMP_ID_SUBSCRIPTION, name, info ) )
-                
-                names.add( name )
-                
-            
-            #
-            
-            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', inserts )
-            
-            #
-            
-            c.execute( 'DROP TABLE fourchan_pass;' )
-            c.execute( 'DROP TABLE pixiv_account;' )
-            c.execute( 'DROP TABLE boorus;' )
-            c.execute( 'DROP TABLE favourite_custom_filter_actions;' )
-            c.execute( 'DROP TABLE gui_sessions;' )
-            c.execute( 'DROP TABLE imageboard_sites;' )
-            c.execute( 'DROP TABLE imageboards;' )
-            c.execute( 'DROP TABLE subscriptions;' )
-            
-        
         if version == 105:
             
             if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
@@ -5082,6 +4872,58 @@ class DB( ServiceDB ):
                 
             
             c.execute( 'DROP TABLE namespace_blacklists;' )
+            
+        
+        if version == 108:
+            
+            c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+            c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
+            c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
+            
+            service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services;' ) ]
+            
+            for ( i, service_id ) in enumerate( service_ids ):
+                
+                HC.app.SetSplashText( 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
+                
+                c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
+                
+            
+            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+            
+            for filename in current_updates:
+                
+                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                
+                os.rename( path, path + 'old' )
+                
+            
+            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+            
+            for ( i, filename ) in enumerate( current_updates ):
+                
+                if i % 100 == 0: HC.app.SetSplashText( 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
+                
+                ( service_key_hex, gumpf ) = filename.split( '_' )
+                
+                service_key = service_key_hex.decode( 'hex' )
+                
+                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                
+                with open( path, 'rb' ) as f: update_text = f.read()
+                
+                update = yaml.safe_load( update_text )
+                
+                ( begin, end ) = update.GetBeginEnd()
+                
+                new_path = CC.GetUpdatePath( service_key, begin )
+                
+                if os.path.exists( new_path ): os.remove( path )
+                else: os.rename( path, new_path )
+                
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6690,6 +6532,239 @@ class DB( ServiceDB ):
             c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
+        if version == 91:
+            
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            HC.options[ 'num_autocomplete_chars' ] = 2
+            
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            
+        
+        if version == 93:
+            
+            c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
+            
+        
+        if version == 94:
+            
+            # I changed a variable name in account, so old yaml dumps need to be refreshed
+            
+            unknown_account = HC.GetUnknownAccount()
+            
+            c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
+            
+            for ( name, info ) in c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall():
+                
+                for ( page_name, c_text, args, kwargs ) in info:
+                    
+                    if 'do_query' in kwargs: del kwargs[ 'do_query' ]
+                    
+                
+                c.execute( 'UPDATE gui_sessions SET info = ? WHERE name = ?;', ( info, name ) )
+                
+            
+        
+        if version == 95:
+            
+            c.execute( 'COMMIT' )
+            
+            c.execute( 'PRAGMA foreign_keys = OFF;' )
+            
+            c.execute( 'BEGIN IMMEDIATE' )
+            
+            service_basic_info = c.execute( 'SELECT service_id, service_key, type, name FROM services;' ).fetchall()
+            service_address_info = c.execute( 'SELECT service_id, host, port, last_error FROM addresses;' ).fetchall()
+            service_account_info = c.execute( 'SELECT service_id, access_key, account FROM accounts;' ).fetchall()
+            service_repository_info = c.execute( 'SELECT service_id, first_begin, next_begin FROM repositories;' ).fetchall()
+            service_ratings_like_info = c.execute( 'SELECT service_id, like, dislike FROM ratings_like;' ).fetchall()
+            service_ratings_numerical_info = c.execute( 'SELECT service_id, lower, upper FROM ratings_numerical;' ).fetchall()
+            
+            service_address_info = { service_id : ( host, port, last_error ) for ( service_id, host, port, last_error ) in service_address_info }
+            service_account_info = { service_id : ( access_key, account ) for ( service_id, access_key, account ) in service_account_info }
+            service_repository_info = { service_id : ( first_begin, next_begin ) for ( service_id, first_begin, next_begin ) in service_repository_info }
+            service_ratings_like_info = { service_id : ( like, dislike ) for ( service_id, like, dislike ) in service_ratings_like_info }
+            service_ratings_numerical_info = { service_id : ( lower, upper ) for ( service_id, lower, upper ) in service_ratings_numerical_info }
+            
+            c.execute( 'DROP TABLE services;' )
+            c.execute( 'DROP TABLE addresses;' )
+            c.execute( 'DROP TABLE accounts;' )
+            c.execute( 'DROP TABLE repositories;' )
+            c.execute( 'DROP TABLE ratings_like;' )
+            c.execute( 'DROP TABLE ratings_numerical;' )
+            
+            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
+            c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
+            
+            services = []
+            
+            for ( service_id, service_key, service_type, name ) in service_basic_info:
+                
+                info = {}
+                
+                if service_id in service_address_info:
+                    
+                    ( host, port, last_error ) = service_address_info[ service_id ]
+                    
+                    info[ 'host' ] = host
+                    info[ 'port' ] = port
+                    info[ 'last_error' ] = last_error
+                    
+                
+                if service_id in service_account_info:
+                    
+                    ( access_key, account ) = service_account_info[ service_id ]
+                    
+                    info[ 'access_key' ] = access_key
+                    info[ 'account' ] = account
+                    
+                
+                if service_id in service_repository_info:
+                    
+                    ( first_begin, next_begin ) = service_repository_info[ service_id ]
+                    
+                    info[ 'first_begin' ] = first_begin
+                    info[ 'next_begin' ] = next_begin
+                    
+                
+                if service_id in service_ratings_like_info:
+                    
+                    ( like, dislike ) = service_ratings_like_info[ service_id ]
+                    
+                    info[ 'like' ] = like
+                    info[ 'dislike' ] = dislike
+                    
+                
+                if service_id in service_ratings_numerical_info:
+                    
+                    ( lower, upper ) = service_ratings_numerical_info[ service_id ]
+                    
+                    info[ 'lower' ] = lower
+                    info[ 'upper' ] = upper
+                    
+                
+                c.execute( 'INSERT INTO services ( service_id, service_key, service_type, name, info ) VALUES ( ?, ?, ?, ?, ? );',  ( service_id, sqlite3.Binary( service_key ), service_type, name, info ) )
+                
+            
+            c.execute( 'COMMIT' )
+            
+            c.execute( 'PRAGMA foreign_keys = ON;' )
+            
+            c.execute( 'BEGIN IMMEDIATE' )
+            
+        
+        if version == 95:
+            
+            for ( service_id, info ) in c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
+                
+                if 'account' in info:
+                    
+                    info[ 'account' ].MakeStale()
+                    
+                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    
+                
+            
+        
+        if version == 101:
+            
+            c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+            
+            inserts = []
+            
+            # singles
+            
+            data = c.execute( 'SELECT token, pin, timeout FROM fourchan_pass;' ).fetchone()
+            
+            if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, '4chan_pass', data ) )
+            
+            data = c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
+            
+            if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, 'pixiv_account', data ) )
+            
+            # boorus
+            
+            data = c.execute( 'SELECT name, booru FROM boorus;' ).fetchall()
+            
+            inserts.extend( ( ( YAML_DUMP_ID_BOORU, name, booru ) for ( name, booru ) in data ) )
+            
+            # favourite custom filter actions
+            
+            data = c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' )
+            
+            inserts.extend( ( ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, name, actions ) for ( name, actions ) in data ) )
+            
+            # gui sessions
+            
+            data = c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
+            
+            inserts.extend( ( ( YAML_DUMP_ID_GUI_SESSION, name, info ) for ( name, info ) in data ) )
+            
+            # imageboards
+            
+            all_imageboards = []
+            
+            all_sites = c.execute( 'SELECT site_id, name FROM imageboard_sites;' ).fetchall()
+            
+            for ( site_id, name ) in all_sites:
+                
+                imageboards = [ imageboard for ( imageboard, ) in c.execute( 'SELECT imageboard FROM imageboards WHERE site_id = ? ORDER BY name;', ( site_id, ) ) ]
+                
+                inserts.append( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) )
+                
+            
+            # import folders
+            
+            data = c.execute( 'SELECT path, details FROM import_folders;' )
+            
+            inserts.extend( ( ( YAML_DUMP_ID_IMPORT_FOLDER, path, details ) for ( path, details ) in data ) )
+            
+            # subs
+            
+            subs = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' )            
+            
+            names = set()
+            
+            for ( site_download_type, name, old_info ) in subs:
+                
+                if name in names: name = name + str( site_download_type )
+                
+                ( query_type, query, frequency_type, frequency_number, advanced_tag_options, advanced_import_options, last_checked, url_cache, paused ) = old_info
+                
+                info = {}
+                
+                info[ 'site_type' ] = site_download_type
+                info[ 'query_type' ] = query_type
+                info[ 'query' ] = query
+                info[ 'frequency_type' ] = frequency_type
+                info[ 'frequency' ] = frequency_number
+                info[ 'advanced_tag_options' ] = advanced_tag_options
+                info[ 'advanced_import_options' ] = advanced_import_options
+                info[ 'last_checked' ] = last_checked
+                info[ 'url_cache' ] = url_cache
+                info[ 'paused' ] = paused
+                
+                inserts.append( ( YAML_DUMP_ID_SUBSCRIPTION, name, info ) )
+                
+                names.add( name )
+                
+            
+            #
+            
+            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', inserts )
+            
+            #
+            
+            c.execute( 'DROP TABLE fourchan_pass;' )
+            c.execute( 'DROP TABLE pixiv_account;' )
+            c.execute( 'DROP TABLE boorus;' )
+            c.execute( 'DROP TABLE favourite_custom_filter_actions;' )
+            c.execute( 'DROP TABLE gui_sessions;' )
+            c.execute( 'DROP TABLE imageboard_sites;' )
+            c.execute( 'DROP TABLE imageboards;' )
+            c.execute( 'DROP TABLE subscriptions;' )
+            
+        
     
     def _Vacuum( self ):
         
@@ -7661,11 +7736,11 @@ def DAEMONSynchroniseRepositories():
                         
                         update = service.Request( HC.GET, 'update', { 'begin' : next_download_timestamp } )
                         
-                        update_path = CC.GetUpdatePath( service_key, value )
+                        ( begin, end ) = update.GetBeginEnd()
+                        
+                        update_path = CC.GetUpdatePath( service_key, begin )
                         
                         with open( update_path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
-                        
-                        ( begin, end ) = update.GetBeginEnd()
                         
                         next_download_timestamp = end + 1
                         
@@ -7730,7 +7805,7 @@ def DAEMONSynchroniseRepositories():
                         message.SetInfo( 'text', prefix_string + 'processing' )
                         message.SetInfo( 'mode', 'gauge' )
                         
-                        update_path = CC.GetUpdatePath( service_key, value )
+                        update_path = CC.GetUpdatePath( service_key, next_processing_timestamp )
                         
                         with open( update_path, 'rb' ) as f: update_yaml = f.read()
                         

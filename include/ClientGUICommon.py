@@ -4226,7 +4226,7 @@ class TagsBoxCounts( TagsBox ):
         
         self._tag_service_identifier = service_identifier
         
-        if self._last_media is not None: self.SetTagsByMedia( self._last_media )
+        if self._last_media is not None: self.SetTagsByMedia( self._last_media, force_reload = True )
         
     
     def SetSort( self, sort ):
@@ -4298,6 +4298,16 @@ class TagsBoxCounts( TagsBox ):
             self._deleted_tags_to_count.update( deleted_tags_to_count )
             self._pending_tags_to_count.update( pending_tags_to_count )
             self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+            
+            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
+                
+                tags = counter.keys()
+                
+                for tag in tags:
+                    
+                    if counter[ tag ] == 0: del counter[ tag ]
+                    
+                
             
         
         self._last_media = media

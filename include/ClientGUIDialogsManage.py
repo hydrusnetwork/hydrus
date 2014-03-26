@@ -7271,7 +7271,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             if self._i_am_local_tag_service:
                 
                 if num_current < num_files: choices.append( ( 'add ' + tag, HC.CONTENT_UPDATE_ADD ) )
-                if num_current > 0: choices.append( ( 'delete ' + tag, HC.CONTENT_UPDATE_DELETE ) )
+                if num_current > 0 and not only_add: choices.append( ( 'delete ' + tag, HC.CONTENT_UPDATE_DELETE ) )
                 
             else:
                 
@@ -7279,12 +7279,13 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_identifier ) ] )
                 
                 if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag, HC.CONTENT_UPDATE_PENDING ) )
-                if num_current > num_petitioned: choices.append( ( 'petition ' + tag, HC.CONTENT_UPDATE_PETITION ) )
-                if num_pending > 0: choices.append( ( 'rescind pending ' + tag, HC.CONTENT_UPDATE_RESCIND_PENDING ) )
+                if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag, HC.CONTENT_UPDATE_PETITION ) )
+                if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag, HC.CONTENT_UPDATE_RESCIND_PENDING ) )
                 if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag, HC.CONTENT_UPDATE_RESCIND_PETITION ) )
                 
             
-            if len( choices ) > 1:
+            if len( choices ) == 0: return
+            elif len( choices ) > 1:
                 
                 intro = 'What would you like to do?'
                 

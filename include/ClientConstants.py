@@ -640,9 +640,9 @@ def GetThumbnailPath( hash, full_size = True ):
     
     return path
     
-def GetUpdatePath( service_key, number ):
+def GetUpdatePath( service_key, begin ):
     
-    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( number ) + '.yaml'
+    return HC.CLIENT_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin ) + '.yaml'
     
 def IterateAllFilePaths():
     
