@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 110</h3></li>
+				<ul>
+					<li>fixed a variable overwriting issue in the subscription daemon error reporting code that was causing error spam</li>
+					<li>fixed more actual and potential instances of this error elsewhere</li>
+					<li>fixed a bug in the import file error system for non-local files</li>
+					<li>fixed url parsing for urls lacking 'http://' or 'https://'</li>
+					<li>fixed hentai foundry image parsing for two different cases</li>
+					<li>fixed client gui-initiated db backup to also backup client_updates folder</li>
+					<li>A/C dropdown now shows current and pending counts separately!</li>
+					<li>fixed display of uncaught database exceptions</li>
+					<li>new version of sqlite for windows, might speed some things up a bit</li>
+					<li>upgraded a bunch of other libraries, look forward to mysterious new bugs!</li>
+					<li>I _think_ some transparency support is improved</li>
+					<li>moved messaging forward</li>
+					<li>dropped processed_mappings experiment</li>
+					<li>removed a bloated mapping index, hopefully speeding a couple things up</li>
+					<li>fixed an erroneous error message in hydrus network session manager</li>
+				</ul>
 				<li><h3>version 109</h3></li>
 				<ul>
 					<li>started processed_mappings table. for now, it mirrors normal mappings table</li>

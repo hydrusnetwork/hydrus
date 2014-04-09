@@ -1105,7 +1105,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     new_page.SetSearchFocus()
                     
-                except: pass
+                except Exception as e:
+                    
+                    HC.ShowException( e )
+                    
                 
             
             if HC.PLATFORM_OSX: self._ClosePage( 0 )
@@ -1951,7 +1954,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ), None ) ] )
+    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ) ) ] )
     
     def NotifyNewOptions( self ):
         

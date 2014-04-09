@@ -48,7 +48,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 109
+SOFTWARE_VERSION = 110
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1773,13 +1773,13 @@ class JobDatabase():
             
             if isinstance( self._result, HydrusExceptions.DBException ):
                 
-                ( gumpf, db_traceback ) = self._result.GetTracebacks()
+                ( text, gumpf, db_traceback ) = self._result.args
                 
                 trace_list = traceback.format_stack()
                 
                 caller_traceback = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
                 
-                raise HydrusExceptions.DBException( u( self._result ), caller_traceback, db_traceback )
+                raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
                 
             else: raise self._result
             
@@ -1977,11 +1977,12 @@ class Predicate( HydrusYAMLBase ):
     
     yaml_tag = u'!Predicate'
     
-    def __init__( self, predicate_type, value, count ):
+    def __init__( self, predicate_type, value, counts = {} ):
         
         self._predicate_type = predicate_type
         self._value = value
-        self._count = count
+        self._counts = collections.Counter()
+        self._counts.update( counts )
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
@@ -1990,21 +1991,35 @@ class Predicate( HydrusYAMLBase ):
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-    def __repr__( self ): return 'Predicate: ' + u( ( self._predicate_type, self._value, self._count ) )
+    def __repr__( self ): return 'Predicate: ' + u( ( self._predicate_type, self._value, self._counts ) )
     
-    def AddToCount( self, count ): self._count += count
+    def AddToCount( self, type, count ): self._counts[ type ] += count
     
-    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._count )
+    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._counts )
     
     def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, None )
     
-    def GetCount( self ): return self._count
+    def GetCount( self, type = None ):
+        
+        if type is None: return sum( self._counts.values() )
+        else: return self._counts[ type ]
+        
     
     def GetInfo( self ): return ( self._predicate_type, self._value )
     
     def GetPredicateType( self ): return self._predicate_type
     
     def GetUnicode( self, with_count = True ):
+        
+        count_text = u''
+        
+        if with_count:
+            
+            count_text 
+            
+            if self._counts[ CURRENT ] > 0: count_text += u' (' + ConvertIntToPrettyString( self._counts[ CURRENT ] ) + u')'
+            if self._counts[ PENDING ] > 0: count_text += u' (+' + ConvertIntToPrettyString( self._counts[ PENDING ] ) + u')'
+            
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM:
             
@@ -2139,7 +2154,7 @@ class Predicate( HydrusYAMLBase ):
                     
                 
             
-            if with_count and self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            base += count_text
             
         elif self._predicate_type == PREDICATE_TYPE_TAG:
             
@@ -2150,7 +2165,7 @@ class Predicate( HydrusYAMLBase ):
             
             base += tag
             
-            if self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            base += count_text
             
             siblings_manager = app.GetManager( 'tag_siblings' )
             
@@ -2166,7 +2181,7 @@ class Predicate( HydrusYAMLBase ):
             
             base += tag
             
-            if with_count and self._count is not None: base += u' (' + ConvertIntToPrettyString( self._count ) + u')'
+            base += count_text
             
         elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
             

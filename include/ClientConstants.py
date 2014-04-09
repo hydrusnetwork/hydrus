@@ -314,24 +314,42 @@ def CatchExceptionClient( etype, value, tb ):
     
     try:
         
-        trace_list = traceback.format_tb( tb )
+        if etype == HydrusExceptions.DBException:
+            
+            ( text, caller_traceback, db_traceback ) = value
+            
+            info = {}
+            
+            info[ 'text' ] = text
+            info[ 'caller_traceback' ] = caller_traceback
+            info[ 'db_traceback' ] = db_traceback
+            
+            message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, info )
+            
+        else:
+            
+            trace_list = traceback.format_tb( tb )
+            
+            trace = ''.join( trace_list )
+            
+            message = HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } )
+            
         
-        trace = ''.join( trace_list )
+        HC.pubsub.pub( 'message', message )
         
-        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } ) )
         
     except:
         
-        message = 'Encountered an error I could not parse:'
+        text = 'Encountered an error I could not parse:'
         
-        message += os.linesep
+        text += os.linesep
         
-        message += HC.u( ( etype, value, tb ) )
+        text += HC.u( ( etype, value, tb ) )
         
-        try: message += traceback.format_exc()
+        try: text += traceback.format_exc()
         except: pass
         
-        HC.ShowText( message )
+        HC.ShowText( text )
         
     
 def GenerateCollectByChoices( sort_by_choices ):
@@ -759,11 +777,11 @@ def ShowExceptionClient( e ):
     
     if isinstance( e, HydrusExceptions.DBException ):
         
-        ( caller_traceback, db_traceback ) = e.GetTracebacks()
+        ( text, caller_traceback, db_traceback ) = e.args
         
         info = {}
         
-        info[ 'text' ] = HC.u( e )
+        info[ 'text' ] = text
         info[ 'caller_traceback' ] = caller_traceback
         info[ 'db_traceback' ] = db_traceback
         

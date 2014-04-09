@@ -96,6 +96,11 @@ def ParseURL( url ):
 
     try:
         
+        starts_http = url.startswith( 'http://' )
+        starts_https = url.startswith( 'https://' )
+        
+        if not starts_http and not starts_https: url = 'http://' + url
+        
         parse_result = urlparse.urlparse( url )
         
         scheme = parse_result.scheme

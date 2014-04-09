@@ -1430,6 +1430,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         shutil.copytree( HC.CLIENT_FILES_DIR, path + os.path.sep + 'client_files' )
         shutil.copytree( HC.CLIENT_THUMBNAILS_DIR, path + os.path.sep + 'client_thumbnails'  )
+        shutil.copytree( HC.CLIENT_UPDATES_DIR, path + os.path.sep + 'client_updates'  )
         
         HC.ShowText( 'Backup done!' )
         
@@ -1721,31 +1722,41 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             cache_results.extend( [ ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
             
         
-        results = []
+        ids = set()
         
-        if include_current: results += [ ( namespace_id, tag_id, current_count ) for ( namespace_id, tag_id, current_count, pending_count ) in cache_results ]
-        if include_pending: results += [ ( namespace_id, tag_id, pending_count ) for ( namespace_id, tag_id, current_count, pending_count ) in cache_results ]
+        current_ids_to_count = collections.Counter()
+        pending_ids_to_count = collections.Counter()
         
-        tags_to_count = collections.Counter()
-        
-        [ tags_to_count.update( { ( namespace_id, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results ]
-        
-        if collapse and not there_was_a_namespace:
+        for ( namespace_id, tag_id, current_count, pending_count ) in cache_results:
             
-            unnamespaced_tag_ids = { tag_id for ( namespace_id, tag_id, num_tags ) in results }
+            ids.add( ( namespace_id, tag_id ) )
             
-            [ tags_to_count.update( { ( 1, tag_id ) : num_tags } ) for ( namespace_id, tag_id, num_tags ) in results if namespace_id != 1 and tag_id in unnamespaced_tag_ids ]
+            current_ids_to_count[ ( namespace_id, tag_id ) ] += current_count
+            pending_ids_to_count[ ( namespace_id, tag_id ) ] += pending_count
+            
+            if namespace_id != 1 and collapse and not there_was_a_namespace:
+                
+                current_ids_to_count[ ( 1, tag_id ) ] += current_count
+                pending_ids_to_count[ ( 1, tag_id ) ] += pending_count
+                
             
         
-        tag_info = [ ( self._GetNamespaceTag( c, namespace_id, tag_id ), num_tags ) for ( ( namespace_id, tag_id ), num_tags ) in tags_to_count.items() if num_tags > 0 ]
+        ids_to_do = set()
         
-        tags = { tag for ( tag, num_tags ) in tag_info }
+        if include_current: ids_to_do.update( ( id for ( id, count ) in current_ids_to_count.items() if count > 0 ) )
+        if include_pending: ids_to_do.update( ( id for ( id, count ) in pending_ids_to_count.items() if count > 0 ) )
+        
+        ids_to_tags = { ( namespace_id, tag_id ) : self._GetNamespaceTag( c, namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_do }
+        
+        tag_info = [ ( ids_to_tags[ id ], current_ids_to_count[ id ], pending_ids_to_count[ id ] ) for id in ids_to_do ]
+        
+        tags_to_do = { tag for ( tag, current_count, pending_count ) in tag_info }
         
         tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
         
-        filtered_tags = tag_censorship_manager.FilterTags( tag_service_identifier, tags )
+        filtered_tags = tag_censorship_manager.FilterTags( tag_service_identifier, tags_to_do )
         
-        predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), num_tags ) for ( tag, num_tags ) in tag_info if tag in filtered_tags ]
+        predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
         
         matches = CC.AutocompleteMatchesPredicates( tag_service_identifier, predicates, collapse = collapse )
         
@@ -2066,16 +2077,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         predicates = []
         
-        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
+        if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
         elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
             service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), num_everything ) )
+            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), { HC.CURRENT : num_everything } ) )
             
-            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
+            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
             
         elif service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
             
@@ -2105,21 +2116,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 num_archive = num_local - num_inbox
                 
             
-            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), num_everything ) )
+            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), { HC.CURRENT : num_everything } ) )
             
             if num_inbox > 0:
                 
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), num_inbox ) )
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), num_archive ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), { HC.CURRENT : num_inbox } ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), { HC.CURRENT : num_archive } ) )
                 
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), num_local ) )
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), num_not_local ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), { HC.CURRENT : num_local } ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), { HC.CURRENT : num_not_local } ) )
                 
             
-            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ), None ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
+            predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
             
         
         return predicates
@@ -3341,7 +3352,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                     for ( namespace_id, tag_id, hash_ids ) in advanced_mappings_ids:
                                         
                                         c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
-                                        c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
                                         
                                     
                                     c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
@@ -3700,7 +3710,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence DESC;' ) ]
         
         c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
-        c.execute( 'DELETE FROM processed_mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
         
         first_round = True
         
@@ -3718,8 +3727,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             first_round = False
             
-        
-        c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
         
         c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
         
@@ -3802,7 +3809,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if dump_type == YAML_DUMP_ID_SUBSCRIPTION: data[ 'advanced_tag_options' ] = data[ 'advanced_tag_options' ].items()
         
-        c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
+        try: c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
+        except:
+            
+            print( ( dump_type, dump_name, data ) )
+            
+            raise
+            
         
     
     def _UpdateAutocompleteTagCacheFromFiles( self, c, file_service_id, hash_ids, direction ):
@@ -3842,12 +3855,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             deletable_hash_ids = existing_hash_ids.intersection( appropriate_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, old_status ) )
-            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, old_status ) )
             
             num_old_deleted = self._GetRowCount( c )
             
             c.execute( 'UPDATE mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( appropriate_hash_ids ) + ' AND status = ?;', ( new_status, service_id, namespace_id, tag_id, old_status ) )
-            c.execute( 'UPDATE processed_mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( appropriate_hash_ids ) + ' AND status = ?;', ( new_status, service_id, namespace_id, tag_id, old_status ) )
             
             num_old_made_new = self._GetRowCount( c )
             
@@ -3916,7 +3927,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             deletable_hash_ids.update( search_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ';', ( self._combined_tag_service_id, namespace_id, tag_id ) )
-            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ';', ( self._combined_tag_service_id, namespace_id, tag_id ) )
             
             UpdateAutocompleteTagCacheFromCombinedCurrentTags( namespace_id, tag_id, deletable_hash_ids, -1 )
             
@@ -3929,7 +3939,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             deletable_hash_ids = set( hash_ids ).difference( existing_other_precedence_hash_ids )
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.PENDING ) )
-            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.PENDING ) )
             
             UpdateAutocompleteTagCacheFromCombinedPendingTags( namespace_id, tag_id, deletable_hash_ids, -1 )
             
@@ -3943,7 +3952,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             new_hash_ids = set( hash_ids ).difference( arguing_higher_precedence_hash_ids ).difference( existing_combined_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.CURRENT ) for hash_id in new_hash_ids ] )
-            c.executemany( 'INSERT OR IGNORE INTO processed_mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.CURRENT ) for hash_id in new_hash_ids ] )
             
             UpdateAutocompleteTagCacheFromCombinedCurrentTags( namespace_id, tag_id, new_hash_ids, 1 )
             
@@ -3955,7 +3963,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             new_hash_ids = set( hash_ids ).difference( existing_combined_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for hash_id in new_hash_ids ] )
-            c.executemany( 'INSERT OR IGNORE INTO processed_mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, HC.PENDING ) for hash_id in new_hash_ids ] )
             
             UpdateAutocompleteTagCacheFromCombinedPendingTags( namespace_id, tag_id, new_hash_ids, 1 )
             
@@ -3963,7 +3970,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         def DeletePending( namespace_id, tag_id, hash_ids ):
             
             c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
-            c.execute( 'DELETE FROM processed_mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( service_id, namespace_id, tag_id, HC.PENDING ) )
             
             num_deleted = self._GetRowCount( c )
             
@@ -3991,7 +3997,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             new_hash_ids = set( hash_ids ).difference( existing_hash_ids )
             
             c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
-            c.executemany( 'INSERT OR IGNORE INTO processed_mappings VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
             
             num_rows_added = self._GetRowCount( c )
             
@@ -4445,9 +4450,9 @@ class DB( ServiceDB ):
             
         except:
             
-            message = 'Database commit error:' + os.linesep + traceback.format_exc()
+            text = 'Database commit error:' + os.linesep + traceback.format_exc()
             
-            HC.ShowText( message )
+            HC.ShowText( text )
             
             c.execute( 'ROLLBACK' )
             
@@ -4604,7 +4609,6 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
             c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
             c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
-            c.execute( 'CREATE INDEX mappings_status_index ON mappings ( status );' )
             
             c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, reason_id ) );' )
             c.execute( 'CREATE INDEX mapping_petitions_hash_id_index ON mapping_petitions ( hash_id );' )
@@ -4645,13 +4649,6 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
             
             c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
-            
-            c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
-            c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
-            c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
             
             c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
             
@@ -4924,6 +4921,15 @@ class DB( ServiceDB ):
                 if os.path.exists( new_path ): os.remove( path )
                 else: os.rename( path, new_path )
                 
+            
+        
+        if version == 109:
+            
+            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
+            
+            c.execute( 'DROP TABLE processed_mappings;' )
+            
+            c.execute( 'DROP INDEX mappings_status_index;' )
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -7029,6 +7035,7 @@ class DB( ServiceDB ):
         
         shutil.copytree( path + os.path.sep + 'client_files', HC.CLIENT_FILES_DIR )
         shutil.copytree( path + os.path.sep + 'client_thumbnails', HC.CLIENT_THUMBNAILS_DIR )
+        shutil.copytree( path + os.path.sep + 'client_updates', HC.CLIENT_UPDATES_DIR )
         
     
     def Shutdown( self ): self._local_shutdown = True
@@ -7232,9 +7239,9 @@ def DAEMONCheckImportFolders():
                                 
                                 details[ 'failed_imported_paths' ].add( path )
                                 
-                                message = 'Import folder failed to import ' + path + ':' + os.linesep + traceback.format_exc()
+                                text = 'Import folder failed to import ' + path + ':' + os.linesep + traceback.format_exc()
                                 
-                                HC.ShowText( message )
+                                HC.ShowText( text )
                                 
                                 should_action = False
                                 
@@ -7313,9 +7320,9 @@ def DAEMONDownloadFiles():
                     
                 except:
                     
-                    message = 'Error downloading file:' + os.linesep + traceback.format_exc()
+                    text = 'Error downloading file:' + os.linesep + traceback.format_exc()
                     
-                    HC.ShowText( message )
+                    HC.ShowText( text )
                     
                 
             
@@ -7412,15 +7419,15 @@ def DAEMONResizeThumbnails():
             
         except IOError as e:
             
-            message = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
+            text = 'Thumbnail read error:' + os.linesep + traceback.format_exc()
             
-            HC.ShowText( message )
+            HC.ShowText( text )
             
         except Exception as e:
             
-            message = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
+            text = 'Thumbnail rendering error:' + os.linesep + traceback.format_exc()
             
-            HC.ShowText( message )
+            HC.ShowText( text )
             
         
         if i % 10 == 0: time.sleep( 2 )
@@ -7470,9 +7477,9 @@ def DAEMONSynchroniseAccounts():
                 
                 name = service_identifier.GetName()
                 
-                message = 'Failed to refresh account for ' + name + ':' + os.linesep + os.linesep + HC.u( e )
+                text = 'Failed to refresh account for ' + name + ':' + os.linesep + os.linesep + HC.u( e )
                 
-                HC.ShowText( message )
+                HC.ShowText( text )
                 
             
         
@@ -7588,9 +7595,9 @@ def DAEMONSynchroniseMessages():
             
         except Exception as e:
             
-            message = 'Failed to check ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
+            text = 'Failed to check ' + name + ':' + os.linesep + os.linesep + traceback.format_exc()
             
-            HC.ShowText( message )
+            HC.ShowText( text )
             
         
     
@@ -7638,9 +7645,9 @@ def DAEMONSynchroniseMessages():
                 
             except:
                 
-                message = 'Sending a message failed: ' + os.linesep + traceback.format_exc()
+                text = 'Sending a message failed: ' + os.linesep + traceback.format_exc()
                 
-                HC.ShowText( message )
+                HC.ShowText( text )
                 
                 status = 'failed'
                 
@@ -7897,9 +7904,9 @@ def DAEMONSynchroniseRepositories():
                 
                 message.Close()
                 
-                message = 'Failed to update ' + name + ':' + os.linesep + os.linesep + HC.u( e )
+                text = 'Failed to update ' + name + ':' + os.linesep + os.linesep + HC.u( e )
                 
-                HC.ShowText( message )
+                HC.ShowText( text )
                 
                 time.sleep( 3 )
                 
@@ -8145,9 +8152,9 @@ def DAEMONSynchroniseSubscriptions():
                             
                         except Exception as e:
                             
-                            message = 'While trying to execute a subscription, the url ' + url + ' caused this problem:' + os.linesep + traceback.format_exc()
+                            text = 'While trying to execute a subscription, the url ' + url + ' caused this problem:' + os.linesep + traceback.format_exc()
                             
-                            HC.ShowText( message )
+                            HC.ShowText( text )
                             
                         
                         i += 1
