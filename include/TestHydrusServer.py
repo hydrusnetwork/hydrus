@@ -242,16 +242,14 @@ class TestServer( unittest.TestCase ):
         # update
         
         update = 'update'
+        begin = 100
         
-        update_key = os.urandom( 32 )
-        
-        path = SC.GetExpectedPath( 'update', update_key )
+        if service_type == HC.FILE_REPOSITORY: path = SC.GetExpectedUpdatePath( self._file_service_identifier, begin )
+        elif service_type == HC.TAG_REPOSITORY: path = SC.GetExpectedUpdatePath( self._tag_service_identifier, begin )
         
         with open( path, 'wb' ) as f: f.write( update )
         
-        HC.app.SetRead( 'update_key', update_key )
-        
-        response = service.Request( HC.GET, 'update', { 'begin' : 100 } )
+        response = service.Request( HC.GET, 'update', { 'begin' : begin } )
         
         self.assertEqual( response, update )
         

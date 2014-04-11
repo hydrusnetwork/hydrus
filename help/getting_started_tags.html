@@ -21,16 +21,16 @@
 			<h3>adding tags</h3>
 			<p>If you connect to a repository that has a lot of tags, you'll probably see them appearing in your client in any normal search. But if you want tags for your rarer files, or you don't connect to any big repositories, you'll have to add some tags yourself.</p>
 			<p>Select some files. Right click on them and select <i>manage->tags</i>, or hit F3. This will boot the very important <i>manage tags dialog</i>.</p>
-			<p><a href="manage_tags.png"><img src="manage_tags.png" width="683" height="384" /></a></p>
-			<p>This shows the <b>intersection</b> of the current selection's tags (it only shows the tags that <i>every</i> file in the selection has), and will equally add/remove tags to/from the entire selection. There's another autocomplete dropdown, just like when you search, that throws what you input at the box above. Submitting a tag that already exists will attempt to remove it, or you can just double click it. You may be prompted to give a reason for removing a tag from a remote repository, creating a petition that an administrator will review.</p>
-			<p>The tag box will prepend certain identifiers to show the changes that'll occur or pend when you hit <i>apply</i>:</p>
+			<p><a href="manage_tags.png"><img src="manage_tags.png" /></a></p>
+			<p>This shows the current selection's tags, and will add/remove tags to/from the entire selection. There's another autocomplete dropdown, just like when you search, that throws what you input at the box above. Submitting a tag that already exists will attempt to remove it, or you can just double-click it. You may be prompted to give a reason for removing a tag from a remote repository, creating a petition that an administrator will review.</p>
+			<p>The tag box will show the current changes with numbers in different sets of parentheses:</p>
 			<ul class="bulletpoints">
-				<li><b>Nothing</b> - Existing tag.</li>
-				<li><b>(+)</b> - Will be applied/pended.</li>
-				<li><b>(-)</b> - Will be removed/petitioned.</li>
-				<li><b>(X)</b> - Has already been applied and deleted; you may or may not have authority to re-apply.</li>
+				<li><b>(n)</b> - Tag exists for n files of the selection.</li>
+				<li><b>(+n)</b> - Tag will be pended to n files.</li>
+				<li><b>(-n)</b> - Tag will be petitioned for n files.</li>
+				<li><b>(Xn)</b> - Tag has been applied and deleted for n files; you may or may not have authority to re-apply.</li>
 			</ul>
-			<p>If you edit tags for the local tags service, they will be applied instantly; otherwise, they will be pended, waiting until you are ready to upload. When you are ready to upload all your pending tag changes, use the <i>pending</i> menu in the main interface.</p>
+			<p>If you edit tags for the local tags service, they will be applied instantly; otherwise, they will be pended, waiting until you are ready to upload. You can re-open the dialog and edit your pending changes as much as you like. When you are ready to upload all your pending tag changes, use the <i>pending</i> menu in the main interface.</p>
 			<p>Please do not upload tags to my public tag repo until you get a rough feel for the <a href="tagging_schema.html">tag schema</a>, or just lurk until you get the idea. I am only interested in objective tags. If you don't like my guidelines, feel free to start your own tag repo!</p>
 			<p>You can synchronise with more than one tag repository. Press the up or down arrow keys on an empty autocomplete input to quickly jump between your repositories. Each repo's beliefs about which tags go with which files will be applied according to a certain precedence that you can edit in <i>services->manage tag service precedence</i>.</p>
 			<p><a href="faq.html#delays">FAQ: why can my friend not see what I just uploaded?</a></p>

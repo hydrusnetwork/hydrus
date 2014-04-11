@@ -1146,9 +1146,7 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         begin = request.hydrus_args[ 'begin' ]
         
-        update_key = HC.app.Read( 'update_key', self._service_identifier, begin )
-        
-        path = SC.GetPath( 'update', update_key )
+        path = SC.GetUpdatePath( self._service_identifier, begin )
         
         response_context = HC.ResponseContext( 200, path = path, is_yaml = True )
         

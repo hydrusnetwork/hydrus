@@ -1949,7 +1949,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_identifier.GetClientData( self._file_service_identifier.GetSelection() ) )
         
-        self._predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ), None )
+        self._predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -2381,9 +2381,9 @@ class DialogInputLocalFiles( Dialog ):
                             
                         except:
                             
-                            message = 'Tried to read a key, but did not understand it.'
+                            text = 'Tried to read a key, but did not understand it.'
                             
-                            HC.ShowText( message )
+                            HC.ShowText( text )
                             
                         
                     

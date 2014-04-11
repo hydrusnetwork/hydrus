@@ -102,6 +102,11 @@ def GeneratePerceptualHash( path ):
     
     # convert to 32 x 32 greyscale
     
+    if thumbnail.mode == 'P':
+        
+        thumbnail = thumbnail.convert( 'RGBA' ) # problem with some P images converting to L without RGBA step in between
+        
+    
     if thumbnail.mode == 'RGBA':
         
         # this is some code i picked up somewhere

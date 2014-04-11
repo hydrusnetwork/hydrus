@@ -2007,7 +2007,9 @@ class ManagementPanelQuery( ManagementPanel ):
         self._include_current_tags = True
         self._include_pending_tags = True
         
-        if show_search:
+        self._show_search = show_search
+        
+        if self._show_search:
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
@@ -2024,7 +2026,7 @@ class ManagementPanelQuery( ManagementPanel ):
         self._MakeSort( vbox )
         self._MakeCollect( vbox )
         
-        if show_search: vbox.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
+        if self._show_search: vbox.AddF( self._search_panel, FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2050,7 +2052,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_key = HC.JobKey()
         
-        if self._synchronised:
+        if self._show_search and self._synchronised:
             
             try:
                 
@@ -2100,7 +2102,7 @@ class ManagementPanelQuery( ManagementPanel ):
                             else: return
                             
                         
-                    elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ) ), None )
+                    elif system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_UNTAGGED: predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '=', 0 ) ) )
                     
                 
                 if self._current_predicates_box.HasPredicate( predicate ): self._current_predicates_box.RemovePredicate( predicate )

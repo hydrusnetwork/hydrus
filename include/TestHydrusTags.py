@@ -441,45 +441,45 @@ class TestTagParents( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'grandmother' ), 10 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'grandfather' ), 15 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'not_exist' ), 20 ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'grandmother' ), { HC.CURRENT : 10 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'grandfather' ), { HC.CURRENT : 15 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'not_exist' ), { HC.CURRENT : 20 } ) )
         
         self.assertEqual( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_IDENTIFIER, predicates ), predicates )
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), 10 ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), { HC.CURRENT : 10 } ) )
         
         results = []
         
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), 10 ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'father', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather', None ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), { HC.CURRENT : 10 } ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_IDENTIFIER, predicates ) ), set( results ) )
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( '+', 'series' ), None ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), 10 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'cousin' ), 5 ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( '+', 'series' ) ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), { HC.CURRENT : 10 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'cousin' ), { HC.CURRENT : 5 } ) )
         
         results = []
         
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( '+', 'series' ), None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), 10 ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'father', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'cousin' ), 5 ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother', None ) )
-        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather', None ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( '+', 'series' ) ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'child' ), { HC.CURRENT : 10 } ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'mother' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'father' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'cousin' ), { HC.CURRENT : 5 } ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'aunt' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'uncle' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
+        results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
         self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_IDENTIFIER, predicates ) ), set( results ) )
         
@@ -620,19 +620,19 @@ class TestTagSiblings( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_a' ), 10 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_b' ), 5 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_c' ), 20 ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_a' ), { HC.CURRENT : 10 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_b' ), { HC.CURRENT : 5 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_c' ), { HC.CURRENT : 20 } ) )
         
-        results = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_c' ), 35 ) ]
+        results = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_c' ), { HC.CURRENT : 35 } ) ]
         
         self.assertEqual( self._tag_siblings_manager.CollapsePredicates( predicates ), results )
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_a' ), 10 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_b' ), 5 ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_c' ), 20 ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_a' ), { HC.CURRENT : 10 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_b' ), { HC.CURRENT : 5 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'chain_c' ), { HC.CURRENT : 20 } ) )
         
         ( result, ) = self._tag_siblings_manager.CollapsePredicates( predicates )
         

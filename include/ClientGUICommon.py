@@ -659,28 +659,38 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         else: tags_managers.append( m.GetTagsManager() )
                         
                     
-                    lists_of_tags = []
+                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
+                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
                     
-                    if self._include_current: lists_of_tags += [ list( tags_manager.GetCurrent( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
-                    if self._include_pending: lists_of_tags += [ list( tags_manager.GetPending( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
+                    current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
+                    pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
                     
-                    all_tags_flat_iterable = itertools.chain.from_iterable( lists_of_tags )
+                    current_tags_flat = [ tag for tag in current_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
+                    pending_tags_flat = [ tag for tag in pending_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
                     
-                    all_tags_flat = [ tag for tag in all_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
+                    if self._current_namespace != '':
+                        
+                        current_tags_flat = [ tag for tag in current_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
+                        pending_tags_flat = [ tag for tag in pending_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
+                        
                     
-                    if self._current_namespace != '': all_tags_flat = [ tag for tag in all_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
+                    current_tags_to_count = collections.Counter( current_tags_flat )
+                    pending_tags_to_count = collections.Counter( pending_tags_flat )
                     
-                    tags_to_count = collections.Counter( all_tags_flat )
+                    tags_to_do = set()
                     
-                    results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), count ) for ( tag, count ) in tags_to_count.items() ] )
+                    if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
+                    if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
+                    
+                    results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
                     
                     matches = results.GetMatches( half_complete_tag )
                     
                 
             
-            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ), None ) )
+            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ) ) )
             
-            entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, search_text ), None )
+            entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, search_text ) )
             
             try:
                 
@@ -835,13 +845,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             top_predicates = []
             
-            top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ), 0 ) )
+            top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ) ) )
             
             siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( search_text )
             
-            if sibling is not None: top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', sibling ), 0 ) )
+            if sibling is not None: top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', sibling ) ) )
             
             for predicate in top_predicates:
                 
@@ -874,7 +884,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         raw_parents = parents_manager.GetParents( self._tag_service_identifier, tag )
                         
-                        parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent, None ) for raw_parent in raw_parents ]
+                        parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
                         
                     
                 
@@ -4226,7 +4236,7 @@ class TagsBoxCounts( TagsBox ):
         
         self._tag_service_identifier = service_identifier
         
-        if self._last_media is not None: self.SetTagsByMedia( self._last_media )
+        if self._last_media is not None: self.SetTagsByMedia( self._last_media, force_reload = True )
         
     
     def SetSort( self, sort ):
@@ -4299,6 +4309,16 @@ class TagsBoxCounts( TagsBox ):
             self._pending_tags_to_count.update( pending_tags_to_count )
             self._petitioned_tags_to_count.update( petitioned_tags_to_count )
             
+            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
+                
+                tags = counter.keys()
+                
+                for tag in tags:
+                    
+                    if counter[ tag ] == 0: del counter[ tag ]
+                    
+                
+            
         
         self._last_media = media
         
@@ -4319,7 +4339,7 @@ class TagsBoxCPP( TagsBoxCounts ):
     
     def _Activate( self, s, term ):
         
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ), None )
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ) )
         
         HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
         
