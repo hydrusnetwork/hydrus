@@ -576,14 +576,16 @@ class DownloaderHentaiFoundry( Downloader ):
         # the .jpg bit is what we really need, but whatever
         try:
             
-            index = html.index( 'http://pictures.hentai-foundry.com//' )
+            index = html.index( 'pictures.hentai-foundry.com' )
             
-            stuff = html[ index : index + 100 ]
+            image_url = html[ index : index + 256 ]
             
-            try: ( image_url, gumpf ) = stuff.split( '"', 1 )
-            except: ( image_url, gumpf ) = stuff.split( '&#039;', 1 )
+            if '"' in image_url: ( image_url, gumpf ) = image_url.split( '"', 1 )
+            if '&#039;' in image_url: ( image_url, gumpf ) = image_url.split( '&#039;', 1 )
             
-        except: raise Exception( 'Could not parse image url!' )
+            image_url = 'http://' + image_url
+            
+        except Exception as e: raise Exception( 'Could not parse image url!' + os.linesep + HC.u( e ) )
         
         soup = bs4.BeautifulSoup( html )
         
@@ -1055,7 +1057,8 @@ class ImportArgsGenerator():
             
             self._job_key.SetVariable( 'result', 'failed' )
             
-            HC.ShowText( 'Problem importing ' + name + '!' )
+            if 'name' in locals(): HC.ShowText( 'Problem importing ' + name + '!' )
+            
             HC.ShowException( e )
             
             time.sleep( 2 )
@@ -1803,11 +1806,11 @@ def Parse4chanPostScreen( html ):
         
         print( repr( soup ) )
         
-        message = 'You are banned from this board! html written to log.'
+        text = 'You are banned from this board! html written to log.'
         
-        HC.ShowText( message )
+        HC.ShowText( text )
         
-        return ( 'big error', message )
+        return ( 'big error', text )
         
     else:
         
@@ -1820,11 +1823,11 @@ def Parse4chanPostScreen( html ):
                 try: print( repr( soup ) )
                 except: pass
                 
-                message = 'Unknown problem; html written to log.'
+                text = 'Unknown problem; html written to log.'
                 
-                HC.ShowText( message )
+                HC.ShowText( text )
                 
-                return ( 'error', message )
+                return ( 'error', text )
                 
             
             problem = HC.u( problem_tag )

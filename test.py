@@ -32,6 +32,10 @@ class App( wx.App ):
         
         HC.http = HydrusNetworking.HTTPConnectionManager()
         
+        def show_text( text ): pass
+        
+        HC.ShowText = show_text
+        
         self._reads = {}
         
         self._reads[ 'hydrus_sessions' ] = []

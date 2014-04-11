@@ -647,7 +647,7 @@ class TagParentsManager():
                     
                     for parent in parents:
                         
-                        parent_predicate = HC.Predicate( HC.PREDICATE_TYPE_PARENT, parent, None )
+                        parent_predicate = HC.Predicate( HC.PREDICATE_TYPE_PARENT, parent )
                         
                         results.append( parent_predicate )
                         
@@ -826,7 +826,7 @@ class TagSiblingsManager():
                         
                         ( old_operator, old_tag ) = old_predicate.GetValue()
                         
-                        new_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( old_operator, new_tag ), 0 )
+                        new_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( old_operator, new_tag ) )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         
@@ -835,9 +835,11 @@ class TagSiblingsManager():
                     
                     new_predicate = tags_to_predicates[ new_tag ]
                     
-                    count = old_predicate.GetCount()
+                    current_count = old_predicate.GetCount( HC.CURRENT )
+                    pending_count = old_predicate.GetCount( HC.PENDING )
                     
-                    new_predicate.AddToCount( count )
+                    new_predicate.AddToCount( HC.CURRENT, current_count )
+                    new_predicate.AddToCount( HC.PENDING, pending_count )
                     
                 else: tags_to_include_in_results.add( tag )
                 

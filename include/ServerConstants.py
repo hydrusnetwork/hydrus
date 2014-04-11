@@ -4,6 +4,8 @@ import HydrusExceptions
 import itertools
 import os
 
+def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
+
 def GetExpectedPath( file_type, hash ):
     
     if file_type == 'file': directory = HC.SERVER_FILES_DIR
@@ -19,6 +21,16 @@ def GetExpectedPath( file_type, hash ):
     
     return path
     
+def GetExpectedUpdatePath( service_identifier, begin ):
+    
+    service_key = service_identifier.GetServiceKey()
+    
+    begin = int( begin )
+    
+    path = HC.SERVER_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin )
+    
+    return path
+    
 def GetPath( file_type, hash ):
     
     path = GetExpectedPath( file_type, hash )
@@ -27,8 +39,14 @@ def GetPath( file_type, hash ):
     
     return path
     
-def GetAllHashes( file_type ): return { os.path.split( path )[1].decode( 'hex' ) for path in IterateAllPaths( file_type ) }
-
+def GetUpdatePath( service_identifier, begin ):
+    
+    path = GetExpectedUpdatePath( service_identifier, begin )
+    
+    if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( 'Update not found!' )
+    
+    return path
+    
 def IterateAllPaths( file_type ):
     
     if file_type == 'file': directory = HC.SERVER_FILES_DIR

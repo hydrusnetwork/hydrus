@@ -1,6 +1,11 @@
 import HydrusConstants as HC
+import HydrusExceptions
 import os
 import socket
+import threading
+from twisted.internet import reactor, defer
+from twisted.internet.threads import deferToThread
+from twisted.python import log
 
 if HC.PLATFORM_WINDOWS: import win32com.client
 

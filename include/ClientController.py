@@ -355,9 +355,9 @@ The database will be locked while the backup occurs, which may lock up your gui 
                         connection.connect()
                         connection.close()
                         
-                        message = 'Something was already bound to port ' + HC.u( port )
+                        text = 'Something was already bound to port ' + HC.u( port )
                         
-                        wx.CallLater( 1, HC.ShowText, message )
+                        wx.CallLater( 1, HC.ShowText, text )
                         
                     except:
                         
@@ -374,9 +374,9 @@ The database will be locked while the backup occurs, which may lock up your gui 
                             
                         except:
                             
-                            message = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
+                            text = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
                             
-                            wx.CallLater( 1, HC.ShowText, message )
+                            wx.CallLater( 1, HC.ShowText, text )
                             
                         
                     
