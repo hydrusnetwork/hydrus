@@ -11,6 +11,7 @@ from include import TestDB
 from include import TestFunctions
 from include import TestHydrusDownloading
 from include import TestHydrusEncryption
+from include import TestHydrusNATPunch
 from include import TestHydrusServer
 from include import TestHydrusSessions
 from include import TestHydrusTags
@@ -18,6 +19,7 @@ import collections
 import os
 import sys
 import threading
+import time
 import unittest
 import wx
 from twisted.internet import reactor
@@ -79,25 +81,20 @@ class App( wx.App ):
         if run_all or only_run == 'encryption': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusEncryption ) )
         if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
         if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusDownloading ) )
+        if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
         if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
         if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
         if run_all or only_run == 'tags': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
         
         suite = unittest.TestSuite( suites )
         
-        if run_all or only_run == 'server':
-            
-            threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
-            
+        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         runner = unittest.TextTestRunner( verbosity = 1 )
         
         runner.run( suite )
         
-        if run_all or only_run == 'server':
-            
-            reactor.callFromThread( reactor.stop )
-            
+        reactor.callFromThread( reactor.stop )
         
         return True
         

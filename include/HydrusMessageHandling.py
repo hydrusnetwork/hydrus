@@ -162,6 +162,20 @@ class Message( HC.HydrusYAMLBase ):
         return verifier.verify( hash_object, self._signature )
         
     
+# here begins the new stuff, I'm pretty sure
+
+class Identity(): # should be a yamlable object
+    
+    def __init__( self ):
+        
+        # no name, right? we associate names and addresses with the identity, but the id only has keys
+        
+        # store key_type -> key
+        # hence need a key_type enum
+        
+        pass
+        
+    
 class IMManager():
     
     def __init__( self ):

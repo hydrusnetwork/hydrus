@@ -1235,6 +1235,20 @@ class FileDropTarget( wx.FileDropTarget ):
     
     def OnDropFiles( self, x, y, paths ): wx.CallAfter( self._callable, paths )
     
+class FitResistantStaticText( wx.StaticText ):
+    
+    def Wrap( self, width ):
+        
+        wx.StaticText.Wrap( self, width )
+        
+        ( x, y ) = self.GetSize()
+        
+        if x > width: x = width
+        
+        self.SetMinSize( ( x, y ) )
+        self.SetMaxSize( ( width, -1 ) )
+        
+    
 class Frame( wx.Frame ):
     
     def __init__( self, *args, **kwargs ):
@@ -2373,14 +2387,17 @@ class PopupMessageDBError( PopupMessage ):
         
         text = wx.StaticText( self, label = HC.u( text ) )
         text.Wrap( 380 )
+        text.SetMinSize( text.GetSize() )
+        text.SetMaxSize( text.GetSize() )
         text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         self._show_caller_tb_button = wx.Button( self, label = 'show caller traceback' )
         self._show_caller_tb_button.Bind( wx.EVT_BUTTON, self.EventShowCallerButton )
         self._show_caller_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        self._caller_tb_text = wx.StaticText( self, label = caller_traceback )
+        self._caller_tb_text = FitResistantStaticText( self, label = caller_traceback )
         self._caller_tb_text.Wrap( 380 )
+        
         self._caller_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._caller_tb_text.Hide()
         
@@ -2388,7 +2405,7 @@ class PopupMessageDBError( PopupMessage ):
         self._show_db_tb_button.Bind( wx.EVT_BUTTON, self.EventShowDBButton )
         self._show_db_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        self._db_tb_text = wx.StaticText( self, label = db_traceback )
+        self._db_tb_text = FitResistantStaticText( self, label = db_traceback )
         self._db_tb_text.Wrap( 380 )
         self._db_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._db_tb_text.Hide()
@@ -2463,7 +2480,7 @@ class PopupMessageError( PopupMessage ):
         
         if len( HC.u( value ) ) > 0:
             
-            text = wx.StaticText( self, label = HC.u( value ) )
+            text = FitResistantStaticText( self, label = HC.u( value ) )
             text.Wrap( 380 )
             text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
             
@@ -2472,7 +2489,7 @@ class PopupMessageError( PopupMessage ):
         self._show_tb_button.Bind( wx.EVT_BUTTON, self.EventShowButton )
         self._show_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        self._tb_text = wx.StaticText( self, label = trace )
+        self._tb_text = FitResistantStaticText( self, label = trace )
         self._tb_text.Wrap( 380 )
         self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._tb_text.Hide()
@@ -2546,7 +2563,7 @@ class PopupMessageGauge( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._text = wx.StaticText( self, style = wx.ALIGN_CENTER )
+        self._text = FitResistantStaticText( self, style = wx.ALIGN_CENTER )
         self._text.Wrap( 380 )
         self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
@@ -2668,7 +2685,7 @@ class PopupMessageText( PopupMessage ):
         
         text = message.GetInfo( 'text' )
         
-        self._text = wx.StaticText( self, label = text )
+        self._text = FitResistantStaticText( self, label = text )
         self._text.Wrap( 380 )
         self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         

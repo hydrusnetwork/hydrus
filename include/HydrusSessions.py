@@ -99,7 +99,7 @@ class HydrusSessionManagerClient():
             
             HC.app.Write( 'delete_hydrus_session_key', service_identifier )
             
-            del self._sessions[ service_identifier ]
+            if service_identifier in self._sessions: del self._sessions[ service_identifier ]
             
         
     
