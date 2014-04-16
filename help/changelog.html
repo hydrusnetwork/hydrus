@@ -10,6 +10,21 @@
 			<ul>
 				<li><h3>version 110</h3></li>
 				<ul>
+					<li>fixed booru searches that include unusual characters like '&'</li>
+					<li>added pause synchronisation to individual repositories in the manage services dialog</li>
+					<li>fixed gui_sessions with predicates (again!)</li>
+					<li>added a unit test for gui_session storage, shouldn't get problems with that again</li>
+					<li>fixed a getcountlesscopy predicates bug</li>
+					<li>first step in multi-platform upnp support is DONE, phew</li>
+					<li>harmonised subscription file import errors with normal hdd import errors. they nshould be a bit clearer</li>
+					<li>corrected how popup text width is enforced</li>
+					<li>added a warning to the reset cache button in the manage subscriptions dialog</li>
+					<li>os x autocomplete dropdown seems to be magically fixed, not sure how or when that happened</li>
+					<li>started HydrusBooru</li>
+					<li>fixed some problems with twisted startup/shutdown in unit testing</li>
+				</ul>
+				<li><h3>version 111</h3></li>
+				<ul>
 					<li>fixed a variable overwriting issue in the subscription daemon error reporting code that was causing error spam</li>
 					<li>fixed more actual and potential instances of this error elsewhere</li>
 					<li>fixed a bug in the import file error system for non-local files</li>
