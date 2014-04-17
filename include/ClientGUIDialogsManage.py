@@ -4938,7 +4938,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
                     
                 
-                if service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
+                if service_type in HC.REPOSITORIES:
+                    
+                    self._pause_synchronisation = wx.CheckBox( self._service_panel, label = 'pause synchronisation' )
+                    
+                    self._pause_synchronisation.SetValue( self._info[ 'paused' ] )
+                    
+                
+                if service_type == HC.LOCAL_RATING_LIKE:
                     
                     like = self._info[ 'like' ]
                     dislike = self._info[ 'dislike' ]
@@ -4946,7 +4953,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._like = wx.TextCtrl( self._service_panel, value = like )
                     self._dislike = wx.TextCtrl( self._service_panel, value = dislike )
                     
-                elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
+                elif service_type == HC.LOCAL_RATING_NUMERICAL:
                     
                     lower = self._info[ 'lower' ]
                     upper = self._info[ 'upper' ]
@@ -4984,7 +4991,13 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     gridbox.AddF( self._check_service, FLAGS_LONE_BUTTON )
                     
                 
-                if service_identifier.GetType() == HC.LOCAL_RATING_LIKE:
+                if service_type in HC.REPOSITORIES:
+                    
+                    gridbox.AddF( ( 20, 20 ), FLAGS_MIXED )
+                    gridbox.AddF( self._pause_synchronisation, FLAGS_LONE_BUTTON )
+                    
+                
+                if service_type == HC.LOCAL_RATING_LIKE:
                     
                     gridbox.AddF( wx.StaticText( self._service_panel, label = 'like' ), FLAGS_MIXED )
                     gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
@@ -4992,7 +5005,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     gridbox.AddF( wx.StaticText( self._service_panel, label = 'dislike' ), FLAGS_MIXED )
                     gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
                     
-                elif service_identifier.GetType() == HC.LOCAL_RATING_NUMERICAL:
+                elif service_type == HC.LOCAL_RATING_NUMERICAL:
                     
                     gridbox.AddF( wx.StaticText( self._service_panel, label = 'lower limit' ), FLAGS_MIXED )
                     gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
@@ -5102,6 +5115,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 info[ 'host' ] = host
                 info[ 'port' ] = port
+                
+            
+            if service_type in HC.REPOSITORIES:
+                
+                info[ 'paused' ] = self._pause_synchronisation.GetValue()
                 
             
             if service_type == HC.LOCAL_RATING_LIKE:
@@ -5657,10 +5675,19 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         def EventResetCache( self, event ):
             
-            self._reset_cache = True
             
-            self._reset_cache_button.SetLabel( 'cache will be reset on dialog ok' )
-            self._reset_cache_button.Disable()
+            message = '''Resetting this subscription's cache will delete ''' + HC.ConvertIntToPrettyString( len( self._original_info[ 'url_cache' ] ) ) + ''' remembered links, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._reset_cache = True
+                    
+                    self._reset_cache_button.SetLabel( 'cache will be reset on dialog ok' )
+                    self._reset_cache_button.Disable()
+                    
+                
             
         
         def EventSiteChanged( self, event ):

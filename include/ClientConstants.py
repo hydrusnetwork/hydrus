@@ -2106,7 +2106,7 @@ class Service( HC.HydrusYAMLBase ):
         
         update_due = self._info[ 'next_download_timestamp' ] + HC.UPDATE_DURATION + 1800 < HC.GetNow()
         
-        return self.CanDownload() and update_due
+        return not self.IsPaused() and self.CanDownload() and update_due
         
     
     def CanProcessUpdate( self ): return self._info[ 'next_download_timestamp' ] > self._info[ 'next_processing_timestamp' ]
@@ -2192,6 +2192,8 @@ class Service( HC.HydrusYAMLBase ):
         if service_type == HC.SERVER_ADMIN: return 'access_key' in self._info
         else: return True
         
+    
+    def IsPaused( self ): return self._info[ 'paused' ]
     
     def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
         
@@ -2332,7 +2334,6 @@ class Service( HC.HydrusYAMLBase ):
             raise
             
         
-    
     
     def SetCredentials( self, credentials ):
         
