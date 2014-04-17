@@ -172,11 +172,13 @@ class AutoCompleteDropdown( wx.TextCtrl ):
                 self._dropdown_window.Layout()
                 
             
-            self._dropdown_window.SetPosition( self.ClientToScreenXY( -2, my_height - 2 ) )
-            
-            self._dropdown_window.Show()
-            
-        
+                self._dropdown_window.SetPosition( self.ClientToScreenXY( -2, my_height - 2 ) )
+
+                self._dropdown_window.Show( True )
+
+                self.SetFocus()
+                wx.CallAfter(self.SetFocus)
+
     
     def _UpdateList( self ): pass
     
@@ -200,9 +202,11 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         new_window = event.GetWindow()
         
-        if new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren(): pass
-        else: self._HideDropdown()
-        
+        if new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren() or new_window == self:
+            pass
+        else:
+            self._HideDropdown()
+
         event.Skip()
         
     
