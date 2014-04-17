@@ -48,7 +48,7 @@ TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 110
+SOFTWARE_VERSION = 111
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1981,8 +1981,13 @@ class Predicate( HydrusYAMLBase ):
         
         self._predicate_type = predicate_type
         self._value = value
-        self._counts = collections.Counter()
-        self._counts.update( counts )
+        
+        self._counts = {}
+        
+        self._counts[ CURRENT ] = 0
+        self._counts[ PENDING ] = 0
+        
+        for ( type, count ) in counts.items(): self.AddToCount( type, count )
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
@@ -1997,7 +2002,7 @@ class Predicate( HydrusYAMLBase ):
     
     def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._counts )
     
-    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, None )
+    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value )
     
     def GetCount( self, type = None ):
         
@@ -2219,10 +2224,10 @@ class Predicate( HydrusYAMLBase ):
             
         
     
-SYSTEM_PREDICATE_INBOX = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_INBOX, None ), None )
-SYSTEM_PREDICATE_ARCHIVE = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), None )
-SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_LOCAL, None ), None )
-SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), None )
+SYSTEM_PREDICATE_INBOX = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_INBOX, None ) )
+SYSTEM_PREDICATE_ARCHIVE = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_ARCHIVE, None ) )
+SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_LOCAL, None ) )
+SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ) )
 
 class ResponseContext():
     

@@ -1342,6 +1342,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             if 'next_download_timestamp' not in info: info[ 'next_download_timestamp' ] = 0
             if 'next_processing_timestamp' not in info: info[ 'next_processing_timestamp' ] = 0
             
+            info[ 'paused' ] = False
+            
         
         c.execute( 'INSERT INTO services ( service_key, service_type, name, info ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, info ) )
         
@@ -4932,6 +4934,21 @@ class DB( ServiceDB ):
             c.execute( 'DROP INDEX mappings_status_index;' )
             
         
+        if version == 110:
+            
+            all_services = c.execute( 'SELECT service_id, service_type, info FROM services;' ).fetchall()
+            
+            for ( service_id, service_type, info ) in all_services:
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    info[ 'paused' ] = False
+                    
+                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    
+                
+            
+        
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True
@@ -8152,9 +8169,11 @@ def DAEMONSynchroniseSubscriptions():
                             
                         except Exception as e:
                             
-                            text = 'While trying to execute a subscription, the url ' + url + ' caused this problem:' + os.linesep + traceback.format_exc()
+                            text = 'While trying to execute subscription ' + name + ', the url ' + url + ' caused this problem:'
                             
                             HC.ShowText( text )
+                            
+                            HC.ShowException( e )
                             
                         
                         i += 1

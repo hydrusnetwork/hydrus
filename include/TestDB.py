@@ -592,6 +592,21 @@ class TestClientDB( unittest.TestCase ):
         for i in range( len( predicates ) ): self.assertEqual( result[i].GetCount(), predicates[i].GetCount() )
         
     
+    def test_gui_sessions( self ):
+        
+        info = []
+        
+        info.append( ( 'blank', 'class_text', ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
+        info.append( ( 'system', 'class_text', ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.SYSTEM_PREDICATE_ARCHIVE ] } ) )
+        info.append( ( 'tags', 'class_text', ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'tag' ), counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
+        
+        self._write( 'gui_session', 'normal', info )
+        
+        result = self._read( 'gui_sessions' )
+        
+        self.assertEqual( result, { 'normal' : info } )
+        
+    
     def test_imageboard( self ):
         
         [ ( site_name_4chan, read_imageboards ) ] = self._read( 'imageboards' ).items()

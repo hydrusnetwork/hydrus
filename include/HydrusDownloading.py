@@ -181,7 +181,7 @@ class DownloaderBooru( Downloader ):
             else: index = self._num_pages_done * self._gallery_advance_num
             
         
-        return self._search_url.replace( '%tags%', self._search_separator.join( self._tags ) ).replace( '%index%', HC.u( index ) )
+        return self._search_url.replace( '%tags%', self._search_separator.join( [ urllib.quote( tag ) for tag in self._tags ] ) ).replace( '%index%', HC.u( index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -425,7 +425,7 @@ class DownloaderGiphy( Downloader ):
     
     def __init__( self, tag ):
         
-        self._gallery_url = 'http://giphy.com/api/gifs?tag=' + tag.replace( ' ', '+' ) + '&page='
+        self._gallery_url = 'http://giphy.com/api/gifs?tag=' + urllib.quote( tag.replace( ' ', '+' ) ) + '&page='
         
         Downloader.__init__( self )
         
@@ -858,7 +858,7 @@ class DownloaderPixiv( Downloader ):
             
             tag = urllib.quote( tag.encode( 'utf-8' ) )
             
-            gallery_url = 'http://www.pixiv.net/search.php?word=' + tag + '&s_mode=s_tag_full&order=date_d'
+            gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag ) + '&s_mode=s_tag_full&order=date_d'
             
         
         return gallery_url + '&p=' + HC.u( self._num_pages_done + 1 )
