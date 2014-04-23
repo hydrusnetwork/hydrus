@@ -8,7 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
-				<li><h3>version 110</h3></li>
+				<li><h3>version 112</h3></li>
+				<ul>
+					<li>A/C dropdown is fixed on linux!</li>
+					<li>wrote new UPnP library based on miniupnpc multiplat executables</li>
+					<li>integrated new UPnP library into existing client code</li>
+					<li>upnp management dialog should now work for os x and linux</li>
+					<li>integrated new UPnP library into existing server code</li>
+					<li>added UPnP unit tests</li>
+					<li>fixed a bug when upnp executable path had whitespace</li>
+					<li>renamed 'add, remove or edit services' to 'manage services'</li>
+					<li>fixed some review services frame text display issues for restricted non-repository services</li>
+					<li>optimised review services frame initialisation db requests</li>
+					<li>added a database maintenance routine that should help review services launch a bit faster on average</li>
+					<li>improved manage services layout a little bit</li>
+					<li>removed initialise server button when it is invalid</li>
+					<li>updated 4chan thread url parser to handle new 4chan thread urls</li>
+					<li>redirected 4chan thread downloader to new api address</li>
+					<li>fixed an error reporting problem in repository sync</li>
+					<li>fixed my linux dev environment, so linux executable is back</li>
+					<li>changed wx requirement to 2.9 on linux, due to bugs in linux 3.0.0.0 release</li>
+					<li>fixed a typo in repository  deletion</li>
+					<li>added repository deletion to unit tests</li>
+					<li>added num_base and num_step to file path regex dialog</li>
+					<li>fixed popup display of certain exceptions, including file parsing exceptions</li>
+				</ul>
+				<li><h3>version 111</h3></li>
 				<ul>
 					<li>fixed booru searches that include unusual characters like '&'</li>
 					<li>added pause synchronisation to individual repositories in the manage services dialog</li>
@@ -23,7 +48,7 @@
 					<li>started HydrusBooru</li>
 					<li>fixed some problems with twisted startup/shutdown in unit testing</li>
 				</ul>
-				<li><h3>version 111</h3></li>
+				<li><h3>version 110</h3></li>
 				<ul>
 					<li>fixed a variable overwriting issue in the subscription daemon error reporting code that was causing error spam</li>
 					<li>fixed more actual and potential instances of this error elsewhere</li>

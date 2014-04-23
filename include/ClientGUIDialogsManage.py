@@ -4918,9 +4918,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             def InitialiseControls():
                 
-                self._service_panel = ClientGUICommon.StaticBox( self, 'service' )
+                if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
+                else: title = 'name'
                 
-                self._service_name = wx.TextCtrl( self._service_panel )
+                self._credentials_panel = ClientGUICommon.StaticBox( self, title )
+                
+                self._service_name = wx.TextCtrl( self._credentials_panel )
                 
                 if service_type in HC.REMOTE_SERVICES:
                     
@@ -4932,41 +4935,54 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     credentials = CC.Credentials( host, port, access_key )
                     
-                    self._service_credentials = wx.TextCtrl( self._service_panel, value = credentials.GetConnectionString() )
+                    self._service_credentials = wx.TextCtrl( self._credentials_panel, value = credentials.GetConnectionString() )
                     
-                    self._check_service = wx.Button( self._service_panel, label = 'test credentials' )
+                    self._check_service = wx.Button( self._credentials_panel, label = 'test credentials' )
                     self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
                     
                 
                 if service_type in HC.REPOSITORIES:
                     
-                    self._pause_synchronisation = wx.CheckBox( self._service_panel, label = 'pause synchronisation' )
+                    self._repositories_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
                     
-                    self._pause_synchronisation.SetValue( self._info[ 'paused' ] )
+                    self._pause_synchronisation = wx.CheckBox( self._repositories_panel, label = 'pause synchronisation' )
+                    
+                    self._reset = wx.Button( self._repositories_panel, label = 'reset cache' )
+                    self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
                     
                 
-                if service_type == HC.LOCAL_RATING_LIKE:
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    like = self._info[ 'like' ]
-                    dislike = self._info[ 'dislike' ]
+                    self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
                     
-                    self._like = wx.TextCtrl( self._service_panel, value = like )
-                    self._dislike = wx.TextCtrl( self._service_panel, value = dislike )
+                    if service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        like = self._info[ 'like' ]
+                        dislike = self._info[ 'dislike' ]
+                        
+                        self._like = wx.TextCtrl( self._local_rating_panel, value = like )
+                        self._dislike = wx.TextCtrl( self._local_rating_panel, value = dislike )
+                        
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        lower = self._info[ 'lower' ]
+                        upper = self._info[ 'upper' ]
+                        
+                        self._lower = wx.SpinCtrl( self._local_rating_panel, min = -2000, max = 2000 )
+                        self._lower.SetValue( lower )
+                        self._upper = wx.SpinCtrl( self._local_rating_panel, min = -2000, max = 2000 )
+                        self._upper.SetValue( upper )
                     
-                elif service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    lower = self._info[ 'lower' ]
-                    upper = self._info[ 'upper' ]
-                    
-                    self._lower = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
-                    self._lower.SetValue( lower )
-                    self._upper = wx.SpinCtrl( self._service_panel, min = -2000, max = 2000 )
-                    self._upper.SetValue( upper )
                 
             
             def PopulateControls():
                 
                 self._service_name.SetValue( self._service_identifier.GetName() )
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    self._pause_synchronisation.SetValue( self._info[ 'paused' ] )
+                    
                 
             
             def ArrangeControls():
@@ -4979,44 +4995,57 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._service_panel, label = 'name' ), FLAGS_MIXED )
+                gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), FLAGS_MIXED )
                 gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
                 
                 if service_type in HC.REMOTE_SERVICES:
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'credentials' ), FLAGS_MIXED )
+                    gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'credentials' ), FLAGS_MIXED )
                     gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
                     
                     gridbox.AddF( ( 20, 20 ), FLAGS_MIXED )
                     gridbox.AddF( self._check_service, FLAGS_LONE_BUTTON )
                     
                 
+                self._credentials_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._credentials_panel, FLAGS_EXPAND_PERPENDICULAR )
+                
                 if service_type in HC.REPOSITORIES:
                     
-                    gridbox.AddF( ( 20, 20 ), FLAGS_MIXED )
-                    gridbox.AddF( self._pause_synchronisation, FLAGS_LONE_BUTTON )
+                    self._repositories_panel.AddF( self._pause_synchronisation, FLAGS_MIXED )
+                    self._repositories_panel.AddF( self._reset, FLAGS_LONE_BUTTON )
+                    
+                    vbox.AddF( self._repositories_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
-                if service_type == HC.LOCAL_RATING_LIKE:
+                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'like' ), FLAGS_MIXED )
-                    gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
+                    gridbox = wx.FlexGridSizer( 0, 2 )
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'dislike' ), FLAGS_MIXED )
-                    gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
+                    gridbox.AddGrowableCol( 1, 1 )
                     
-                elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                    if service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'like' ), FLAGS_MIXED )
+                        gridbox.AddF( self._like, FLAGS_EXPAND_BOTH_WAYS )
+                        
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'dislike' ), FLAGS_MIXED )
+                        gridbox.AddF( self._dislike, FLAGS_EXPAND_BOTH_WAYS )
+                        
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'lower limit' ), FLAGS_MIXED )
+                        gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
+                        
+                        gridbox.AddF( wx.StaticText( self._local_rating_panel, label = 'upper limit' ), FLAGS_MIXED )
+                        gridbox.AddF( self._upper, FLAGS_EXPAND_BOTH_WAYS )
+                        
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'lower limit' ), FLAGS_MIXED )
-                    gridbox.AddF( self._lower, FLAGS_EXPAND_BOTH_WAYS )
+                    self._local_rating_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
                     
-                    gridbox.AddF( wx.StaticText( self._service_panel, label = 'upper limit' ), FLAGS_MIXED )
-                    gridbox.AddF( self._upper, FLAGS_EXPAND_BOTH_WAYS )
+                    vbox.AddF( self._local_rating_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
-                
-                self._service_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                vbox.AddF( self._service_panel, FLAGS_EXPAND_BOTH_WAYS )
                 
                 self.SetSizer( vbox )
                 
@@ -5138,6 +5167,19 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
             
             return ( service_identifier, info )
+            
+        
+        def EventServiceReset( self, event ):
+            
+            message = 'This will remove all the information for ' + self._service_identifier.GetName() + ' from the database, so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep + os.linesep + 'Once the service is reset, the client will have to reprocess all the information that was deleted, which will take another long time.' + os.linesep + os.linesep + 'If you do not understand what this button does, you probably want to click no!'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    with wx.BusyCursor(): HC.app.Write( 'reset_service', self._service_identifier )
+                    
+                
             
         
         def HasChanges( self ):
@@ -7448,7 +7490,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
-            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 760, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'enabled', 80 ) ] )
+            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 760, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ] )
             
             self._mappings_list_ctrl.SetMinSize( ( 760, 660 ) )
             
@@ -7554,14 +7596,15 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         protocol = 'TCP'
         internal_port = HC.DEFAULT_SERVICE_PORT
         description = 'hydrus service'
+        duration = 0
         
-        with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description ) as dlg:
+        with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( external_port, protocol, internal_port, description ) = dlg.GetInfo()
+                ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                 
-                for ( existing_description, existing_internal_ip, existing_internal_port, existing_external_ip, existing_external_port, existing_protocol, existing_enabled ) in self._mappings:
+                for ( existing_description, existing_internal_ip, existing_internal_port, existing_external_ip, existing_external_port, existing_protocol, existing_lease ) in self._mappings:
                     
                     if external_port == existing_external_port and protocol == existing_protocol:
                         
@@ -7571,7 +7614,9 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                         
                     
                 
-                HydrusNATPunch.AddUPnPMapping( external_port, protocol, internal_port, description )
+                internal_client = HydrusNATPunch.GetLocalIP()
+                
+                HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
                 
             
         
@@ -7591,17 +7636,19 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         for index in self._mappings_list_ctrl.GetAllSelected():
             
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, enabled ) = self._mappings_list_ctrl.GetClientData( index )
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, lease ) = self._mappings_list_ctrl.GetClientData( index )
             
-            with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description ) as dlg:
+            with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( external_port, protocol, internal_port, description ) = dlg.GetInfo()
+                    ( external_port, protocol, internal_port, description, duration ) = dlg.GetInfo()
                     
                     HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
                     
-                    HydrusNATPunch.AddUPnPMapping( external_port, protocol, internal_port, description )
+                    internal_client = HydrusNATPunch.GetLocalIP()
+                    
+                    HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
                     
                 
             
@@ -7618,7 +7665,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         for index in self._mappings_list_ctrl.GetAllSelected():
             
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, enabled ) = self._mappings_list_ctrl.GetClientData( index )
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, lease ) = self._mappings_list_ctrl.GetClientData( index )
             
             HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
             

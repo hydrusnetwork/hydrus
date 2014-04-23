@@ -1753,7 +1753,15 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 
                 if host is None or '4chan.org' not in host: raise Exception( 'This only works for 4chan right now!' )
                 
-                try: ( nothing, board, res, thread_id ) = request.split( '/' )
+                try:
+                    
+                    # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
+                    
+                    ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
+                    
+                    if '/' in rest_of_request: ( thread_id, gumpf ) = rest_of_request.split( '/' )
+                    else: thread_id = rest_of_request
+                    
                 except: raise Exception( 'Could not understand the board or thread id!' )
                 
             except Exception as e:

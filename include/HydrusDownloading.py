@@ -1704,7 +1704,7 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                     
                     self._job_key.SetVariable( 'status', 'checking thread' )
                     
-                    url = 'http://api.4chan.org/' + board + '/res/' + thread_id + '.json'
+                    url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
                     
                     try:
                         

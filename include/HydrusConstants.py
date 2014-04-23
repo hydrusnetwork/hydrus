@@ -1,38 +1,11 @@
-import bisect
-import bs4
-import collections
-import cStringIO
-import httplib
-import HydrusExceptions
-import HydrusNetworking
-import HydrusPubSub
-import itertools
-import locale
 import os
-import Queue
-import re
-import sqlite3
 import sys
-import threading
-import time
-import traceback
-import wx
-import yaml
-
-PLATFORM_WINDOWS = False
-PLATFORM_OSX  = False
-PLATFORM_LINUX = False
-
-if sys.platform == 'win32': PLATFORM_WINDOWS = True
-elif sys.platform == 'darwin': PLATFORM_OSX = True
-elif sys.platform == 'linux2': PLATFORM_LINUX = True
-
-options = {}
 
 # dirs
 
 BASE_DIR = sys.path[0]
 
+BIN_DIR = BASE_DIR + os.path.sep + 'bin'
 DB_DIR = BASE_DIR + os.path.sep + 'db'
 CLIENT_FILES_DIR = DB_DIR + os.path.sep + 'client_files'
 SERVER_FILES_DIR = DB_DIR + os.path.sep + 'server_files'
@@ -45,10 +18,50 @@ LOGS_DIR = BASE_DIR + os.path.sep + 'logs'
 STATIC_DIR = BASE_DIR + os.path.sep + 'static'
 TEMP_DIR = BASE_DIR + os.path.sep + 'temp'
 
+#
+
+PLATFORM_WINDOWS = False
+PLATFORM_OSX  = False
+PLATFORM_LINUX = False
+
+if sys.platform == 'win32': PLATFORM_WINDOWS = True
+elif sys.platform == 'darwin': PLATFORM_OSX = True
+elif sys.platform == 'linux2': PLATFORM_LINUX = True
+
+if PLATFORM_LINUX:
+    
+    import wxversion
+    
+    if not wxversion.checkInstalled( '2.9' ): raise Exception( 'Need wxPython 2.9 on linux!' )
+    
+    wxversion.select( '2.9' )
+
+import wx
+
+import bisect
+import bs4
+import collections
+import cStringIO
+import httplib
+import HydrusExceptions
+import HydrusNetworking
+import HydrusPubSub
+import itertools
+import locale
+import Queue
+import re
+import sqlite3
+import threading
+import time
+import traceback
+import yaml
+
+options = {}
+
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 111
+SOFTWARE_VERSION = 112
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

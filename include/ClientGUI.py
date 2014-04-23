@@ -865,8 +865,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
             
             menu.AppendSeparator()
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Review your services.' ) )
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Add, Remove or Edit Services' ), p( 'Edit your services.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'review_services' ), p( '&Review Services' ), p( 'Look at the services your client connects to.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_services' ), p( '&Manage Services' ), p( 'Edit the services your client connects to.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
@@ -2102,7 +2102,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._listbook = ClientGUICommon.ListBook( self )
             
-            self._edit = wx.Button( self, label = 'add, remove or edit services' )
+            self._edit = wx.Button( self, label = 'manage services' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
             self._ok = wx.Button( self, label = 'ok' )
@@ -2238,8 +2238,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
-                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                    
                     self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
                     
                     self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
@@ -2247,10 +2245,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._requests = ClientGUICommon.Gauge( self._permissions_panel )
                     
                     self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                    if max_num_bytes is None: self._bytes.Hide()
-                    if expiry is None: self._age.Hide()
-                    if max_num_requests is None: self._requests.Hide()
                     
                 
                 if service_type in HC.REPOSITORIES:
@@ -2301,12 +2295,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._service_wide_update = wx.Button( self, label = 'perform a service-wide update' )
                     self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
-                    
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._reset = wx.Button( self, label = 'reset cache' )
-                    self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
                     
                 
                 if service_type == HC.SERVER_ADMIN:
@@ -2393,11 +2381,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         repo_buttons_hbox.AddF( self._service_wide_update, FLAGS_MIXED )
                         
                     
-                    if service_type in HC.REPOSITORIES:
-                        
-                        repo_buttons_hbox.AddF( self._reset, FLAGS_MIXED )
-                        
-                    
                     if service_type == HC.SERVER_ADMIN:
                         
                         repo_buttons_hbox.AddF( self._init, FLAGS_MIXED )
@@ -2420,18 +2403,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._service_identifier = service_identifier
             
-            self._service = HC.app.Read( 'service', self._service_identifier )
-            
             service_type = service_identifier.GetType()
-            
-            if service_type in HC.RESTRICTED_SERVICES:
-                
-                account = self._service.GetAccount()
-                
-                account_type = account.GetAccountType()
-                
-                expiry = account.GetExpiry()
-                
             
             InitialiseControls()
             
@@ -2475,69 +2447,66 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._account_type.Wrap( 400 )
                     
                 
+                created = account.GetCreated()
+                expiry = account.GetExpiry()
+                
+                if expiry is None: self._age.Hide()
+                else:
+                    
+                    self._age.Show()
+                    
+                    self._age.SetRange( expiry - created )
+                    self._age.SetValue( min( now - created, expiry - created ) )
+                    
+                
+                self._age_text.SetLabel( account.GetExpiryString() )
+                
+                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                ( used_bytes, used_requests ) = account.GetUsedData()
+                
+                if max_num_bytes is None: self._bytes.Hide()
+                else:
+                    
+                    self._bytes.Show()
+                    
+                    self._bytes.SetRange( max_num_bytes )
+                    self._bytes.SetValue( used_bytes )
+                    
+                
+                self._bytes_text.SetLabel( account.GetUsedBytesString() )
+                
+                if max_num_requests is None: self._requests.Hide()
+                else:
+                    
+                    self._requests.Show()
+                    
+                    self._requests.SetValue( max_num_requests )
+                    self._requests.SetValue( min( used_requests, max_num_requests ) )
+                    
+                
+                self._requests_text.SetLabel( account.GetUsedRequestsString() )
+                
                 if service_type in HC.REPOSITORIES:
                     
-                    if not account.IsBanned():
+                    ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = self._service.GetTimestamps()
+                    
+                    if first_timestamp is None:
                         
-                        created = account.GetCreated()
-                        expiry = account.GetExpiry()
+                        num_updates = 0
+                        num_updates_downloaded = 0
                         
-                        if expiry is None: self._age.Hide()
-                        else:
-                            
-                            self._age.Show()
-                            
-                            self._age.SetRange( expiry - created )
-                            self._age.SetValue( min( now - created, expiry - created ) )
-                            
+                        self._updates.SetValue( 0 )
                         
-                        self._age_text.SetLabel( account.GetExpiryString() )
+                    else:
                         
-                        ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = self._service.GetTimestamps()
+                        num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
+                        num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
                         
-                        if first_timestamp is None:
-                            
-                            num_updates = 0
-                            num_updates_downloaded = 0
-                            
-                            self._updates.SetValue( 0 )
-                            
-                        else:
-                            
-                            num_updates = ( now - first_timestamp ) / HC.UPDATE_DURATION
-                            num_updates_downloaded = ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION
-                            
-                            self._updates.SetRange( num_updates )
-                            self._updates.SetValue( num_updates_downloaded )
-                            
+                        self._updates.SetRange( num_updates )
+                        self._updates.SetValue( num_updates_downloaded )
                         
-                        self._updates_text.SetLabel( self._service.GetUpdateStatus() )
-                        
-                        ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                        ( used_bytes, used_requests ) = account.GetUsedData()
-                        
-                        if max_num_bytes is None: self._bytes.Hide()
-                        else:
-                            
-                            self._bytes.Show()
-                            
-                            self._bytes.SetRange( max_num_bytes )
-                            self._bytes.SetValue( used_bytes )
-                            
-                        
-                        self._bytes_text.SetLabel( account.GetUsedBytesString() )
-                        
-                        if max_num_requests is None: self._requests.Hide()
-                        else:
-                            
-                            self._requests.Show()
-                            
-                            self._requests.SetValue( max_num_requests )
-                            self._requests.SetValue( min( used_requests, max_num_requests ) )
-                            
-                        
-                        self._requests_text.SetLabel( account.GetUsedRequestsString() )
-                        
+                    
+                    self._updates_text.SetLabel( self._service.GetUpdateStatus() )
                     
                 
                 self._refresh.Enable()
@@ -2558,7 +2527,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._DisplayAccountInfo()
             
-            if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+            if service_type in [ HC.FILE_REPOSITORY, HC.TAG_REPOSITORY, HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
                 
                 service_info = HC.app.Read( 'service_info', self._service_identifier )
                 
@@ -2608,13 +2577,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 if self._service.IsInitialised():
                     
-                    self._init.Disable()
-                    self._refresh.Enable()
+                    self._init.Hide()
+                    self._refresh.Show()
                     
                 else:
                     
-                    self._init.Enable()
-                    self._refresh.Disable()
+                    self._init.Show()
+                    self._refresh.Hide()
                     
                 
             
@@ -2663,19 +2632,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             account.MakeFresh()
             
             HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
-            
-        
-        def EventServiceReset( self, event ):
-            
-            message = 'This will remove all the information for ' + self._service_identifier.GetName() + ' from the database, so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui may freeze.' + os.linesep + os.linesep + 'If you do not know what this is, you probably want to click no!'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    with wx.BusyCursor(): HC.app.Write( 'reset_service', self._service_identifier )
-                    
-                
             
         
         def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):

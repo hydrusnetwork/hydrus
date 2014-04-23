@@ -1,3 +1,4 @@
+import collections
 import gc
 import hashlib
 import httplib
@@ -153,11 +154,22 @@ The database will be locked while the backup occurs, which may lock up your gui 
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > 86400 * 5: self.Write( 'vacuum' )
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > 86400 * 3: self.Write( 'delete_orphans' )
         
+        if now - self._timestamps[ 'service_info_cache_fatten' ] > 60 * 20:
+            
+            service_identifiers = self.Read( 'service_identifiers' )
+            
+            for service_identifier in service_identifiers: self.Read( 'service_info', service_identifier )
+            
+        
     
     def OnInit( self ):
-    
+        
         HC.app = self
         HC.http = HydrusNetworking.HTTPConnectionManager()
+        
+        self._timestamps = collections.defaultdict( lambda: 0 )
+        
+        self._timestamps[ 'boot' ] = HC.GetNow()
         
         self._local_service = None
         self._server = None

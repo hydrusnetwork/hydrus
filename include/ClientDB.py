@@ -4324,7 +4324,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if service_type in HC.REPOSITORIES:
                     
-                    service_key = service_identifier.GetKey()
+                    service_key = service_identifier.GetServiceKey()
                     
                     service_key_hex = service_key.encode( 'hex' )
                     
@@ -7919,7 +7919,7 @@ def DAEMONSynchroniseRepositories():
                 
                 print( traceback.format_exc() )
                 
-                message.Close()
+                if 'message' in locals(): message.Close()
                 
                 text = 'Failed to update ' + name + ':' + os.linesep + os.linesep + HC.u( e )
                 
@@ -8211,7 +8211,7 @@ def DAEMONSynchroniseSubscriptions():
                     
                 except Exception as e:
                     
-                    message.Close()
+                    if 'message' in locals(): message.Close()
                     
                     last_checked = now + HC.UPDATE_DURATION
                     

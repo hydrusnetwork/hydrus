@@ -2877,16 +2877,15 @@ def DAEMONUPnP():
     
     local_ip = HydrusNATPunch.GetLocalIP()
     
-    try: current_mappings = HydrusNATPunch.GetUPnPMappings()
-    except: return # UPnP COM is not working right now
+    current_mappings = HydrusNATPunch.GetUPnPMappings()
     
     our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
     
     service_identifiers = HC.app.ReadDaemon( 'service_identifiers' )
     
-    all_options = [ HC.app.ReadDaemon( 'options', service_identifier ) for service_identifier in service_identifiers ]
+    all_options = { service_identifier : HC.app.ReadDaemon( 'options', service_identifier ) for service_identifier in service_identifiers }
     
-    for options in all_options:
+    for ( service_identifier, options ) in all_options.items():
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
@@ -2899,7 +2898,7 @@ def DAEMONUPnP():
             
         
     
-    for options in all_options:
+    for ( service_identifier, options ) in all_options.items():
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
@@ -2908,9 +2907,13 @@ def DAEMONUPnP():
             
             external_port = our_mappings[ ( local_ip, internal_port ) ]
             
-            HydrusNATPunch.AddUPnPMapping( external_port, 'TCP', internal_port, 'hydrus service at ' + local_ip + ':' + str( internal_port ) )
+            protocol = 'TCP'
             
-        
-        ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled )
+            description = HC.service_string_lookup[ service_identifier.GetType() ] + ' at ' + local_ip + ':' + str( internal_port )
+            
+            duration = 3600
+            
+            HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, external_port, protocol, description, duration = duration )
+            
         
     
