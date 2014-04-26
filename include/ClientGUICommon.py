@@ -98,7 +98,15 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
+        self._dropdown_window.SetSize( ( 0, 0 ) )
+        
+        self._dropdown_window.SetPosition( self.ClientToScreenXY( 0, 0, ) )
+        
+        self._dropdown_window.Show()
+        
         self._dropdown_list = self._InitDropDownList()
+        
+        self._dropdown_hidden = True
         
         self._first_letters = ''
         self._cached_results = self._InitCachedResults()
@@ -155,7 +163,12 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         self._BroadcastChoice( predicate )
         
     
-    def _HideDropdown( self ): self._dropdown_window.Show( False )
+    def _HideDropdown( self ):
+        
+        self._dropdown_window.SetSize( ( 0, 0 ) )
+        
+        self._dropdown_hidden = True
+        
     
     def _ShowDropdownIfFocussed( self ):
         
@@ -163,7 +176,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
             
             ( my_width, my_height ) = self.GetSize()
             
-            if not self._dropdown_window.IsShown():
+            if self._dropdown_hidden:
                 
                 self._dropdown_window.Fit()
                 
@@ -171,10 +184,10 @@ class AutoCompleteDropdown( wx.TextCtrl ):
                 
                 self._dropdown_window.Layout()
                 
+                self._dropdown_hidden = False
+                
             
             self._dropdown_window.SetPosition( self.ClientToScreenXY( -2, my_height - 2 ) )
-            
-            self._dropdown_window.Show()
             
         
     
@@ -200,8 +213,9 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         new_window = event.GetWindow()
         
-        if new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren(): pass
-        else: self._HideDropdown()
+        focus_remains_on_self_or_children = new_window == self._dropdown_window or new_window in self._dropdown_window.GetChildren() or new_window == self or new_window is None
+        
+        if not focus_remains_on_self_or_children: self._HideDropdown()
         
         event.Skip()
         
@@ -1237,16 +1251,43 @@ class FileDropTarget( wx.FileDropTarget ):
     
 class FitResistantStaticText( wx.StaticText ):
     
+    # this is a huge damn mess! I think I really need to be doing this inside or before the parent's fit, or something
+    
+    def __init__( self, *args, **kwargs ):
+        
+        wx.StaticText.__init__( self, *args, **kwargs )
+        
+        self._wrap = 380
+        
+        if 'label' in kwargs: self._last_label = kwargs[ 'label' ]
+        else: self._last_label = ''
+        
+    
     def Wrap( self, width ):
         
-        wx.StaticText.Wrap( self, width )
+        self._wrap = width
+        
+        wx.StaticText.Wrap( self, self._wrap )
         
         ( x, y ) = self.GetSize()
         
-        if x > width: x = width
+        if x > self._wrap: x = self._wrap
+        if x < 150: x = 150
         
         self.SetMinSize( ( x, y ) )
-        self.SetMaxSize( ( width, -1 ) )
+        self.SetMaxSize( ( self._wrap, -1 ) )
+        
+    
+    def SetLabel( self, label ):
+        
+        if label != self._last_label:
+            
+            self._last_label = label
+            
+            wx.StaticText.SetLabel( self, label )
+            
+            self.Wrap( self._wrap )
+            
         
     
 class Frame( wx.Frame ):
@@ -2847,7 +2888,12 @@ class PopupMessageManager( wx.Frame ):
             
             self._CheckPending()
             
-        except: print( traceback.format_exc() )
+        except:
+            
+            traceback.print_stack()
+            
+            print( traceback.format_exc() )
+            
         
     
     def CleanBeforeDestroy( self ):

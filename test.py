@@ -1,5 +1,6 @@
-from include import ClientConstants as CC
 from include import HydrusConstants as HC
+
+from include import ClientConstants as CC
 from include import HydrusNetworking
 from include import HydrusSessions
 from include import HydrusTags

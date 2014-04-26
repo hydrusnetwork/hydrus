@@ -791,7 +791,14 @@ def ShowExceptionClient( e ):
         
         ( etype, value, tb ) = sys.exc_info()
         
-        trace = ''.join( traceback.format_exception( etype, value, tb ) )
+        if etype is None:
+            
+            etype = type( e )
+            value = HC.u( e )
+            
+            trace = ''.join( traceback.format_stack() )
+            
+        else: trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
         message = HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } )
         

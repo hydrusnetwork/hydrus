@@ -13,9 +13,10 @@ string.whitespace
 import locale
 locale.setlocale( locale.LC_ALL, '' )
 
+from include import HydrusConstants as HC
+
 import os
 import sys
-from include import HydrusConstants as HC
 from include import ServerController
 import threading
 from twisted.internet import reactor

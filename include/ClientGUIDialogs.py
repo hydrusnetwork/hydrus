@@ -3150,7 +3150,7 @@ class DialogInputShortcut( Dialog ):
     
 class DialogInputUPnPMapping( Dialog ):
     
-    def __init__( self, parent, external_port, protocol_type, internal_port, description ):
+    def __init__( self, parent, external_port, protocol_type, internal_port, description, duration ):
         
         def InitialiseControls():
             
@@ -3162,6 +3162,7 @@ class DialogInputUPnPMapping( Dialog ):
             
             self._internal_port = wx.SpinCtrl( self, min = 0, max = 65535 )
             self._description = wx.TextCtrl( self )
+            self._duration = wx.SpinCtrl( self, min = 0, max = 86400 )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -3179,6 +3180,7 @@ class DialogInputUPnPMapping( Dialog ):
             
             self._internal_port.SetValue( internal_port )
             self._description.SetValue( description )
+            self._duration.SetValue( duration )
             
         
         def ArrangeControls():
@@ -3198,6 +3200,9 @@ class DialogInputUPnPMapping( Dialog ):
             
             gridbox.AddF( wx.StaticText( self, label = 'description' ), FLAGS_MIXED )
             gridbox.AddF( self._description, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'duration (0 = indefinite)' ), FLAGS_MIXED )
+            gridbox.AddF( self._duration, FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             b_box.AddF( self._ok, FLAGS_MIXED )
@@ -3232,8 +3237,9 @@ class DialogInputUPnPMapping( Dialog ):
         protocol_type = self._protocol_type.GetChoice()
         internal_port = self._internal_port.GetValue()
         description = self._description.GetValue()
+        duration = self._duration.GetValue()
         
-        return ( external_port, protocol_type, internal_port, description )
+        return ( external_port, protocol_type, internal_port, description, duration )
         
     
 class DialogModifyAccounts( Dialog ):
@@ -3958,6 +3964,14 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._num_panel = ClientGUICommon.StaticBox( self, '#' )
                 
+                self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 80, -1 ) )
+                self._num_base.SetValue( 1 )
+                self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+                
+                self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 80, -1 ) )
+                self._num_step.SetValue( 1 )
+                self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
+                
                 self._num_namespace = wx.TextCtrl( self._num_panel )
                 self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
                 
@@ -3982,15 +3996,20 @@ class DialogPathsToTagsRegex( Dialog ):
             
             def PopulateControls():
                 
-                for ( num, path ) in enumerate( self._paths, 1 ):
+                num_base = self._num_base.GetValue()
+                num_step = self._num_step.GetValue()
+                
+                for ( num, path ) in enumerate( self._paths ):
                     
-                    pretty_num = HC.ConvertIntToPrettyString( num )
+                    processed_num = num_base + num * num_step
+                    
+                    pretty_num = HC.ConvertIntToPrettyString( processed_num )
                     
                     tags = self._GetTags( num, path )
                     
                     tags_string = ', '.join( tags )
                     
-                    self._paths_list.Append( ( pretty_num, path, tags_string ), ( num, path, tags ) )
+                    self._paths_list.Append( ( pretty_num, path, tags_string ), ( ( num, processed_num ), path, tags ) )
                     
                 
                 self._single_tag_box.Disable()
@@ -4015,6 +4034,14 @@ class DialogPathsToTagsRegex( Dialog ):
                 self._regexes_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
                 
                 #
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), FLAGS_MIXED )
+                hbox.AddF( self._num_base, FLAGS_MIXED )
+                hbox.AddF( self._num_step, FLAGS_MIXED )
+                
+                self._num_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
@@ -4118,19 +4145,19 @@ class DialogPathsToTagsRegex( Dialog ):
         
         def _RefreshFileList( self ):
             
-            for ( index, ( num, path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
+            for ( index, ( ( original_num, processed_num ), path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
                 
                 # when doing regexes, make sure not to include '' results, same for system: and - started tags.
                 
-                tags = self._GetTags( num, path )
+                tags = self._GetTags( processed_num, path )
                 
                 if tags != old_tags:
                     
-                    pretty_num = HC.ConvertIntToPrettyString( num )
+                    pretty_num = HC.ConvertIntToPrettyString( processed_num )
                     
                     tags_string = ', '.join( tags )
                     
-                    self._paths_list.UpdateRow( index, ( pretty_num, path, tags_string ), ( num, path, tags ) )
+                    self._paths_list.UpdateRow( index, ( pretty_num, path, tags_string ), ( ( original_num, processed_num ), path, tags ) )
                     
                 
             
@@ -4159,7 +4186,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 for index in indices:
                     
-                    ( num, path, old_tags ) = self._paths_list.GetClientData( index )
+                    ( ( original_num, processed_num ), path, old_tags ) = self._paths_list.GetClientData( index )
                     
                     if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
                     else:
@@ -4173,7 +4200,7 @@ class DialogPathsToTagsRegex( Dialog ):
                         
                     
                 
-                self._RefreshFileList() # make this more clever
+                self._RefreshFileList()
                 
             
         
@@ -4257,6 +4284,23 @@ class DialogPathsToTagsRegex( Dialog ):
         
         def EventNumNamespaceChanged( self, event ): self._RefreshFileList()
         
+        def EventRecalcNum( self, event ):
+            
+            num_base = self._num_base.GetValue()
+            num_step = self._num_step.GetValue()
+            
+            for ( index, ( ( original_num, processed_num ), path, tags ) ) in enumerate( self._paths_list.GetClientData() ):
+                
+                processed_num = num_base + original_num * num_step
+                
+                pretty_num = HC.ConvertIntToPrettyString( processed_num )
+                
+                tags_string = ', '.join( tags )
+                
+                self._paths_list.UpdateRow( index, ( pretty_num, path, tags_string ), ( ( original_num, processed_num ), path, tags ) )
+                
+            
+        
         def EventRemoveRegex( self, event ):
             
             selection = self._regexes.GetSelection()
@@ -4271,7 +4315,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
             
         
-        def GetInfo( self ): return { path : tags for ( num, path, tags ) in self._paths_list.GetClientData() }
+        def GetInfo( self ): return { path : tags for ( ( original_num, processed_num ), path, tags ) in self._paths_list.GetClientData() }
         
         def GetServiceIdentifier( self ): return self._service_identifier
         
@@ -4283,7 +4327,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
             for index in indices:
                 
-                ( num, path, old_tags ) = self._paths_list.GetClientData( index )
+                ( ( original_num, processed_num ), path, old_tags ) = self._paths_list.GetClientData( index )
                 
                 if tag in self._paths_to_single_tags[ path ]: self._paths_to_single_tags[ path ].remove( tag )
                 

@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientDB
 import collections
 import HydrusConstants as HC
+import HydrusExceptions
 import itertools
 import os
 import shutil
@@ -1054,18 +1055,37 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'update_services', edit_log )
         
-        # now delete local_like, test that
-        # edit other_tag_repo, test that
+        with self.assertRaises( HydrusExceptions.DBException ):
+            
+            self._read( 'service', new_local_like )
+            
+        
+        result = self._read( 'service', other_new_tag_repo )
+        
+        host = other_new_tag_repo_info_updated[ 'host' ]
+        port = other_new_tag_repo_info_updated[ 'port' ]
+        access_key = other_new_tag_repo_info_updated[ 'access_key' ]
+        
+        self.assertEqual( result.GetCredentials(), CC.Credentials( host, port, access_key ) )
         
         #
         
-        result = self._read( 'service', new_tag_repo )
+        edit_log = []
         
-        # test credentials
+        edit_log.append( ( HC.DELETE, other_new_tag_repo ) )
         
-        result = self._read( 'services', ( HC.TAG_REPOSITORY, ) )
+        self._write( 'update_services', edit_log )
         
-        # test there are two, and test credentials
+        with self.assertRaises( HydrusExceptions.DBException ):
+            
+            self._read( 'service', other_new_tag_repo )
+            
+        
+        #
+        
+        result = self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        
+        self.assertEqual( len( result ), 2 )
         
     
     def test_sessions( self ):
