@@ -133,6 +133,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             wx.CallLater( 1, self._LoadGUISession, name )
             
         
+        wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
+        
     
     def _THREADUploadPending( self, service_identifier ):
         
@@ -2031,6 +2033,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def RefreshStatusBar( self ): self._RefreshStatusBar()
+    
+    def SaveLastSession( self ):
+        
+        self._SaveGUISession( 'last session' )
+        
+        wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
+        
     
     def SetDBLockedStatus( self, status ):
         

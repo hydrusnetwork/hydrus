@@ -63,11 +63,16 @@ def GetFileInfo( path, hash ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
         
+    elif mime in ( HC.VIDEO_MKV, HC.VIDEO_WEBM ):
+        
+        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetMatroskaOrWebMProperties( path )
+        
     elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( path )
     elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( path )
     elif mime == HC.AUDIO_OGG: duration = HydrusAudioHandling.GetOGGVorbisDuration( path )
     elif mime == HC.AUDIO_FLAC: duration = HydrusAudioHandling.GetFLACDuration( path )
     elif mime == HC.AUDIO_WMA: duration = HydrusAudioHandling.GetWMADuration( path )
+    
     
     return ( size, mime, width, height, duration, num_frames, num_words )
     
@@ -161,6 +166,14 @@ def GetMime( path ):
             else: return mime
             
         
+    
+    try:
+        
+        mime = HydrusVideoHandling.GetMatroskaOrWebm( path )
+        
+        return mime
+        
+    except: pass
     
     hsaudio_object = hsaudiotag.auto.File( path )
     

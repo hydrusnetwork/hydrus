@@ -1238,9 +1238,11 @@ class Credentials( HC.HydrusYAMLBase ):
     
 class DataCache():
     
-    def __init__( self, cache_size_key ):
+    def __init__( self, cache_size_key, decay_duration = 1200 ):
         
         self._cache_size_key = cache_size_key
+        
+        self._decay_duration = decay_duration
         
         self._keys_to_data = {}
         self._keys_fifo = []
@@ -1248,6 +1250,8 @@ class DataCache():
         self._total_estimated_memory_footprint = 0
         
         self._lock = threading.Lock()
+        
+        wx.CallLater( 60 * 1000, self.MaintainCache )
         
     
     def Clear( self ):
@@ -1269,7 +1273,7 @@ class DataCache():
                 
                 while self._total_estimated_memory_footprint > HC.options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
                     
-                    deletee_key = self._keys_fifo.pop( 0 )
+                    ( deletee_key, last_access_time ) = self._keys_fifo.pop( 0 )
                     
                     deletee_data = self._keys_to_data[ deletee_key ]
                     
@@ -1280,7 +1284,7 @@ class DataCache():
                 
                 self._keys_to_data[ key ] = data
                 
-                self._keys_fifo.append( key )
+                self._keys_fifo.append( ( key, HC.GetNow() ) )
                 
                 self._total_estimated_memory_footprint += data.GetEstimatedMemoryFootprint()
                 
@@ -1291,16 +1295,27 @@ class DataCache():
         
         with self._lock:
             
-            if key not in self._keys_fifo:
+            if key not in self._keys_to_data:
                 
                 message = 'Cache error! Looking for ' + HC.u( key ) + ', but it was missing.'
                 
                 raise Exception( message )
                 
             
-            self._keys_fifo.remove( key )
+            i = 0
             
-            self._keys_fifo.append( key )
+            for ( fifo_key, last_access_time ) in self._keys_fifo:
+                
+                if fifo_key == key:
+                    
+                    del self._keys_fifo[ i ]
+                    
+                    break
+                    
+                else: i += 1
+                
+            
+            self._keys_fifo.append( ( key, HC.GetNow() ) )
             
             return self._keys_to_data[ key ]
             
@@ -1314,6 +1329,33 @@ class DataCache():
     def HasData( self, key ):
         
         with self._lock: return key in self._keys_to_data
+        
+    
+    def MaintainCache( self ):
+        
+        now = HC.GetNow()
+        
+        with self._lock:
+            
+            while True:
+                
+                if len( self._keys_fifo ) == 0: break
+                else:
+                    
+                    ( key, last_access_time ) = self._keys_fifo[ 0 ]
+                    
+                    if now - last_access_time > self._decay_duration:
+                        
+                        del self._keys_fifo[ 0 ]
+                        
+                        del self._keys_to_data[ key ]
+                        
+                    else: break
+                    
+                
+            
+        
+        wx.CallLater( 60 * 1000, self.MaintainCache )
         
     
 class FileQueryResult():

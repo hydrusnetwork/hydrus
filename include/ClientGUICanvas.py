@@ -236,6 +236,8 @@ class Canvas():
         self._file_service_identifier = file_service_identifier
         self._image_cache = image_cache
         
+        self._closing = False
+        
         self._service_identifiers_to_services = {}
         
         self._focus_holder = wx.Window( self )
@@ -545,29 +547,32 @@ class Canvas():
     
     def EventResize( self, event ):
         
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        wx.CallAfter( self._canvas_bmp.Destroy )
-        
-        self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
-        
-        if self._media_container is not None:
+        if not self._closing:
             
-            ( media_width, media_height ) = self._media_container.GetClientSize()
+            ( my_width, my_height ) = self.GetClientSize()
             
-            if my_width != media_width or my_height != media_height:
+            wx.CallAfter( self._canvas_bmp.Destroy )
+            
+            self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+            
+            if self._media_container is not None:
                 
-                with wx.FrozenWindow( self ):
+                ( media_width, media_height ) = self._media_container.GetClientSize()
+                
+                if my_width != media_width or my_height != media_height:
                     
-                    self._RecalcZoom()
-                    
-                    self._DrawBackgroundBitmap()
-                    
-                    self._DrawCurrentMedia()
+                    with wx.FrozenWindow( self ):
+                        
+                        self._RecalcZoom()
+                        
+                        self._DrawBackgroundBitmap()
+                        
+                        self._DrawCurrentMedia()
+                        
                     
                 
+            else: self._DrawBackgroundBitmap()
             
-        else: self._DrawBackgroundBitmap()
         
         event.Skip()
         
@@ -1033,6 +1038,8 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
     
     def EventClose( self, event ):
+        
+        self._closing = True
         
         HC.pubsub.pub( 'set_focus', self._page_key, self._current_media )
         
@@ -1512,6 +1519,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     elif action == 'delete': self._Delete()
                     elif action == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
                     elif action == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
+                    elif action == 'fullscreen_switch': self._FullscreenSwitch()
                     elif action == 'inbox': self._Inbox()
                     elif action == 'manage_ratings': self._ManageRatings()
                     elif action == 'manage_tags': self._ManageTags()
@@ -1644,7 +1652,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
     
     def EventMenu( self, event ):
-        
+        print( 'menu' )
         # is None bit means this is prob from a keydown->menu event
         if event.GetEventObject() is None and self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
@@ -3497,7 +3505,7 @@ class MediaContainer( wx.Window ):
             
         elif self._media.GetMime() == HC.APPLICATION_PDF: self._media_window = PDFButton( self, self._media.GetHash(), media_initial_size )
         elif self._media.GetMime() in HC.AUDIO: self._media_window = EmbedWindowAudio( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
-        elif self._media.GetMime() in ( HC.VIDEO_MP4, HC.VIDEO_WMV ): self._media_window = EmbedWindowVideo( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
+        elif self._media.GetMime() in HC.VIDEO: self._media_window = EmbedWindowVideo( self, self._media.GetHash(), self._media.GetMime(), media_initial_size )
         
         if ShouldHaveAnimationBar( self._media ):
             

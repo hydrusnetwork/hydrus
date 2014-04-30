@@ -2,6 +2,7 @@ import numpy.core.multiarray # important this comes before cv!
 import cv
 from flvlib import tags as flv_tags
 import HydrusConstants as HC
+import matroska
 import os
 import traceback
 
@@ -61,6 +62,46 @@ def GetCVVideoProperties( path ):
     width = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_WIDTH ) )
     
     height = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_HEIGHT ) )
+    
+    return ( ( width, height ), duration, num_frames )
+    
+def GetMatroskaOrWebm( path ):
+    
+    tags = matroska.parse( path )
+    
+    ebml = tags[ 'EBML' ][0]
+    
+    if ebml[ 'DocType' ][0] == 'matroska': return HC.VIDEO_MKV
+    elif ebml[ 'DocType' ][0] == 'webm': return HC.VIDEO_WEBM
+    
+    raise Exception()
+    
+def GetMatroskaOrWebMProperties( path ):
+    
+    tags = matroska.parse( path )
+    
+    segment = tags['Segment'][0]
+    
+    info = segment['Info'][0]
+    duration = int( ( info['Duration'][0] * info['TimecodeScale'][0] / 1e9 ) * 1000 )
+    
+    tracks = segment['Tracks'][0]
+    trackentries = tracks['TrackEntry']
+    
+    for trackentry in trackentries:
+        
+        if 'Video' in trackentry:
+            
+            video = trackentry['Video'][0]
+            
+            width = video[ 'PixelWidth' ][0]
+            height = video[ 'PixelHeight' ][0]
+            
+            break
+            
+        
+    
+    num_frames = 0
     
     return ( ( width, height ), duration, num_frames )
     

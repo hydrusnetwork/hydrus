@@ -2687,6 +2687,7 @@ class DB( ServiceDB ):
                 elif action == 'num_petitions': result = self._GetNumPetitions( c, *args, **kwargs )
                 elif action == 'petition': result = self._GetPetition( c, *args, **kwargs )
                 elif action == 'registration_keys': result = self._GenerateRegistrationKeys( c, *args, **kwargs )
+                elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
                 elif action == 'services': result = self._GetServicesInfo( c, *args, **kwargs )
                 elif action == 'sessions': result = self._GetSessions( c, *args, **kwargs )
                 elif action == 'stats': result = self._GetStats( c, *args, **kwargs )

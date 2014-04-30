@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 113</h3></li>
+				<ul>
+					<li>added mkv+webm support!</li>
+					<li>fixed some system:mime selection stuff</li>
+					<li>fixed a missing db call in the server upnp daemon</li>
+					<li>fixed upnp dialog's edit button</li>
+					<li>cleaned up upnp dialog's post-button refreshing logic</li>
+					<li>fixed getupnpmappings to deal with >10 mappings</li>
+					<li>fixed fullscreen_switch for custom filter</li>
+					<li>fixed a late canvas drawing exception when fullscreen window was closing due to being media-empty</li>
+					<li>rolled back to wx 2.9.5 for windows again. not worth the trouble, right now</li>
+					<li>hydrus caches should now clean up anything older than twenty minutes</li>
+					<li>'last session' will now be saved every five minutes, rather than only on a successful close</li>
+				</ul>
 				<li><h3>version 112</h3></li>
 				<ul>
 					<li>A/C dropdown is fixed on linux!</li>
@@ -32,6 +46,7 @@
 					<li>added repository deletion to unit tests</li>
 					<li>added num_base and num_step to file path regex dialog</li>
 					<li>fixed popup display of certain exceptions, including file parsing exceptions</li>
+					<li>cleaned up os x and linux build scripts, added static&help sync</li>
 				</ul>
 				<li><h3>version 111</h3></li>
 				<ul>
