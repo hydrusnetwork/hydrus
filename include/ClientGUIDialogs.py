@@ -1839,9 +1839,9 @@ class DialogInputFileSystemPredicate( Dialog ):
         if media == 'image':
             
             self._mime_type.Append( 'any', HC.IMAGES )
+            self._mime_type.Append( 'gif', HC.IMAGE_GIF )
             self._mime_type.Append( 'jpeg', HC.IMAGE_JPEG )
             self._mime_type.Append( 'png', HC.IMAGE_PNG )
-            self._mime_type.Append( 'gif', HC.IMAGE_GIF )
             
         elif media == 'application':
             
@@ -1852,15 +1852,17 @@ class DialogInputFileSystemPredicate( Dialog ):
         elif media == 'audio':
             
             self._mime_type.Append( 'any', HC.AUDIO )
+            self._mime_type.Append( 'flac', HC.AUDIO_FLAC )
             self._mime_type.Append( 'mp3', HC.AUDIO_MP3 )
             self._mime_type.Append( 'ogg', HC.AUDIO_OGG )
             self._mime_type.Append( 'x-ms-wma', HC.AUDIO_WMA )
-            self._mime_type.Append( 'flac', HC.AUDIO_FLAC )
             
         elif media == 'video':
             
             self._mime_type.Append( 'any', HC.VIDEO )
             self._mime_type.Append( 'mp4', HC.VIDEO_MP4 )
+            self._mime_type.Append( 'webm', HC.VIDEO_WEBM )
+            self._mime_type.Append( 'x-matroska', HC.VIDEO_MKV )
             self._mime_type.Append( 'x-ms-wmv', HC.VIDEO_WMV )
             self._mime_type.Append( 'x-flv', HC.VIDEO_FLV )
             

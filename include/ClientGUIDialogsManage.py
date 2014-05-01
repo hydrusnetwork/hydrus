@@ -3470,9 +3470,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         if media == 'image':
             
             self._file_system_predicate_mime_type.Append( 'any', HC.IMAGES )
+            self._file_system_predicate_mime_type.Append( 'gif', HC.IMAGE_GIF )
             self._file_system_predicate_mime_type.Append( 'jpeg', HC.IMAGE_JPEG )
             self._file_system_predicate_mime_type.Append( 'png', HC.IMAGE_PNG )
-            self._file_system_predicate_mime_type.Append( 'gif', HC.IMAGE_GIF )
             
         elif media == 'application':
             
@@ -3480,10 +3480,21 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._file_system_predicate_mime_type.Append( 'pdf', HC.APPLICATION_PDF )
             self._file_system_predicate_mime_type.Append( 'x-shockwave-flash', HC.APPLICATION_FLASH )
             
+        elif media == 'audio':
+            
+            self._file_system_predicate_mime_type.Append( 'any', HC.AUDIO )
+            self._file_system_predicate_mime_type.Append( 'flac', HC.AUDIO_FLAC )
+            self._file_system_predicate_mime_type.Append( 'mp3', HC.AUDIO_MP3 )
+            self._file_system_predicate_mime_type.Append( 'ogg', HC.AUDIO_OGG )
+            self._file_system_predicate_mime_type.Append( 'x-ms-wma', HC.AUDIO_WMA )
+            
         elif media == 'video':
             
             self._file_system_predicate_mime_type.Append( 'any', HC.VIDEO )
             self._file_system_predicate_mime_type.Append( 'mp4', HC.VIDEO_MP4 )
+            self._file_system_predicate_mime_type.Append( 'webm', HC.VIDEO_WEBM )
+            self._file_system_predicate_mime_type.Append( 'x-matroska', HC.VIDEO_MKV )
+            self._file_system_predicate_mime_type.Append( 'x-ms-wmv', HC.VIDEO_WMV )
             self._file_system_predicate_mime_type.Append( 'x-flv', HC.VIDEO_FLV )
             
         
@@ -7561,20 +7572,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _AddMapping( self, description, internal_ip, internal_port, external_ip, external_port, protocol, enabled ):
-        
-        # tell service to add it
-        
-        pass
-        
-    
-    def _RemoveMapping( self, internal_ip, internal_port ):
-        
-        # tell service to remove it
-        
-        pass
-        
-    
     def _RefreshMappings( self ):
     
         self._mappings_list_ctrl.DeleteAllItems()
@@ -7591,6 +7588,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
     
     def EventAddCustomMapping( self, event ):
+        
+        do_refresh = False
         
         external_port = HC.DEFAULT_SERVICE_PORT
         protocol = 'TCP'
@@ -7618,9 +7617,11 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
                 
+                do_refresh = True
+                
             
         
-        self._RefreshMappings()
+        if do_refresh: self._RefreshMappings()
         
     
     def EventAddServiceMapping( self, event ):
@@ -7634,9 +7635,11 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventEditMapping( self, event ):
         
+        do_refresh = False
+        
         for index in self._mappings_list_ctrl.GetAllSelected():
             
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, lease ) = self._mappings_list_ctrl.GetClientData( index )
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = self._mappings_list_ctrl.GetClientData( index )
             
             with ClientGUIDialogs.DialogInputUPnPMapping( self, external_port, protocol, internal_port, description, duration ) as dlg:
                 
@@ -7650,10 +7653,12 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                     
                     HydrusNATPunch.AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = duration )
                     
+                    do_refresh = True
+                    
                 
             
         
-        self._RefreshMappings()
+        if do_refresh: self._RefreshMappings()
         
     
     def EventOK( self, event ):
@@ -7663,13 +7668,17 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
     def EventRemoveMapping( self, event ):
         
+        do_refresh = False
+        
         for index in self._mappings_list_ctrl.GetAllSelected():
             
-            ( description, internal_ip, internal_port, external_ip, external_port, protocol, lease ) = self._mappings_list_ctrl.GetClientData( index )
+            ( description, internal_ip, internal_port, external_ip, external_port, protocol, duration ) = self._mappings_list_ctrl.GetClientData( index )
             
             HydrusNATPunch.RemoveUPnPMapping( external_port, protocol )
             
+            do_refresh = True
+            
         
-        self._RefreshMappings()
+        if do_refresh: self._RefreshMappings()
         
     

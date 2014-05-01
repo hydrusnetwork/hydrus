@@ -124,7 +124,7 @@ def GetUPnPMappings():
             
             while i < len( lines ):
                 
-                if not lines[ i ].startswith( ' ' ): break
+                if not lines[ i ][0] in ( ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ): break
                 
                 data_lines.append( lines[ i ] )
                 
@@ -139,7 +139,8 @@ def GetUPnPMappings():
                 
                 while '  ' in line: line = line.replace( '  ', ' ' )
                 
-                ( empty, number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 4 )
+                if line.startswith( ' ' ): ( empty, number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 4 )
+                else: ( number, protocol, mapping_data, rest_of_line ) = line.split( ' ', 3 )
                 
                 ( external_port, rest_of_mapping_data ) = mapping_data.split( '->' )
                 

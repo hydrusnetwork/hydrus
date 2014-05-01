@@ -30,11 +30,14 @@ elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
 if PLATFORM_LINUX:
     
-    import wxversion
-    
-    if not wxversion.checkInstalled( '2.9' ): raise Exception( 'Need wxPython 2.9 on linux!' )
-    
-    wxversion.select( '2.9' )
+    if not hasattr( sys, 'frozen' ):
+        
+        import wxversion
+        
+        if not wxversion.checkInstalled( '2.9' ): raise Exception( 'Need wxPython 2.9 on linux!' )
+        
+        wxversion.select( '2.9' )
+        
 
 import wx
 
@@ -61,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 112
+SOFTWARE_VERSION = 113
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -277,16 +280,18 @@ AUDIO_FLAC = 16
 AUDIO_WMA = 17
 VIDEO_WMV = 18
 UNDETERMINED_WM = 19
+VIDEO_MKV = 20
+VIDEO_WEBM = 21
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, VIDEO_MP4, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_FLV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
 
 AUDIO = ( AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA )
 
-VIDEO = ( VIDEO_FLV, VIDEO_MP4, VIDEO_WMV )
+VIDEO = ( VIDEO_FLV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM )
 
 APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF, APPLICATION_ZIP )
 
@@ -326,6 +331,8 @@ mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
 mime_enum_lookup[ 'video/mp4' ] = VIDEO_MP4
 mime_enum_lookup[ 'video/x-ms-wmv' ] = VIDEO_WMV
+mime_enum_lookup[ 'video/x-matroska' ] = VIDEO_MKV
+mime_enum_lookup[ 'video/webm' ] = VIDEO_WEBM
 mime_enum_lookup[ 'video' ] = VIDEO
 mime_enum_lookup[ 'unknown mime' ] = APPLICATION_UNKNOWN
 
@@ -354,6 +361,8 @@ mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ VIDEO_MP4 ] = 'video/mp4'
 mime_string_lookup[ VIDEO_WMV ] = 'video/x-ms-wmv'
+mime_string_lookup[ VIDEO_MKV ] = 'video/x-matroska'
+mime_string_lookup[ VIDEO_WEBM ] = 'video/webm'
 mime_string_lookup[ VIDEO ] = 'video'
 mime_string_lookup[ UNDETERMINED_WM ] = 'audio/x-ms-wma or video/x-ms-wmv'
 mime_string_lookup[ APPLICATION_UNKNOWN ] = 'unknown mime'
@@ -380,6 +389,8 @@ mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ VIDEO_MP4 ] = '.mp4'
 mime_ext_lookup[ VIDEO_WMV ] = '.wmv'
+mime_ext_lookup[ VIDEO_MKV ] = '.mkv'
+mime_ext_lookup[ VIDEO_WEBM ] = '.webm'
 mime_ext_lookup[ APPLICATION_UNKNOWN ] = ''
 #mime_ext_lookup[ 'application/x-rar-compressed' ] = '.rar'
 
