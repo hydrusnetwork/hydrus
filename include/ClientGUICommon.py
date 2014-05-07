@@ -2392,6 +2392,8 @@ class PopupDismissAll( PopupWindow ):
         self.SetSizer( hbox )
         
     
+    def Dismiss( self ): pass
+    
     def EventButton( self, event ): self.GetParent().DismissAll()
     
     def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HC.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )

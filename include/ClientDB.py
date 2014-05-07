@@ -1319,6 +1319,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         service_type = service_identifier.GetType()
         name = service_identifier.GetName()
         
+        if service_type in HC.CLIENT_SERVICES:
+            
+            if 'max_monthly_data' not in info: info[ 'max_monthly_data' ] = None
+            if 'port' not in info: info[ 'port' ] = 45871
+            if 'upnp' not in info: info[ 'upnp' ] = None
+            
+        
         if service_type in HC.REMOTE_SERVICES:
             
             if 'last_error' not in info: info[ 'last_error' ] = 0

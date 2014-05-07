@@ -65,7 +65,7 @@ def GetFileInfo( path, hash ):
         
     elif mime in ( HC.VIDEO_MKV, HC.VIDEO_WEBM ):
         
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetMatroskaOrWebMProperties( path )
+        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
         
     elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( path )
     elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( path )

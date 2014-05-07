@@ -8,6 +8,16 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 114</h3></li>
+				<ul>
+					<li>gif rendering seems to be fixed in all cases! hooray!</li>
+					<li>fixed 'pop from empty list' popup error spam in the new cache clearing system</li>
+					<li>fixed weird behaviour on right-clicking 'dismiss all' popups button</li>
+					<li>added a unit test for perceptual hash generation, with an eye to moving the delicate code from cv to cv2</li>
+					<li>updated opencv to 2.4.9</li>
+					<li>updated pyinstaller, so frozen releases may be a bit more stable!</li>
+					<li>moved webm and mkv info parsing over to cv, which allows num_frames</li>
+				</ul>
 				<li><h3>version 113</h3></li>
 				<ul>
 					<li>added mkv+webm support!</li>

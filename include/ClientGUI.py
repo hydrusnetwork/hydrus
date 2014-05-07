@@ -2195,6 +2195,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     elif service_type == HC.SERVER_ADMIN: name = 'servers admin'
                     elif service_type == HC.LOCAL_RATING_LIKE: name = 'local ratings like'
                     elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'local ratings numerical'
+                    elif service_type == HC.BOORU: name = 'booru'
                     
                     self._listbook.AddPage( listbook, name )
                     
@@ -2236,6 +2237,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         def __init__( self, parent, service_identifier ):
             
             def InitialiseControls():
+                
+                if service_type in HC.CLIENT_SERVICES:
+                    
+                    # show bandwidth used and so on
+                    
+                    # if a booru, show how many shares currently active
+                    
+                    pass
+                    
                 
                 if service_type in HC.RESTRICTED_SERVICES:
                     
@@ -2329,6 +2339,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                if service_type in HC.CLIENT_SERVICES:
+                    
+                    # show bandwidth used and so on
+                    
+                    # if a booru, show how many shares currently active
+                    
+                    pass
+                    
                 
                 if service_type in HC.RESTRICTED_SERVICES:
                     
@@ -2441,6 +2460,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             now = HC.GetNow()
             
+            if service_type in HC.CLIENT_SERVICES:
+                
+                # show bandwidth used and so on
+                
+                # if a booru, show how many shares currently active
+                
+                pass
+                
+            
             if service_type in HC.RESTRICTED_SERVICES:
                 
                 account = self._service.GetAccount()
@@ -2535,6 +2563,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             service_type = self._service_identifier.GetType()
             
             self._DisplayAccountInfo()
+            
+            if service_type in HC.CLIENT_SERVICES:
+                
+                # show bandwidth used and so on
+                
+                # if a booru, show how many shares currently active
+                
+                pass
+                
             
             if service_type in [ HC.FILE_REPOSITORY, HC.TAG_REPOSITORY, HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
                 

@@ -4517,6 +4517,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._listbook )
             
+            # boorus
+            
             self._local_ratings_like = ClientGUICommon.ListBook( self._listbook )
             self._local_ratings_like.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
             

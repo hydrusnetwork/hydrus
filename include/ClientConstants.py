@@ -1348,6 +1348,10 @@ class DataCache():
                         
                         del self._keys_fifo[ 0 ]
                         
+                        data = self._keys_to_data[ key ]
+                        
+                        self._total_estimated_memory_footprint -= data.GetEstimatedMemoryFootprint()
+                        
                         del self._keys_to_data[ key ]
                         
                     else: break

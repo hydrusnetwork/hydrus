@@ -248,6 +248,34 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     return thumbnail
     
+def GetFrameDurations( path ):
+
+    pil_image_for_duration = GeneratePILImage( path )
+    
+    frame_durations = []
+    
+    i = 0
+    
+    while True:
+        
+        try: pil_image_for_duration.seek( i )
+        except: break
+        
+        if 'duration' not in pil_image_for_duration.info: duration = 40 # 25 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+        else:
+            
+            duration = pil_image_for_duration.info[ 'duration' ]
+            
+            if duration == 0: duration = 40
+            
+        
+        frame_durations.append( duration )
+        
+        i += 1
+        
+    
+    return frame_durations
+    
 def GetHammingDistance( phash1, phash2 ):
     
     distance = 0
@@ -306,10 +334,12 @@ class AnimatedFrameRenderer( FrameRenderer ):
         
         # this code initially written by @fluffy_cub
         
+        frame_durations = GetFrameDurations( self._path )
+        
         cv_image = cv2.VideoCapture( self._path )
         cv_image.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
         
-        no_frames_yet = False
+        no_frames_yet = True
         
         while True:
             
@@ -322,13 +352,16 @@ class AnimatedFrameRenderer( FrameRenderer ):
                 
             else:
                 
+                no_frames_yet = False
+                
                 rgb_data = cv2.cvtColor( frame, cv2.COLOR_BGR2RGBA )
                 
                 pil_frame = PILImage.fromarray( rgb_data, 'RGBA' )
                 
                 pil_frame = EfficientlyResizeImage( pil_frame, self._target_resolution )
                 
-                duration = 40 # will have to use pil to get accurate duration, as cv assumes 25fps
+                try: duration = frame_durations.pop( 0 )
+                except: duration = 40
                 
                 yield ( GenerateHydrusBitmapFromPILImage( pil_frame ), duration )
                 
@@ -374,9 +407,8 @@ class AnimatedFrameRenderer( FrameRenderer ):
     
     def GetFrames( self ):
     
-        for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
+        #for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
         
-        '''
         try:
             
             for ( frame, duration ) in self._GetFramesCV(): yield ( frame, duration )
@@ -385,7 +417,7 @@ class AnimatedFrameRenderer( FrameRenderer ):
             
             for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
             
-        '''
+        
     
     def Render( self ):
         

@@ -1,5 +1,5 @@
-import numpy.core.multiarray # important this comes before cv!
-import cv
+#import numpy.core.multiarray # important this comes before cv!
+import cv2
 from flvlib import tags as flv_tags
 import HydrusConstants as HC
 import matroska
@@ -47,11 +47,11 @@ def GetFLVProperties( path ):
 
 def GetCVVideoProperties( path ):
     
-    cvcapture = cv.CaptureFromFile( path )
+    capture = cv2.VideoCapture( path )
     
-    num_frames = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_COUNT ) )
+    num_frames = int( capture.get( cv2.cv.CV_CAP_PROP_FRAME_COUNT ) )
     
-    fps = cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FPS )
+    fps = capture.get( cv2.cv.CV_CAP_PROP_FPS )
     
     length_in_seconds = num_frames / fps
     
@@ -59,9 +59,9 @@ def GetCVVideoProperties( path ):
     
     duration = length_in_ms
     
-    width = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_WIDTH ) )
+    width = int( capture.get( cv2.cv.CV_CAP_PROP_FRAME_WIDTH ) )
     
-    height = int( cv.GetCaptureProperty( cvcapture, cv.CV_CAP_PROP_FRAME_HEIGHT ) )
+    height = int( capture.get( cv2.cv.CV_CAP_PROP_FRAME_HEIGHT ) )
     
     return ( ( width, height ), duration, num_frames )
     
