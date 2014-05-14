@@ -1655,12 +1655,12 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 
-                downloadable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GET_DATA ) }
-                uploadable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.POST_DATA ) }
-                petition_resolvable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) }
-                petitionable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_identifiers
-                user_manageable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.MANAGE_USERS ) }
-                admin_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) }
+                downloadable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) }
+                uploadable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) }
+                petition_resolvable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
+                petitionable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_identifiers
+                user_manageable_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
+                admin_file_service_identifiers = { repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
                 
                 if multiple_selected:
                     

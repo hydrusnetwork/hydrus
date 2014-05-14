@@ -35,6 +35,7 @@ class TestSessions( unittest.TestCase ):
         with self.assertRaises( HydrusExceptions.SessionException ):
             
             session_manager.GetAccount( service_identifier, session_key_1 )
+            
         
         #
         

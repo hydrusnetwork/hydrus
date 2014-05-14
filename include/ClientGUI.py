@@ -746,12 +746,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
             
-            petition_resolve_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
+            petition_resolve_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
             file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
             
             file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories ]
-            petition_resolve_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
+            petition_resolve_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
             menu = wx.Menu()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
@@ -896,13 +896,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             services = HC.app.Read( 'services' )
             
             tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
-            admin_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
+            admin_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
-            admin_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
+            admin_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             servers_admin = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.SERVER_ADMIN ]
-            server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetAccount().HasPermission( HC.GENERAL_ADMIN ) ]
+            server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             if len( admin_tag_service_identifiers ) > 0 or len( admin_file_service_identifiers ) > 0 or len( server_admin_identifiers ) > 0:
                 
@@ -1308,7 +1308,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             service = HC.app.Read( 'service', service_identifier )
             
-            account = service.GetAccount()
+            account = service.GetInfo( 'account' )
             
             if not account.HasPermission( HC.RESOLVE_PETITIONS ): return
             
@@ -2109,7 +2109,10 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def InitialiseControls():
             
-            self._listbook = ClientGUICommon.ListBook( self )
+            self._notebook = wx.Notebook( self )
+            
+            self._local_listbook = ClientGUICommon.ListBook( self._notebook )
+            self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
             
             self._edit = wx.Button( self, label = 'manage services' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
@@ -2128,8 +2131,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
+            self._notebook.AddPage( self._local_listbook, 'local' )
+            self._notebook.AddPage( self._remote_listbook, 'remote' )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._listbook, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._notebook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._edit, FLAGS_SMALL_INDENT )
             vbox.AddF( self._ok, FLAGS_BUTTON_SIZERS )
             
@@ -2163,7 +2169,8 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     def _InitialiseServices( self ):
         
-        self._listbook.DeleteAllPages()
+        self._local_listbook.DeleteAllPages()
+        self._remote_listbook.DeleteAllPages()
         
         listbook_dict = {}
         
@@ -2173,44 +2180,39 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             service_type = service_identifier.GetType()
             
-            if service_type in ( HC.LOCAL_FILE, HC.LOCAL_TAG ):
+            if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
+            else: parent_listbook = self._remote_listbook
+            
+            if service_type not in listbook_dict:
                 
-                page = self._Panel( self._listbook, service_identifier )
+                listbook = ClientGUICommon.ListBook( parent_listbook )
                 
-                name = service_identifier.GetName()
+                listbook_dict[ service_type ] = listbook
                 
-                self._listbook.AddPage( page, name )
+                if service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
+                elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
+                elif service_type == HC.MESSAGE_DEPOT: name = 'message depots'
+                elif service_type == HC.SERVER_ADMIN: name = 'administrative servers'
+                elif service_type == HC.LOCAL_FILE: name = 'files'
+                elif service_type == HC.LOCAL_TAG: name = 'tags'
+                elif service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
+                elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
+                elif service_type == HC.LOCAL_BOORU: name = 'booru'
                 
-            else:
-                
-                if service_type not in listbook_dict:
-                    
-                    listbook = ClientGUICommon.ListBook( self._listbook )
-                    
-                    listbook_dict[ service_type ] = listbook
-                    
-                    if service_type == HC.TAG_REPOSITORY: name = 'tags'
-                    elif service_type == HC.FILE_REPOSITORY: name = 'files'
-                    elif service_type == HC.MESSAGE_DEPOT: name = 'message depots'
-                    elif service_type == HC.SERVER_ADMIN: name = 'servers admin'
-                    elif service_type == HC.LOCAL_RATING_LIKE: name = 'local ratings like'
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'local ratings numerical'
-                    elif service_type == HC.BOORU: name = 'booru'
-                    
-                    self._listbook.AddPage( listbook, name )
-                    
-                
-                listbook = listbook_dict[ service_type ]
-                
-                page = ( self._Panel, [ listbook, service_identifier ], {} )
-                
-                name = service_identifier.GetName()
-                
-                listbook.AddPage( page, name )
+                parent_listbook.AddPage( listbook, name )
                 
             
+            listbook = listbook_dict[ service_type ]
+            
+            page = ( self._Panel, [ listbook, service_identifier ], {} )
+            
+            name = service_identifier.GetName()
+            
+            listbook.AddPage( page, name )
+            
         
-        wx.CallAfter( self._listbook.Layout )
+        wx.CallAfter( self._local_listbook.Layout )
+        wx.CallAfter( self._remote_listbook.Layout )
         
     
     def EventEdit( self, event ):
@@ -2238,44 +2240,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             def InitialiseControls():
                 
-                if service_type in HC.CLIENT_SERVICES:
-                    
-                    # show bandwidth used and so on
-                    
-                    # if a booru, show how many shares currently active
-                    
-                    pass
-                    
-                
-                if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
-                    
-                    self._account_type = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER )
-                    
-                    self._age = ClientGUICommon.Gauge( self._permissions_panel )
-                    
-                    self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                    self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
-                    
-                    self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                    self._requests = ClientGUICommon.Gauge( self._permissions_panel )
-                    
-                    self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
-                    
-                    self._updates = ClientGUICommon.Gauge( self._synchro_panel )
-                    
-                    self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
-                    
-                
-                if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+                if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                     
                     self._info_panel = ClientGUICommon.StaticBox( self, 'service information' )
                     
@@ -2308,6 +2273,44 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                         self._ratings_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                         
+                    elif service_type == HC.LOCAL_BOORU:
+                        
+                        self._link = wx.HyperlinkCtrl( self._info_panel, id = -1 )
+                        
+                        self._num_shares = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                        self._bytes = ClientGUICommon.Gauge( self._info_panel )
+                        
+                        self._bytes_text = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                        
+                    
+                
+                if service_type in HC.RESTRICTED_SERVICES:
+                    
+                    self._permissions_panel = ClientGUICommon.StaticBox( self, 'service permissions' )
+                    
+                    self._account_type = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER )
+                    
+                    self._age = ClientGUICommon.Gauge( self._permissions_panel )
+                    
+                    self._age_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    self._bytes = ClientGUICommon.Gauge( self._permissions_panel )
+                    
+                    self._bytes_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                    self._requests = ClientGUICommon.Gauge( self._permissions_panel )
+                    
+                    self._requests_text = wx.StaticText( self._permissions_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    self._synchro_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
+                    
+                    self._updates = ClientGUICommon.Gauge( self._synchro_panel )
+                    
+                    self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                     
                 
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
@@ -2340,37 +2343,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                if service_type in HC.CLIENT_SERVICES:
-                    
-                    # show bandwidth used and so on
-                    
-                    # if a booru, show how many shares currently active
-                    
-                    pass
-                    
-                
-                if service_type in HC.RESTRICTED_SERVICES:
-                    
-                    self._permissions_panel.AddF( self._account_type, FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._age, FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._age_text, FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._requests, FLAGS_EXPAND_PERPENDICULAR )
-                    self._permissions_panel.AddF( self._requests_text, FLAGS_EXPAND_PERPENDICULAR )
-                    
-                    vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    self._synchro_panel.AddF( self._updates, FLAGS_EXPAND_PERPENDICULAR )
-                    self._synchro_panel.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
-                    
-                    vbox.AddF( self._synchro_panel, FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if service_type in HC.REPOSITORIES + [ HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+                if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                     
                     if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
                         
@@ -2396,8 +2369,36 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                         self._info_panel.AddF( self._ratings_text, FLAGS_EXPAND_PERPENDICULAR )
                         
+                    elif service_type == HC.LOCAL_BOORU:
+                        
+                        self._info_panel.AddF( self._link, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._num_shares, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
+                        self._info_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
+                        
                     
                     vbox.AddF( self._info_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type in HC.RESTRICTED_SERVICES:
+                    
+                    self._permissions_panel.AddF( self._account_type, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._age, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._age_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._requests, FLAGS_EXPAND_PERPENDICULAR )
+                    self._permissions_panel.AddF( self._requests_text, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    self._synchro_panel.AddF( self._updates, FLAGS_EXPAND_PERPENDICULAR )
+                    self._synchro_panel.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    vbox.AddF( self._synchro_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ]:
@@ -2460,18 +2461,40 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             now = HC.GetNow()
             
-            if service_type in HC.CLIENT_SERVICES:
+            if service_type == HC.LOCAL_BOORU:
                 
-                # show bandwidth used and so on
+                info = self._service.GetInfo()
                 
-                # if a booru, show how many shares currently active
+                port = info[ 'port' ]
                 
-                pass
+                url = 'http://127.0.0.1:' + str( port ) + '/'
+                
+                self._link.SetLabel( url )
+                self._link.SetURL( url )
+                
+                max_monthly_data = info[ 'max_monthly_data' ]
+                used_monthly_data = info[ 'used_monthly_data' ]
+                
+                if max_monthly_data is None:
+                    
+                    self._bytes.Hide()
+                    
+                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + ' this month' )
+                    
+                else:
+                    
+                    self._bytes.Show()
+                    
+                    self._bytes.SetRange( max_monthly_data )
+                    self._bytes.SetValue( used_monthly_data )
+                    
+                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + '/' + HC.ConvertIntToBytes( max_monthly_data ) + ' this month' )
+                    
                 
             
             if service_type in HC.RESTRICTED_SERVICES:
                 
-                account = self._service.GetAccount()
+                account = self._service.GetInfo( 'account' )
                 
                 account_type = account.GetAccountType()
                 
@@ -2517,7 +2540,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._requests.Show()
                     
-                    self._requests.SetValue( max_num_requests )
+                    self._requests.SetRange( max_num_requests )
                     self._requests.SetValue( min( used_requests, max_num_requests ) )
                     
                 
@@ -2564,16 +2587,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._DisplayAccountInfo()
             
-            if service_type in HC.CLIENT_SERVICES:
-                
-                # show bandwidth used and so on
-                
-                # if a booru, show how many shares currently active
-                
-                pass
-                
-            
-            if service_type in [ HC.FILE_REPOSITORY, HC.TAG_REPOSITORY, HC.LOCAL_FILE, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ]:
+            if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                 
                 service_info = HC.app.Read( 'service_info', self._service_identifier )
                 
@@ -2616,6 +2630,12 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                     
                     self._ratings_text.SetLabel( HC.u( num_ratings ) + ' files rated' )
+                    
+                elif service_type == HC.LOCAL_BOORU:
+                    
+                    num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
+                    
+                    self._num_shares.SetLabel( HC.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
                     
                 
             

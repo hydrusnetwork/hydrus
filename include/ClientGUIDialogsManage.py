@@ -4513,29 +4513,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             self._edit_log = []
             
-            self._listbook = ClientGUICommon.ListBook( self )
-            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            self._listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._listbook )
+            self._notebook = wx.Notebook( self )
+            self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+            self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._notebook )
             
-            # boorus
+            self._local_listbook = ClientGUICommon.ListBook( self._notebook )
+            self._local_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._local_listbook )
             
-            self._local_ratings_like = ClientGUICommon.ListBook( self._listbook )
-            self._local_ratings_like.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._local_ratings_numerical = ClientGUICommon.ListBook( self._listbook )
-            self._local_ratings_numerical.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._tag_repositories = ClientGUICommon.ListBook( self._listbook )
-            self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._file_repositories = ClientGUICommon.ListBook( self._listbook )
-            self._file_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._message_depots = ClientGUICommon.ListBook( self._listbook )
-            self._message_depots.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._servers_admin = ClientGUICommon.ListBook( self._listbook )
-            self._servers_admin.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+            self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
+            self._remote_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._remote_listbook )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -4558,7 +4545,34 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = HC.app.Read( 'services', HC.RESTRICTED_SERVICES + [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] )
+            manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU ]
+            
+            for service_type in manageable_service_types:
+                
+                if service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
+                elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
+                elif service_type == HC.LOCAL_BOORU: name = 'booru'
+                elif service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
+                elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
+                #elif service_type == HC.MESSAGE_DEPOT: name = 'message repositories'
+                elif service_type == HC.SERVER_ADMIN: name = 'administrative services'
+                #elif service_type == HC.RATING_LIKE_REPOSITORY: name = 'like/dislike rating repositories'
+                #elif service_type == HC.RATING_NUMERICAL_REPOSITORY: name = 'numerical rating repositories'
+                else: continue
+                
+                if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
+                else: parent_listbook = self._remote_listbook
+                
+                listbook = ClientGUICommon.ListBook( parent_listbook )
+                listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
+                
+                self._service_types_to_listbooks[ service_type ] = listbook
+                self._listbooks_to_service_types[ listbook ] = service_type
+                
+                parent_listbook.AddPage( listbook, name )
+                
+            
+            services = HC.app.Read( 'services', manageable_service_types )
             
             for service in services:
                 
@@ -4569,25 +4583,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 info = service.GetInfo()
                 
-                if service_type == HC.LOCAL_RATING_LIKE: listbook = self._local_ratings_like
-                elif service_type == HC.LOCAL_RATING_NUMERICAL: listbook = self._local_ratings_numerical
-                elif service_type == HC.TAG_REPOSITORY: listbook = self._tag_repositories
-                elif service_type == HC.FILE_REPOSITORY: listbook = self._file_repositories
-                elif service_type == HC.MESSAGE_DEPOT: listbook = self._message_depots
-                elif service_type == HC.SERVER_ADMIN: listbook = self._servers_admin
-                else: continue
+                listbook = self._service_types_to_listbooks[ service_type ]
                 
                 page_info = ( self._Panel, ( listbook, service_identifier, info ), {} )
                 
                 listbook.AddPage( page_info, name )
                 
-            
-            self._listbook.AddPage( self._local_ratings_like, 'local ratings like' )
-            self._listbook.AddPage( self._local_ratings_numerical, 'local ratings numerical' )
-            self._listbook.AddPage( self._tag_repositories, 'tags' )
-            self._listbook.AddPage( self._file_repositories, 'files' )
-            self._listbook.AddPage( self._message_depots, 'message depots' )
-            self._listbook.AddPage( self._servers_admin, 'servers admin' )
             
         
         def ArrangeControls():
@@ -4603,9 +4604,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             ok_hbox.AddF( self._ok, FLAGS_MIXED )
             ok_hbox.AddF( self._cancel, FLAGS_MIXED )
             
+            self._notebook.AddPage( self._local_listbook, 'local' )
+            self._notebook.AddPage( self._remote_listbook, 'remote' )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._listbook, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._notebook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
             vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
             
@@ -4613,6 +4617,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage services' )
+        
+        self._service_types_to_listbooks = {}
+        self._listbooks_to_service_types = {}
         
         InitialiseControls()
         
@@ -4631,24 +4638,29 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def _CheckCurrentServiceIsValid( self ):
         
-        services_listbook = self._listbook.GetCurrentPage()
+        local_or_remote_listbook = self._notebook.GetCurrentPage()
         
-        if services_listbook is not None:
+        if local_or_remote_listbook is not None:
             
-            service_panel = services_listbook.GetCurrentPage()
+            services_listbook = local_or_remote_listbook.GetCurrentPage()
             
-            if service_panel is not None:
+            if services_listbook is not None:
                 
-                ( service_identifier, info ) = service_panel.GetInfo()
+                service_panel = services_listbook.GetCurrentPage()
                 
-                old_name = services_listbook.GetCurrentName()
-                name = service_identifier.GetName()
-                
-                if old_name is not None and name != old_name:
+                if service_panel is not None:
                     
-                    if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                    ( service_identifier, info ) = service_panel.GetInfo()
                     
-                    services_listbook.RenamePage( old_name, name )
+                    old_name = services_listbook.GetCurrentName()
+                    name = service_identifier.GetName()
+                    
+                    if old_name is not None and name != old_name:
+                        
+                        if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                        
+                        services_listbook.RenamePage( old_name, name )
+                        
                     
                 
             
@@ -4664,78 +4676,78 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     name = dlg.GetValue()
                     
-                    services_listbook = self._listbook.GetCurrentPage()
+                    local_or_remote_listbook = self._notebook.GetCurrentPage()
                     
-                    if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
-                    
-                    if name == '': raise Exception( 'Please enter a nickname for the service.' )
-                    
-                    if services_listbook == self._local_ratings_like: service_type = HC.LOCAL_RATING_LIKE
-                    elif services_listbook == self._local_ratings_numerical: service_type = HC.LOCAL_RATING_NUMERICAL
-                    elif services_listbook == self._tag_repositories: service_type = HC.TAG_REPOSITORY
-                    elif services_listbook == self._file_repositories: service_type = HC.FILE_REPOSITORY
-                    elif services_listbook == self._message_depots: service_type = HC.MESSAGE_DEPOT
-                    elif services_listbook == self._servers_admin: service_type = HC.SERVER_ADMIN
-                    
-                    service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, name )
-                    
-                    info = {}
-                    
-                    if service_type in HC.REMOTE_SERVICES:
+                    if local_or_remote_listbook is not None:
                         
-                        if service_type == HC.SERVER_ADMIN: ( host, port ) = ( 'hostname', 45870 )
-                        elif service_type in HC.RESTRICTED_SERVICES:
+                        services_listbook = local_or_remote_listbook.GetCurrentPage()
+                        
+                        if services_listbook.NameExists( name ): raise Exception( 'That name is already in use!' )
+                        
+                        if name == '': raise Exception( 'Please enter a nickname for the service.' )
+                        
+                        service_type = self._listbooks_to_service_types[ services_listbook ]
+                        
+                        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, name )
+                        
+                        info = {}
+                        
+                        if service_type in HC.REMOTE_SERVICES:
                             
-                            with ClientGUIDialogs.DialogChooseNewServiceMethod( self ) as dlg:
+                            if service_type == HC.SERVER_ADMIN: ( host, port ) = ( 'hostname', 45870 )
+                            elif service_type in HC.RESTRICTED_SERVICES:
                                 
-                                if dlg.ShowModal() != wx.ID_OK: return
-                                
-                                register = dlg.GetRegister()
-                                
-                                if register:
+                                with ClientGUIDialogs.DialogChooseNewServiceMethod( self ) as dlg:
                                     
-                                    with ClientGUIDialogs.DialogRegisterService( self, service_type ) as dlg:
-                                        
-                                        if dlg.ShowModal() != wx.ID_OK: return
-                                        
-                                        credentials = dlg.GetCredentials()
-                                        
-                                        ( host, port ) = credentials.GetAddress()
-                                        
-                                        if credentials.HasAccessKey(): info[ 'access_key' ] = credentials.GetAccessKey()
-                                        
+                                    if dlg.ShowModal() != wx.ID_OK: return
                                     
-                                else: ( host, port ) = ( 'hostname', 45871 )
+                                    register = dlg.GetRegister()
+                                    
+                                    if register:
+                                        
+                                        with ClientGUIDialogs.DialogRegisterService( self, service_type ) as dlg:
+                                            
+                                            if dlg.ShowModal() != wx.ID_OK: return
+                                            
+                                            credentials = dlg.GetCredentials()
+                                            
+                                            ( host, port ) = credentials.GetAddress()
+                                            
+                                            if credentials.HasAccessKey(): info[ 'access_key' ] = credentials.GetAccessKey()
+                                            
+                                        
+                                    else: ( host, port ) = ( 'hostname', 45871 )
+                                    
                                 
+                                account = HC.GetUnknownAccount()
+                                
+                                account.MakeStale()
+                                
+                                info[ 'account' ] = account
+                                
+                            else: ( host, port ) = ( 'hostname', 45871 )
                             
-                            account = HC.GetUnknownAccount()
+                            info[ 'host' ] = host
+                            info[ 'port' ] = port
                             
-                            account.MakeStale()
+                        
+                        if service_type == HC.LOCAL_RATING_LIKE:
                             
-                            info[ 'account' ] = account
+                            info[ 'like' ] = 'like'
+                            info[ 'dislike' ] = 'dislike'
                             
-                        else: ( host, port ) = ( 'hostname', 45871 )
+                        elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                            
+                            info[ 'lower' ] = 0
+                            info[ 'upper' ] = 5
+                            
                         
-                        info[ 'host' ] = host
-                        info[ 'port' ] = port
+                        self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
                         
-                    
-                    if service_type == HC.LOCAL_RATING_LIKE:
+                        page = self._Panel( services_listbook, service_identifier, info )
                         
-                        info[ 'like' ] = 'like'
-                        info[ 'dislike' ] = 'dislike'
+                        services_listbook.AddPage( page, name, select = True )
                         
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
-
-                        info[ 'lower' ] = 0
-                        info[ 'upper' ] = 5
-                        
-                    
-                    self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
-                    
-                    page = self._Panel( services_listbook, service_identifier, info )
-                    
-                    services_listbook.AddPage( page, name, select = True )
                     
                 except Exception as e:
                     
@@ -4757,33 +4769,38 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             return
             
         
-        services_listbook = self._listbook.GetCurrentPage()
+        local_or_remote_listbook = self._notebook.GetCurrentPage()
         
-        if services_listbook is not None:
+        if local_or_remote_listbook is not None:
             
-            service_panel = services_listbook.GetCurrentPage()
+            services_listbook = local_or_remote_listbook.GetCurrentPage()
             
-            ( service_identifier, info ) = service_panel.GetInfo()
-            
-            name = service_identifier.GetName()
-            
-            try:
+            if services_listbook is not None:
                 
-                with wx.FileDialog( self, 'select where to export service', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
-                        
-                    
+                service_panel = services_listbook.GetCurrentPage()
                 
-            except:
+                ( service_identifier, info ) = service_panel.GetInfo()
                 
-                with wx.FileDialog( self, 'select where to export service', defaultFile = 'service.yaml', style = wx.FD_SAVE ) as dlg:
+                name = service_identifier.GetName()
+                
+                try:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    with wx.FileDialog( self, 'select where to export service', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
                         
-                        with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
+                            
+                        
+                    
+                except:
+                    
+                    with wx.FileDialog( self, 'select where to export service', defaultFile = 'service.yaml', style = wx.FD_SAVE ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
+                            
                         
                     
                 
@@ -4800,18 +4817,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             return
             
         
-        all_pages = []
+        all_listbooks = self._service_types_to_listbooks.values()
         
-        all_pages.extend( self._local_ratings_like.GetNameToPageDict().values() )
-        all_pages.extend( self._local_ratings_numerical.GetNameToPageDict().values() )
-        all_pages.extend( self._tag_repositories.GetNameToPageDict().values() )
-        all_pages.extend( self._file_repositories.GetNameToPageDict().values() )
-        all_pages.extend( self._message_depots.GetNameToPageDict().values() )
-        all_pages.extend( self._servers_admin.GetNameToPageDict().values() )
-        
-        for page in all_pages:
+        for listbook in all_listbooks:
             
-            if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalServiceIdentifier(), page.GetInfo() ) ) )
+            all_pages = listbook.GetNameToPageDict().values()
+            
+            for page in all_pages:
+                
+                if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalServiceIdentifier(), page.GetInfo() ) ) )
+                
             
         
         try:
@@ -4834,17 +4849,47 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def EventRemove( self, event ):
         
-        services_listbook = self._listbook.GetCurrentPage()
+        local_or_remote_listbook = self._notebook.GetCurrentPage()
         
-        service_panel = services_listbook.GetCurrentPage()
+        if local_or_remote_listbook is not None:
+            
+            services_listbook = local_or_remote_listbook.GetCurrentPage()
+            
+            service_panel = services_listbook.GetCurrentPage()
+            
+            if service_panel is not None:
+                
+                service_identifier = service_panel.GetOriginalServiceIdentifier()
+                
+                self._edit_log.append( ( HC.DELETE, service_identifier ) )
+                
+                services_listbook.DeleteCurrentPage()
+                
+            
         
-        if service_panel is not None:
+    
+    def EventServiceChanged( self, event ):
+        
+        local_or_remote_listbook = self._notebook.GetCurrentPage()
+        
+        if local_or_remote_listbook is not None:
             
-            service_identifier = service_panel.GetOriginalServiceIdentifier()
+            services_listbook = local_or_remote_listbook.GetCurrentPage()
             
-            self._edit_log.append( ( HC.DELETE, service_identifier ) )
+            service_type = self._listbooks_to_service_types[ services_listbook ]
             
-            services_listbook.DeleteCurrentPage()
+            if service_type == HC.LOCAL_BOORU:
+                
+                self._add.Disable()
+                self._remove.Disable()
+                self._export.Disable()
+                
+            else:
+                
+                self._add.Enable()
+                self._remove.Enable()
+                self._export.Enable()
+                
             
         
     
@@ -4871,49 +4916,37 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         for path in paths:
             
-            try:
+            with open( path, 'rb' ) as f: file = f.read()
+            
+            ( service_identifier, info ) = yaml.safe_load( file )
+            
+            name = service_identifier.GetName()
+            
+            service_type = service_identifier.GetType()
+            
+            services_listbook = self._service_types_to_listbooks[ service_type ]
+            
+            if services_listbook.NameExists( name ):
                 
-                with open( path, 'rb' ) as f: file = f.read()
+                message = 'A service already exists with that name. Overwrite it?'
                 
-                ( service_identifier, info ) = yaml.safe_load( file )
-                
-                name = service_identifier.GetName()
-                
-                service_type = service_identifier.GetType()
-                
-                if service_type == HC.TAG_REPOSITORY: services_listbook = self._tag_repositories
-                elif service_type == HC.FILE_REPOSITORY: services_listbook = self._file_repositories
-                elif service_type == HC.MESSAGE_DEPOT: services_listbook = self._message_depots
-                elif service_type == HC.SERVER_ADMIN: services_listbook = self._servers_admin
-                
-                self._listbook.SelectPage( services_listbook )
-                
-                if services_listbook.NameExists( name ):
+                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                     
-                    message = 'A service already exists with that name. Overwrite it?'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    if dlg.ShowModal() == wx.ID_YES:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            page = services_listbook.GetNameToPageDict()[ name ]
-                            
-                            page.Update( service_identifier, info )
-                            
+                        page = services_listbook.GetNameToPageDict()[ name ]
+                        
+                        page.Update( service_identifier, info )
                         
                     
-                else:
-                    
-                    self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
-                    
-                    page = self._Panel( services_listbook, service_identifier, info )
-                    
-                    services_listbook.AddPage( page, name, select = True )
-                    
                 
-            except:
+            else:
                 
-                wx.MessageBox( traceback.format_exc() )
+                self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
+                
+                page = self._Panel( services_listbook, service_identifier, info )
+                
+                services_listbook.AddPage( page, name, select = True )
                 
             
         
@@ -4987,6 +5020,23 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         self._upper.SetValue( upper )
                     
                 
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
+                    
+                    self._port = wx.SpinCtrl( self._booru_options_panel, min = 0, max = 65535 )
+                    
+                    self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+                    
+                    self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
+                    
+                    #
+                    
+                    self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
+                    
+                    # add listctrl here
+                    
+                
             
             def PopulateControls():
                 
@@ -4997,6 +5047,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._pause_synchronisation.SetValue( self._info[ 'paused' ] )
                     
                 
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    self._port.SetValue( self._info[ 'port' ] )
+                    self._upnp.SetValue( self._info[ 'upnp' ] )
+                    self._max_monthly_data.SetValue( self._info[ 'max_monthly_data' ] )
+                    
+                    # fill up listctrl here
+                    
+                
             
             def ArrangeControls():
                 
@@ -5004,12 +5063,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
+                if service_type == HC.LOCAL_BOORU: self._credentials_panel.Hide()
+                
                 gridbox = wx.FlexGridSizer( 0, 2 )
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
                 gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), FLAGS_MIXED )
                 gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
+                
                 
                 if service_type in HC.REMOTE_SERVICES:
                     
@@ -5058,6 +5120,24 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._local_rating_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
                     
                     vbox.AddF( self._local_rating_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    hbox = wx.BoxSizer( wx.HORIZONTAL )
+                    
+                    hbox.AddF( wx.StaticText( self._booru_options_panel, label = 'port' ), FLAGS_MIXED )
+                    hbox.AddF( self._port, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    self._booru_options_panel.AddF( hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                    self._booru_options_panel.AddF( self._upnp, FLAGS_EXPAND_BOTH_WAYS )
+                    self._booru_options_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    vbox.AddF( self._booru_options_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                    self._booru_shares_panel.AddF( wx.StaticText( self._booru_shares_panel, label = 'listctrl goes here' ), FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    vbox.AddF( self._booru_shares_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 self.SetSizer( vbox )
@@ -5177,6 +5257,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 info[ 'lower' ] = lower
                 info[ 'upper' ] = upper
+                
+            
+            if service_type == HC.LOCAL_BOORU:
+                
+                info[ 'port' ] = self._port.GetValue()
+                info[ 'upnp' ] = self._upnp.GetValue()
+                info[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
+                
+                # listctrl stuff here
                 
             
             return ( service_identifier, info )
@@ -6004,7 +6093,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             for service in services:
                 
-                account = service.GetAccount()
+                account = service.GetInfo( 'account' )
                 
                 if account.HasPermission( HC.POST_DATA ):
                     
@@ -6181,7 +6270,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
-                self._account = service.GetAccount()
+                self._account = service.GetInfo( 'account' )
                 
             
             self._original_statuses_to_pairs = HC.app.Read( 'tag_parents', service_identifier )
@@ -6472,7 +6561,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             for service in services:
                 
-                account = service.GetAccount()
+                account = service.GetInfo( 'account' )
                 
                 if account.HasPermission( HC.POST_DATA ):
                     
@@ -6649,7 +6738,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 service = HC.app.Read( 'service', service_identifier )
                 
-                self._account = service.GetAccount()
+                self._account = service.GetInfo( 'account' )
                 
             
             self._original_statuses_to_pairs = HC.app.Read( 'tag_siblings', service_identifier )
@@ -7321,7 +7410,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 service = HC.app.Read( 'service', tag_service_identifier )
                 
-                self._account = service.GetAccount()
+                self._account = service.GetInfo( 'account' )
                 
             
             hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )

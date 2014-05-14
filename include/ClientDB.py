@@ -1319,11 +1319,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         service_type = service_identifier.GetType()
         name = service_identifier.GetName()
         
-        if service_type in HC.CLIENT_SERVICES:
+        if service_type in HC.LOCAL_SERVICES:
             
-            if 'max_monthly_data' not in info: info[ 'max_monthly_data' ] = None
-            if 'port' not in info: info[ 'port' ] = 45871
-            if 'upnp' not in info: info[ 'upnp' ] = None
+            if service_type == HC.LOCAL_BOORU:
+                
+                if 'used_monthly_data' not in info: info[ 'used_monthly_data' ] = 0
+                if 'max_monthly_data' not in info: info[ 'max_monthly_data' ] = None
+                if 'port' not in info: info[ 'port' ] = 45866
+                if 'upnp' not in info: info[ 'upnp' ] = None
+                
             
         
         if service_type in HC.REMOTE_SERVICES:
@@ -2470,7 +2474,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         repository = self._GetService( c, service_id )
         
-        account = repository.GetAccount()
+        account = repository.GetInfo( 'account' )
         
         if service_type == HC.TAG_REPOSITORY:
             
@@ -2711,6 +2715,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         elif service_type == HC.LOCAL_TAG: info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_NAMESPACES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS }
         elif service_type == HC.TAG_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_NAMESPACES, HC.SERVICE_INFO_NUM_TAGS, HC.SERVICE_INFO_NUM_MAPPINGS, HC.SERVICE_INFO_NUM_DELETED_MAPPINGS }
         elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): info_types = { HC.SERVICE_INFO_NUM_FILES }
+        elif service_type == HC.LOCAL_BOORU: info_types = { HC.SERVICE_INFO_NUM_SHARES }
         else: info_types = set()
         
         service_info = self._GetServiceInfoSpecific( c, service_id, service_type, info_types )
@@ -2795,6 +2800,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
                     if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( * ) FROM local_ratings WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    
+                elif service_type == HC.LOCAL_BOORU:
+                    
+                    if info_type == HC.SERVICE_INFO_NUM_SHARES: result = c.execute( 'SELECT COUNT( * ) FROM booru_shares WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
                 
                 if result is None: info = 0
@@ -4575,8 +4584,12 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
             c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
             
+            #
+            
             c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
+            
+            c.execute( 'CREATE TABLE booru_shares ( service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, share_key BLOB_BYTES, share TEXT_YAML, expiry INTEGER, used_monthly_data INTEGER, max_monthly_data INTEGER, ip_restriction TEXT, notes TEXT, PRIMARY KEY( service_id, share_key ) );' )
             
             c.execute( 'CREATE TABLE contacts ( contact_id INTEGER PRIMARY KEY, contact_key BLOB_BYTES, public_key TEXT, name TEXT, host TEXT, port INTEGER );' )
             c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
@@ -4712,7 +4725,7 @@ class DB( ServiceDB ):
             
             account.MakeStale()
             
-            init_service_identifiers = [ HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.LOCAL_TAG_SERVICE_IDENTIFIER, HC.COMBINED_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+            init_service_identifiers = [ HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.LOCAL_TAG_SERVICE_IDENTIFIER, HC.COMBINED_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER, HC.LOCAL_BOORU_SERVICE_IDENTIFIER ]
             
             for init_service_identifier in init_service_identifiers:
                 
@@ -4834,126 +4847,13 @@ class DB( ServiceDB ):
         
         self._UpdateDBOld( c, version )
         
-        if version == 105:
+        if version == 114:
             
-            if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
+            info = {}
             
-            result = c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.REPOSITORIES ) + ';' ).fetchall()
+            self._AddService( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER, info )
             
-            for ( service_id, info ) in result:
-                
-                first_begin = info[ 'first_begin' ]
-                if first_begin == 0: first_begin = None
-                
-                next_begin = info[ 'next_begin' ]
-                
-                info[ 'first_timestamp' ] = first_begin
-                info[ 'next_download_timestamp' ] = 0
-                info[ 'next_processing_timestamp' ] = next_begin
-                
-                del info[ 'first_begin' ]
-                del info[ 'next_begin' ]
-                
-                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                
-            
-        
-        if version == 106:
-            
-            c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
-            
-            result = c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall()
-            
-            for ( service_id, blacklist, namespaces ) in result:
-                
-                tags = [ namespace + ':' for namespace in namespaces ]
-                
-                if ':' in tags: # don't want to change ''!
-                    
-                    tags.remove( ':' )
-                    tags.append( '' )
-                    
-                
-                c.execute( 'INSERT INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
-                
-            
-            c.execute( 'DROP TABLE namespace_blacklists;' )
-            
-        
-        if version == 108:
-            
-            c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
-            c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
-            c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
-            
-            service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services;' ) ]
-            
-            for ( i, service_id ) in enumerate( service_ids ):
-                
-                HC.app.SetSplashText( 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
-                
-                c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
-                
-            
-            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
-            
-            for filename in current_updates:
-                
-                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                
-                os.rename( path, path + 'old' )
-                
-            
-            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
-            
-            for ( i, filename ) in enumerate( current_updates ):
-                
-                if i % 100 == 0: HC.app.SetSplashText( 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
-                
-                ( service_key_hex, gumpf ) = filename.split( '_' )
-                
-                service_key = service_key_hex.decode( 'hex' )
-                
-                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
-                
-                with open( path, 'rb' ) as f: update_text = f.read()
-                
-                update = yaml.safe_load( update_text )
-                
-                ( begin, end ) = update.GetBeginEnd()
-                
-                new_path = CC.GetUpdatePath( service_key, begin )
-                
-                if os.path.exists( new_path ): os.remove( path )
-                else: os.rename( path, new_path )
-                
-            
-        
-        if version == 109:
-            
-            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
-            
-            c.execute( 'DROP TABLE processed_mappings;' )
-            
-            c.execute( 'DROP INDEX mappings_status_index;' )
-            
-        
-        if version == 110:
-            
-            all_services = c.execute( 'SELECT service_id, service_type, info FROM services;' ).fetchall()
-            
-            for ( service_id, service_type, info ) in all_services:
-                
-                if service_type in HC.REPOSITORIES:
-                    
-                    info[ 'paused' ] = False
-                    
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                    
-                
+            c.execute( 'CREATE TABLE booru_shares ( service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, share_key BLOB_BYTES, share TEXT_YAML, expiry INTEGER, used_monthly_data INTEGER, max_monthly_data INTEGER, ip_restriction TEXT, notes TEXT, PRIMARY KEY( service_id, share_key ) );' )
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -6795,6 +6695,128 @@ class DB( ServiceDB ):
             c.execute( 'DROP TABLE subscriptions;' )
             
         
+        if version == 105:
+            
+            if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
+            
+            result = c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.REPOSITORIES ) + ';' ).fetchall()
+            
+            for ( service_id, info ) in result:
+                
+                first_begin = info[ 'first_begin' ]
+                if first_begin == 0: first_begin = None
+                
+                next_begin = info[ 'next_begin' ]
+                
+                info[ 'first_timestamp' ] = first_begin
+                info[ 'next_download_timestamp' ] = 0
+                info[ 'next_processing_timestamp' ] = next_begin
+                
+                del info[ 'first_begin' ]
+                del info[ 'next_begin' ]
+                
+                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+        
+        if version == 106:
+            
+            c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
+            
+            result = c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall()
+            
+            for ( service_id, blacklist, namespaces ) in result:
+                
+                tags = [ namespace + ':' for namespace in namespaces ]
+                
+                if ':' in tags: # don't want to change ''!
+                    
+                    tags.remove( ':' )
+                    tags.append( '' )
+                    
+                
+                c.execute( 'INSERT INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
+                
+            
+            c.execute( 'DROP TABLE namespace_blacklists;' )
+            
+        
+        if version == 108:
+            
+            c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+            c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
+            c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
+            c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
+            
+            service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services;' ) ]
+            
+            for ( i, service_id ) in enumerate( service_ids ):
+                
+                HC.app.SetSplashText( 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
+                
+                c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
+                
+            
+            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+            
+            for filename in current_updates:
+                
+                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                
+                os.rename( path, path + 'old' )
+                
+            
+            current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+            
+            for ( i, filename ) in enumerate( current_updates ):
+                
+                if i % 100 == 0: HC.app.SetSplashText( 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
+                
+                ( service_key_hex, gumpf ) = filename.split( '_' )
+                
+                service_key = service_key_hex.decode( 'hex' )
+                
+                path = HC.CLIENT_UPDATES_DIR + os.path.sep + filename
+                
+                with open( path, 'rb' ) as f: update_text = f.read()
+                
+                update = yaml.safe_load( update_text )
+                
+                ( begin, end ) = update.GetBeginEnd()
+                
+                new_path = CC.GetUpdatePath( service_key, begin )
+                
+                if os.path.exists( new_path ): os.remove( path )
+                else: os.rename( path, new_path )
+                
+            
+        
+        if version == 109:
+            
+            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
+            
+            c.execute( 'DROP TABLE processed_mappings;' )
+            
+            c.execute( 'DROP INDEX mappings_status_index;' )
+            
+        
+        if version == 110:
+            
+            all_services = c.execute( 'SELECT service_id, service_type, info FROM services;' ).fetchall()
+            
+            for ( service_id, service_type, info ) in all_services:
+                
+                if service_type in HC.REPOSITORIES:
+                    
+                    info[ 'paused' ] = False
+                    
+                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    
+                
+            
+        
     
     def _Vacuum( self ):
         
@@ -7477,7 +7499,7 @@ def DAEMONSynchroniseAccounts():
     
     for service in services:
         
-        account = service.GetAccount()
+        account = service.GetInfo( 'account' )
         service_identifier = service.GetServiceIdentifier()
         credentials = service.GetCredentials()
         

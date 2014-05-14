@@ -1820,7 +1820,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier, starting_from_session = starting_from_session )
         
         self._service = HC.app.Read( 'service', self._petition_service_identifier )
-        self._can_ban = self._service.GetAccount().HasPermission( HC.MANAGE_USERS )
+        self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
         self._current_petition = None

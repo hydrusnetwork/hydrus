@@ -63,7 +63,7 @@ def SelectServiceIdentifier( permission = None, service_types = HC.ALL_SERVICES,
         
         services = HC.app.Read( 'services', service_types )
         
-        if permission is not None: services = [ service for service in services if service.GetAccount().HasPermission( permission ) ]
+        if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
         service_identifiers = [ service.GetServiceIdentifier() for service in services ]
         
@@ -717,7 +717,7 @@ class DialogInputCustomFilterAction( Dialog ):
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
             self._ok_tag.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'ratings like service actions' )
+            self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'like/dislike ratings service actions' )
             
             self._ratings_like_service_identifiers = wx.Choice( self._ratings_like_panel )
             self._ratings_like_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
@@ -729,7 +729,7 @@ class DialogInputCustomFilterAction( Dialog ):
             self._ok_ratings_like.Bind( wx.EVT_BUTTON, self.EventOKRatingsLike )
             self._ok_ratings_like.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'ratings numerical service actions' )
+            self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'numerical ratings service actions' )
             
             self._ratings_numerical_service_identifiers = wx.Choice( self._ratings_numerical_panel )
             self._ratings_numerical_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
@@ -3332,7 +3332,7 @@ class DialogModifyAccounts( Dialog ):
             
             #
             
-            if not self._service.GetAccount().HasPermission( HC.GENERAL_ADMIN ):
+            if not self._service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ):
                 
                 self._account_types_ok.Disable()
                 self._add_to_expiry_ok.Disable()
@@ -3603,7 +3603,7 @@ class DialogPageChooser( Dialog ):
         
         self._services = HC.app.Read( 'services' )
         
-        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetAccount().HasPermission( HC.RESOLVE_PETITIONS ) ]
+        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
         self._InitButtons( 'home' )
         
@@ -3814,7 +3814,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
             for service in services:
                 
-                account = service.GetAccount()
+                account = service.GetInfo( 'account' )
                 
                 if account.HasPermission( HC.POST_DATA ):
                     

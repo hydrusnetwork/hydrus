@@ -736,6 +736,8 @@ class MediaSingleton( Media ):
     
     def HasInbox( self ): return self._media_result.GetInbox()
     
+    def IsAnimated( self ): return self._media_result.IsAnimated()
+    
     def IsCollection( self ): return False
     
     def IsImage( self ): return HC.IsImage( self._media_result.GetMime() )

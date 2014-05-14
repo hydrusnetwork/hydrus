@@ -2009,6 +2009,8 @@ class MediaResult():
     
     def GetTimestamp( self ): return self._tuple[4]
     
+    def IsAnimated( self ): return self.GetNumFrames() > 0
+    
     def ProcessContentUpdate( self, service_identifier, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
@@ -2100,17 +2102,18 @@ class RenderedImageCache():
     
     def Clear( self ): self._data_cache.Clear()
     
-    def GetImage( self, hash, mime, resolution ):
+    def GetImage( self, media, target_resolution ):
         
-        key = ( hash, resolution )
+        hash = media.GetHash()
+        mime = media.GetMime()
+        
+        key = ( hash, target_resolution )
         
         if self._data_cache.HasData( key ): return self._data_cache.GetData( key )
         elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
         else:
             
-            path = GetFilePath( hash, mime )
-            
-            image_container = HydrusImageHandling.RenderImage( path, hash, target_resolution = resolution, synchronous = False )
+            image_container = HydrusImageHandling.RenderImage( media, target_resolution )
             
             self._keys_being_rendered[ key ] = image_container
             
@@ -2118,9 +2121,9 @@ class RenderedImageCache():
             
         
     
-    def HasImage( self, hash, resolution ):
+    def HasImage( self, hash, target_resolution ):
         
-        key = ( hash, resolution )
+        key = ( hash, target_resolution )
         
         return self._data_cache.HasData( key ) or key in self._keys_being_rendered
         
@@ -2166,8 +2169,6 @@ class Service( HC.HydrusYAMLBase ):
     
     def CanUpload( self ): return self._info[ 'account' ].HasPermission( HC.POST_DATA ) and not self.HasRecentError()
     
-    def GetAccount( self ): return self._info[ 'account' ]
-    
     def GetCredentials( self ):
         
         host = self._info[ 'host' ]
@@ -2180,7 +2181,11 @@ class Service( HC.HydrusYAMLBase ):
         return credentials
         
     
-    def GetInfo( self ): return self._info
+    def GetInfo( self, key = None ):
+        
+        if key is None: return self._info
+        else: return self._info[ key ]
+        
     
     def GetLikeDislike( self ): return ( self._info[ 'like' ], self._info[ 'dislike' ] )
     

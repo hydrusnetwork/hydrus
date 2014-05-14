@@ -41,15 +41,7 @@ def GetFileInfo( path, hash ):
     
     if mime in HC.IMAGES:
         
-        image_container = HydrusImageHandling.RenderImage( path, hash )
-        
-        ( width, height ) = image_container.GetSize()
-        
-        if image_container.IsAnimated():
-            
-            duration = image_container.GetTotalDuration()
-            num_frames = image_container.GetNumFrames()
-            
+        ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path )
         
     elif mime == HC.APPLICATION_FLASH:
         

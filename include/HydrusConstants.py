@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 114
+SOFTWARE_VERSION = 115
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -166,7 +166,7 @@ RATING_NUMERICAL_REPOSITORY = 8
 RATING_LIKE_REPOSITORY = 9
 COMBINED_TAG = 10
 COMBINED_FILE = 11
-BOORU = 12
+LOCAL_BOORU = 12
 SERVER_ADMIN = 99
 NULL_SERVICE = 100
 
@@ -183,7 +183,7 @@ service_string_lookup[ RATING_NUMERICAL_REPOSITORY ] = 'hydrus numerical rating 
 service_string_lookup[ RATING_LIKE_REPOSITORY ] = 'hydrus like/dislike rating repository'
 service_string_lookup[ COMBINED_TAG ] = 'virtual combined tag service'
 service_string_lookup[ COMBINED_FILE ] = 'virtual combined file service'
-service_string_lookup[ BOORU ] = 'hydrus booru'
+service_string_lookup[ LOCAL_BOORU ] = 'hydrus local booru'
 service_string_lookup[ SERVER_ADMIN ] = 'hydrus server administration'
 service_string_lookup[ NULL_SERVICE ] = 'null service'
 
@@ -191,8 +191,8 @@ RATINGS_SERVICES = [ LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPO
 REPOSITORIES = [ TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
 RESTRICTED_SERVICES = ( REPOSITORIES ) + [ SERVER_ADMIN, MESSAGE_DEPOT ]
 REMOTE_SERVICES = list( RESTRICTED_SERVICES )
-CLIENT_SERVICES = [ BOORU ]
-ALL_SERVICES = list( REMOTE_SERVICES ) + [ LOCAL_FILE, LOCAL_TAG, LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL ]
+LOCAL_SERVICES = [ LOCAL_FILE, LOCAL_TAG, LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_BOORU ]
+ALL_SERVICES = list( REMOTE_SERVICES ) + list( LOCAL_SERVICES )
 
 SERVICES_WITH_THUMBNAILS = [ FILE_REPOSITORY, LOCAL_FILE ]
 
@@ -239,6 +239,7 @@ SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS = 17
 SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS = 18
 SERVICE_INFO_NUM_PENDING_TAG_PARENTS = 19
 SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS = 20
+SERVICE_INFO_NUM_SHARES = 21
 
 SERVICE_UPDATE_ACCOUNT = 0
 SERVICE_UPDATE_DELETE_PENDING = 1
@@ -1517,6 +1518,7 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
 LOCAL_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local files', LOCAL_FILE, 'local files' )
 LOCAL_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local tags', LOCAL_TAG, 'local tags' )
+LOCAL_BOORU_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local booru', LOCAL_BOORU, 'local booru' )
 COMBINED_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known files', COMBINED_FILE, 'all known files' )
 COMBINED_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known tags', COMBINED_TAG, 'all known tags' )
 NULL_SERVICE_IDENTIFIER = ClientServiceIdentifier( '', NULL_SERVICE, 'no service' )

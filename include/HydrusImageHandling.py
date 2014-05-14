@@ -1,9 +1,11 @@
+import ClientConstants as CC
 import cStringIO
 import numpy.core.multiarray # important this comes before cv!
 import cv
 import cv2
 import HydrusConstants as HC
 import HydrusExceptions
+import lz4
 import os
 from PIL import Image as PILImage
 import shutil
@@ -34,7 +36,20 @@ def ConvertToPngIfBmp( path ):
         os.remove( temp_path )
         
     
-def EfficientlyResizeImage( pil_image, ( x, y ) ):
+def EfficientlyResizeCVImage( cv_image, ( x, y ) ):
+    
+    ( im_y, im_x, depth ) = cv_image.shape
+    
+    if x >= im_x and y >= im_y: return cv_image
+    
+    result = cv_image
+    
+    # this seems to slow things down a lot, at least for cv!
+    #if im_x > 2 * x and im_y > 2 * y: result = cv2.resize( cv_image, ( 2 * x, 2 * y ), interpolation = cv2.INTER_NEAREST )
+    
+    return cv2.resize( result, ( x, y ), interpolation = cv2.INTER_AREA )
+    
+def EfficientlyResizePILImage( pil_image, ( x, y ) ):
     
     ( im_x, im_y ) = pil_image.size
     
@@ -47,7 +62,7 @@ def EfficientlyResizeImage( pil_image, ( x, y ) ):
     
     return pil_image.resize( ( x, y ), PILImage.ANTIALIAS )
     
-def EfficientlyThumbnailImage( pil_image, ( x, y ) ):
+def EfficientlyThumbnailPILImage( pil_image, ( x, y ) ):
     
     ( im_x, im_y ) = pil_image.size
     
@@ -68,7 +83,7 @@ def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
         if duration == 0: duration = 40
         
     
-    current_frame = EfficientlyResizeImage( pil_image, target_resolution )
+    current_frame = EfficientlyResizePILImage( pil_image, target_resolution )
     
     if pil_image.mode == 'P' and 'transparency' in pil_image.info:
         
@@ -83,11 +98,38 @@ def GenerateAnimatedFrame( pil_image, target_resolution, canvas ):
     
     return ( canvas, duration )
     
+def GenerateCVImage( path ):
+    
+    cv_image = cv2.imread( self._path, flags = -1 ) # flags = -1 loads alpha channel, if present
+    
+    ( x, y, depth ) = cv_image.shape
+    
+    if depth == 4: raise Exception( 'CV is bad at alpha!' )
+    else: cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
+    
+    return cv_image
+    
 def GenerateHydrusBitmap( path ):
     
-    pil_image = GeneratePILImage( path )
+    try:
+        
+        cv_image = GenerateCVImage( path )
+        
+        return GenerateHydrusBitmapFromCVImage( cv_image )
+        
+    except:
+        
+        pil_image = GeneratePILImage( path )
+        
+        return GenerateHydrusBitmapFromPILImage( pil_image )
+        
     
-    return GenerateHydrusBitmapFromPILImage( pil_image )
+def GenerateHydrusBitmapFromCVImage( cv_image ):
+    
+    ( y, x, depth ) = cv_image.shape
+    
+    if depth == 4: raise Exception( 'CV is bad at alpha!' )
+    else: return HydrusBitmap( cv_image.data, wx.BitmapBufferFormat_RGB, ( x, y ) )
     
 def GenerateHydrusBitmapFromPILImage( pil_image ):
     
@@ -105,6 +147,9 @@ def GenerateHydrusBitmapFromPILImage( pil_image ):
         
     
 def GeneratePerceptualHash( path ):
+    
+    # I think what I should be doing here is going cv2.imread( path, flags = cv2.CV_LOAD_IMAGE_GRAYSCALE )
+    # then efficiently resize
     
     thumbnail = GeneratePILImage( path )
     
@@ -193,38 +238,11 @@ def GeneratePerceptualHash( path ):
     
 def GeneratePILImage( path ): return PILImage.open( path )
 
-def GenerateResolutionAndNumFrames( path ):
-    
-    pil_image = GeneratePILImage( path )
-    
-    ( x, y ) = pil_image.size
-    
-    try:
-        
-        pil_image.seek( 1 )
-        pil_image.seek( 0 )
-        
-        num_frames = 1
-        
-        while True:
-            
-            try:
-                
-                pil_image.seek( pil_image.tell() + 1 )
-                num_frames += 1
-                
-            except: break
-            
-        
-    except: num_frames = 1
-    
-    return ( ( x, y ), num_frames )
-    
 def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     pil_image = GeneratePILImage( path )
     
-    EfficientlyThumbnailImage( pil_image, dimensions )
+    EfficientlyThumbnailPILImage( pil_image, dimensions )
     
     f = cStringIO.StringIO()
     
@@ -296,36 +314,84 @@ def GetHammingDistance( phash1, phash2 ):
     
     return distance
     
-def RenderImage( path, hash, target_resolution = None, synchronous = True ):
+def GetImageProperties( path ):
+    
+    ( ( width, height ), num_frames ) = GetResolutionAndNumFrames( path )
+    
+    if num_frames > 1:
+        
+        durations = GetFrameDurations( path )
+        
+        duration = sum( durations )
+        
+    else:
+        
+        duration = None
+        num_frames = None
+        
+    
+    return ( ( width, height ), duration, num_frames )
+    
+def GetResolutionAndNumFrames( path ):
+    
+    pil_image = GeneratePILImage( path )
+    
+    ( x, y ) = pil_image.size
     
     try:
         
-        ( original_resolution, num_frames ) = GenerateResolutionAndNumFrames( path )
+        pil_image.seek( 1 )
+        pil_image.seek( 0 )
         
-        if target_resolution is None: target_resolution = original_resolution
+        num_frames = 1
         
-        image_container = RenderedImageContainer( hash, original_resolution, target_resolution, num_frames )
+        while True:
+            
+            try:
+                
+                pil_image.seek( pil_image.tell() + 1 )
+                num_frames += 1
+                
+            except: break
+            
         
-        if image_container.IsAnimated(): renderer = AnimatedFrameRenderer( image_container, path, target_resolution )
-        else: renderer = StaticFrameRenderer( image_container, path, target_resolution )
+    except: num_frames = 1
+    
+    return ( ( x, y ), num_frames )
+    
+def RenderImage( media, target_resolution = None ):
+    
+    if target_resolution is None: target_resolution = media.GetResolution()
+    
+    if media.IsAnimated():
         
-        if synchronous: renderer.Render()
-        else: threading.Thread( target = renderer.THREADRender ).start()
+        image_container = ImageContainerAnimated( media, target_resolution )
         
-        return image_container
+        renderer = AnimatedFrameRenderer( image_container, media, target_resolution )
         
-    except Exception as e:
+    else:
         
-        raise Exception( 'Attempted to render the image, but received an error. It was likely either formatted slightly incorrectly or PIL could not handle it; look up PIL in the hydrus help for more info. Here is the exact error:' + os.linesep + os.linesep + HC.u( e ) )
+        image_container = ImageContainerStatic( media, target_resolution )
         
+        renderer = StaticFrameRenderer( image_container, media, target_resolution )
+        
+    
+    threading.Thread( target = renderer.THREADRender ).start()
+    
+    return image_container
     
 class FrameRenderer():
     
-    def __init__( self, image_container, path, target_resolution ):
+    def __init__( self, image_container, media, target_resolution ):
         
         self._image_container = image_container
-        self._path = path
+        self._media = media
         self._target_resolution = target_resolution
+        
+        hash = self._media.GetHash()
+        mime = self._media.GetMime()
+        
+        self._path = CC.GetFilePath( hash, mime )
         
     
 class AnimatedFrameRenderer( FrameRenderer ):
@@ -336,14 +402,14 @@ class AnimatedFrameRenderer( FrameRenderer ):
         
         frame_durations = GetFrameDurations( self._path )
         
-        cv_image = cv2.VideoCapture( self._path )
-        cv_image.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
+        cv_video = cv2.VideoCapture( self._path )
+        cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
         
         no_frames_yet = True
         
         while True:
             
-            ( retval, frame ) = cv_image.read()
+            ( retval, cv_image ) = cv_video.read()
             
             if not retval:
                 
@@ -354,16 +420,14 @@ class AnimatedFrameRenderer( FrameRenderer ):
                 
                 no_frames_yet = False
                 
-                rgb_data = cv2.cvtColor( frame, cv2.COLOR_BGR2RGBA )
+                cv_image = EfficientlyResizeCVImage( cv_image, self._target_resolution )
                 
-                pil_frame = PILImage.fromarray( rgb_data, 'RGBA' )
-                
-                pil_frame = EfficientlyResizeImage( pil_frame, self._target_resolution )
+                cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
                 
                 try: duration = frame_durations.pop( 0 )
                 except: duration = 40
                 
-                yield ( GenerateHydrusBitmapFromPILImage( pil_frame ), duration )
+                yield ( GenerateHydrusBitmapFromCVImage( cv_image ), duration )
                 
             
         
@@ -406,8 +470,6 @@ class AnimatedFrameRenderer( FrameRenderer ):
         
     
     def GetFrames( self ):
-    
-        #for ( frame, duration ) in self._GetFramesPIL(): yield ( frame, duration )
         
         try:
             
@@ -435,20 +497,35 @@ class AnimatedFrameRenderer( FrameRenderer ):
     
 class StaticFrameRenderer( FrameRenderer ):
     
-    def GetFrame( self ):
+    def _GetFrame( self ):
+        
+        try: frame = self._GetFrameCV()
+        except: frame = self._GetFramePIL()
+        
+        return frame
+        
+    
+    def _GetFrameCV( self ):
+        
+        cv_image = GenerateCVImage( self._path )
+        
+        return GenerateHydrusBitmapFromCVImage( EfficientlyResizeCVImage( cv_image, self._target_resolution ) )
+        
+    
+    def _GetFramePIL( self ):
         
         pil_image = GeneratePILImage( self._path )
         
-        return GenerateHydrusBitmapFromPILImage( EfficientlyResizeImage( pil_image, self._target_resolution ) )
+        return GenerateHydrusBitmapFromPILImage( EfficientlyResizePILImage( pil_image, self._target_resolution ) )
         
     
-    def Render( self ): self._image_container.AddFrame( self.GetFrame() )
+    def Render( self ): self._image_container.AddFrame( self._GetFrame() )
     
     def THREADRender( self ):
         
         time.sleep( 0.00001 ) # thread yield
         
-        wx.CallAfter( self._image_container.AddFrame, self.GetFrame() )
+        wx.CallAfter( self._image_container.AddFrame, self._GetFrame() )
         
         HC.pubsub.pub( 'finished_rendering', self._image_container.GetKey() )
         
@@ -457,7 +534,7 @@ class HydrusBitmap():
     
     def __init__( self, data, format, size ):
         
-        self._data = data
+        self._data = lz4.dumps( data )
         self._format = format
         self._size = size
         
@@ -466,26 +543,24 @@ class HydrusBitmap():
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.BitmapFromBuffer( width, height, self._data )
-        else: return wx.BitmapFromBufferRGBA( width, height, self._data )
+        if self._format == wx.BitmapBufferFormat_RGB: return wx.BitmapFromBuffer( width, height, lz4.loads( self._data ) )
+        else: return wx.BitmapFromBufferRGBA( width, height, lz4.loads( self._data ) )
         
     
     def GetEstimatedMemoryFootprint( self ): return len( self._data )
     
     def GetSize( self ): return self._size
     
-class RenderedImageContainer():
+class ImageContainer():
     
-    def __init__( self, hash, original_resolution, my_resolution, num_frames ):
+    def __init__( self, media, target_resolution ):
         
-        self._hash = hash
-        self._original_resolution = original_resolution
-        self._my_resolution = my_resolution
-        self._num_frames = num_frames
+        self._media = media
+        self._target_resolution = target_resolution
         
-        ( original_width, original_height ) = original_resolution
+        ( original_width, original_height ) = self._media.GetResolution()
         
-        ( my_width, my_height ) = my_resolution
+        ( my_width, my_height ) = target_resolution
         
         width_zoom = my_width / float( original_width )
         height_zoom = my_height / float( original_height )
@@ -494,10 +569,17 @@ class RenderedImageContainer():
         
         if self._zoom > 1.0: self._zoom = 1.0
         
+        self._finished_rendering = False
+        
+    
+class ImageContainerAnimated( ImageContainer ):
+    
+    def __init__( self, media, target_resolution ):
+        
+        ImageContainer.__init__( self, media, target_resolution )
+        
         self._frames = []
         self._durations = []
-        
-        self._finished_rendering = False
         
     
     def AddFrame( self, frame, duration = None ):
@@ -517,17 +599,17 @@ class RenderedImageContainer():
         else: return self._frames[ index ]
         
     
-    def GetHash( self ): return self._hash
+    def GetHash( self ): return self._media.GetHash()
     
-    def GetKey( self ): return ( self._hash, self._my_resolution )
+    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
     
-    def GetNumFrames( self ): return self._num_frames
+    def GetNumFrames( self ): return self._media.GetNumFrames()
     
     def GetNumFramesRendered( self ): return len( self._frames )
     
-    def GetResolution( self ): return self._original_resolution
+    def GetResolution( self ): return self._media.GetResolution()
     
-    def GetSize( self ): return self._my_resolution
+    def GetSize( self ): return self._target_resolution
     
     def GetTotalDuration( self ): return sum( self._durations )
     
@@ -540,9 +622,44 @@ class RenderedImageContainer():
         return len( self._frames ) > index
         
     
-    def IsAnimated( self ): return self._num_frames > 1
+    def IsAnimated( self ): return True
     
-    def IsFinishedRendering( self ): return len( self._frames ) == self._num_frames
+    def IsFinishedRendering( self ): return len( self._frames ) == self.GetNumFrames()
+    
+    def IsScaled( self ): return self._zoom != 1.0
+    
+class ImageContainerStatic( ImageContainer ):
+    
+    def __init__( self, media, target_resolution ):
+        
+        ImageContainer.__init__( self, media, target_resolution )
+        
+        self._frame = None
+        
+    
+    def AddFrame( self, frame, duration = None ): self._frame = frame
+    
+    def GetEstimatedMemoryFootprint( self ): return self._frame.GetEstimatedMemoryFootprint()
+    
+    def GetFrame( self, index = None ): return self._frame
+    
+    def GetHash( self ): return self._media.GetHash()
+    
+    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
+    
+    def GetNumFrames( self ): return self._media.GetNumFrames()
+    
+    def GetResolution( self ): return self._media.GetResolution()
+    
+    def GetSize( self ): return self._target_resolution
+    
+    def GetZoom( self ): return self._zoom
+    
+    def HasFrame( self, index = None ): return self._frame is not None
+    
+    def IsAnimated( self ): return False
+    
+    def IsFinishedRendering( self ): return len( self._frames ) == 1
     
     def IsScaled( self ): return self._zoom != 1.0
     

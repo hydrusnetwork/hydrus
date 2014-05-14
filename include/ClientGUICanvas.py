@@ -5,6 +5,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIMixins
 import collections
+import HydrusImageHandling
 import os
 import Queue
 import random
@@ -856,8 +857,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
             hash = media.GetHash()
             
-            mime = media.GetMime()
-            
             if media.GetMime() in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                 
                 ( media_width, media_height ) = media.GetResolution()
@@ -874,7 +873,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 resolution_to_request = ( int( round( zoom * media_width ) ), int( round( zoom * media_height ) ) )
                 
-                if not self._image_cache.HasImage( hash, resolution_to_request ): wx.CallLater( delay, self._image_cache.GetImage, hash, mime, resolution_to_request )
+                if not self._image_cache.HasImage( hash, resolution_to_request ): wx.CallLater( delay, self._image_cache.GetImage, media, resolution_to_request )
                 
             
         
@@ -3856,7 +3855,11 @@ class Image( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._image_container is None: self._image_container = self._image_cache.GetImage( self._media.GetHash(), self._media.GetMime(), ( my_width, my_height ) )
+                if self._image_container is None:
+                    
+                    if self._media.IsAnimated(): self._image_container = HydrusImageHandling.RenderImage( self._media, ( my_width, my_height ) )
+                    else: self._image_container = self._image_cache.GetImage( self._media, ( my_width, my_height ) )
+                    
                 else:
                     
                     ( image_width, image_height ) = self._image_container.GetSize()
@@ -3867,7 +3870,8 @@ class Image( wx.Window ):
                         
                         full_resolution = self._image_container.GetResolution()
                         
-                        self._image_container = self._image_cache.GetImage( self._media.GetHash(), self._media.GetMime(), full_resolution )
+                        if self._media.IsAnimated(): self._image_container = HydrusImageHandling.RenderImage( self._media, full_resolution )
+                        else: self._image_container = self._image_cache.GetImage( self._media, full_resolution )
                         
                         self._yet_to_draw_initial_frame = True
                         
