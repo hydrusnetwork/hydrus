@@ -12,7 +12,7 @@
 			<p>You will need to install python 2.7 and several python modules. To see what your system needs, just keep running client.pyw and see what it complains about missing.</p>
 			<p>I recently got the client working on Ubuntu 13.10, which required:</p>
 			<p><ul>
-				<li>sudo pip install beautifulsoup4 pyyaml python-potr hsaudiotag PyPDF2 flvlib pafy</li>
+				<li>sudo pip install beautifulsoup4 pyyaml python-potr hsaudiotag PyPDF2 flvlib pafy lz4</li>
 				<li>sudo apt-get install python-numpy</li>
 				<li>sudo apt-get install python-opencv</li>
 				<li>and installing a recent version of wxPython, which is difficult and best done <a href="http://wiki.wxpython.org/CheckInstall">like so</a></li>
@@ -21,7 +21,8 @@
 			<p>YMMV. Feel free to email me if you run into trouble or discover any neat tricks.</p>
 			<p>OS X 10.9 requires a similar pattern to above, though wx is simpler. I use the cocoa package <a href="http://wxpython.org/download.php#osx">straight from wxPython's site</a>. One user reports that this worked for 10.7:</p>
 			<p><ul>
-				<li>sudo pip install beautifulsoup4 pyyaml python-potr hsaudiotag PyPDF2 flvlib pafy numpy pil lxml brew tap homebrew/homebrew-science</li>
+				<li>sudo pip install beautifulsoup4 pyyaml python-potr hsaudiotag PyPDF2 flvlib pafy numpy pil lxml lz4</li>
+				<li>brew tap homebrew/homebrew-science</li>
 				<li>brew install opencv</li>
 				<li>export PYTHONPATH=/usr/local/lib/python2.7/site-packages:$PYTHONPATH</li>
 			</ul></p>
@@ -31,7 +32,7 @@
 			<p>Once you have everything set up, client.pyw and server.pyw should look for and run off the database files just like the executables.</p>
 			<p>I develop hydrus on 64-bit Win 7, so the program is much more stable and reasonable on Windows. I am developing for Linux and OS X, but I do not have as much experience with them, so I would particularly appreciate your Linux/OS X bug reports and any informed suggestions.</p>
 			<h3>my code</h3>
-			<p>I find I work very much on a conceptual, boxes-and-arrows level. Although I <i>can</i> code in any language, I find the pedantic intricacies of C and its low-level friends a pain, and not worth the performance gain. Python works with little hassle and semantically rich in a way I appreciate; one line of intelligent and word-heavy python can do the work of 20 robotic <i>t+=ord(j_temp)%2;</i>s in C, and with far less fear of memory leaks or injection attacks or buffer overflows. I like long variable names and copious whitespace. I don't do much commenting because I am working alone and it usually makes quick sense to me, even when I haven't seen something for ages. If my code looks kooky to you, I'm sorry; my nerdism is INFJ, not INTP/J.</p>
+			<p>I find I work very much on a conceptual, boxes-and-arrows level. Although I <i>can</i> code in any language, I find the pedantic intricacies of C and its low-level friends a pain to work with, and not worth the performance gain. Python works with little hassle in a semantically rich way I appreciate; one line of intelligent and word-heavy python can do the work of 20 robotic <i>t+=ord(j_temp)%2;</i>s in C, and with far less fear of memory leaks or injection attacks or buffer overflows. I like long variable names and copious whitespace. I don't do much commenting because I am working alone and it usually makes quick sense to me, even when I haven't seen something for ages. If my code looks kooky to you, I'm sorry; my nerdism is INFJ, not INTP/J.</p>
 			<p>If you want to contribute to the project, please do! You can send the changes over <a href="https://github.com/hydrusnetwork/hydrus">github</a>, or just email them to me. I'm pretty OCD about my code style and grammar though, so be warned that I'll probably rewrite everything you submit!</p>
 			<p>I'm not enough of a participant in the open source community to release my code under a specific licence, so everything is just <a href="http://sam.zoy.org/wtfpl/COPYING">WTFPL</a>. In our internet age, I see copyright and copyleft as equally impotent.</p>
 		</div>
