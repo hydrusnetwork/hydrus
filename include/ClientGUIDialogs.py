@@ -5,6 +5,7 @@ import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusTags
+import HydrusThreading
 import ClientConstants as CC
 import ClientGUICommon
 import collections
@@ -2125,7 +2126,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 self._job_key = HC.JobKey()
                 
-                threading.Thread( target = self.THREADParseImportablePaths, args = ( paths, self._job_key ) ).start()
+                HydrusThreading.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
                 
                 self.SetGaugeInfo( None, None, '' )
                 
@@ -4726,7 +4727,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string )
                 
-                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( message, url, url_string ) ).start()
+                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, message, url, url_string )
                 
                 HC.pubsub.pub( 'message', message )
                 

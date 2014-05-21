@@ -129,7 +129,7 @@ class HTTPConnectionManager():
         
         self._lock = threading.Lock()
         
-        threading.Thread( target = self.MaintainConnections, name = 'Maintain Connections' ).start()
+        threading.Thread( target = self.DAEMONMaintainConnections, name = 'Maintain Connections' ).start()
         
     
     def _DoRequest( self, location, method, path_and_query, request_headers, body, follow_redirects = True, report_hooks = [], response_to_path = False, num_redirects_permitted = 4, long_timeout = False ):
@@ -203,7 +203,7 @@ class HTTPConnectionManager():
         else: return response
         
     
-    def MaintainConnections( self ):
+    def DAEMONMaintainConnections( self ):
         
         while True:
             

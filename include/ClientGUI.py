@@ -8,6 +8,7 @@ import ClientGUIPages
 import HydrusDownloading
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusThreading
 import itertools
 import os
 import random
@@ -1418,7 +1419,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                def do_it():
+                def THREADRegenerateThumbnails():
                     
                     message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'regenerating thumbnails - creating directories' } )
                     
@@ -1455,13 +1456,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                                 hash = hash_encoded.decode( 'hex' )
                                 
-                                thumbnail = HydrusImageHandling.GenerateThumbnail( path )
+                                thumbnail = HydrusFileHandling.GenerateThumbnail( path )
                                 
                                 thumbnail_path = CC.GetExpectedThumbnailPath( hash, True )
                                 
                                 with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
                                 
-                                thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+                                thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
                                 
                                 thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
                                 
@@ -1476,7 +1477,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     message.SetInfo( 'text', 'done regenerating thumbnails' )
                     
                 
-                threading.Thread( target = do_it ).start()
+                HydrusThreading.CallToThread( THREADRegenerateThumbnails )
                 
             
         
@@ -1589,7 +1590,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 HC.pubsub.pub( 'message', message )
                 
-                threading.Thread( target = HydrusDownloading.THREADDownloadURL, args = ( message, url, url_string ) ).start()
+                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, message, url, url_string )
                 
             
         
@@ -1639,7 +1640,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UploadPending( self, service_identifier ):
         
-        threading.Thread( target = self._THREADUploadPending, args = ( service_identifier, ) ).start()
+        HydrusThreading.CallToThread( self._THREADUploadPending, service_identifier )
         
     
     def _VacuumDatabase( self ):

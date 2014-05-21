@@ -12,6 +12,7 @@ import HydrusImageHandling
 import HydrusMessageHandling
 import HydrusServer
 import HydrusTags
+import HydrusThreading
 import ClientConstants as CC
 import ClientConstantsMessages
 import os
@@ -46,7 +47,7 @@ class FileDB():
             
             with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
-            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
             
             thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
             
@@ -3110,7 +3111,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
-                thumbnail = HydrusImageHandling.GenerateThumbnail( path )
+                thumbnail = HydrusFileHandling.GenerateThumbnail( path )
                 
                 self._AddThumbnails( c, [ ( hash, thumbnail ) ] )
                 
@@ -4854,6 +4855,29 @@ class DB( ServiceDB ):
             self._AddService( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER, info )
             
             c.execute( 'CREATE TABLE booru_shares ( service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, share_key BLOB_BYTES, share TEXT_YAML, expiry INTEGER, used_monthly_data INTEGER, max_monthly_data INTEGER, ip_restriction TEXT, notes TEXT, PRIMARY KEY( service_id, share_key ) );' )
+            
+        
+        if version == 115:
+            
+            for path in CC.IterateAllFilePaths():
+                
+                try:
+                    
+                    filename = os.path.basename( path )
+                    
+                    ( hash_encoded, ext ) = filename.split( '.', 1 )
+                    
+                    hash = hash_encoded.decode( 'hex' )
+                    
+                    if ext == 'webm':
+                        
+                        thumbnail = HydrusFileHandling.GenerateThumbnail( path )
+                        
+                        with open( CC.GetExpectedThumbnailPath( hash ), 'wb' ) as f: f.write( thumbnail )
+                        
+                    
+                except: print( traceback.format_exc())
+                
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -7088,15 +7112,15 @@ class DB( ServiceDB ):
     
     def StartDaemons( self ):
         
-        HC.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
-        HC.DAEMONWorker( 'CheckExportFolders', DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
-        HC.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HC.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
-        HC.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
-        HC.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
-        HC.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
-        HC.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) )
-        HC.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
+        HydrusThreading.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
+        HydrusThreading.DAEMONWorker( 'CheckExportFolders', DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
+        HydrusThreading.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
+        HydrusThreading.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
+        HydrusThreading.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
+        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) )
+        HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
     
     def WaitUntilGoodTimeToUseDBThread( self ):
@@ -7457,7 +7481,7 @@ def DAEMONResizeThumbnails():
         
         try:
             
-            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
             
             thumbnail_resized_path = thumbnail_path + '_resized'
             

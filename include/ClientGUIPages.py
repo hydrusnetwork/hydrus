@@ -355,7 +355,7 @@ class PageImport( PageWithMedia ):
         
         self._import_controller = HydrusDownloading.ImportController( import_args_generator_factory, import_queue_generator_factory, page_key = self._page_key )
         
-        self._import_controller.StartThread()
+        self._import_controller.StartDaemon()
         
     
     def _PauseControllers( self ):

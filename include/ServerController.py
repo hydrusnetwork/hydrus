@@ -2,6 +2,7 @@ import httplib
 import HydrusConstants as HC
 import HydrusServer
 import HydrusSessions
+import HydrusThreading
 import ServerConstants as SC
 import ServerDB
 import os
@@ -180,14 +181,14 @@ class Controller( wx.App ):
     
     def StartDaemons( self ):
         
-        HC.DAEMONQueue( 'FlushRequestsMade', ServerDB.DAEMONFlushRequestsMade, 'request_made', period = 60 )
+        HydrusThreading.DAEMONQueue( 'FlushRequestsMade', ServerDB.DAEMONFlushRequestsMade, 'request_made', period = 60 )
         
-        HC.DAEMONWorker( 'CheckMonthlyData', ServerDB.DAEMONCheckMonthlyData, period = 3600 )
-        HC.DAEMONWorker( 'ClearBans', ServerDB.DAEMONClearBans, period = 3600 )
-        HC.DAEMONWorker( 'DeleteOrphans', ServerDB.DAEMONDeleteOrphans, period = 86400 )
-        HC.DAEMONWorker( 'GenerateUpdates', ServerDB.DAEMONGenerateUpdates, period = 1200 )
-        HC.DAEMONWorker( 'CheckDataUsage', ServerDB.DAEMONCheckDataUsage, period = 86400 )
-        HC.DAEMONWorker( 'UPnP', ServerDB.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 )
+        HydrusThreading.DAEMONWorker( 'CheckMonthlyData', ServerDB.DAEMONCheckMonthlyData, period = 3600 )
+        HydrusThreading.DAEMONWorker( 'ClearBans', ServerDB.DAEMONClearBans, period = 3600 )
+        HydrusThreading.DAEMONWorker( 'DeleteOrphans', ServerDB.DAEMONDeleteOrphans, period = 86400 )
+        HydrusThreading.DAEMONWorker( 'GenerateUpdates', ServerDB.DAEMONGenerateUpdates, period = 1200 )
+        HydrusThreading.DAEMONWorker( 'CheckDataUsage', ServerDB.DAEMONCheckDataUsage, period = 86400 )
+        HydrusThreading.DAEMONWorker( 'UPnP', ServerDB.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 )
         
     
     def Write( self, action, *args, **kwargs ):

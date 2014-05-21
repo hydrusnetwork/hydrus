@@ -11,7 +11,6 @@ import Queue
 import random
 import shutil
 import subprocess
-import threading
 import time
 import traceback
 import urllib
@@ -21,6 +20,7 @@ import wx.media
 if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
 
 ID_TIMER_ANIMATED = wx.NewId()
+ID_TIMER_RENDER_WAIT = wx.NewId()
 ID_TIMER_ANIMATION_BAR_UPDATE = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_CURSOR_HIDE = wx.NewId()
@@ -73,6 +73,174 @@ def GetExtraDimensions( media ):
     
     return ( extra_width, extra_height )
 
+class Animation( wx.Window ):
+    
+    def __init__( self, parent, media, initial_size, initial_position ):
+        
+        wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
+        
+        self.SetDoubleBuffered( True )
+        
+        self._media = media
+        self._animation_container = None
+        
+        self._animation_bar = None
+        
+        self._current_frame_index = 0
+        self._current_frame_drawn = False
+        self._current_frame_drawn_at = 0
+        
+        self._paused = False
+        
+        self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
+        
+        self._timer_animated = wx.Timer( self, id = ID_TIMER_ANIMATED )
+        
+        self._paused = False
+        
+        self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_SIZE, self.EventResize )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
+        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+        
+        self.EventResize( None )
+        
+        self._timer_animated.Start( 5, wx.TIMER_CONTINUOUS )
+        
+    
+    def _DrawFrame( self ):
+        
+        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        
+        current_frame = self._animation_container.GetFrame( self._current_frame_index )
+        
+        ( my_width, my_height ) = self._canvas_bmp.GetSize()
+        
+        ( frame_width, frame_height ) = current_frame.GetSize()
+        
+        x_scale = my_width / float( frame_width )
+        y_scale = my_height / float( frame_height )
+        
+        dc.SetUserScale( x_scale, y_scale )
+        
+        hydrus_bmp = current_frame.CreateWxBmp()
+        
+        dc.DrawBitmap( hydrus_bmp, 0, 0 )
+        
+        wx.CallAfter( hydrus_bmp.Destroy )
+        
+        dc.SetUserScale( 1.0, 1.0 )
+        
+        if self._animation_bar is not None: self._animation_bar.GotoFrame( self._current_frame_index )
+        
+        self._current_frame_drawn = True
+        
+        self._current_frame_drawn_at = time.clock()
+        
+    
+    def _DrawWhite( self ):
+        
+        dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+        
+        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        
+        dc.Clear()
+        
+    
+    def CurrentFrame( self ): return self._current_frame_index
+    
+    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    
+    def EventPropagateMouse( self, event ):
+        
+        screen_position = self.ClientToScreen( event.GetPosition() )
+        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+        
+        event.SetX( x )
+        event.SetY( y )
+        
+        event.ResumePropagation( 1 )
+        event.Skip()
+        
+    
+    def EventResize( self, event ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        ( current_bmp_width, current_bmp_height ) = self._canvas_bmp.GetSize()
+        
+        if my_width != current_bmp_width or my_height != current_bmp_height:
+            
+            if my_width > 0 and my_height > 0:
+                
+                if self._animation_container is None: self._animation_container = HydrusImageHandling.ImageContainerAnimated( self._media, ( my_width, my_height ) )
+                else:
+                    
+                    ( image_width, image_height ) = self._animation_container.GetSize()
+                    
+                    we_just_zoomed_in = my_width > image_width
+                    
+                    if we_just_zoomed_in and self._animation_container.IsScaled():
+                        
+                        full_resolution = self._animation_container.GetResolution()
+                        
+                        self._animation_container = HydrusImageHandling.ImageContainerAnimated( self._media, full_resolution )
+                        
+                        self._animation_container.SetPosition( self._current_frame_index )
+                        
+                        self._current_frame_drawn = False
+                        
+                    
+                
+                wx.CallAfter( self._canvas_bmp.Destroy )
+                
+                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                
+                if self._animation_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+                else: self._DrawWhite()
+                
+            
+        
+    
+    def GotoFrame( self, frame_index ):
+        
+        if frame_index != self._current_frame_index:
+            
+            self._current_frame_index = frame_index
+            
+            self._current_frame_drawn = False
+            
+            self._animation_container.SetPosition( frame_index )
+            
+        
+        self._paused = True
+        
+    
+    def Play( self ): self._paused = False
+    
+    def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
+    
+    def TIMEREventAnimated( self, event ):
+        
+        if self.IsShown():
+            
+            if self._current_frame_drawn:
+                
+                ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
+                
+                if not self._paused and ms_since_current_frame_drawn > self._animation_container.GetDuration( self._current_frame_index ):
+                
+                    num_frames = self._media.GetNumFrames()
+                    
+                    self._current_frame_index = ( self._current_frame_index + 1 ) % num_frames
+                    
+                    self._current_frame_drawn = False
+                    
+                
+            elif self._animation_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+            
+        
+    
 class AnimationBar( wx.Window ):
     
     def __init__( self, parent, media, media_window ):
@@ -88,7 +256,6 @@ class AnimationBar( wx.Window ):
         self._media = media
         self._media_window = media_window
         self._num_frames = self._media.GetNumFrames()
-        self._num_frames_rendered = 0
         self._current_frame_index = 0
         
         self._currently_in_a_drag = False
@@ -112,30 +279,9 @@ class AnimationBar( wx.Window ):
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
-        if self._media.GetMime() in HC.IMAGES:
-            
-            image_container = self._media_window.GetImageContainer()
-            
-            self._num_frames_rendered = image_container.GetNumFramesRendered()
-            
-            num_frames = image_container.GetNumFrames()
-            
-            my_rendered_width = int( my_width * ( float( self._num_frames_rendered ) / num_frames ) )
-            
-            dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
-            
-            dc.DrawRectangle( 0, 0, my_rendered_width, ANIMATED_SCANBAR_HEIGHT )
-            
-            dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
-            
-            dc.DrawRectangle( my_rendered_width, 0, my_width - my_rendered_width, ANIMATED_SCANBAR_HEIGHT )
-            
-        else:
-            
-            dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
-            
-            dc.DrawRectangle( 0, 0, my_width, ANIMATED_SCANBAR_HEIGHT )
-            
+        dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) ) )
+        
+        dc.DrawRectangle( 0, 0, my_width, ANIMATED_SCANBAR_HEIGHT )
         
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
         
@@ -207,16 +353,7 @@ class AnimationBar( wx.Window ):
         
         if self.IsShown():
             
-            if self._media.GetMime() in HC.IMAGES:
-                
-                image_container = self._media_window.GetImageContainer()
-                
-                if self._num_frames_rendered != image_container.GetNumFramesRendered():
-                    
-                    self._Draw()
-                    
-                
-            elif self._media.GetMime() == HC.APPLICATION_FLASH:
+            if self._media.GetMime() == HC.APPLICATION_FLASH:
                 
                 frame_index = self._media_window.CurrentFrame()
                 
@@ -2760,7 +2897,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     
                 
             
-            if best_media_first.qsize() > 0: ( value, media_to_rate_against ) = best_media_first.get()
+            if not best_media_first.empty(): ( value, media_to_rate_against ) = best_media_first.get()
             
         
         if media_to_rate_against is None:
@@ -3477,7 +3614,11 @@ class MediaContainer( wx.Window ):
             media_initial_size = ( x, y - ANIMATED_SCANBAR_HEIGHT )
             
         
-        if self._media.GetMime() in HC.IMAGES: self._media_window = Image( self, self._media, self._image_cache, media_initial_size, media_initial_position )
+        if self._media.GetMime() in HC.IMAGES:
+            
+            if ShouldHaveAnimationBar( self._media ): self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
+            else: self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
+            
         elif self._media.GetMime() == HC.APPLICATION_FLASH:
             
             self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
@@ -3748,7 +3889,28 @@ class EmbedWindowVideo( wx.Window ):
         subprocess.call( 'start "" "' + path + '"', shell = True )
         
     
-class Image( wx.Window ):
+class PDFButton( wx.Button ):
+    
+    def __init__( self, parent, hash, size ):
+        
+        wx.Button.__init__( self, parent, label = 'launch pdf', size = size )
+        
+        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        
+        self._hash = hash
+        
+        self.Bind( wx.EVT_BUTTON, self.EventButton )
+        
+    
+    def EventButton( self, event ):
+        
+        path = CC.GetFilePath( self._hash, HC.APPLICATION_PDF )
+        
+        # os.system( 'start ' + path )
+        subprocess.call( 'start "" "' + path + '"', shell = True )
+        
+    
+class StaticImage( wx.Window ):
     
     def __init__( self, parent, media, image_cache, initial_size, initial_position ):
         
@@ -3760,43 +3922,33 @@ class Image( wx.Window ):
         self._image_container = None
         self._image_cache = image_cache
         
-        self._animation_bar = None
-        
-        self._last_clock = time.clock()
-        self._current_frame_index = 0
-        
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
-        self._timer_animated = wx.Timer( self, id = ID_TIMER_ANIMATED )
-        
-        self._yet_to_draw_initial_frame = True
+        self._timer_render_wait = wx.Timer( self, id = ID_TIMER_RENDER_WAIT )
         
         self._paused = False
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventRenderWait, id = ID_TIMER_RENDER_WAIT )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         
         self.EventResize( None )
         
-        self._timer_animated.Start( 16, wx.TIMER_CONTINUOUS )
+        self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
         
     
     def _Draw( self ):
         
         dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    
+        dc.SetBackground( wx.Brush( wx.WHITE ) )
         
-        if self._image_container.HasFrame( self._current_frame_index ):
+        dc.Clear()
+        
+        if self._image_container.IsRendered():
             
-            if not self._image_container.IsAnimated():
-                
-                dc.SetBackground( wx.Brush( wx.WHITE ) )
-                
-                dc.Clear()
-                
-            
-            current_frame = self._image_container.GetFrame( self._current_frame_index )
+            current_frame = self._image_container.GetFrame()
             
             ( my_width, my_height ) = self._canvas_bmp.GetSize()
             
@@ -3815,21 +3967,9 @@ class Image( wx.Window ):
             
             dc.SetUserScale( 1.0, 1.0 )
             
-            if self._image_container.IsAnimated():
-                
-                if self._animation_bar is not None: self._animation_bar.GotoFrame( self._current_frame_index )
-                
-            else: self._timer_animated.Stop()
-            
-        else:
-            
-            dc.SetBackground( wx.Brush( wx.WHITE ) )
-            
-            dc.Clear()
+            self._timer_render_wait.Stop()
             
         
-    
-    def CurrentFrame( self ): return self._current_frame_index
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     
@@ -3855,27 +3995,18 @@ class Image( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._image_container is None:
-                    
-                    if self._media.IsAnimated(): self._image_container = HydrusImageHandling.RenderImage( self._media, ( my_width, my_height ) )
-                    else: self._image_container = self._image_cache.GetImage( self._media, ( my_width, my_height ) )
-                    
+                if self._image_container is None: self._image_container = self._image_cache.GetImage( self._media, ( my_width, my_height ) )
                 else:
                     
                     ( image_width, image_height ) = self._image_container.GetSize()
                     
-                    we_just_zoomed_in = my_width > image_width
+                    we_just_zoomed_in = my_width > image_width or my_height > image_height
                     
                     if we_just_zoomed_in and self._image_container.IsScaled():
                         
-                        full_resolution = self._image_container.GetResolution()
+                        full_resolution = self._media.GetResolution()
                         
-                        if self._media.IsAnimated(): self._image_container = HydrusImageHandling.RenderImage( self._media, full_resolution )
-                        else: self._image_container = self._image_cache.GetImage( self._media, full_resolution )
-                        
-                        self._yet_to_draw_initial_frame = True
-                        
-                        self._timer_animated.Start()
+                        self._image_container = self._image_cache.GetImage( self._media, full_resolution )
                         
                     
                 
@@ -3884,76 +4015,14 @@ class Image( wx.Window ):
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._Draw()
+
+                if not self._image_container.IsRendered(): self._timer_render_wait.Start()
                 
             
         
     
-    def GetImageContainer( self ): return self._image_container
-    
-    def GotoFrame( self, frame_index ):
+    def TIMEREventRenderWait( self, event ):
         
-        self._current_frame_index = frame_index
-        
-        self._Draw()
-        
-        self._timer_animated.Stop()
-        
-    
-    def Play( self ): self._timer_animated.Start()
-    
-    def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
-    
-    def TIMEREventAnimated( self, event ):
-        
-        if self.IsShown():
-            
-            now = time.clock()
-            
-            ms_since_last_clock = int( 1000.0 * ( now - self._last_clock ) )
-            
-            if self._yet_to_draw_initial_frame or ms_since_last_clock > self._image_container.GetDuration( self._current_frame_index ):
-                
-                if self._yet_to_draw_initial_frame: next_frame = 0
-                else:
-                    
-                    num_frames = self._media.GetNumFrames()
-                    
-                    if num_frames is None: next_frame = 0
-                    else: next_frame = ( self._current_frame_index + 1 ) % num_frames
-                    
-                
-                if self._image_container.HasFrame( next_frame ):
-                    
-                    self._current_frame_index = next_frame
-                    
-                    self._last_clock = now
-                    
-                    self._Draw()
-                    
-                    self._yet_to_draw_initial_frame = False
-                    
-                
-            
-        
-    
-class PDFButton( wx.Button ):
-    
-    def __init__( self, parent, hash, size ):
-        
-        wx.Button.__init__( self, parent, label = 'launch pdf', size = size )
-        
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-        
-        self._hash = hash
-        
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
-        
-    
-    def EventButton( self, event ):
-        
-        path = CC.GetFilePath( self._hash, HC.APPLICATION_PDF )
-        
-        # os.system( 'start ' + path )
-        subprocess.call( 'start "" "' + path + '"', shell = True )
+        if self.IsShown() and self._image_container.IsRendered(): self._Draw()
         
     

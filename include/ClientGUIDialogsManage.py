@@ -4731,6 +4731,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                             info[ 'port' ] = port
                             
                         
+                        if service_type in HC.REPOSITORIES: info[ 'paused' ] = False
+                        
                         if service_type == HC.LOCAL_RATING_LIKE:
                             
                             info[ 'like' ] = 'like'

@@ -1,3 +1,4 @@
+import cv2
 import hashlib
 import hsaudiotag
 import hsaudiotag.auto
@@ -16,11 +17,61 @@ import threading
 import time
 import traceback
 import wx
+import cStringIO
 
 # Mime
 
 #magic_mime = magic.Magic( HC.STATIC_DIR + os.path.sep + 'magic.mime', HC.STATIC_DIR + os.path.sep + 'magic.mime.cache' )
 
+def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+    
+    mime = GetMime( path )
+    
+    if mime in HC.IMAGES:
+        
+        pil_image = HydrusImageHandling.GeneratePILImage( path )
+        
+        HydrusImageHandling.EfficientlyThumbnailPILImage( pil_image, dimensions )
+        
+        f = cStringIO.StringIO()
+        
+        if pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ):
+            
+            pil_image.save( f, 'PNG', transparency = pil_image.info[ 'transparency' ] )
+            
+        elif pil_image.mode == 'RGBA': pil_image.save( f, 'PNG' )
+        else:
+            
+            pil_image = pil_image.convert( 'RGB' )
+            
+            pil_image.save( f, 'JPEG', quality=92 )
+            
+        
+        f.seek( 0 )
+        
+        thumbnail = f.read()
+        
+        f.close()
+        
+    else:
+        
+        cv_video = cv2.VideoCapture( path )
+        
+        cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
+        
+        ( retval, cv_image ) = cv_video.read()
+        
+        if not retval: raise Exception( 'Could not read first frame of ' + HC.u( path ) + ' to create thumbnail!' )
+        
+        cv_image = HydrusImageHandling.EfficientlyThumbnailCVImage( cv_image, dimensions )
+        
+        ( retval, thumbnail ) = cv2.imencode( '.jpg', cv_image, ( cv2.cv.CV_IMWRITE_JPEG_QUALITY, 92 ) )
+        
+        if not retval: raise Exception( 'Could not export thumbnail for ' + HC.u( path ) + '!' )
+        
+    
+    return thumbnail
+    
 def GetFileInfo( path, hash ):
     
     info = os.lstat( path )

@@ -12,7 +12,6 @@ import random
 import sqlite3
 import threading
 import time
-import threading
 import traceback
 import yaml
 import wx

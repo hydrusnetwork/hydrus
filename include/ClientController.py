@@ -9,6 +9,7 @@ import HydrusImageHandling
 import HydrusSessions
 import HydrusServer
 import HydrusTags
+import HydrusThreading
 import ClientConstants as CC
 import ClientDB
 import ClientGUI
@@ -454,10 +455,7 @@ Once it is done, the client will restart.'''
         self.Yield() # this processes the event queue immediately, so the paint event can occur
         
     
-    def StartFileQuery( self, query_key, search_context ):
-        
-        threading.Thread( target = self.THREADDoFileQuery, name = 'file query', args = ( query_key, search_context ) ).start()
-        
+    def StartFileQuery( self, query_key, search_context ): HydrusThreading.CallToThread( self.THREADDoFileQuery, query_key, search_context )
     
     def THREADDoFileQuery( self, query_key, search_context ):
         

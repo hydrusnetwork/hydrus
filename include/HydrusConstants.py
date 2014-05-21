@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 115
+SOFTWARE_VERSION = 116
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -303,7 +303,7 @@ NOISY_MIMES = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) + list( VIDEO ) )
 
 ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
-MIMES_WITH_THUMBNAILS = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
+MIMES_WITH_THUMBNAILS = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, VIDEO_WEBM )
 
 # mp3 header is complicated
 
@@ -1675,98 +1675,6 @@ class ContentUpdate():
         
     
     def ToTuple( self ): return ( self._data_type, self._action, self._row )
-    
-class DAEMON( threading.Thread ):
-    
-    def __init__( self, name, callable, period = 1200 ):
-        
-        threading.Thread.__init__( self, name = name )
-        
-        self._name = name
-        self._callable = callable
-        self._period = period
-        
-        self._event = threading.Event()
-        
-        pubsub.sub( self, 'shutdown', 'shutdown' )
-        
-    
-    def shutdown( self ): self._event.set()
-    
-class DAEMONQueue( DAEMON ):
-    
-    def __init__( self, name, callable, queue_topic, period = 10 ):
-        
-        DAEMON.__init__( self, name, callable, period )
-        
-        self._queue = Queue.Queue()
-        self._queue_topic = queue_topic
-        
-        self.start()
-        
-        pubsub.sub( self, 'put', queue_topic )
-        
-    
-    def put( self, data ): self._queue.put( data )
-    
-    def run( self ):
-        
-        time.sleep( 3 )
-        
-        while True:
-            
-            while self._queue.qsize() == 0:
-                
-                if shutdown: return
-                
-                self._event.wait( self._period )
-                
-                self._event.clear()
-                
-            
-            items = []
-            
-            while self._queue.qsize() > 0: items.append( self._queue.get() )
-            
-            try: self._callable( items )
-            except Exception as e: ShowException( e )
-            
-        
-    
-class DAEMONWorker( DAEMON ):
-    
-    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3 ):
-        
-        DAEMON.__init__( self, name, callable, period )
-        
-        self._topics = topics
-        self._init_wait = init_wait
-        
-        self.start()
-        
-        for topic in topics: pubsub.sub( self, 'set', topic )
-        
-    
-    def run( self ):
-        
-        self._event.wait( self._init_wait )
-        
-        while True:
-            
-            if shutdown: return
-            
-            try: self._callable()
-            except Exception as e: ShowException( e )
-            
-            if shutdown: return
-            
-            self._event.wait( self._period )
-            
-            self._event.clear()
-            
-        
-    
-    def set( self, *args, **kwargs ): self._event.set()
     
 class JobDatabase():
     

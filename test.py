@@ -152,8 +152,9 @@ if __name__ == '__main__':
     
     app = App()
     
-    raw_input()
-    
     HC.shutdown = True
     
     HC.pubsub.WXpubimmediate( 'shutdown' )
+    
+    raw_input()
+    

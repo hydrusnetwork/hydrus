@@ -20,7 +20,6 @@ import sqlite3
 import sys
 import threading
 import time
-import threading
 import traceback
 import urllib
 import yaml
@@ -650,7 +649,7 @@ def GetThumbnailPath( hash, full_size = True ):
             
             thumbnail_dimensions = HC.options[ 'thumbnail_dimensions' ]
             
-            thumbnail_resized = HydrusImageHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
             
             with open( path, 'wb' ) as f: f.write( thumbnail_resized )
             
@@ -2009,8 +2008,6 @@ class MediaResult():
     
     def GetTimestamp( self ): return self._tuple[4]
     
-    def IsAnimated( self ): return self.GetNumFrames() > 0
-    
     def ProcessContentUpdate( self, service_identifier, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
@@ -2113,7 +2110,7 @@ class RenderedImageCache():
         elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
         else:
             
-            image_container = HydrusImageHandling.RenderImage( media, target_resolution )
+            image_container = HydrusImageHandling.ImageContainerStatic( media, target_resolution )
             
             self._keys_being_rendered[ key ] = image_container
             
@@ -2430,7 +2427,7 @@ class ThumbnailCache():
             
             path = HC.STATIC_DIR + os.path.sep + name + '.png'
             
-            thumbnail = HydrusImageHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
+            thumbnail = HydrusFileHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
             
             temp_path = HC.GetTempPath()
             
@@ -2446,7 +2443,7 @@ class ThumbnailCache():
         
         mime = media.GetDisplayMedia().GetMime()
         
-        if mime in HC.IMAGES:
+        if mime in HC.MIMES_WITH_THUMBNAILS:
             
             hash = media.GetDisplayMedia().GetHash()
             

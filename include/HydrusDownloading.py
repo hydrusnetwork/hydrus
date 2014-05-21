@@ -4,6 +4,7 @@ import httplib
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
+import HydrusThreading
 import json
 import lxml
 import os
@@ -1484,7 +1485,7 @@ class ImportController():
                                 
                                 args_generator = self._import_args_generator_factory( self._import_job_key, item )
                                 
-                                threading.Thread( target = args_generator, name = 'Generate Import Args' ).start()
+                                HydrusThreading.CallToThread( args_generator )
                                 
                             else:
                                 
@@ -1518,7 +1519,8 @@ class ImportController():
                             
                             queue_generator = self._import_queue_generator_factory( self._import_queue_job_key, item )
                             
-                            threading.Thread( target = queue_generator, name = 'Generate Import Items' ).start()
+                            # make it a daemon, not a thread job, as it has a loop!
+                            threading.Thread( target = queue_generator ).start()
                             
                         
                     
@@ -1535,10 +1537,7 @@ class ImportController():
             
         
     
-    def StartThread( self ):
-        
-        threading.Thread( target = self.MainLoop ).start()
-        
+    def StartDaemon( self ): threading.Thread( target = self.MainLoop ).start()
     
 class ImportQueueGenerator():
     

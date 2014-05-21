@@ -4,6 +4,7 @@ import HydrusDownloading
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusThreading
 import ClientConstants as CC
 import ClientConstantsMessages
 import ClientGUICommon
@@ -1119,7 +1120,7 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         self._actually_dumping = True
                         
-                        threading.Thread( target = self._THREADDoDump, args = ( hash, post_field_info, headers, body ) ).start()
+                        HydrusThreading.CallToThread( self._THREADDoDump, hash, post_field_info, headers, body )
                         
                     
                 except Exception as e:
