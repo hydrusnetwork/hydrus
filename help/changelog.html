@@ -8,6 +8,23 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 117</h3></li>
+				<ul>
+					<li>fixed the gif rendering error that was causing threading lockup</li>
+					<li>fixed a bug in the animated drawing code that was causing +5ms duration on every frame</li>
+					<li>improved frame duration checking code</li>
+					<li>lowered quality of animated frame resizing to improve effective framerate for previews</li>
+					<li>fixed a problem with pixiv session management</li>
+					<li>fixed a problem with pixiv tag subscriptions</li>
+					<li>neatened an error with pixiv manga download failures</li>
+					<li>corrected reviewservices hyperlinkctrl initialisation</li>
+					<li>improved the wording for the 'port already bound' error message on client startup</li>
+					<li>improved hydrus network session error handling</li>
+					<li>cleaned up some old gui messaging code</li>
+					<li>some general image/video code nomenclature cleanup</li>
+					<li>changed http connection maintenance daemon to be snappier on client shutdown</li>
+					<li>subscription minimum check period is now 1 time unit, not 0!</li>
+				</ul>
 				<li><h3>version 116</h3></li>
 				<ul>
 					<li>gifs now render their frames as needed, rather than building a giant memory-hogging cache of all of them</li>
