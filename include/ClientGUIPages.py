@@ -501,7 +501,7 @@ class PageImportGallery( PageImport ):
                 
                 def downloaders_factory( tag ):
                     
-                    return ( HydrusDownloading.DownloaderPixiv( 'tag', tag ), )
+                    return ( HydrusDownloading.DownloaderPixiv( 'tags', tag ), )
                     
                 
             

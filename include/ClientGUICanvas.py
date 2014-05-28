@@ -6,6 +6,7 @@ import ClientGUIDialogsManage
 import ClientGUIMixins
 import collections
 import HydrusImageHandling
+import HydrusVideoHandling
 import os
 import Queue
 import random
@@ -19,7 +20,7 @@ import wx.media
 
 if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
 
-ID_TIMER_ANIMATED = wx.NewId()
+ID_TIMER_VIDEO = wx.NewId()
 ID_TIMER_RENDER_WAIT = wx.NewId()
 ID_TIMER_ANIMATION_BAR_UPDATE = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
@@ -62,7 +63,9 @@ def ShouldHaveAnimationBar( media ):
     
     is_animated_flash = media.GetMime() == HC.APPLICATION_FLASH and media.HasDuration()
     
-    return is_animated_gif or is_animated_flash
+    is_webm = media.GetMime() == HC.VIDEO_WEBM
+    
+    return is_animated_gif or is_animated_flash or is_webm
     
 def GetExtraDimensions( media ):
     
@@ -75,6 +78,8 @@ def GetExtraDimensions( media ):
 
 class Animation( wx.Window ):
     
+    UPDATE_MS = 8
+    
     def __init__( self, parent, media, initial_size, initial_position ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
@@ -82,37 +87,37 @@ class Animation( wx.Window ):
         self.SetDoubleBuffered( True )
         
         self._media = media
-        self._animation_container = None
+        self._video_container = None
         
         self._animation_bar = None
         
         self._current_frame_index = 0
         self._current_frame_drawn = False
-        self._current_frame_drawn_at = 0
+        self._current_frame_drawn_at = 0.0
         
         self._paused = False
         
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
-        self._timer_animated = wx.Timer( self, id = ID_TIMER_ANIMATED )
+        self._timer_video = wx.Timer( self, id = ID_TIMER_VIDEO )
         
         self._paused = False
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventVideo, id = ID_TIMER_VIDEO )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         
         self.EventResize( None )
         
-        self._timer_animated.Start( 5, wx.TIMER_CONTINUOUS )
+        self._timer_video.Start( self.UPDATE_MS, wx.TIMER_CONTINUOUS )
         
     
     def _DrawFrame( self ):
         
         dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
         
-        current_frame = self._animation_container.GetFrame( self._current_frame_index )
+        current_frame = self._video_container.GetFrame( self._current_frame_index )
         
         ( my_width, my_height ) = self._canvas_bmp.GetSize()
         
@@ -135,7 +140,9 @@ class Animation( wx.Window ):
         
         self._current_frame_drawn = True
         
-        self._current_frame_drawn_at = time.clock()
+        self._current_frame_drawn_at = max( time.clock(), self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 ) )
+        
+        #self._current_frame_drawn_at = time.clock()
         
     
     def _DrawWhite( self ):
@@ -173,20 +180,20 @@ class Animation( wx.Window ):
             
             if my_width > 0 and my_height > 0:
                 
-                if self._animation_container is None: self._animation_container = HydrusImageHandling.ImageContainerAnimated( self._media, ( my_width, my_height ) )
+                if self._video_container is None: self._video_container = HydrusVideoHandling.VideoContainer( self._media, ( my_width, my_height ) )
                 else:
                     
-                    ( image_width, image_height ) = self._animation_container.GetSize()
+                    ( image_width, image_height ) = self._video_container.GetSize()
                     
                     we_just_zoomed_in = my_width > image_width
                     
-                    if we_just_zoomed_in and self._animation_container.IsScaled():
+                    if we_just_zoomed_in and self._video_container.IsScaled():
                         
-                        full_resolution = self._animation_container.GetResolution()
+                        full_resolution = self._video_container.GetResolution()
                         
-                        self._animation_container = HydrusImageHandling.ImageContainerAnimated( self._media, full_resolution )
+                        self._video_container = HydrusVideoHandling.VideoContainer( self._media, full_resolution )
                         
-                        self._animation_container.SetPosition( self._current_frame_index )
+                        self._video_container.SetPosition( self._current_frame_index )
                         
                         self._current_frame_drawn = False
                         
@@ -196,7 +203,7 @@ class Animation( wx.Window ):
                 
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
-                if self._animation_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+                if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
                 else: self._DrawWhite()
                 
             
@@ -210,7 +217,7 @@ class Animation( wx.Window ):
             
             self._current_frame_drawn = False
             
-            self._animation_container.SetPosition( frame_index )
+            self._video_container.SetPosition( self._current_frame_index )
             
         
         self._paused = True
@@ -220,7 +227,7 @@ class Animation( wx.Window ):
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
     
-    def TIMEREventAnimated( self, event ):
+    def TIMEREventVideo( self, event ):
         
         if self.IsShown():
             
@@ -228,16 +235,21 @@ class Animation( wx.Window ):
                 
                 ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
                 
-                if not self._paused and ms_since_current_frame_drawn > self._animation_container.GetDuration( self._current_frame_index ):
+                time_to_update = ms_since_current_frame_drawn + float( self.UPDATE_MS ) / 2 > self._video_container.GetDuration( self._current_frame_index )
                 
+                if not self._paused and time_to_update:
+                    
                     num_frames = self._media.GetNumFrames()
                     
                     self._current_frame_index = ( self._current_frame_index + 1 ) % num_frames
                     
                     self._current_frame_drawn = False
                     
+                    self._video_container.SetPosition( self._current_frame_index )
+                    
                 
-            elif self._animation_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+            
+            if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             
         
     
@@ -3619,6 +3631,7 @@ class MediaContainer( wx.Window ):
             if ShouldHaveAnimationBar( self._media ): self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
             else: self._media_window = self._media_window = StaticImage( self, self._media, self._image_cache, media_initial_size, media_initial_position )
             
+        elif self._media.GetMime() == HC.VIDEO_WEBM: self._media_window = Animation( self, self._media, media_initial_size, media_initial_position )
         elif self._media.GetMime() == HC.APPLICATION_FLASH:
             
             self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
@@ -3651,7 +3664,7 @@ class MediaContainer( wx.Window ):
             
             self._animation_bar = AnimationBar( self, self._media, self._media_window )
             
-            if self._media.GetMime() == HC.IMAGE_GIF: self._media_window.SetAnimationBar( self._animation_bar )
+            if self._media.GetMime() != HC.APPLICATION_FLASH: self._media_window.SetAnimationBar( self._animation_bar )
             
         
     
@@ -3948,22 +3961,22 @@ class StaticImage( wx.Window ):
         
         if self._image_container.IsRendered():
             
-            current_frame = self._image_container.GetFrame()
+            hydrus_bitmap = self._image_container.GetHydrusBitmap()
             
             ( my_width, my_height ) = self._canvas_bmp.GetSize()
             
-            ( frame_width, frame_height ) = current_frame.GetSize()
+            ( frame_width, frame_height ) = hydrus_bitmap.GetSize()
             
             x_scale = my_width / float( frame_width )
             y_scale = my_height / float( frame_height )
             
             dc.SetUserScale( x_scale, y_scale )
             
-            hydrus_bmp = current_frame.CreateWxBmp()
+            wx_bitmap = hydrus_bitmap.CreateWxBmp()
             
-            dc.DrawBitmap( hydrus_bmp, 0, 0 )
+            dc.DrawBitmap( wx_bitmap, 0, 0 )
             
-            wx.CallAfter( hydrus_bmp.Destroy )
+            wx.CallAfter( wx_bitmap.Destroy )
             
             dc.SetUserScale( 1.0, 1.0 )
             

@@ -58,10 +58,13 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         
         wx.StaticText.__init__( self, parent, label = self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
         
-        HC.pubsub.sub( self, 'Tick', 'animated_tick' )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
+        
+        animated_event_timer = wx.Timer( self, ID_TIMER_ANIMATED )
+        animated_event_timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
-    def Tick( self ):
+    def TIMEREventAnimated( self ):
         
         update = False
         

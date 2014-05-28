@@ -4880,6 +4880,11 @@ class DB( ServiceDB ):
                 
             
         
+        if version == 116:
+            
+            c.execute( 'DELETE FROM service_info WHERE info_type == ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
+            
+        
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True

@@ -2276,7 +2276,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     elif service_type == HC.LOCAL_BOORU:
                         
-                        self._link = wx.HyperlinkCtrl( self._info_panel, id = -1 )
+                        self._link = wx.HyperlinkCtrl( self._info_panel, label = 'link', url = 'link', id = -1 )
                         
                         self._num_shares = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                         

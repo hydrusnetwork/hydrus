@@ -5,7 +5,6 @@ import httplib
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetworking
-import HydrusImageHandling
 import HydrusSessions
 import HydrusServer
 import HydrusTags
@@ -283,11 +282,6 @@ The database will be locked while the backup occurs, which may lock up your gui 
             wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
             wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
             
-            self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_ANIMATED_EVENT_TIMER )
-            
-            self._animated_event_timer = wx.Timer( self, ID_ANIMATED_EVENT_TIMER )
-            self._animated_event_timer.Start( 1000, wx.TIMER_CONTINUOUS )
-            
             self.SetSplashText( 'starting daemons' )
             
             if HC.is_first_start: self._gui.DoFirstStart()
@@ -368,7 +362,11 @@ The database will be locked while the backup occurs, which may lock up your gui 
                         connection.connect()
                         connection.close()
                         
-                        text = 'Something was already bound to port ' + HC.u( port )
+                        text = 'The client\'s local server could not start because something was already bound to port ' + HC.u( port ) + '.'
+                        text += os.linesep * 2
+                        text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
+                        text += os.linesep * 2
+                        text += 'You can change the port this client tries to host its local server on in file->options.'
                         
                         wx.CallLater( 1, HC.ShowText, text )
                         
@@ -506,14 +504,9 @@ Once it is done, the client will restart.'''
         except Exception as e: HC.ShowException( e )
         
     
-    def TIMEREventAnimated( self, event ):
+    def TIMEREventMaintenance( self, event ):
         
         del gc.garbage[:]
-        
-        HC.pubsub.pub( 'animated_tick' )
-        
-    
-    def TIMEREventMaintenance( self, event ):
         
         if self.CurrentlyIdle(): self.MaintainDB()
         

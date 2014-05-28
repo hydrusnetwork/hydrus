@@ -209,22 +209,29 @@ class HTTPConnectionManager():
             
             if HC.shutdown: break
             
-            with self._lock:
+            last_checked = 0
+            
+            if HC.GetNow() - last_checked > 30:
                 
-                connections_copy = dict( self._connections )
-                
-                for ( location, connection ) in connections_copy.items():
+                with self._lock:
                     
-                    with connection.lock:
+                    connections_copy = dict( self._connections )
+                    
+                    for ( location, connection ) in connections_copy.items():
                         
-                        if connection.IsStale():
+                        with connection.lock:
                             
-                            del self._connections[ location ]
+                            if connection.IsStale():
+                                
+                                del self._connections[ location ]
+                            
                         
                     
+                
+                last_checked = HC.GetNow()
                 
             
-            time.sleep( 30 )
+            time.sleep( 1 )
             
         
     

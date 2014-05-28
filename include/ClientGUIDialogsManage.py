@@ -5621,7 +5621,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 self._query_type.Append( 'artist', 'artist' )
                 self._query_type.Append( 'tags', 'tags' )
                 
-                self._frequency = wx.SpinCtrl( self._query_panel )
+                self._frequency = wx.SpinCtrl( self._query_panel, min = 1, max = 9999 )
                 
                 self._frequency_type = wx.Choice( self._query_panel )
                 

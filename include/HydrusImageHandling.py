@@ -48,7 +48,7 @@ def EfficientlyResizeCVImage( cv_image, ( target_x, target_y ) ):
     # this seems to slow things down a lot, at least for cv!
     #if im_x > 2 * target_x and im_y > 2 * target_y: result = cv2.resize( cv_image, ( 2 * target_x, 2 * target_y ), interpolation = cv2.INTER_NEAREST )
     
-    return cv2.resize( result, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
+    return cv2.resize( result, ( target_x, target_y ), interpolation = cv2.INTER_LINEAR )
     
 def EfficientlyResizePILImage( pil_image, ( target_x, target_y ) ):
     
@@ -224,8 +224,8 @@ def GeneratePerceptualHash( path ):
     
 def GeneratePILImage( path ): return PILImage.open( path )
 
-def GetFrameDurations( path ):
-
+def GetGIFFrameDurations( path ):
+    
     pil_image_for_duration = GeneratePILImage( path )
     
     frame_durations = []
@@ -278,7 +278,7 @@ def GetImageProperties( path ):
     
     if num_frames > 1:
         
-        durations = GetFrameDurations( path )
+        durations = GetGIFFrameDurations( path )
         
         duration = sum( durations )
         
@@ -334,20 +334,6 @@ def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
     target_y = int( im_y / ratio_to_use )
     
     return ( target_x, target_y )
-    
-class FrameRenderer():
-    
-    def __init__( self, image_container, media, target_resolution ):
-        
-        self._image_container = image_container
-        self._media = media
-        self._target_resolution = target_resolution
-        
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        self._path = CC.GetFilePath( hash, mime )
-        
     
 ''' # old pil code
 
@@ -419,173 +405,6 @@ def _GetFramesPIL( self ):
 '''
 
 # the cv code was initially written by @fluffy_cub
-class AnimatedFrameRenderer( FrameRenderer ):
-    
-    def __init__( self, image_container, media, target_resolution ):
-        
-        FrameRenderer.__init__( self, image_container, media, target_resolution )
-        
-        self._lock = threading.Lock()
-        
-        self._cv_video = cv2.VideoCapture( self._path )
-        
-        self._cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
-        
-        self._current_index = 0
-        self._last_index_rendered = -1
-        self._render_to_index = -1
-        
-    
-    def _GetCurrentFrame( self ):
-        
-        ( retval, cv_image ) = self._cv_video.read()
-        
-        self._last_index_rendered = self._current_index
-        
-        num_frames = self._media.GetNumFrames()
-        
-        if not retval:
-            
-            raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HC.u( self._current_index ) + '.' )
-            
-        
-        self._current_index = ( self._current_index + 1 ) % num_frames
-        
-        if self._current_index == 0 and self._last_index_rendered != 0:
-            
-            if self._media.GetMime() == HC.IMAGE_GIF: self._RewindGIF()
-                
-            else: self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
-            
-        
-        return cv_image
-        
-    
-    def _RenderCurrentFrame( self ):
-        
-        cv_image = self._GetCurrentFrame()
-        
-        cv_image = EfficientlyResizeCVImage( cv_image, self._target_resolution )
-        
-        cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
-        
-        return GenerateHydrusBitmapFromCVImage( cv_image )
-        
-    
-    def _RenderFrames( self ):
-        
-        no_frames_yet = True
-        
-        while True:
-            
-            try:
-                
-                yield self._RenderCurrentFrame()
-                
-                no_frames_yet = False
-                
-            except HydrusExceptions.CantRenderWithCVException:
-                
-                if no_frames_yet: raise
-                else: break
-                
-            
-        
-    
-    def _RewindGIF( self ):
-        
-        self._cv_video.release()
-        self._cv_video.open( self._path )
-        
-        self._current_index = 0
-        
-    
-    def SetRenderToPosition( self, index ):
-        
-        with self._lock:
-            
-            if self._render_to_index != index:
-                
-                self._render_to_index = index
-                
-                HydrusThreading.CallToThread( self.THREADDoWork )
-                
-            
-        
-    
-    def SetPosition( self, index ):
-        
-        with self._lock:
-            
-            if self._media.GetMime() == HC.IMAGE_GIF:
-                
-                if index == self._current_index: return
-                elif index < self._current_index: self._RewindGIF()
-                
-                while self._current_index < index: self._GetCurrentFrame()
-                
-            else:
-                
-                self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, index )
-                
-            
-            self._render_to_index = index
-            
-        
-    
-    def THREADDoWork( self ):
-        
-        while True:
-            
-            time.sleep( 0.00001 ) # thread yield
-            
-            with self._lock:
-                
-                if self._last_index_rendered != self._render_to_index:
-                    
-                    index = self._current_index
-                    
-                    frame = self._RenderCurrentFrame()
-                    
-                    wx.CallAfter( self._image_container.AddFrame, index, frame )
-                    
-                else: break
-            
-        
-    
-class StaticFrameRenderer( FrameRenderer ):
-    
-    def _GetFrame( self ):
-        
-        try:
-            
-            cv_image = GenerateCVImage( self._path )
-            
-            resized_cv_image = EfficientlyResizeCVImage( cv_image, self._target_resolution )
-            
-            return GenerateHydrusBitmapFromCVImage( resized_cv_image )
-            
-        except:
-            
-            pil_image = GeneratePILImage( self._path )
-            
-            resized_pil_image = EfficientlyResizePILImage( pil_image, self._target_resolution )
-            
-            return GenerateHydrusBitmapFromPILImage( resized_pil_image )
-            
-        
-    
-    def Render( self ): self._image_container.SetFrame( self._GetFrame() )
-    
-    def THREADRender( self ):
-        
-        time.sleep( 0.00001 ) # thread yield
-        
-        wx.CallAfter( self._image_container.SetFrame, self._GetFrame() )
-        
-        HC.pubsub.pub( 'finished_rendering', self._image_container.GetKey() )
-        
-    
 class HydrusBitmap():
     
     def __init__( self, data, format, size ):
@@ -607,7 +426,7 @@ class HydrusBitmap():
     
     def GetSize( self ): return self._size
     
-class ImageContainer():
+class RasterContainer():
     
     def __init__( self, media, target_resolution = None ):
         
@@ -632,109 +451,52 @@ class ImageContainer():
         
         if self._zoom > 1.0: self._zoom = 1.0
         
-        self._finished_rendering = False
-        
     
-class ImageContainerAnimated( ImageContainer ):
-    
-    NUM_FRAMES_BACKWARDS = 30
-    NUM_FRAMES_FORWARDS = 15
-    
-    def __init__( self, media, target_resolution = None, init_position = 0 ):
-        
-        ImageContainer.__init__( self, media, target_resolution )
-        
-        self._frames = {}
-        self._last_index_asked_for = 0
-        self._durations = GetFrameDurations( self._path )
-        
-        self._renderer = AnimatedFrameRenderer( self, self._media, self._target_resolution )
-        
-        self.SetPosition( init_position )
-        
-    
-    def _MaintainBuffer( self ):
-        
-        num_frames = self.GetNumFrames()
-        
-        if num_frames < self.NUM_FRAMES_BACKWARDS + 1 + self.NUM_FRAMES_FORWARDS: render_to_index = num_frames - 1
-        else: render_to_index = self._last_index_asked_for + self.NUM_FRAMES_FORWARDS % num_frames
-        
-        self._renderer.SetRenderToPosition( render_to_index )
-        
-        indices_i_want = { ( self._last_index_asked_for + i ) % num_frames for i in range( -self.NUM_FRAMES_BACKWARDS, self.NUM_FRAMES_FORWARDS + 1 ) }
-        
-        current_indices = set( self._frames.keys() )
-        
-        deletees = current_indices.difference( indices_i_want )
-        
-        for i in deletees: del self._frames[ i ]
-        
-    
-    def AddFrame( self, index, frame ): self._frames[ index ] = frame
-    
-    def GetDuration( self, index ): return self._durations[ index ]
-    
-    def GetFrame( self, index ):
-        
-        frame = self._frames[ index ]
-        
-        self._last_index_asked_for = index
-        
-        self._MaintainBuffer()
-        
-        return frame
-        
-    
-    def GetHash( self ): return self._media.GetHash()
-    
-    def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
-    
-    def GetNumFrames( self ): return self._media.GetNumFrames()
-    
-    def GetResolution( self ): return self._media.GetResolution()
-    
-    def GetSize( self ): return self._target_resolution
-    
-    def GetTotalDuration( self ): return sum( self._durations )
-    
-    def GetZoom( self ): return self._zoom
-    
-    def HasFrame( self, index ): return index in self._frames
-    
-    def IsScaled( self ): return self._zoom != 1.0
-    
-    def SetPosition( self, index ):
-        
-        num_frames = self.GetNumFrames()
-        
-        self._last_index_asked_for = index
-        
-        pre_index = max( 0, index - self.NUM_FRAMES_BACKWARDS ) % num_frames
-        
-        self._renderer.SetPosition( pre_index )
-        
-        self._MaintainBuffer()
-        
-    
-class ImageContainerStatic( ImageContainer ):
+class ImageContainer( RasterContainer ):
     
     def __init__( self, media, target_resolution = None ):
         
-        ImageContainer.__init__( self, media, target_resolution )
+        RasterContainer.__init__( self, media, target_resolution )
         
-        self._frame = None
+        self._hydrus_bitmap = None
         
-        renderer = StaticFrameRenderer( self, self._media, self._target_resolution )
-        
-        HydrusThreading.CallToThread( renderer.THREADRender )
+        HydrusThreading.CallToThread( self.THREADRender )
         
     
-    def GetEstimatedMemoryFootprint( self ): return self._frame.GetEstimatedMemoryFootprint()
+    def _GetHydrusBitmap( self ):
+        
+        try:
+            
+            cv_image = GenerateCVImage( self._path )
+            
+            resized_cv_image = EfficientlyResizeCVImage( cv_image, self._target_resolution )
+            
+            return GenerateHydrusBitmapFromCVImage( resized_cv_image )
+            
+        except:
+            
+            pil_image = GeneratePILImage( self._path )
+            
+            resized_pil_image = EfficientlyResizePILImage( pil_image, self._target_resolution )
+            
+            return GenerateHydrusBitmapFromPILImage( resized_pil_image )
+            
+        
     
-    def GetFrame( self ): return self._frame
+    def THREADRender( self ):
+        
+        time.sleep( 0.00001 ) # thread yield
+        
+        wx.CallAfter( self.SetHydrusBitmap, self._GetHydrusBitmap() )
+        
+        HC.pubsub.pub( 'finished_rendering', self.GetKey() )
+        
+    
+    def GetEstimatedMemoryFootprint( self ): return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
     
     def GetHash( self ): return self._media.GetHash()
+    
+    def GetHydrusBitmap( self ): return self._hydrus_bitmap
     
     def GetKey( self ): return ( self._media.GetHash(), self._target_resolution )
     
@@ -746,9 +508,9 @@ class ImageContainerStatic( ImageContainer ):
     
     def GetZoom( self ): return self._zoom
     
-    def IsRendered( self ): return self._frame is not None
+    def IsRendered( self ): return self._hydrus_bitmap is not None
     
     def IsScaled( self ): return self._zoom != 1.0
     
-    def SetFrame( self, frame ): self._frame = frame
+    def SetHydrusBitmap( self, hydrus_bitmap ): self._hydrus_bitmap = hydrus_bitmap
     

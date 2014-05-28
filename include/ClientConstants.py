@@ -2110,7 +2110,7 @@ class RenderedImageCache():
         elif key in self._keys_being_rendered: return self._keys_being_rendered[ key ]
         else:
             
-            image_container = HydrusImageHandling.ImageContainerStatic( media, target_resolution )
+            image_container = HydrusImageHandling.ImageContainer( media, target_resolution )
             
             self._keys_being_rendered[ key ] = image_container
             

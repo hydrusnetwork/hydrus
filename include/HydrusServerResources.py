@@ -11,7 +11,6 @@ import HydrusFileHandling
 import HydrusFlashHandling
 import HydrusNATPunch
 import HydrusImageHandling
-import HydrusVideoHandling
 import os
 import random
 import ServerConstants as SC
@@ -594,7 +593,7 @@ class HydrusResourceCommand( Resource ):
         elif failure.type == HydrusExceptions.ForbiddenException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NotFoundException: response_context = HC.ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
         elif failure.type == HydrusExceptions.NetworkVersionException: response_context = HC.ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.SessionException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( 'Session not found!' ) )
+        elif failure.type == HydrusExceptions.SessionException: response_context = HC.ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
         else:
             
             print( failure.getTraceback() )

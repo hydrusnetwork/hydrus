@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib
 import wx
 import yaml
 from twisted.internet.threads import deferToThread
@@ -202,11 +203,13 @@ class HydrusSessionManagerServer():
         
         with self._lock:
             
-            if session_key in self._sessions[ service_identifier ]:
+            services_sessions = self._sessions[ service_identifier ]
+            
+            if session_key in services_sessions:
                 
-                ( account, expiry ) = self._sessions[ service_identifier ][ session_key ]
+                ( account, expiry ) = services_sessions[ session_key ]
                 
-                if expiry is not None and now > expiry: del self._sessions[ service_identifier ][ session_key ]
+                if expiry is not None and now > expiry: del services_sessions[ session_key ]
                 else: return account
                 
             

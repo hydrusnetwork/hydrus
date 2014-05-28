@@ -853,7 +853,7 @@ class DownloaderPixiv( Downloader ):
             
             gallery_url = 'http://www.pixiv.net/member_illust.php?id=' + HC.u( artist_id )
             
-        elif self._query_type == 'tag':
+        elif self._query_type == 'tags':
             
             tag = self._query
             
@@ -884,6 +884,8 @@ class DownloaderPixiv( Downloader ):
         
     
     def _ParseImagePage( self, html, page_url ):
+        
+        if 'member_illust.php?mode=manga' in html: raise Exception( page_url + ' was manga, not a single image, so could not be downloaded.' )
         
         soup = bs4.BeautifulSoup( html )
         

@@ -134,10 +134,15 @@ class DAEMONCallToThread( DAEMON ):
                 self._event.clear()
                 
             
-            ( callable, args, kwargs ) = self._queue.get()
-            
-            try: callable( *args, **kwargs )
+            try:
+                
+                ( callable, args, kwargs ) = self._queue.get()
+                
+                callable( *args, **kwargs )
+                
             except Exception as e: HC.ShowException( e )
+            
+            time.sleep( 0.00001 )
             
         
     
