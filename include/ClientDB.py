@@ -4771,7 +4771,7 @@ class DB( ServiceDB ):
         
         if resize_thumbs:
             
-            thumbnail_paths = [ path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) ]
+            thumbnail_paths = ( path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
             
             for path in thumbnail_paths: os.remove( path )
             
@@ -4883,6 +4883,31 @@ class DB( ServiceDB ):
         if version == 116:
             
             c.execute( 'DELETE FROM service_info WHERE info_type == ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
+            
+        
+        if version == 117:
+            
+            i = 0
+            
+            for path in CC.IterateAllThumbnailPaths():
+                
+                if not path.endswith( '_resized' ):
+                    
+                    filename = os.path.basename( path )
+                    
+                    hash = filename.decode( 'hex' )
+                    
+                    phash = HydrusImageHandling.GeneratePerceptualHash( path )
+                    
+                    hash_id = self._GetHashId( c, hash )
+                    
+                    c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                    
+                    i += 1
+                    
+                    if i % 100 == 0: HC.app.SetSplashText( 'reprocessing thumbs: ' + HC.ConvertIntToPrettyString( i ) )
+                    
+                
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

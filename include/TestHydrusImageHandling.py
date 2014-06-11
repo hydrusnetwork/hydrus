@@ -12,5 +12,5 @@ class TestImageHandling( unittest.TestCase ):
         
         phash = HydrusImageHandling.GeneratePerceptualHash( HC.STATIC_DIR + os.path.sep + 'hydrus.png' )
         
-        self.assertEqual( phash, 'a2088220080a2808'.decode( 'hex' ) )
+        self.assertEqual( phash, '\xb0\x08\x83\xb2\x08\x0b8\x08' )
         

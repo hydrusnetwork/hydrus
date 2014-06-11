@@ -1413,7 +1413,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _RegenerateThumbnails( self ):
         
-        message = 'This will rebuild all your thumbnails from the original files. Only do this if you experience thumbnail errors. If you have a large database, it will take some time. A popup message will appear when it is done.'
+        message = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             

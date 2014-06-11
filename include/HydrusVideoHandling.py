@@ -122,8 +122,7 @@ def GetMatroskaOrWebMProperties( path ):
     
 class VideoContainer( HydrusImageHandling.RasterContainer ):
     
-    NUM_FRAMES_BACKWARDS = 30
-    NUM_FRAMES_FORWARDS = 15
+    BUFFER_SIZE = 1024 * 1024 * 96
     
     def __init__( self, media, target_resolution = None, init_position = 0 ):
         
@@ -133,6 +132,13 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         self._last_index_asked_for = -1
         self._minimum_frame_asked_for = 0
         self._maximum_frame_asked_for = 0
+        
+        ( x, y ) = self._target_resolution
+        
+        frame_buffer_length = self.BUFFER_SIZE / ( x * y * 3 )
+        
+        self._num_frames_backwards = frame_buffer_length * 2 / 3
+        self._num_frames_forwards = frame_buffer_length / 3
         
         if self._media.GetMime() == HC.IMAGE_GIF: self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
         else: self._frame_duration = GetVideoFrameDuration( self._path )
@@ -208,11 +214,11 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         
         num_frames = self.GetNumFrames()
         
-        if num_frames > self.NUM_FRAMES_BACKWARDS + 1 + self.NUM_FRAMES_FORWARDS:
+        if num_frames > self._num_frames_backwards + 1 + self._num_frames_forwards:
             
-            new_minimum_frame_to_ask_for = max( 0, index - self.NUM_FRAMES_BACKWARDS ) % num_frames
+            new_minimum_frame_to_ask_for = max( 0, index - self._num_frames_backwards ) % num_frames
             
-            new_maximum_frame_to_ask_for = ( index + self.NUM_FRAMES_FORWARDS ) % num_frames
+            new_maximum_frame_to_ask_for = ( index + self._num_frames_forwards ) % num_frames
             
             if index == self._last_index_asked_for: return
             elif index < self._last_index_asked_for:
@@ -413,8 +419,4 @@ class VideoRenderer():
                 
             
         
-    
-        
-        
-    
     

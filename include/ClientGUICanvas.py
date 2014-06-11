@@ -78,7 +78,7 @@ def GetExtraDimensions( media ):
 
 class Animation( wx.Window ):
     
-    UPDATE_MS = 8
+    UPDATE_MS = 16
     
     def __init__( self, parent, media, initial_size, initial_position ):
         
@@ -141,8 +141,6 @@ class Animation( wx.Window ):
         self._current_frame_drawn = True
         
         self._current_frame_drawn_at = max( time.clock(), self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 ) )
-        
-        #self._current_frame_drawn_at = time.clock()
         
     
     def _DrawWhite( self ):
@@ -3675,7 +3673,7 @@ class MediaContainer( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        if self._media.GetMime() in HC.IMAGES:
+        if self._media.GetMime() in HC.IMAGES or self._media.GetMime() in HC.VIDEO:
             
             screen_position = self.ClientToScreen( event.GetPosition() )
             ( x, y ) = self.GetParent().ScreenToClient( screen_position )

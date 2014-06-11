@@ -7,6 +7,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusThreading
 import lz4
+import numpy
 import os
 from PIL import Image as PILImage
 import shutil
@@ -77,10 +78,10 @@ def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
     
     ( im_x, im_y ) = pil_image.size
     
-    if pil_image.mode == 'RGB': # low quality resize screws up alpha channel!
-        
-        if im_x > 2 * target_x or im_y > 2 * target_y: pil_image.thumbnail( ( 2 * target_x, 2 * target_y ), PILImage.NEAREST )
-        
+    #if pil_image.mode == 'RGB': # low quality resize screws up alpha channel!
+    #    
+    #    if im_x > 2 * target_x or im_y > 2 * target_y: pil_image.thumbnail( ( 2 * target_x, 2 * target_y ), PILImage.NEAREST )
+    #    
     
     pil_image.thumbnail( ( target_x, target_y ), PILImage.ANTIALIAS )
     
@@ -133,6 +134,102 @@ def GenerateHydrusBitmapFromPILImage( pil_image ):
         
     
 def GeneratePerceptualHash( path ):
+    
+    cv_image = cv2.imread( path, cv2.CV_LOAD_IMAGE_UNCHANGED )
+    
+    ( x, y, depth ) = cv_image.shape
+    
+    if depth == 4:
+        
+        # create a white greyscale canvas
+        
+        white = numpy.ones( ( x, y ) ) * 255
+        
+        # create weight and transform cv_image to greyscale
+        
+        cv_alpha = cv_image[ :, :, 3 ]
+        
+        cv_image_bgr = cv_image[ :, :, :3 ]
+        
+        cv_image_gray = cv2.cvtColor( cv_image_bgr, cv2.COLOR_BGR2GRAY )
+        
+        cv_image_result = numpy.empty( ( x, y ), numpy.float32 )
+        
+        # paste greyscale onto the white
+        
+        # can't think of a better way to do this!
+        # cv2.addWeighted only takes a scalar for weight!
+        for i in range( x ):
+            
+            for j in range( y ):
+                
+                opacity = float( cv_alpha[ i, j ] ) / 255.0
+                
+                grey_part = cv_image_gray[ i, j ] * opacity
+                white_part = 255 * ( 1 - opacity )
+                
+                pixel = grey_part + white_part
+                
+                cv_image_result[ i, j ] = pixel
+                
+            
+        
+        cv_image_gray = cv_image_result
+        
+        # use 255 for white weight, alpha for image weight
+        
+    else:
+        
+        cv_image_gray = cv2.cvtColor( cv_image, cv2.COLOR_BGR2GRAY )
+        
+    
+    cv_image_tiny = cv2.resize( cv_image_gray, ( 32, 32 ), interpolation = cv2.INTER_AREA )
+    
+    # convert to float and calc dct
+    
+    cv_image_tiny_float = numpy.float32( cv_image_tiny )
+    
+    dct = cv2.dct( cv_image_tiny_float )
+    
+    # take top left 8x8 of dct
+    
+    dct_88 = dct[:8,:8]
+    
+    # get mean of dct, excluding [0,0]
+    
+    mask = numpy.ones( ( 8, 8 ) )
+    
+    mask[0,0] = 0
+    
+    average = numpy.average( dct_88, weights = mask )
+    
+    # make a monochromatic, 64-bit hash of whether the entry is above or below the mean
+    
+    bytes = []
+    
+    for i in range( 8 ):
+        
+        byte = 0
+        
+        for j in range( 8 ):
+            
+            byte <<= 1 # shift byte one left
+            
+            value = dct_88[i,j]
+            
+            if value > average: byte |= 1
+            
+        
+        bytes.append( byte )
+        
+    
+    answer = str( bytearray( bytes ) )
+    
+    # we good
+    
+    return answer
+    
+def old_GeneratePerceptualHash( path ):
     
     # I think what I should be doing here is going cv2.imread( path, flags = cv2.CV_LOAD_IMAGE_GRAYSCALE )
     # then efficiently resize
