@@ -122,10 +122,10 @@ The database will be locked while the backup occurs, which may lock up your gui 
     
     def EventPubSub( self, event ):
         
-        HC.busy_doing_pubsub = True
+        HC.currently_doing_pubsub = True
         
         try: HC.pubsub.WXProcessQueueItem()
-        finally: HC.busy_doing_pubsub = False
+        finally: HC.currently_doing_pubsub = False
         
     
     def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
@@ -331,7 +331,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
     
     def Read( self, action, *args, **kwargs ):
         
-        self._last_idle_time = HC.GetNow()
+        if action == 'media_results': self._last_idle_time = HC.GetNow()
         
         return self._Read( action, *args, **kwargs )
         
@@ -506,7 +506,7 @@ Once it is done, the client will restart.'''
     
     def TIMEREventMaintenance( self, event ):
         
-        del gc.garbage[:]
+        gc.collect()
         
         if self.CurrentlyIdle(): self.MaintainDB()
         
@@ -518,12 +518,7 @@ Once it is done, the client will restart.'''
         while True:
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
-            elif HC.pubsub.NotBusy() and not HC.busy_doing_pubsub:
-                
-                if not self.CurrentlyIdle(): time.sleep( 1 )
-                
-                return
-                
+            elif HC.pubsub.NoJobsQueued() and not HC.currently_doing_pubsub: return
             else: time.sleep( 0.0001 )
             
         

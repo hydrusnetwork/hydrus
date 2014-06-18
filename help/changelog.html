@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 119</h3></li>
+				<ul>
+					<li>fixed an overzealous error in v118 update code</li>
+					<li>new direct ffmpeg video decoder for webm</li>
+					<li>new system takes advantage of multi-core processors, increasing render speed</li>
+					<li>improved animated frame timings</li>
+					<li>fixed a number of gifs that were causing the "None has no 'shape' attribute" error</li>
+					<li>sped up memory and subprocess cleanup after video playback</li>
+					<li>added some new ffmpeg instructions to the running from source help page</li>
+					<li>added client and server startup and shutdown statements to the log</li>
+					<li>improved some idle time logic, which should improve maintenance timings</li>
+					<li>fixed a critical idle timing bug that was adding 1s to many actions, including file queries!</li>
+					<li>fixed a pubsub testing bug that was preventing daemons from quickly closing after a unit test</li>
+				</ul>
 				<li><h3>version 118</h3></li>
 				<ul>
 					<li>improved animated frame buffer size calculation, saving memory and improving smaller animation performance</li>

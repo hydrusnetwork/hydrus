@@ -29,6 +29,7 @@
 			<p>For Windows, you can do the same thing with easy_install and pip and module installers. Since it doesn't natively come with Python, you'll probably need to go through a bigger list. You'll find <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">this</a> page very helpful. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>Some people have encountered problems with wxPython 3.0, so I use 2.9.x in my official releases. Again, YMMV.</p>
 			<p>You'll probably want to install Pillow (pip should do it for Linux/OS X, easy_install for Windows) instead of PIL, but go back to PIL if Pillow doesn't work.</p>
+			<p>If you want to import videos, you will need to put a static <a href="http://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. You can either copy the exe from one of those releases, or download it right from the FFMPEG site. I don't include the FFMPEG exes in the source release like I do upnpc just because they are so big.</a>
 			<p>Once you have everything set up, client.pyw and server.pyw should look for and run off the database files just like the executables.</p>
 			<p>I develop hydrus on 64-bit Win 7, so the program is much more stable and reasonable on Windows. I am developing for Linux and OS X, but I do not have as much experience with them, so I would particularly appreciate your Linux/OS X bug reports and any informed suggestions.</p>
 			<h3>my code</h3>

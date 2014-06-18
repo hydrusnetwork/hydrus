@@ -60,7 +60,7 @@ class HydrusPubSub():
         return callables
         
     
-    def NotBusy( self ):
+    def NoJobsQueued( self ):
         
         with self._lock:
             
@@ -131,7 +131,7 @@ class HydrusPubSub():
     def WXpubimmediate( self, topic, *args, **kwargs ):
         
         with self._lock:
-        
+            
             callables = self._GetCallables( topic )
             
             for callable in callables: callable( *args, **kwargs )

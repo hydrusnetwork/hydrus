@@ -4897,13 +4897,17 @@ class DB( ServiceDB ):
                     
                     hash = filename.decode( 'hex' )
                     
-                    phash = HydrusImageHandling.GeneratePerceptualHash( path )
-                    
-                    hash_id = self._GetHashId( c, hash )
-                    
-                    c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
-                    
-                    i += 1
+                    try:
+                        
+                        phash = HydrusImageHandling.GeneratePerceptualHash( path )
+                        
+                        hash_id = self._GetHashId( c, hash )
+                        
+                        c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                        
+                        i += 1
+                        
+                    except: print( 'When updating to v118, ' + path + '\'s phash could not be recalculated.' )
                     
                     if i % 100 == 0: HC.app.SetSplashText( 'reprocessing thumbs: ' + HC.ConvertIntToPrettyString( i ) )
                     

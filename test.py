@@ -63,6 +63,7 @@ class App( wx.App ):
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
+        
         self._managers[ 'undo' ] = CC.UndoManager()
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         
@@ -150,11 +151,14 @@ if __name__ == '__main__':
         
     else: only_run = None
     
+    old_pubsub = HC.pubsub
+    
     app = App()
     
     HC.shutdown = True
     
     HC.pubsub.WXpubimmediate( 'shutdown' )
     
-    raw_input()
+    old_pubsub.WXpubimmediate( 'shutdown' )
     
+    raw_input()

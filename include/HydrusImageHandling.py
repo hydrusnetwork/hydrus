@@ -523,7 +523,7 @@ class HydrusBitmap():
     
     def GetSize( self ): return self._size
     
-class RasterContainer():
+class RasterContainer( object ):
     
     def __init__( self, media, target_resolution = None ):
         

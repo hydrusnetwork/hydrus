@@ -1135,7 +1135,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
@@ -1263,7 +1263,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
             
             return ( status, media_result )
             
@@ -1303,7 +1303,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
             
             return ( status, media_result )
             

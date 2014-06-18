@@ -5,6 +5,7 @@ import HydrusTags
 import os
 import random
 import threading
+import weakref
 
 tinest_gif = '\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
 
@@ -60,14 +61,58 @@ class FakePubSub():
         
         self._pubsubs = collections.defaultdict( list )
         
+        self._callables = []
+        
         self._lock = threading.Lock()
+        
+        self._topics_to_objects = {}
+        self._topics_to_method_names = {}
+        
+    
+    def _GetCallables( self, topic ):
+        
+        callables = []
+        
+        if topic in self._topics_to_objects:
+            
+            try:
+                
+                objects = self._topics_to_objects[ topic ]
+                
+                for object in objects:
+                    
+                    method_names = self._topics_to_method_names[ topic ]
+                    
+                    for method_name in method_names:
+                        
+                        if hasattr( object, method_name ):
+                            
+                            try:
+                                
+                                callable = getattr( object, method_name )
+                                
+                                callables.append( callable )
+                                
+                            except wx.PyDeadObjectError: pass
+                            except TypeError as e:
+                                
+                                if '_wxPyDeadObject' not in str( e ): raise
+                                
+                            
+                        
+                    
+                
+            except: pass
+            
+        
+        return callables
         
     
     def ClearPubSubs( self ): self._pubsubs = collections.defaultdict( list )
     
     def GetPubSubs( self, topic ): return self._pubsubs[ topic ]
     
-    def NotBusy( self ): return True
+    def NoJobsQueued( self ): return True
     
     def WXProcessQueueItem( self ): pass
     
@@ -79,13 +124,22 @@ class FakePubSub():
             
         
     
-    def sub( self, object, method_name, topic ): pass
+    def sub( self, object, method_name, topic ):
+        
+        if topic not in self._topics_to_objects: self._topics_to_objects[ topic ] = weakref.WeakSet()
+        if topic not in self._topics_to_method_names: self._topics_to_method_names[ topic ] = set()
+        
+        self._topics_to_objects[ topic ].add( object )
+        self._topics_to_method_names[ topic ].add( method_name )
+        
     
     def WXpubimmediate( self, topic, *args, **kwargs ):
         
         with self._lock:
             
-            self._pubsubs[ topic ].append( ( args, kwargs ) )
+            callables = self._GetCallables( topic )
+            
+            for callable in callables: callable( *args, **kwargs )
             
         
     

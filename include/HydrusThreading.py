@@ -140,6 +140,8 @@ class DAEMONCallToThread( DAEMON ):
                 
                 callable( *args, **kwargs )
                 
+                del callable
+                
             except Exception as e: HC.ShowException( e )
             
             time.sleep( 0.00001 )

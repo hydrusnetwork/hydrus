@@ -17,6 +17,7 @@ from include import HydrusConstants as HC
 
 import os
 import sys
+import time
 from include import ServerController
 import threading
 from twisted.internet import reactor
@@ -31,13 +32,19 @@ with open( HC.LOGS_DIR + os.path.sep + 'server.log', 'a' ) as f:
     
     try:
         
+        print( 'hydrus server started at ' + time.ctime() )
+        
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         app = ServerController.Controller()
         
         app.MainLoop()
         
+        print( 'hydrus server shut down at ' + time.ctime() )
+        
     except:
+        
+        print( 'hydrus server failed at ' + time.ctime() )
         
         import traceback
         print( traceback.format_exc() )

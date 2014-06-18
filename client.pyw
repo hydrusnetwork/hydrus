@@ -17,6 +17,7 @@ from include import HydrusConstants as HC
 
 import os
 import sys
+import time
 
 from include import ClientController
 import threading
@@ -32,13 +33,19 @@ with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
     
     try:
         
+        print( 'hydrus client started at ' + time.ctime() )
+        
         threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
         
         app = ClientController.Controller()
         
         app.MainLoop()
         
+        print( 'hydrus client shut down at ' + time.ctime() )
+        
     except:
+        
+        print( 'hydrus client failed at ' + time.ctime() )
         
         import traceback
         print( traceback.format_exc() )

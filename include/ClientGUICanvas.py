@@ -5,6 +5,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIMixins
 import collections
+import gc
 import HydrusImageHandling
 import HydrusVideoHandling
 import os
@@ -78,8 +79,6 @@ def GetExtraDimensions( media ):
 
 class Animation( wx.Window ):
     
-    UPDATE_MS = 16
-    
     def __init__( self, parent, media, initial_size, initial_position ):
         
         wx.Window.__init__( self, parent, size = initial_size, pos = initial_position )
@@ -110,7 +109,12 @@ class Animation( wx.Window ):
         
         self.EventResize( None )
         
-        self._timer_video.Start( self.UPDATE_MS, wx.TIMER_CONTINUOUS )
+        self._timer_video.Start( 16, wx.TIMER_ONE_SHOT )
+        
+    
+    def __del__( self ):
+        
+        wx.CallLater( 500, gc.collect )
         
     
     def _DrawFrame( self ):
@@ -140,7 +144,11 @@ class Animation( wx.Window ):
         
         self._current_frame_drawn = True
         
-        self._current_frame_drawn_at = max( time.clock(), self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 ) )
+        now_in_ms = time.clock()
+        frame_was_supposed_to_be_at = self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 )
+        
+        if 1000.0 * ( now_in_ms - frame_was_supposed_to_be_at ) > 16.7: self._current_frame_drawn_at = now_in_ms
+        else: self._current_frame_drawn_at = frame_was_supposed_to_be_at
         
     
     def _DrawWhite( self ):
@@ -227,13 +235,15 @@ class Animation( wx.Window ):
     
     def TIMEREventVideo( self, event ):
         
+        MIN_TIMER_TIME = 4
+        
         if self.IsShown():
             
             if self._current_frame_drawn:
                 
                 ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
                 
-                time_to_update = ms_since_current_frame_drawn + float( self.UPDATE_MS ) / 2 > self._video_container.GetDuration( self._current_frame_index )
+                time_to_update = ms_since_current_frame_drawn + MIN_TIMER_TIME / 2 > self._video_container.GetDuration( self._current_frame_index )
                 
                 if not self._paused and time_to_update:
                     
@@ -248,6 +258,12 @@ class Animation( wx.Window ):
                 
             
             if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+            
+            ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
+            
+            ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
+            
+            self._timer_video.Start( ms_until_next_frame, wx.TIMER_ONE_SHOT )
             
         
     

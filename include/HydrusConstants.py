@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 118
+SOFTWARE_VERSION = 119
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -84,7 +84,7 @@ subs_changed = False
 
 http = None
 
-busy_doing_pubsub = False
+currently_doing_pubsub = False
 
 # Enums
 
