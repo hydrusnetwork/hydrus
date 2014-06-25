@@ -8,6 +8,21 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 120</h3></li>
+				<ul>
+					<li>improved quality of downsized animation rendering</li>
+					<li>sped up downsized animation rendering in this case</li>
+					<li>neatened animation code</li>
+					<li>fixed a mid-animation resize parameter bug</li>
+					<li>I think I fixed an animation scan bug that was sometimes giving the wrong frames</li>
+					<li>added thumbnails for all video formats</li>
+					<li>fixed an off-by-one framecount bug for certain videos, and retroactively fixed counts for existing videos</li>
+					<li>fixed a couple harmless width/height numpy.shape switcharounds</li>
+					<li>cleaned up some file parsing code</li>
+					<li>added a pixiv unit test</li>
+					<li>fixed a bug when servers were returning unusual relative redirect urls (gelbooru)</li>
+					<li>semi-fixed a bug when servers were returning unescaped redirect urls (gelbooru)</li>
+				</ul>
 				<li><h3>version 119</h3></li>
 				<ul>
 					<li>fixed an overzealous error in v118 update code</li>
