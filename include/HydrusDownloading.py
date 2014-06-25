@@ -857,9 +857,7 @@ class DownloaderPixiv( Downloader ):
             
             tag = self._query
             
-            tag = urllib.quote( tag.encode( 'utf-8' ) )
-            
-            gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag ) + '&s_mode=s_tag_full&order=date_d'
+            gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( tag.encode( 'utf-8' ) ) + '&s_mode=s_tag_full&order=date_d'
             
         
         return gallery_url + '&p=' + HC.u( self._num_pages_done + 1 )

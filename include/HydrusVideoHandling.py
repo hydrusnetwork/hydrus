@@ -40,6 +40,20 @@ def GetCVVideoProperties( path ):
     
     return ( ( width, height ), duration, num_frames )
     
+def GetFFMPEGVideoProperties( path ):
+    
+    info = Hydrusffmpeg_parse_infos( path )
+    
+    ( w, h ) = info[ 'video_size' ]
+    
+    duration_in_s = info[ 'duration' ]
+    
+    duration = int( duration_in_s * 1000 )
+    
+    num_frames = info[ 'video_nframes' ]
+    
+    return ( ( w, h ), duration, num_frames )
+    
 def GetFLVProperties( path ):
     
     with open( path, 'rb' ) as f:
@@ -127,144 +141,7 @@ def GetMatroskaOrWebMProperties( path ):
     
     return ( ( width, height ), duration, num_frames )
     
-# This is cribbed from moviepy's FFMPEG_VideoReader
-class HydrusFFMPEG_VideoReader( object ):
-
-    def __init__(self, media, print_infos=False, bufsize = None, pix_fmt="rgb24"):
-        
-        self._media = media
-        
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        self._path = CC.GetFilePath( hash, mime )
-        
-        self.size = self._media.GetResolution()
-        self.duration = float( self._media.GetDuration() ) / 1000.0
-        self.nframes = self._media.GetNumFrames()
-        
-        self.fps = float( self.nframes ) / self.duration
-        
-        self.pix_fmt = pix_fmt
-        
-        if pix_fmt == 'rgba': self.depth = 4
-        else: self.depth = 3
-        
-        if bufsize is None:
-            
-            ( x, y ) = self.size
-            bufsize = self.depth * x * y * 5
-            
-
-        self.process = None
-        
-        self.bufsize = bufsize
-        
-        self.initialize()
-        
-    
-    def __del__( self ):
-        
-        self.close()
-        
-    
-    def close(self):
-        
-        if self.process is not None:
-            
-            self.process.terminate()
-            
-            self.process.stdout.close()
-            self.process.stderr.close()
-            
-            self.process = None
-            
-        
-    
-    def initialize( self, starttime=0 ):
-        """Opens the file, creates the pipe. """
-        
-        self.close()
-        
-        if starttime != 0:
-            
-            offset = min( 1, starttime )
-            
-            i_arg = [ '-ss', "%.03f" % ( starttime - offset ), '-i', '"' + self._path + '"' ]
-            
-        else: i_arg = [ '-i', '"' + self._path + '"' ]
-        
-        cmd = ([FFMPEG_PATH]+ i_arg +
-                ['-loglevel', 'error',
-                '-f', 'image2pipe',
-                "-pix_fmt", self.pix_fmt,
-                '-vcodec', 'rawvideo', '-'])
-        
-        self.process = subprocess.Popen( ' '.join( cmd ), shell = True, bufsize= self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
-        
-        self.pos = int( round( self.fps * starttime ) )
-        
-
-    def skip_frames(self, n=1):
-        
-        """Reads and throws away n frames """
-        
-        ( w, h ) = self.size
-        
-        for i in range( n ):
-            
-            self.process.stdout.read( self.depth * w * h )
-            self.process.stdout.flush()
-            
-        
-        self.pos += n
-        
-
-    def read_frame( self ):
-        
-        ( w, h ) = self.size
-        
-        nbytes = self.depth * w * h
-        
-        s = self.process.stdout.read(nbytes)
-        
-        self.pos += 1
-        
-        if len(s) != nbytes:
-            
-            print( "Warning: in file %s, "%(self._path)+
-                   "%d bytes wanted but %d bytes read,"%(nbytes, len(s))+
-                   "at frame %d/%d, at time %.02f/%.02f sec. "%(
-                    self.pos,self.nframes,
-                    1.0*self.pos/self.fps,
-                    self.duration)+
-                   "Using the last valid frame instead.")
-            result = self.lastread
-            
-            self.close()
-            
-        else:
-            
-            result = numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
-            
-            self.lastread = result
-            
-        
-        return result
-        
-    
-    def set_position( self, pos ):
-        
-        if ( pos < self.pos ) or ( pos > self.pos + 60 ):
-            
-            starttime = float( pos ) / self.fps
-            
-            self.initialize( starttime )
-            
-        else: self.skip_frames( pos - self.pos )
-        
-    
-# same thing; this is cribbed from moviepy
+# this is cribbed from moviepy
 def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     """Get file infos using ffmpeg.
 
@@ -306,9 +183,19 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     result = dict()
     
     # get duration (in seconds)
+    #   Duration: 00:00:02.46, start: 0.033000, bitrate: 1069 kb/s
     try:
         keyword = ('frame=' if is_GIF else 'Duration: ')
         line = [l for l in lines if keyword in l][0]
+        
+        if 'start:' in line:
+            
+            m = re.search( '(start\\: )' + '[0-9]\\.[0-9]*', line )
+            
+            start_offset = float( line[ m.start() + 7 : m.end() ] )
+            
+        else: start_offset = 0
+        
         match = re.search("[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
         hms = map(float, line[match.start()+1:match.end()].split(':'))
         
@@ -318,6 +205,8 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
             result['duration'] = 60*hms[0]+hms[1]
         elif len(hms) ==3:
             result['duration'] = 3600*hms[0]+60*hms[1]+hms[2]
+        
+        result[ 'duration' ] -= start_offset
         
     except:
         raise IOError("Error reading duration in file %s,"%(filename)+
@@ -345,9 +234,13 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         except:
             match = re.search("( [0-9]*.| )[0-9]* fps", line)
             result['video_fps'] = float(line[match.start():match.end()].split(' ')[1])
-
-        result['video_nframes'] = int(result['duration']*result['video_fps'])+1
-
+        
+        num_frames = result['duration'] * result['video_fps']
+        
+        if num_frames != int( num_frames ): num_frames += 1 # rounding up
+        
+        result['video_nframes'] = int( num_frames )
+        
         result['video_duration'] = result['duration']
         # We could have also recomputed the duration from the number
         # of frames, as follows:
@@ -378,8 +271,8 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         
         self._frames = {}
         self._last_index_asked_for = -1
-        self._minimum_frame_asked_for = 0
-        self._maximum_frame_asked_for = 0
+        self._buffer_start_index = -1
+        self._buffer_end_index = -1
         
         ( x, y ) = self._target_resolution
         
@@ -391,9 +284,21 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         if self._media.GetMime() == HC.IMAGE_GIF: self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
         else: self._frame_duration = GetVideoFrameDuration( self._path )
         
-        self._renderer = VideoRendererMoviePy( self, self._media, self._target_resolution )
+        self._render_lock = threading.Lock()
         
-        num_frames = self.GetNumFrames()
+        hash = self._media.GetHash()
+        mime = self._media.GetMime()
+        
+        path = CC.GetFilePath( hash, mime )
+        
+        duration = self._media.GetDuration()
+        num_frames = self._media.GetNumFrames()
+        
+        self._ffmpeg_reader = VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
+        
+        self._next_render_index = 0
+        self._render_to_index = -1
+        self._rendered_first_frame = False
         
         self.SetPosition( init_position )
         
@@ -404,17 +309,79 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         
         for index in self._frames.keys():
             
-            if self._minimum_frame_asked_for < self._maximum_frame_asked_for:
+            if self._buffer_start_index < self._buffer_end_index:
                 
-                if index < self._minimum_frame_asked_for or self._maximum_frame_asked_for < index: deletees.append( index )
+                if index < self._buffer_start_index or self._buffer_end_index < index: deletees.append( index )
                 
             else:
                 
-                if self._maximum_frame_asked_for < index and index < self._minimum_frame_asked_for: deletees.append( index )
+                if self._buffer_end_index < index and index < self._buffer_start_index: deletees.append( index )
                 
             
         
         for i in deletees: del self._frames[ i ]
+        
+    
+    def _RENDERERSetRenderToPosition( self, index ):
+        
+        with self._render_lock:
+            
+            if self._render_to_index != index:
+                
+                self._render_to_index = index
+                
+                HydrusThreading.CallToThread( self.THREADRender )
+                
+            
+        
+    
+    def _RENDERERSetPosition( self, index ):
+        
+        with self._render_lock:
+            
+            if index == self._next_render_index: return
+            else:
+                
+                self._ffmpeg_reader.set_position( index )
+                
+                self._next_render_index = index
+                self._render_to_index = index
+                
+            
+        
+    
+    def THREADRender( self ):
+        
+        num_frames = self._media.GetNumFrames()
+        
+        while True:
+            
+            time.sleep( 0.00001 ) # thread yield
+            
+            with self._render_lock:
+                
+                if not self._rendered_first_frame or self._next_render_index != ( self._render_to_index + 1 ) % num_frames:
+                    
+                    self._rendered_first_frame = True
+                    
+                    frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
+                    
+                    try: numpy_image = self._ffmpeg_reader.read_frame()
+                    except Exception as e:
+                        
+                        HC.ShowException( e )
+                        
+                        break
+                        
+                    finally: self._next_render_index = ( self._next_render_index + 1 ) % num_frames
+                    
+                    frame = HydrusImageHandling.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+                    
+                    wx.CallAfter( self.AddFrame, frame_index, frame )
+                    
+                else: break
+                
+            
         
     
     def AddFrame( self, index, frame ): self._frames[ index ] = frame
@@ -464,61 +431,205 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         
         if num_frames > self._num_frames_backwards + 1 + self._num_frames_forwards:
             
-            new_minimum_frame_to_ask_for = max( 0, index - self._num_frames_backwards ) % num_frames
+            new_buffer_start_index = max( 0, index - self._num_frames_backwards ) % num_frames
             
-            new_maximum_frame_to_ask_for = ( index + self._num_frames_forwards ) % num_frames
+            new_buffer_end_index = ( index + self._num_frames_forwards ) % num_frames
             
             if index == self._last_index_asked_for: return
             elif index < self._last_index_asked_for:
                 
-                if index < self._minimum_frame_asked_for:
+                if index < self._buffer_start_index:
                     
-                    self._minimum_frame_asked_for = new_minimum_frame_to_ask_for
+                    self._buffer_start_index = new_buffer_start_index
                     
-                    self._renderer.SetPosition( self._minimum_frame_asked_for )
+                    self._RENDERERSetPosition( self._buffer_start_index )
                     
-                    self._maximum_frame_asked_for = new_maximum_frame_to_ask_for
+                    self._buffer_end_index = new_buffer_end_index
                     
-                    self._renderer.SetRenderToPosition( self._maximum_frame_asked_for )
+                    self._RENDERERSetRenderToPosition( self._buffer_end_index )
                     
                 
             else: # index > self._last_index_asked_for
                 
-                currently_no_wraparound = self._minimum_frame_asked_for < self._maximum_frame_asked_for
+                currently_no_wraparound = self._buffer_start_index < self._buffer_end_index
                 
-                self._minimum_frame_asked_for = new_minimum_frame_to_ask_for
+                self._buffer_start_index = new_buffer_start_index
                 
                 if currently_no_wraparound:
                     
-                    if index > self._maximum_frame_asked_for:
+                    if index > self._buffer_end_index:
                         
-                        self._renderer.SetPosition( self._minimum_frame_asked_for )
+                        self._RENDERERSetPosition( self._buffer_start_index )
                         
                     
                 
-                self._maximum_frame_asked_for = new_maximum_frame_to_ask_for
+                self._buffer_end_index = new_buffer_end_index
                 
-                self._renderer.SetRenderToPosition( self._maximum_frame_asked_for )
+                self._RENDERERSetRenderToPosition( self._buffer_end_index )
                 
             
         else:
             
-            if self._maximum_frame_asked_for == 0:
+            if self._buffer_end_index == -1:
                 
-                self._minimum_frame_asked_for = 0
+                self._buffer_start_index = 0
                 
-                self._renderer.SetPosition( 0 )
+                self._RENDERERSetPosition( 0 )
                 
-                self._maximum_frame_asked_for = num_frames - 1
+                self._buffer_end_index = num_frames - 1
                 
-                self._renderer.SetRenderToPosition( self._maximum_frame_asked_for )
+                self._RENDERERSetRenderToPosition( self._buffer_end_index )
                 
             
         
         self._MaintainBuffer()
         
 
-class VideoRendererCV():
+# This was built from moviepy's FFMPEG_VideoReader
+class VideoRendererFFMPEG( object ):
+
+    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24" ):
+        
+        self._path = path
+        self._mime = mime
+        self._duration = float( duration ) / 1000.0
+        self._num_frames = num_frames
+        self._target_resolution = target_resolution
+        
+        self.fps = float( self._num_frames ) / self._duration
+        
+        if self.fps == 0: self.fps = 24
+        
+        self.pix_fmt = pix_fmt
+        
+        if pix_fmt == 'rgba': self.depth = 4
+        else: self.depth = 3
+        
+        ( x, y ) = self._target_resolution
+        bufsize = self.depth * x * y
+        
+        self.process = None
+        
+        self.bufsize = bufsize
+        
+        self.initialize()
+        
+    
+    def __del__( self ):
+        
+        self.close()
+        
+    
+    def close(self):
+        
+        if self.process is not None:
+            
+            self.process.terminate()
+            
+            self.process.stdout.close()
+            self.process.stderr.close()
+            
+            self.process = None
+            
+        
+    
+    def initialize( self, start_index = 0 ):
+        
+        self.close()
+        
+        if self._mime == HC.IMAGE_GIF:
+            
+            ss = 0
+            self.pos = 0
+            skip_frames = start_index
+            
+        else:
+            
+            ss = float( start_index ) / self.fps
+            self.pos = start_index
+            skip_frames = 0
+            
+        
+        ( w, h ) = self._target_resolution
+        
+        cmd = ( [ FFMPEG_PATH,
+            '-ss', "%.03f" % ss,
+            '-i', '"' + self._path + '"',
+            '-loglevel', 'quiet',
+            '-f', 'image2pipe',
+            "-pix_fmt", self.pix_fmt,
+            "-s", str( w ) + 'x' + str( h ),
+            '-vcodec', 'rawvideo', '-' ] )
+        
+        self.process = subprocess.Popen( ' '.join( cmd ), shell = True, bufsize= self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
+        
+        self.skip_frames( skip_frames )
+        
+    
+    def skip_frames( self, n ):
+        
+        ( w, h ) = self._target_resolution
+        
+        for i in range( n ):
+            
+            self.process.stdout.read( self.depth * w * h )
+            
+            self.process.stdout.flush()
+            
+            self.pos += 1
+            
+        
+    
+    def read_frame( self ):
+        
+        if self.pos == self._num_frames: self.initialize()
+        
+        if self.process is None: result = self.lastread
+        else:
+            
+            ( w, h ) = self._target_resolution
+            
+            nbytes = self.depth * w * h
+            
+            s = self.process.stdout.read(nbytes)
+            
+            if len(s) != nbytes:
+                
+                print( "Warning: in file %s, "%(self._path)+
+                       "%d bytes wanted but %d bytes read,"%(nbytes, len(s))+
+                       "at frame %d/%d, at time %.02f/%.02f sec. "%(
+                        self.pos,self._num_frames,
+                        1.0*self.pos/self.fps,
+                        self._duration)+
+                       "Using the last valid frame instead.")
+                
+                result = self.lastread
+                
+                self.close()
+                
+            else:
+                
+                result = numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
+                
+                self.lastread = result
+                
+            
+        
+        self.pos += 1
+        
+        return result
+        
+    
+    def set_position( self, pos ):
+        
+        rewind = pos < self.pos
+        jump_a_long_way_ahead = pos > self.pos + 60
+        
+        if rewind or jump_a_long_way_ahead: self.initialize( pos )
+        else: self.skip_frames( pos - self.pos )
+        
+    
+class OLDCODEVideoRendererCV():
     
     def __init__( self, image_container, media, target_resolution ):
         
@@ -531,13 +642,13 @@ class VideoRendererCV():
         
         self._path = CC.GetFilePath( hash, mime )
         
-        self._lock = threading.Lock()
+        self._render_lock = threading.Lock()
         
         self._cv_video = cv2.VideoCapture( self._path )
         
         self._cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
         
-        self._current_index = 0
+        self._next_render_index = 0
         self._last_index_rendered = -1
         self._last_frame = None
         self._render_to_index = -1
@@ -547,13 +658,13 @@ class VideoRendererCV():
         
         ( retval, cv_image ) = self._cv_video.read()
         
-        self._last_index_rendered = self._current_index
+        self._last_index_rendered = self._next_render_index
         
         num_frames = self._media.GetNumFrames()
         
-        self._current_index = ( self._current_index + 1 ) % num_frames
+        self._next_render_index = ( self._next_render_index + 1 ) % num_frames
         
-        if self._current_index == 0 and self._last_index_rendered != 0:
+        if self._next_render_index == 0 and self._last_index_rendered != 0:
             
             if self._media.GetMime() == HC.IMAGE_GIF: self._RewindGIF()
             else: self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
@@ -561,7 +672,7 @@ class VideoRendererCV():
         
         if not retval:
             
-            raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HC.u( self._current_index ) + '.' )
+            raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HC.u( self._next_render_index ) + '.' )
             
         
         return cv_image
@@ -584,27 +695,7 @@ class VideoRendererCV():
             cv_image = self._last_frame
             
         
-        return HydrusImageHandling.GenerateHydrusBitmapFromCVImage( cv_image )
-        
-    
-    def _RenderFrames( self ):
-        
-        no_frames_yet = True
-        
-        while True:
-            
-            try:
-                
-                yield self._RenderCurrentFrame()
-                
-                no_frames_yet = False
-                
-            except HydrusExceptions.CantRenderWithCVException:
-                
-                if no_frames_yet: raise
-                else: break
-                
-            
+        return HydrusImageHandling.GenerateHydrusBitmapFromNumPyImage( cv_image )
         
     
     def _RewindGIF( self ):
@@ -612,12 +703,12 @@ class VideoRendererCV():
         self._cv_video.release()
         self._cv_video.open( self._path )
         
-        self._current_index = 0
+        self._next_render_index = 0
         
     
     def SetRenderToPosition( self, index ):
         
-        with self._lock:
+        with self._render_lock:
             
             if self._render_to_index != index:
                 
@@ -630,14 +721,14 @@ class VideoRendererCV():
     
     def SetPosition( self, index ):
         
-        with self._lock:
+        with self._render_lock:
             
             if self._media.GetMime() == HC.IMAGE_GIF:
                 
-                if index == self._current_index: return
-                elif index < self._current_index: self._RewindGIF()
+                if index == self._next_render_index: return
+                elif index < self._next_render_index: self._RewindGIF()
                 
-                while self._current_index < index: self._GetCurrentFrame()
+                while self._next_render_index < index: self._GetCurrentFrame()
                 
             else:
                 
@@ -654,149 +745,11 @@ class VideoRendererCV():
             
             time.sleep( 0.00001 ) # thread yield
             
-            with self._lock:
+            with self._render_lock:
                 
                 if self._last_index_rendered != self._render_to_index:
                     
-                    index = self._current_index
-                    
-                    frame = self._RenderCurrentFrame()
-                    
-                    wx.CallAfter( self._image_container.AddFrame, index, frame )
-                    
-                else: break
-                
-            
-        
-    
-class VideoRendererMoviePy():
-    
-    def __init__( self, image_container, media, target_resolution ):
-        
-        self._image_container = image_container
-        self._media = media
-        self._target_resolution = target_resolution
-        
-        self._lock = threading.Lock()
-        
-        ( x, y ) = media.GetResolution()
-        
-        self._ffmpeg_reader = HydrusFFMPEG_VideoReader( media, bufsize = x * y * 3 * 5 )
-        
-        self._current_index = 0
-        self._last_index_rendered = -1
-        self._last_frame = None
-        self._render_to_index = -1
-        
-    
-    def _GetCurrentFrame( self ):
-        
-        try: image = self._ffmpeg_reader.read_frame()
-        except Exception as e: raise HydrusExceptions.CantRenderWithCVException( 'FFMPEG could not render frame ' + HC.u( self._current_index ) + '.' + os.linesep * 2 + HC.u( e ) )
-        
-        self._last_index_rendered = self._current_index
-        
-        num_frames = self._media.GetNumFrames()
-        
-        self._current_index = ( self._current_index + 1 ) % num_frames
-        
-        if self._current_index == 0 and self._last_index_rendered != 0: self._ffmpeg_reader.initialize()
-        
-        return image
-        
-    
-    def _RenderCurrentFrame( self ):
-        
-        try:
-            
-            image = self._GetCurrentFrame()
-            
-            image = HydrusImageHandling.EfficientlyResizeCVImage( image, self._target_resolution )
-            
-            self._last_frame = image
-            
-        except HydrusExceptions.CantRenderWithCVException:
-            
-            if self._last_frame is None: raise
-            
-            image = self._last_frame
-            
-        
-        return HydrusImageHandling.GenerateHydrusBitmapFromCVImage( image )
-        
-    
-    def _RenderFrames( self ):
-        
-        no_frames_yet = True
-        
-        while True:
-            
-            try:
-                
-                yield self._RenderCurrentFrame()
-                
-                no_frames_yet = False
-                
-            except HydrusExceptions.CantRenderWithCVException:
-                
-                if no_frames_yet: raise
-                else: break
-                
-            
-        
-    
-    def SetRenderToPosition( self, index ):
-        
-        with self._lock:
-            
-            if self._render_to_index != index:
-                
-                self._render_to_index = index
-                
-                HydrusThreading.CallToThread( self.THREADDoWork )
-                
-            
-        
-    
-    def SetPosition( self, index ):
-        
-        with self._lock:
-            
-            if index == self._current_index: return
-            else:
-                
-                if self._media.GetMime() == HC.IMAGE_GIF:
-                    
-                    if index < self._current_index:
-                        
-                        self._ffmpeg_reader.initialize()
-                        
-                        self._ffmpeg_reader.skip_frames( index )
-                        
-                    
-                else:
-                    
-                    timecode = float( index ) / self._ffmpeg_reader.fps
-                    
-                    self._ffmpeg_reader.set_position( timecode )
-                    
-                
-                self._render_to_index = index
-                
-            
-        
-    
-    def THREADDoWork( self ):
-        
-        while True:
-            
-            time.sleep( 0.00001 ) # thread yield
-            
-            with self._lock:
-                
-                if self._last_index_rendered != self._render_to_index:
-                    
-                    index = self._current_index
+                    index = self._next_render_index
                     
                     frame = self._RenderCurrentFrame()
                     

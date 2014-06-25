@@ -3,6 +3,7 @@ import HydrusExceptions
 import httplib
 import threading
 import time
+import urllib
 import urlparse
 import yaml
 
@@ -132,11 +133,14 @@ class HTTPConnectionManager():
         threading.Thread( target = self.DAEMONMaintainConnections, name = 'Maintain Connections' ).start()
         
     
-    def _DoRequest( self, location, method, path_and_query, request_headers, body, follow_redirects = True, report_hooks = [], response_to_path = False, num_redirects_permitted = 4, long_timeout = False ):
+    def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = [], response_to_path = False, num_redirects_permitted = 4, long_timeout = False ):
         
         connection = self._GetConnection( location, long_timeout )
         
         try:
+            
+            if query == '': path_and_query = path
+            else: path_and_query = path + '?' + query
             
             with connection.lock:
                 
@@ -154,10 +158,7 @@ class HTTPConnectionManager():
                 
                 if new_location is None: new_location = location
                 
-                if new_query != '': new_path_and_query = new_path + '?' + new_query
-                else: new_path_and_query = new_path
-                
-                return self._DoRequest( new_location, new_method, new_path_and_query, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, num_redirects_permitted = num_redirects_permitted - 1 )
+                return self._DoRequest( new_method, new_location, new_path, new_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path, num_redirects_permitted = num_redirects_permitted - 1, long_timeout = long_timeout )
                 
             
         except:
@@ -191,12 +192,9 @@ class HTTPConnectionManager():
         
         ( location, path, query ) = ParseURL( url )
         
-        if query != '': path_and_query = path + '?' + query
-        else: path_and_query = path
-        
         follow_redirects = not return_cookies
         
-        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( location, method, path_and_query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path, long_timeout = long_timeout )
+        ( response, size_of_response, response_headers, cookies ) = self._DoRequest( method, location, path, query, request_headers, body, follow_redirects = follow_redirects, report_hooks = report_hooks, response_to_path = response_to_path, long_timeout = long_timeout )
         
         if return_everything: return ( response, size_of_response, response_headers, cookies )
         elif return_cookies: return ( response, cookies )
@@ -452,6 +450,23 @@ class HTTPConnection():
             else:
                 
                 url = location
+                
+                if ' ' in url:
+                    
+                    # some booru is giving daft redirect responses
+                    print( url )
+                    url = urllib.quote( url, safe = '/?=&' )
+                    print( url )
+                
+                if not url.startswith( self._scheme ):
+                    
+                    # assume it is like 'index.php' or '/index.php', rather than 'http://blah.com/index.php'
+                    
+                    if url.startswith( '/' ): slash_sep = ''
+                    else: slash_sep = '/'
+                    
+                    url = self._scheme + '://' + self._host + slash_sep + url
+                    
                 
                 if response.status in ( 301, 307 ):
                     

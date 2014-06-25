@@ -89,7 +89,7 @@ def GenerateCVImage( path ):
     
     cv_image = cv2.imread( self._path, flags = -1 ) # flags = -1 loads alpha channel, if present
     
-    ( x, y, depth ) = cv_image.shape
+    ( y, x, depth ) = cv_image.shape
     
     if depth == 4: raise Exception( 'CV is bad at alpha!' )
     else: cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
@@ -102,7 +102,7 @@ def GenerateHydrusBitmap( path ):
         
         cv_image = GenerateCVImage( path )
         
-        return GenerateHydrusBitmapFromCVImage( cv_image )
+        return GenerateHydrusBitmapFromNumPyImage( cv_image )
         
     except:
         
@@ -111,7 +111,7 @@ def GenerateHydrusBitmap( path ):
         return GenerateHydrusBitmapFromPILImage( pil_image )
         
     
-def GenerateHydrusBitmapFromCVImage( cv_image ):
+def GenerateHydrusBitmapFromNumPyImage( cv_image ):
     
     ( y, x, depth ) = cv_image.shape
     
@@ -137,7 +137,7 @@ def GeneratePerceptualHash( path ):
     
     cv_image = cv2.imread( path, cv2.CV_LOAD_IMAGE_UNCHANGED )
     
-    ( x, y, depth ) = cv_image.shape
+    ( y, x, depth ) = cv_image.shape
     
     if depth == 4:
         
@@ -153,15 +153,15 @@ def GeneratePerceptualHash( path ):
         
         cv_image_gray = cv2.cvtColor( cv_image_bgr, cv2.COLOR_BGR2GRAY )
         
-        cv_image_result = numpy.empty( ( x, y ), numpy.float32 )
+        cv_image_result = numpy.empty( ( y, x ), numpy.float32 )
         
         # paste greyscale onto the white
         
         # can't think of a better way to do this!
         # cv2.addWeighted only takes a scalar for weight!
-        for i in range( x ):
+        for i in range( y ):
             
-            for j in range( y ):
+            for j in range( x ):
                 
                 opacity = float( cv_alpha[ i, j ] ) / 255.0
                 
@@ -321,6 +321,17 @@ def old_GeneratePerceptualHash( path ):
     
 def GeneratePILImage( path ): return PILImage.open( path )
 
+def GeneratePILImageFromNumpyImage( numpy_image ):
+    
+    ( h, w, depth ) = numpy_image.shape
+    
+    if depth == 3: format = 'RGB'
+    elif depth == 4: format = 'RGBA'
+    
+    pil_image = PILImage.fromstring( format, ( w, h ), numpy_image.data )
+    
+    return pil_image
+    
 def GetGIFFrameDurations( path ):
     
     pil_image_for_duration = GeneratePILImage( path )
@@ -568,7 +579,7 @@ class ImageContainer( RasterContainer ):
             
             resized_cv_image = EfficientlyResizeCVImage( cv_image, self._target_resolution )
             
-            return GenerateHydrusBitmapFromCVImage( resized_cv_image )
+            return GenerateHydrusBitmapFromNumPyImage( resized_cv_image )
             
         except:
             

@@ -238,7 +238,7 @@ def ParseFileArguments( path ):
     
     hash = HydrusFileHandling.GetHashFromPath( path )
     
-    try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, hash )
+    try: ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
     except HydrusExceptions.SizeException: raise HydrusExceptions.ForbiddenException( 'File is of zero length!' )
     except HydrusExceptions.MimeException: raise HydrusExceptions.ForbiddenException( 'Filetype is not permitted!' )
     except Exception as e: raise HydrusExceptions.ForbiddenException( HC.u( e ) )

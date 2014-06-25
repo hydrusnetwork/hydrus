@@ -1,4 +1,4 @@
-import cv2
+#import cv2
 import hashlib
 import hsaudiotag
 import hsaudiotag.auto
@@ -55,24 +55,36 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
         
     else:
         
-        cv_video = cv2.VideoCapture( path )
+        ( size, mime, width, height, duration, num_frames, num_words ) = GetFileInfo( path )
         
-        cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
+        cropped_dimensions = HydrusImageHandling.GetThumbnailResolution( ( width, height ), dimensions )
         
-        ( retval, cv_image ) = cv_video.read()
+        renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, cropped_dimensions )
         
-        if not retval: raise Exception( 'Could not read first frame of ' + HC.u( path ) + ' to create thumbnail!' )
+        numpy_image = renderer.read_frame()
         
-        cv_image = HydrusImageHandling.EfficientlyThumbnailCVImage( cv_image, dimensions )
+        pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
         
-        ( retval, thumbnail ) = cv2.imencode( '.jpg', cv_image, ( cv2.cv.CV_IMWRITE_JPEG_QUALITY, 92 ) )
+        f = cStringIO.StringIO()
         
-        if not retval: raise Exception( 'Could not export thumbnail for ' + HC.u( path ) + '!' )
+        pil_image.save( f, 'JPEG', quality=92 )
+        
+        f.seek( 0 )
+        
+        thumbnail = f.read()
+        
+        f.close()
+        
+        #numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_RGB2BGR )
+        
+        #( retval, thumbnail ) = cv2.imencode( '.jpg', numpy_image, ( cv2.cv.CV_IMWRITE_JPEG_QUALITY, 92 ) )
+        
+        #if not retval: raise Exception( 'Could not export thumbnail for ' + HC.u( path ) + '!' )
         
     
     return thumbnail
     
-def GetFileInfo( path, hash ):
+def GetFileInfo( path ):
     
     info = os.lstat( path )
     
@@ -102,13 +114,9 @@ def GetFileInfo( path, hash ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFLVProperties( path )
         
-    elif mime in ( HC.VIDEO_WMV, HC.VIDEO_MP4 ):
+    elif mime in ( HC.VIDEO_WMV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM ):
         
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
-        
-    elif mime in ( HC.VIDEO_MKV, HC.VIDEO_WEBM ):
-        
-        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetCVVideoProperties( path )
+        ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
     elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( path )
     elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( path )

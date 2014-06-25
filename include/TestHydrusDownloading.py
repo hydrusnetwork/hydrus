@@ -98,7 +98,46 @@ class TestDownloaders( unittest.TestCase ):
         
         info = ( data, tags )
         
-        expected_info = ('swf file', set([u'chores', u'laser', u'silent', u'title:Cat Dust', u'creator:warlord-of-noodles', u'pointer']))
+        expected_info = ( 'swf file', set([u'chores', u'laser', u'silent', u'title:Cat Dust', u'creator:warlord-of-noodles', u'pointer']) )
+        
+        self.assertEqual( info, expected_info )
+        
+    
+    def test_pixiv( self ):
+        
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_gallery.html' ) as f: pixiv_gallery = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'pixiv_page.html' ) as f: pixiv_page = f.read()
+        
+        HC.http.SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
+        HC.http.SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605', pixiv_page )
+        
+        HC.http.SetResponse( HC.GET, 'http://i1.pixiv.net/img59/img/dbhope/43718605.jpg', 'image file' )
+        
+        #
+        
+        downloader = HydrusDownloading.DownloaderPixiv( 'tags', 'naruto' )
+        
+        #
+        
+        gallery_urls = downloader.GetAnotherPage()
+        
+        expected_gallery_urls = [ ( u'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605', ), 'a bunch of others' ]
+        
+        self.assertEqual( gallery_urls[0], expected_gallery_urls[0] )
+        
+        #
+        
+        info = downloader.GetFileAndTags( 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=43718605' )
+        
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
+        expected_tags = [ u'1P\u6f2b\u753b', u'\u7720\u305f\u3044', u'NARUTO', u'\u30ca\u30eb\u30c8', u'\u30b5\u30b9\u30b1', u'\u30b5\u30af\u30e9', u'\u30d2\u30ca\u30bf', u'creator:\u30df\u30c4\u30ad\u30e8\u3063\u3057\uff5e', u'title:\u7720\u305f\u3044', 'creator:dbhope' ]
+        
+        expected_info = ( 'image file', expected_tags )
         
         self.assertEqual( info, expected_info )
         

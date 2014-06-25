@@ -3079,7 +3079,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if can_add:
             
-            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, hash )
+            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
             
             if width is not None and height is not None:
                 
@@ -4771,7 +4771,7 @@ class DB( ServiceDB ):
         
         if resize_thumbs:
             
-            thumbnail_paths = ( path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
+            thumbnail_paths = [ path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) ]
             
             for path in thumbnail_paths: os.remove( path )
             
@@ -4907,10 +4907,52 @@ class DB( ServiceDB ):
                         
                         i += 1
                         
+                        if i % 100 == 0: HC.app.SetSplashText( 'reprocessing thumbs: ' + HC.ConvertIntToPrettyString( i ) )
+                        
                     except: print( 'When updating to v118, ' + path + '\'s phash could not be recalculated.' )
                     
-                    if i % 100 == 0: HC.app.SetSplashText( 'reprocessing thumbs: ' + HC.ConvertIntToPrettyString( i ) )
+                
+            
+        
+        if version == 119:
+            
+            i = 0
+            
+            for path in CC.IterateAllFilePaths():
+                
+                try:
                     
+                    filename = os.path.basename( path )
+                    
+                    ( hash_encoded, ext ) = filename.split( '.' )
+                    
+                    hash = hash_encoded.decode( 'hex' )
+                    
+                    hash_id = self._GetHashId( c, hash )
+                    
+                    if ext not in ( 'flv', 'mp4', 'wmv', 'mkv', 'webm' ): continue
+                    
+                    ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
+                    
+                    c.execute( 'UPDATE files_info SET duration = ?, num_frames = ? WHERE hash_id = ?;', ( duration, num_frames, hash_id ) )
+                    
+                    thumbnail = HydrusFileHandling.GenerateThumbnail( path )
+                    
+                    thumbnail_path = CC.GetExpectedThumbnailPath( hash )
+                    
+                    with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
+                    
+                    phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
+                    
+                    c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                    
+                    i += 1
+                    
+                    if i % 100 == 0: HC.app.SetSplashText( 'creating video thumbs: ' + HC.ConvertIntToPrettyString( i ) )
+                    
+                except:
+                    print( traceback.format_exc())
+                    print( 'When updating to v119, ' + path + '\'s thumbnail or phash could not be calculated.' )
                 
             
         
