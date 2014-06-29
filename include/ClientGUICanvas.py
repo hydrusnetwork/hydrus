@@ -266,8 +266,6 @@ class Animation( wx.Window ):
             if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             
             ms_since_current_frame_drawn = int( 1000.0 * ( timeit.default_timer() - self._current_frame_drawn_at ) )
-
-            subprocess.Popen('echo {}\t\t{}'.format(self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn, timeit.default_timer()), shell=True)
             
             ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
             

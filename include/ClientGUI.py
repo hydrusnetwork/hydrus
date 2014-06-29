@@ -2006,7 +2006,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if old_show:
             
             old_menu_index = self._menubar.FindMenu( old_label )
-
+            
             if show: self._menubar.Replace( old_menu_index, menu, label )
             else: self._menubar.Remove( old_menu_index )
             

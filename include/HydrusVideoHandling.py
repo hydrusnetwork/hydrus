@@ -283,8 +283,6 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
         
-        #subprocess.Popen('echo {}'.format(duration), shell=True)
-
         # 24fps => 1 frame -> 41.66ms
         self._frame_duration = 41.66 if duration == None or num_frames == None else duration / num_frames
         
