@@ -18,6 +18,7 @@ import traceback
 import urllib
 import wx
 import wx.media
+import timeit
 
 if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
 
@@ -106,6 +107,7 @@ class Animation( wx.Window ):
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_TIMER, self.TIMEREventVideo, id = ID_TIMER_VIDEO )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+        self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
         
         self.EventResize( None )
         
@@ -144,7 +146,7 @@ class Animation( wx.Window ):
         
         self._current_frame_drawn = True
         
-        now_in_ms = time.clock()
+        now_in_ms = timeit.default_timer()
         frame_was_supposed_to_be_at = self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 )
         
         if 1000.0 * ( now_in_ms - frame_was_supposed_to_be_at ) > 16.7: self._current_frame_drawn_at = now_in_ms
@@ -172,6 +174,10 @@ class Animation( wx.Window ):
         event.SetX( x )
         event.SetY( y )
         
+        event.ResumePropagation( 1 )
+        event.Skip()
+
+    def EventPropagateKey ( self, event ):
         event.ResumePropagation( 1 )
         event.Skip()
         
@@ -241,7 +247,7 @@ class Animation( wx.Window ):
             
             if self._current_frame_drawn:
                 
-                ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
+                ms_since_current_frame_drawn = int( 1000.0 * ( timeit.default_timer() - self._current_frame_drawn_at ) )
                 
                 time_to_update = ms_since_current_frame_drawn + MIN_TIMER_TIME / 2 > self._video_container.GetDuration( self._current_frame_index )
                 
@@ -259,7 +265,9 @@ class Animation( wx.Window ):
             
             if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             
-            ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
+            ms_since_current_frame_drawn = int( 1000.0 * ( timeit.default_timer() - self._current_frame_drawn_at ) )
+
+            subprocess.Popen('echo {}\t\t{}'.format(self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn, timeit.default_timer()), shell=True)
             
             ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
             
@@ -1041,13 +1049,24 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
             
         
     
-    def _ShowFirst( self ): self.SetMedia( self._GetFirst() )
+    def _correctFocus ( self ):
+        self._media_container.SetFocus()
+
+    def _ShowFirst( self ):
+        self.SetMedia( self._GetFirst() )
+        self._correctFocus()
     
-    def _ShowLast( self ): self.SetMedia( self._GetLast() )
+    def _ShowLast( self ):
+        self.SetMedia( self._GetLast() )
+        self._correctFocus()
     
-    def _ShowNext( self ): self.SetMedia( self._GetNext( self._current_media ) )
-    
-    def _ShowPrevious( self ): self.SetMedia( self._GetPrevious( self._current_media ) )
+    def _ShowNext( self ):
+        self.SetMedia( self._GetNext( self._current_media ) )
+        self._correctFocus()
+
+    def _ShowPrevious( self ):
+        self.SetMedia( self._GetPrevious( self._current_media ) )
+        self._correctFocus()
     
     def _StartSlideshow( self, interval ): pass
     
@@ -4043,7 +4062,7 @@ class StaticImage( wx.Window ):
                 
                 self._Draw()
 
-                if not self._image_container.IsRendered(): self._timer_render_wait.Start()
+                #if not self._image_container.IsRendered(): self._timer_render_wait.Start()
                 
             
         

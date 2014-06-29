@@ -1999,13 +1999,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def RefreshMenu( self, name ):
         
         ( menu, label, show ) = self._GenerateMenuInfo( name )
+        menu.SetTitle(label)
         
         ( old_menu, old_label, old_show ) = self._menus[ name ]
         
         if old_show:
             
             old_menu_index = self._menubar.FindMenu( old_label )
-            
+
             if show: self._menubar.Replace( old_menu_index, menu, label )
             else: self._menubar.Remove( old_menu_index )
             

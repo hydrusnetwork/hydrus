@@ -159,11 +159,9 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     
     cmd = [FFMPEG_PATH, "-i", '"' + filename + '"']
     
-    is_GIF = filename.endswith('.gif')
-    
-    if is_GIF:
-        if HC.PLATFORM_WINDOWS: cmd += ["-f", "null", "NUL"]
-        else: cmd += ["-f", "null", "/dev/null"]
+    # always perform fast null-output
+    if HC.PLATFORM_WINDOWS: cmd += ["-f", "null", "NUL"]
+    else: cmd += ["-f", "null", "/dev/null"]
     
     proc = subprocess.Popen( ' '.join( cmd ), shell = True, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE )
     
@@ -183,68 +181,62 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     result = dict()
     
     # get duration (in seconds)
-    #   Duration: 00:00:02.46, start: 0.033000, bitrate: 1069 kb/s
+    # fetch 'result line'
+    # gif: frame=   52 fps=0.0 q=0.0 Lsize=N/A time=00:00:02.05 bitrate=N/A
+    # vid: frame=  467 fps=0.0 q=0.0 Lsize=N/A time=00:00:19.45 bitrate=N/A
     try:
-        keyword = ('frame=' if is_GIF else 'Duration: ')
-        line = [l for l in lines if keyword in l][0]
-        
-        if 'start:' in line:
+        line = [l for l in lines if "frame=" in l][0]
+
+        _frames = None
+        _offset = 0.0
+        _duration = None
             
-            m = re.search( '(start\\: )' + '[0-9]\\.[0-9]*', line )
+        match_frames = re.search(r'(?<=frame\=).+?(?=fps)', line)        
+        if match_frames != None:
+            _frames = int(match_frames.group().strip())
+
+        # get duration from result line, because "Duration" line can be "N/A", result-line always has a time
+        match_duration = re.search(r"(?<=time\=)(?P<hour>\d\d):(?P<minute>\d\d):(?P<second>\d\d)\.(?P<ms>\d\d)", line)
+        if match_duration != None and len(match_duration.groups()) == 4:
+            _hours = int(match_duration.group('hour'))
+            _minutes = int(match_duration.group('minute'))
+            _seconds = _hours * 60 * 60 + _minutes * 60 * 60 + int(match_duration.group('second'))
             
-            start_offset = float( line[ m.start() + 7 : m.end() ] )
-            
-        else: start_offset = 0
+            _duration = float('{}.{}'.format(_seconds, match_duration.group('ms')))
         
-        match = re.search("[0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9][0-9]", line)
-        hms = map(float, line[match.start()+1:match.end()].split(':'))
         
-        if len(hms) == 1:
-            result['duration'] = hms[0]
-        elif len(hms) == 2:
-            result['duration'] = 60*hms[0]+hms[1]
-        elif len(hms) ==3:
-            result['duration'] = 3600*hms[0]+60*hms[1]+hms[2]
+        # get duration and start-offset
+        line = [l for l in lines if "Duration: " in l][0]
         
-        result[ 'duration' ] -= start_offset
-        
+        match_startOffset = re.search(r'(?<=start\:).*?(?P<offset>[\d\.]+?)(?=\,)', line)
+        if match_startOffset != None and len(match_startOffset.groups()) > 0:
+            _offset = float(match_startOffset.group('offset').strip())
+
+    
+        result[ 'duration' ] = _duration - _offset
+    
+        result['video_fps'] = 24.0 if _frames == None or _duration == None else _frames / _duration
+        result['video_duration'] = result['duration']
+        result['video_nframes'] = _frames
+
     except:
         raise IOError("Error reading duration in file %s,"%(filename)+
                       "Text parsed: %s"%infos)
-
-    # get the output line that speaks about video
-    lines_video = [l for l in lines if ' Video: ' in l]
-    
-    result['video_found'] = ( lines_video != [] )
-    
-    if result['video_found']:
         
-        line = lines_video[0]
-
-        # get the size, of the form 460x320 (w x h)
-        match = re.search(" [0-9]*x[0-9]*(,| )", line)
-        s = list(map(int, line[match.start():match.end()-1].split('x')))
-        result['video_size'] = s
-
-
-        # get the frame rate
-        try:
-            match = re.search("( [0-9]*.| )[0-9]* tbr", line)
-            result['video_fps'] = float(line[match.start():match.end()].split(' ')[1])
-        except:
-            match = re.search("( [0-9]*.| )[0-9]* fps", line)
-            result['video_fps'] = float(line[match.start():match.end()].split(' ')[1])
+    # get information about stream size
+    # and override fps if found
+    #
+    # line starts with Stream
+    # Stream #0:0: Video: vp8, yuv420p, 720x408, SAR 8:13 DAR 240:221, 29.97 fps, 29.97 tbr, 1k tbn, 1k tbc (default)
         
-        num_frames = result['duration'] * result['video_fps']
+    lines_stream = [l for l in lines if 'Stream #' in l]
+    if len(lines_stream) > 0:
+        line = lines_stream[0]
         
-        if num_frames != int( num_frames ): num_frames += 1 # rounding up
-        
-        result['video_nframes'] = int( num_frames )
-        
-        result['video_duration'] = result['duration']
-        # We could have also recomputed the duration from the number
-        # of frames, as follows:
-        # >>> result['video_duration'] = result['video_nframes'] / result['video_fps']
+        match_frames = re.search(r'(?<=\, )(?P<width>\d+)x(?P<height>\d+)\,.+?(?P<fps>[\.\d]+) fps', line)
+        if match_frames != None and len(match_frames.groups()) == 3:
+            result['video_size'] = (int(match_frames.group('width')), int(match_frames.group('height')))
+            result['video_fps'] = float(match_frames.group('fps'))
 
 
     lines_audio = [l for l in lines if ' Audio: ' in l]
@@ -281,9 +273,6 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         self._num_frames_backwards = frame_buffer_length * 2 / 3
         self._num_frames_forwards = frame_buffer_length / 3
         
-        if self._media.GetMime() == HC.IMAGE_GIF: self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
-        else: self._frame_duration = GetVideoFrameDuration( self._path )
-        
         self._render_lock = threading.Lock()
         
         hash = self._media.GetHash()
@@ -293,6 +282,11 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
+        
+        #subprocess.Popen('echo {}'.format(duration), shell=True)
+
+        # 24fps => 1 frame -> 41.66ms
+        self._frame_duration = 41.66 if duration == None or num_frames == None else duration / num_frames
         
         self._ffmpeg_reader = VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
         
@@ -386,10 +380,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
     
     def AddFrame( self, index, frame ): self._frames[ index ] = frame
     
-    def GetDuration( self, index ):
-        
-        if self._media.GetMime() == HC.IMAGE_GIF: return self._durations[ index ]
-        else: return self._frame_duration
+    def GetDuration( self, index ): return self._frame_duration
         
     
     def GetFrame( self, index ):
@@ -413,10 +404,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
     
     def GetSize( self ): return self._target_resolution
     
-    def GetTotalDuration( self ):
-        
-        if self._media.GetMime() == HC.IMAGE_GIF: return sum( self._durations )
-        else: return self._frame_duration * self.GetNumFrames()
+    def GetTotalDuration( self ): return self._frame_duration * self.GetNumFrames()
         
     
     def GetZoom( self ): return self._zoom
@@ -492,7 +480,7 @@ class VideoRendererFFMPEG( object ):
         
         self._path = path
         self._mime = mime
-        self._duration = float( duration ) / 1000.0
+        self._duration = float( duration )
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
