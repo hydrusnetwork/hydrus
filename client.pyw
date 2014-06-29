@@ -11,7 +11,7 @@ string.whitespace
 # what a mess!
 
 import locale
-locale.setlocale( locale.LC_ALL, '' )
+locale.setlocale( locale.LC_ALL, None )
 
 from include import HydrusConstants as HC
 

@@ -1999,6 +1999,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def RefreshMenu( self, name ):
         
         ( menu, label, show ) = self._GenerateMenuInfo( name )
+        menu.SetTitle(label)
         
         ( old_menu, old_label, old_show ) = self._menus[ name ]
         
