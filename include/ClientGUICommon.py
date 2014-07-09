@@ -3100,7 +3100,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         num_columns = len( columns )
         
-        wx.ListCtrl.__init__( self, parent, size=( -1, height ), style=wx.LC_REPORT )
+        wx.ListCtrl.__init__( self, parent, style = wx.LC_REPORT )
         ListCtrlAutoWidthMixin.__init__( self )
         ColumnSorterMixin.__init__( self, num_columns )
         
@@ -3119,6 +3119,8 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
             
         
         self.setResizeColumn( resize_column )
+        
+        self.SetMinSize( ( -1, height ) )
         
     
     def Append( self, display_tuple, data_tuple ):
@@ -3177,6 +3179,20 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
     
     def GetListCtrl( self ): return self
+    
+    def GetSelectedClientData( self ):
+        
+        indices = self.GetAllSelected()
+        
+        results = []
+        
+        for index in indices:
+            
+            results.append( self.GetClientData( index ) )
+            
+        
+        return results
+        
     
     def RemoveAllSelected( self ):
         

@@ -268,6 +268,18 @@ def ParseFileArguments( path ):
     
 hydrus_favicon = FileResource( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', defaultType = HC.IMAGE_ICON )
 
+class HydrusDomain( object ):
+    
+    def __init__( self, local_only ):
+        
+        self._local_only = local_only
+        
+    
+    def CheckValid( self, client_ip ):
+        
+        if self._local_only and client_ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
+        
+    
 class HydrusResourceWelcome( Resource ):
     
     def __init__( self, service_identifier, message ):
@@ -293,13 +305,13 @@ class HydrusResourceWelcome( Resource ):
     
 class HydrusResourceCommand( Resource ):
     
-    local_only = False
-    
-    def __init__( self, service_identifier ):
+    def __init__( self, service_identifier, domain ):
         
         Resource.__init__( self )
         
         self._service_identifier = service_identifier
+        
+        self._domain = domain
         
         service_type = self._service_identifier.GetType()
         
@@ -310,7 +322,7 @@ class HydrusResourceCommand( Resource ):
         
         self._checkUserAgent( request )
         
-        self._checkLocal( request )
+        self._domain.CheckValid( request.getClientIP() )
         
         return request
         
@@ -330,7 +342,7 @@ class HydrusResourceCommand( Resource ):
                 try: hydrus_args[ name ] = int( value )
                 except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
                 
-            elif name in ( 'access_key', 'title', 'subject_access_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key' ):
+            elif name in ( 'access_key', 'title', 'subject_access_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key', 'share_key' ):
                 
                 try: hydrus_args[ name ] = value.decode( 'hex' )
                 except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
@@ -506,11 +518,6 @@ class HydrusResourceCommand( Resource ):
         d.addCallback( wrap_thread_result )
         
         return d
-        
-    
-    def _checkLocal( self, request ):
-        
-        if self.local_only and request.getClientIP() != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
         
     
     def _checkUserAgent( self, request ):
@@ -710,15 +717,195 @@ class HydrusResourceCommandAccessKeyVerification( HydrusResourceCommand ):
         return response_context
         
     
-class HydrusResourceCommandFileLocal( HydrusResourceCommand ):
+class HydrusResourceCommandBooru( HydrusResourceCommand ):
     
-    local_only = True
+    def _callbackCheckRestrictions( self, request ):
+        
+        self._checkUserAgent( request )
+        
+        self._domain.CheckValid( request.getClientIP() )
+        
+        # extract booru key, hence fetch booru cache thing and assign it to this request
+        # or fail with a 404
+        
+        return request
+        
+    
+class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
     
     def _threadDoGETJob( self, request ):
         
+        # in future, make this a standard frame with a search key that'll load xml or yaml AJAX stuff
+        # with file info included, so the page can sort and whatever
+        
+        share_key = request.hydrus_args[ 'share_key' ]
+        
+        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        
+        local_booru_manager.CheckShareAuthorised( share_key )
+        
+        ( name, text, timeout, hashes ) = local_booru_manager.GetGalleryInfo( share_key )
+        
+        body = '''<html>
+    <head>'''
+        
+        if name == '': body += '''
+        <title>hydrus network local booru share</title>'''
+        else: body += '''
+        <title>''' + name + '''</title>'''
+        
+        body += '''
+    </head>
+    <style>
+body { font-family: "Calibri", Arial, sans-serif; color: rgb( 85, 85, 85 ); line-height: 1.5; }
+a { color: #222; text-decoration: none; font-weight: bold; }
+h3 { color: #222; }
+a:hover { color: #555 }
+.footer { text-align: center; font-size: 80% }
+.media { clear: both; }
+.name { font-weight: bold; font-size: 150%; }
+.thumbnail { margin: 1px; border: 1px rgb( 223, 227, 230 ) solid; display: inline-block; }
+.thumbnail_container { text-align: center; width: 200px; height: 200px; display: table-cell; vertical-align: middle; }
+.thumbnail_container img { display: block; margin-left: auto; margin-right: auto; }
+.timeout { font-size: 80%; float: right; margin: 2px }
+    </style>
+    <body>'''
+        
+        body += '''
+        <span class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</span>'''
+        
+        if name != '': body += '''
+        <div class="name">''' + name + '''</div>'''
+        
+        if text != '':
+            
+            newline = '''</p>
+        <p>'''
+            
+            body += '''
+        <p>''' + text.replace( os.linesep, newline ).replace( '\n', newline ) + '''</p>'''
+        
+        body+= '''
+        <div class="media">'''
+        
+        for hash in hashes:
+            
+            body += '''
+            <span class="thumbnail">
+                <span class="thumbnail_container">
+                    <a href="page?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">
+                        <img src="thumbnail?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
+                    </a>
+                </span>
+            </span>'''
+            
+        
+        body += '''
+        </div>
+        <div class="footer"><a href="http://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
+    </body>
+</html>'''
+        
+        response_context = HC.ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
+        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        
+        local_booru_manager.CheckFileAuthorised( share_key, hash )
+        
         path = CC.GetFilePath( hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        share_key = request.hydrus_args[ 'share_key' ]
+        hash = request.hydrus_args[ 'hash' ]
+        
+        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        
+        local_booru_manager.CheckFileAuthorised( share_key, hash )
+        
+        ( name, text, timeout ) = local_booru_manager.GetPageInfo( share_key, hash )
+        
+        body = '''<html>
+    <head>'''
+        
+        if name == '': body += '''
+        <title>hydrus network local booru share</title>'''
+        else: body += '''
+        <title>''' + name + '''</title>'''
+        
+        body += '''
+    </head>
+    <style>
+body { font-family: "Calibri", Arial, sans-serif; color: rgb( 85, 85, 85 ); line-height: 1.5; }
+a { color: #222; text-decoration: none; font-weight: bold; }
+h3 { color: #222; }
+a:hover { color: #555 }
+.footer { text-align: center; font-size: 80% }
+.media { clear: both; }
+.name { font-weight: bold; font-size: 150%; }
+.thumbnail { margin: 1px; border: 1px rgb( 223, 227, 230 ) solid; display: inline-block; }
+.thumbnail_container { text-align: center; width: 200px; height: 200px; display: table-cell; vertical-align: middle; }
+.thumbnail_container img { display: block; margin-left: auto; margin-right: auto; }
+.timeout { font-size: 80%; float: right; margin: 2px }
+    </style>
+    <body>'''
+        
+        body += '''
+        <span class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</span>'''
+        
+        if name != '': body += '''
+        <div class="name">''' + name + '''</div>'''
+        
+        if text != '':
+            
+            newline = '''</p>
+        <p>'''
+            
+            body += '''
+        <p>''' + text.replace( os.linesep, newline ) + '''</p>'''
+        
+        body+= '''
+        <div class="media">
+            <img src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
+        </div>
+        <div class="footer"><a href="http://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
+    </body>
+</html>'''
+        
+        response_context = HC.ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        share_key = request.hydrus_args[ 'share_key' ]
+        hash = request.hydrus_args[ 'hash' ]
+        
+        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        
+        local_booru_manager.CheckFileAuthorised( share_key, hash )
+        
+        path = CC.GetThumbnailPath( hash )
         
         response_context = HC.ResponseContext( 200, path = path )
         
@@ -734,6 +921,32 @@ class HydrusResourceCommandInit( HydrusResourceCommand ):
         body = yaml.safe_dump( { 'access_key' : access_key } )
         
         response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandLocalFile( HydrusResourceCommand ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        path = CC.GetFilePath( hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandLocalThumbnail( HydrusResourceCommand ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        path = CC.GetThumbnailPath( hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
         
         return response_context
         
@@ -761,21 +974,6 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         return response_context
         
     
-class HydrusResourceCommandThumbnailLocal( HydrusResourceCommand ):
-    
-    local_only = True
-    
-    def _threadDoGETJob( self, request ):
-        
-        hash = request.hydrus_args[ 'hash' ]
-        
-        path = CC.GetThumbnailPath( hash )
-        
-        response_context = HC.ResponseContext( 200, path = path )
-        
-        return response_context
-        
-    
 class HydrusResourceCommandRestricted( HydrusResourceCommand ):
     
     GET_PERMISSION = HC.GENERAL_ADMIN
@@ -787,7 +985,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
         
         self._checkUserAgent( request )
         
-        self._checkLocal( request )
+        self._domain.CheckValid( request.getClientIP() )
         
         self._checkSession( request )
         
@@ -952,41 +1150,6 @@ class HydrusResourceCommandRestrictedBackup( HydrusResourceCommandRestricted ):
         return response_context
         
     
-class HydrusResourceCommandRestrictedFileRepository( HydrusResourceCommandRestricted ):
-    
-    GET_PERMISSION = HC.GET_DATA
-    POST_PERMISSION = HC.POST_DATA
-    RECORD_GET_DATA_USAGE = True
-    RECORD_POST_DATA_USAGE = True
-    
-    def _threadDoGETJob( self, request ):
-        
-        hash = request.hydrus_args[ 'hash' ]
-        
-        # don't I need to check that we aren't stealing the file from another service?
-        
-        path = SC.GetPath( 'file', hash )
-        
-        response_context = HC.ResponseContext( 200, path = path )
-        
-        return response_context
-        
-    
-    def _threadDoPOSTJob( self, request ):
-        
-        account = request.hydrus_account
-        
-        file_dict = request.hydrus_args
-        
-        file_dict[ 'ip' ] = request.getClientIP()
-        
-        HC.app.Write( 'file', self._service_identifier, account, file_dict )
-        
-        response_context = HC.ResponseContext( 200 )
-        
-        return response_context
-        
-    
 class HydrusResourceCommandRestrictedIP( HydrusResourceCommandRestricted ):
     
     GET_PERMISSION = HC.GENERAL_ADMIN
@@ -1070,6 +1233,59 @@ class HydrusResourceCommandRestrictedRegistrationKeys( HydrusResourceCommandRest
         return response_context
         
     
+class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GET_DATA
+    POST_PERMISSION = HC.POST_DATA
+    RECORD_GET_DATA_USAGE = True
+    RECORD_POST_DATA_USAGE = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        # don't I need to check that we aren't stealing the file from another service?
+        
+        path = SC.GetPath( 'file', hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
+    def _threadDoPOSTJob( self, request ):
+        
+        account = request.hydrus_account
+        
+        file_dict = request.hydrus_args
+        
+        file_dict[ 'ip' ] = request.getClientIP()
+        
+        HC.app.Write( 'file', self._service_identifier, account, file_dict )
+        
+        response_context = HC.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedRepositoryThumbnail( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GET_DATA
+    RECORD_GET_DATA_USAGE = True
+    
+    def _threadDoGETJob( self, request ):
+        
+        hash = request.hydrus_args[ 'hash' ]
+        
+        # don't I need to check that we aren't stealing the file from another service?
+        
+        path = SC.GetPath( 'thumbnail', hash )
+        
+        response_context = HC.ResponseContext( 200, path = path )
+        
+        return response_context
+        
+    
 class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted ):
     
     GET_PERMISSION = HC.GENERAL_ADMIN
@@ -1112,24 +1328,6 @@ class HydrusResourceCommandRestrictedStats( HydrusResourceCommandRestricted ):
         body = yaml.safe_dump( { 'stats' : stats } )
         
         response_context = HC.ResponseContext( 200, body = body )
-        
-        return response_context
-        
-    
-class HydrusResourceCommandRestrictedThumbnailRepository( HydrusResourceCommandRestricted ):
-    
-    GET_PERMISSION = HC.GET_DATA
-    RECORD_GET_DATA_USAGE = True
-    
-    def _threadDoGETJob( self, request ):
-        
-        hash = request.hydrus_args[ 'hash' ]
-        
-        # don't I need to check that we aren't stealing the file from another service?
-        
-        path = SC.GetPath( 'thumbnail', hash )
-        
-        response_context = HC.ResponseContext( 200, path = path )
         
         return response_context
         

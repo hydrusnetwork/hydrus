@@ -1088,9 +1088,116 @@ class CDPPFileServiceIdentifiers():
         self._petitioned.discard( service_identifier )
         
     
-class LocalRatings():
+class LocalBooruCache( object ):
     
-    # c for current; feel free to rename this stupid thing
+    def __init__( self ):
+        
+        self._lock = threading.Lock()
+        
+        self._RefreshShares()
+        
+        HC.pubsub.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
+        
+    
+    def _CheckFileAuthorised( self, share_key, hash ):
+        
+        self._CheckShareAuthorised( share_key )
+        
+        info = self._GetInfo( share_key )
+        
+        if hash not in info[ 'hashes_set' ]: raise HydrusExceptions.NotFoundException( 'That file was not found in that share.' )
+        
+    
+    def _CheckShareAuthorised( self, share_key ):
+        
+        info = self._GetInfo( share_key )
+        
+        timeout = info[ 'timeout' ]
+        
+        if timeout is not None and HC.GetNow() > timeout: raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
+        
+    
+    def _GetInfo( self, share_key ):
+        
+        try: info = self._keys_to_infos[ share_key ]
+        except: raise HydrusExceptions.NotFoundException( 'Did not find that share on this booru.' )
+        
+        if info is None:
+            
+            info = HC.app.Read( 'local_booru_share', share_key )
+            
+            hashes = info[ 'hashes' ]
+            
+            info[ 'hashes_set' ] = set( hashes )
+            
+            self._keys_to_infos[ share_key ] = info
+            
+        
+        return info
+        
+    
+    def _RefreshShares( self ):
+        
+        self._keys_to_infos = {}
+        
+        share_keys = HC.app.Read( 'local_booru_share_keys' )
+        
+        for share_key in share_keys: self._keys_to_infos[ share_key ] = None
+        
+    
+    def CheckShareAuthorised( self, share_key ):
+        
+        with self._lock: self._CheckShareAuthorised( share_key )
+        
+    
+    def CheckFileAuthorised( self, share_key, hash ):
+        
+        with self._lock: self._CheckFileAuthorised( share_key, hash )
+        
+    
+    def GetGalleryInfo( self, share_key ):
+        
+        with self._lock:
+            
+            info = self._GetInfo( share_key )
+            
+            name = info[ 'name' ]
+            text = info[ 'text' ]
+            timeout = info[ 'timeout' ]
+            hashes = info[ 'hashes' ]
+            
+            # eventually move to a set of media results that has tags from ~whatever~
+            # the media_results should be generated on demand and cached with a timeout
+            
+            return ( name, text, timeout, hashes )
+            
+        
+    
+    def GetPageInfo( self, share_key, hash ):
+        
+        with self._lock:
+            
+            info = self._GetInfo( share_key )
+            
+            name = info[ 'name' ]
+            text = info[ 'text' ]
+            timeout = info[ 'timeout' ]
+            
+            # eventually move to returning resolution and so on so we can show tags and whatever, doing a proper page
+            
+            return ( name, text, timeout )
+            
+        
+    
+    def RefreshShares( self ):
+        
+        with self._lock:
+            
+            self._RefreshShares()
+            
+        
+    
+class LocalRatings():
     
     def __init__( self, service_identifiers_to_ratings ):
         

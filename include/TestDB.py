@@ -181,14 +181,14 @@ class TestClientDB( unittest.TestCase ):
         
         for ( name, booru ) in CC.DEFAULT_BOORUS.items():
             
-            read_booru = self._read( 'booru', name )
+            read_booru = self._read( 'remote_booru', name )
             
             self.assertEqual( booru.GetData(), read_booru.GetData() )
             
         
         #
         
-        result = self._read( 'boorus' )
+        result = self._read( 'remote_boorus' )
         
         for name in CC.DEFAULT_BOORUS: self.assertEqual( result[ name ].GetData(), CC.DEFAULT_BOORUS[ name ].GetData() )
         
@@ -205,19 +205,19 @@ class TestClientDB( unittest.TestCase ):
         
         booru = CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
         
-        self._write( 'booru', 'blah', booru )
+        self._write( 'remote_booru', 'blah', booru )
         
-        read_booru = self._read( 'booru', name )
+        read_booru = self._read( 'remote_booru', name )
         
         self.assertEqual( booru.GetData(), read_booru.GetData() )
         
         #
         
-        self._write( 'delete_booru', 'blah' )
+        self._write( 'delete_remote_booru', 'blah' )
         
         with self.assertRaises( Exception ):
             
-            read_booru = self._read( 'booru', name )
+            read_booru = self._read( 'remote_booru', name )
             
         
     

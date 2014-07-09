@@ -421,7 +421,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            boorus = HC.app.Read( 'boorus' )
+            boorus = HC.app.Read( 'remote_boorus' )
             
             for ( name, booru ) in boorus.items():
                 
@@ -534,13 +534,13 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     ( name, booru ) = data
                     
-                    HC.app.Write( 'booru', name, booru )
+                    HC.app.Write( 'remote_booru', name, booru )
                     
                 elif action == HC.DELETE:
                     
                     name = data
                     
-                    HC.app.Write( 'delete_booru', name )
+                    HC.app.Write( 'delete_remote_booru', name )
                     
                 
             
@@ -5032,12 +5032,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
                     
-                    #
-                    
-                    self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
-                    
-                    # add listctrl here
-                    
                 
             
             def PopulateControls():
@@ -5054,8 +5048,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._port.SetValue( self._info[ 'port' ] )
                     self._upnp.SetValue( self._info[ 'upnp' ] )
                     self._max_monthly_data.SetValue( self._info[ 'max_monthly_data' ] )
-                    
-                    # fill up listctrl here
                     
                 
             
@@ -5136,10 +5128,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._booru_options_panel.AddF( self._max_monthly_data, FLAGS_EXPAND_BOTH_WAYS )
                     
                     vbox.AddF( self._booru_options_panel, FLAGS_EXPAND_PERPENDICULAR )
-                    
-                    self._booru_shares_panel.AddF( wx.StaticText( self._booru_shares_panel, label = 'listctrl goes here' ), FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    vbox.AddF( self._booru_shares_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 self.SetSizer( vbox )
@@ -5731,7 +5719,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if self._booru_selector.GetCount() == 0:
                     
-                    boorus = HC.app.Read( 'boorus' )
+                    boorus = HC.app.Read( 'remote_boorus' )
                     
                     for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                     
@@ -5782,7 +5770,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 if self._booru_selector.GetCount() == 0:
                     
-                    boorus = HC.app.Read( 'boorus' )
+                    boorus = HC.app.Read( 'remote_boorus' )
                     
                     for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                     
@@ -7594,9 +7582,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
-            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 760, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ] )
-            
-            self._mappings_list_ctrl.SetMinSize( ( 760, 660 ) )
+            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ] )
             
             self._add_local = wx.Button( self, label = 'add service mapping' )
             self._add_local.Bind( wx.EVT_BUTTON, self.EventAddServiceMapping )
@@ -7640,6 +7626,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             self.SetSizer( vbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
+            
+            x = max( x, 760 )
             
             self.SetInitialSize( ( x, y ) )
             

@@ -647,6 +647,38 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         HC.pubsub.pub( 'focus_changed', self._page_key, media )
         
     
+    def _ShareOnLocalBooru( self ):
+        
+        if len( self._selected_media ) > 0:
+            
+            share_key = os.urandom( 32 )
+            
+            name = ''
+            text = ''
+            timeout = HC.GetNow() + 60 * 60 * 24
+            hashes = self._GetSelectedHashes()
+            
+            with ClientGUIDialogs.DialogInputLocalBooruShare( self, share_key, name, text, timeout, hashes, new_share = True ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( share_key, name, text, timeout, hashes ) = dlg.GetInfo()
+                    
+                    info = {}
+                    
+                    info[ 'name' ] = name
+                    info[ 'text' ] = text
+                    info[ 'timeout' ] = timeout
+                    info[ 'hashes' ] = hashes
+                    
+                    HC.app.Write( 'local_booru_share', share_key, info )
+                    
+                
+            
+            self.SetFocus()
+            
+        
+    
     def _ShowSelectionInNewQueryPage( self ):
         
         hashes = self._GetSelectedHashes()
@@ -1528,6 +1560,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'shift_scroll_end': self._ScrollEnd( True )
             elif command == 'shift_scroll_home': self._ScrollHome( True )
             elif command == 'select': self._Select( data )
+            elif command == 'share_on_local_booru': self._ShareOnLocalBooru()
             elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
             elif command == 'upload': self._UploadFiles( data )
             elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
@@ -1684,7 +1717,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     inbox_phrase = 'return all to inbox'
                     remove_phrase = 'remove all'
                     local_delete_phrase = 'delete all'
-                    dump_phrase = 'dump all'
+                    dump_phrase = 'dump all to 4chan'
                     export_phrase = 'files'
                     copy_phrase = 'files'
                     
@@ -1710,7 +1743,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     inbox_phrase = 'return to inbox'
                     remove_phrase = 'remove'
                     local_delete_phrase = 'delete'
-                    dump_phrase = 'dump'
+                    dump_phrase = 'dump to 4chan'
                     export_phrase = 'file'
                     copy_phrase = 'file'
                     
@@ -1901,18 +1934,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), local_delete_phrase )
                     
                 
-                #
+                # share
                 
-                export_menu  = wx.Menu()
-                
-                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_files' ), export_phrase )
-                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_tags' ), 'tags' )
-                
-                menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
-                
-                #
-                
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
+                share_menu = wx.Menu()
                 
                 #
                 
@@ -1924,7 +1948,28 @@ class MediaPanelThumbnails( MediaPanel ):
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
                 
-                menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+                share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+                
+                #
+                
+                share_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
+                
+                #
+                
+                export_menu  = wx.Menu()
+                
+                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_files' ), export_phrase )
+                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_tags' ), 'tags' )
+                
+                share_menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
+                
+                #
+                
+                share_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'share_on_local_booru' ), 'on local booru' )
+                
+                #
+                
+                menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
                 
                 #
                 

@@ -4042,8 +4042,8 @@ class StaticImage( wx.Window ):
                 self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
                 
                 self._Draw()
-
-                if not self._image_container.IsRendered(): self._timer_render_wait.Start()
+                
+                if not self._image_container.IsRendered(): self._timer_render_wait.Start( 16, wx.TIMER_ONE_SHOT)
                 
             
         

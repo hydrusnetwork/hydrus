@@ -172,7 +172,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
         self._timestamps[ 'boot' ] = HC.GetNow()
         
         self._local_service = None
-        self._server = None
+        self._booru_service = None
         
         init_result = True
         
@@ -261,6 +261,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
             self._managers[ 'undo' ] = CC.UndoManager()
             self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
+            self._managers[ 'local_booru' ] = CC.LocalBooruCache()
             
             self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
             self._preview_image_cache = CC.RenderedImageCache( 'preview' )
@@ -275,6 +276,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
             HC.pubsub.sub( self, 'Clipboard', 'clipboard' )
             HC.pubsub.sub( self, 'RestartServer', 'restart_server' )
+            HC.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
             
             self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
             
@@ -288,6 +290,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             if HC.is_db_updated: wx.CallLater( 1, HC.ShowText, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
             
             self.RestartServer()
+            self.RestartBooru()
             self._db.StartDaemons()
             
             self._last_idle_time = 0.0
@@ -345,6 +348,74 @@ The database will be locked while the backup occurs, which may lock up your gui 
         return result
         
     
+    def RestartBooru( self ):
+        
+        service = self.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        
+        info = service.GetInfo()
+        
+        port = info[ 'port' ]
+        
+        def TWISTEDRestartServer():
+            
+            def StartServer( *args, **kwargs ):
+                
+                try:
+                    
+                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+                    
+                    try:
+                        
+                        connection.connect()
+                        connection.close()
+                        
+                        text = 'The client\'s booru server could not start because something was already bound to port ' + HC.u( port ) + '.'
+                        text += os.linesep * 2
+                        text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
+                        text += os.linesep * 2
+                        text += 'You can change the port this client tries to host its local server on in services->manage services.'
+                        
+                        wx.CallLater( 1, HC.ShowText, text )
+                        
+                    except:
+                        
+                        booru_server_service_identifier = HC.ServerServiceIdentifier( 'local booru', HC.LOCAL_BOORU )
+                        
+                        self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( booru_server_service_identifier, 'This is the local booru.' ) )
+                        
+                        connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+                        
+                        try:
+                            
+                            connection.connect()
+                            connection.close()
+                            
+                        except:
+                            
+                            text = 'Tried to bind port ' + HC.u( port ) + ' for the local booru, but it failed.'
+                            
+                            wx.CallLater( 1, HC.ShowText, text )
+                            
+                        
+                    
+                except Exception as e:
+                    
+                    wx.CallAfter( HC.ShowException, e )
+                    
+                
+            
+            if self._booru_service is None: StartServer()
+            else:
+                
+                deferred = defer.maybeDeferred( self._booru_service.stopListening )
+                
+                deferred.addCallback( StartServer )
+                
+            
+        
+        reactor.callFromThread( TWISTEDRestartServer )
+        
+    
     def RestartServer( self ):
         
         port = HC.options[ 'local_port' ]
@@ -374,7 +445,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                         
                         local_file_server_service_identifier = HC.ServerServiceIdentifier( 'local file', HC.LOCAL_FILE )
                         
-                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( local_file_server_service_identifier, 'hello' ) )
+                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( local_file_server_service_identifier, 'This is the local file service.' ) )
                         
                         connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                         
@@ -385,7 +456,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                             
                         except:
                             
-                            text = 'Tried to bind port ' + HC.u( port ) + ' but it failed'
+                            text = 'Tried to bind port ' + HC.u( port ) + ' for the local server, but it failed.'
                             
                             wx.CallLater( 1, HC.ShowText, text )
                             

@@ -4,6 +4,7 @@ import HydrusDownloading
 import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
+import HydrusNATPunch
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
@@ -1986,6 +1987,169 @@ class DialogInputFileSystemPredicate( Dialog ):
         
     
     def GetPredicate( self ): return self._predicate
+    
+class DialogInputLocalBooruShare( Dialog ):
+    
+    def __init__( self, parent, share_key, name, text, timeout, hashes, new_share = False ):
+        
+        def InitialiseControls():
+            
+            self._name = wx.TextCtrl( self )
+            
+            self._text = wx.TextCtrl( self, style = wx.TE_MULTILINE )
+            self._text.SetMinSize( ( -1, 100 ) )
+            
+            message = 'expires in' 
+            
+            self._timeout_number = ClientGUICommon.NoneableSpinCtrl( self, message, none_phrase = 'no expiration', max = 1000000, multiplier = 1 )
+            
+            self._timeout_multiplier = ClientGUICommon.BetterChoice( self )
+            self._timeout_multiplier.Append( 'minutes', 60 )
+            self._timeout_multiplier.Append( 'hours', 60 * 60 )
+            self._timeout_multiplier.Append( 'days', 60 * 60 * 24 )
+            
+            self._copy_internal_share_link = wx.Button( self, label = 'copy internal share link' )
+            self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
+            
+            self._copy_external_share_link = wx.Button( self, label = 'copy external share link' )
+            self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            self._share_key = share_key
+            self._name.SetValue( name )
+            self._text.SetValue( text )
+            
+            if timeout is None:
+                
+                self._timeout_number.SetValue( None )
+                
+                self._timeout_multiplier.SelectClientData( 60 )
+                
+            else:
+                
+                time_left = max( 0, timeout - HC.GetNow() )
+                
+                if time_left < 60 * 60 * 12: time_value = 60
+                elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 
+                else: time_value = 60 * 60 * 24
+                
+                self._timeout_number.SetValue( time_left / time_value )
+                
+                self._timeout_multiplier.SelectClientData( time_value )
+                
+            
+            self._hashes = hashes
+            
+        
+        def ArrangeControls():
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'share name' ), FLAGS_MIXED )
+            gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self, label = 'share text' ), FLAGS_MIXED )
+            gridbox.AddF( self._text, FLAGS_EXPAND_BOTH_WAYS )
+            
+            timeout_box = wx.BoxSizer( wx.HORIZONTAL )
+            timeout_box.AddF( self._timeout_number, FLAGS_EXPAND_BOTH_WAYS )
+            timeout_box.AddF( self._timeout_multiplier, FLAGS_EXPAND_BOTH_WAYS )
+            
+            link_box = wx.BoxSizer( wx.HORIZONTAL )
+            link_box.AddF( self._copy_internal_share_link, FLAGS_MIXED )
+            link_box.AddF( self._copy_external_share_link, FLAGS_MIXED )
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            intro = 'Sharing ' + HC.ConvertIntToPrettyString( len( self._hashes ) ) + ' files.'
+            intro += os.linesep + 'Title and text are optional.'
+            
+            if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
+            
+            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( timeout_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( link_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            x = max( x, 350 )
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'configure local booru share' )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def EventCopyExternalShareURL( self, event ):
+        
+        self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        
+        info = self._service.GetInfo()
+        
+        external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
+        
+        external_port = info[ 'upnp' ]
+        
+        if external_port is None: external_port = info[ 'port' ]
+        
+        url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', url )
+        
+    
+    def EventCopyInternalShareURL( self, event ):
+        
+        self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        
+        info = self._service.GetInfo()
+        
+        internal_ip = '127.0.0.1'
+        
+        internal_port = info[ 'port' ]
+        
+        url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', url )
+        
+    
+    def GetInfo( self ):
+        
+        name = self._name.GetValue()
+        
+        text = self._text.GetValue()
+        
+        timeout = self._timeout_number.GetValue()
+        
+        if timeout is not None: timeout = timeout * self._timeout_multiplier.GetChoice() + HC.GetNow()
+        
+        return ( self._share_key, name, text, timeout, self._hashes )
+        
     
 class DialogInputLocalFiles( Dialog ):
     
@@ -4473,7 +4637,7 @@ class DialogSelectBooru( Dialog ):
     
         def PopulateControls():
             
-            boorus = HC.app.Read( 'boorus' )
+            boorus = HC.app.Read( 'remote_boorus' )
             
             for ( name, booru ) in boorus.items(): self._boorus.Append( name, booru )
             

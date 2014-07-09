@@ -29,13 +29,14 @@ import wx
 import yaml
 
 YAML_DUMP_ID_SINGLE = 0
-YAML_DUMP_ID_BOORU = 1
+YAML_DUMP_ID_REMOTE_BOORU = 1
 YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS = 2
 YAML_DUMP_ID_GUI_SESSION = 3
 YAML_DUMP_ID_IMAGEBOARD = 4
 YAML_DUMP_ID_IMPORT_FOLDER = 5
 YAML_DUMP_ID_EXPORT_FOLDER = 6
 YAML_DUMP_ID_SUBSCRIPTION = 7
+YAML_DUMP_ID_LOCAL_BOORU = 8
 
 class FileDB():
     
@@ -1591,7 +1592,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     def _DeleteYAMLDump( self, c, dump_type, dump_name = None ):
         
         if dump_name is None: c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
-        else: c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+        else:
+            
+            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
+            
+            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+            
+        
+        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
+            
+            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+            
+            c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
+            
+            HC.pubsub.pub( 'refresh_local_booru_shares' )
+            
         
     
     def _FattenAutocompleteCache( self, c ):
@@ -2804,7 +2819,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 elif service_type == HC.LOCAL_BOORU:
                     
-                    if info_type == HC.SERVICE_INFO_NUM_SHARES: result = c.execute( 'SELECT COUNT( * ) FROM booru_shares WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_SHARES: result = c.execute( 'SELECT COUNT( * ) FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_LOCAL_BOORU, ) ).fetchone()
                     
                 
                 if result is None: info = 0
@@ -2995,6 +3010,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             result = { dump_name : data for ( dump_name, data ) in c.execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) }
             
+            if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
+                
+                result = { dump_name.decode( 'hex' ) : data for ( dump_name, data ) in result.items() }
+                
+            
             if dump_type == YAML_DUMP_ID_SUBSCRIPTION:
                 
                 for ( dump_name, data ) in result.items():
@@ -3004,6 +3024,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         else:
+            
+            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
             result = c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
             
@@ -3029,6 +3051,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         return result
+        
+    
+    def _GetYAMLDumpNames( self, c, dump_type ):
+        
+        names = [ name for ( name, ) in c.execute( 'SELECT dump_name FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) ]
+        
+        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
+            
+            names = [ name.decode( 'hex' ) for name in names ]
+            
+        
+        return names
         
     
     def _ImportFile( self, c, path, advanced_import_options = {}, service_identifiers_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
@@ -3824,6 +3858,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _SetYAMLDump( self, c, dump_type, dump_name, data ):
         
+        if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
+        
         c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
         
         if dump_type == YAML_DUMP_ID_SUBSCRIPTION: data[ 'advanced_tag_options' ] = data[ 'advanced_tag_options' ].items()
@@ -3834,6 +3870,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             print( ( dump_type, dump_name, data ) )
             
             raise
+            
+        
+        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
+            
+            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+            
+            c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
+            
+            HC.pubsub.pub( 'refresh_local_booru_shares' )
             
         
     
@@ -4381,6 +4426,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 self._UpdateServiceInfo( c, service_id, update )
                 
+                if service_type == HC.LOCAL_BOORU: HC.pubsub.pub( 'restart_booru' )
+                
             
         
         if recalc_combined_mappings:
@@ -4735,7 +4782,7 @@ class DB( ServiceDB ):
                 self._AddService( c, init_service_identifier, info )
                 
             
-            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
+            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
             
             c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in CC.DEFAULT_IMAGEBOARDS ) )
             
@@ -4882,7 +4929,7 @@ class DB( ServiceDB ):
         
         if version == 116:
             
-            c.execute( 'DELETE FROM service_info WHERE info_type == ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
+            c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
             
         
         if version == 117:
@@ -6716,7 +6763,7 @@ class DB( ServiceDB ):
             
             data = c.execute( 'SELECT name, booru FROM boorus;' ).fetchall()
             
-            inserts.extend( ( ( YAML_DUMP_ID_BOORU, name, booru ) for ( name, booru ) in data ) )
+            inserts.extend( ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in data ) )
             
             # favourite custom filter actions
             
@@ -6956,8 +7003,6 @@ class DB( ServiceDB ):
                 if action == '4chan_pass': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, '4chan_pass' )
                 elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
                 elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
-                elif action == 'booru': result = self._GetYAMLDump( c, YAML_DUMP_ID_BOORU, *args, **kwargs )
-                elif action == 'boorus': result = self._GetYAMLDump( c, YAML_DUMP_ID_BOORU )
                 elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
                 elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
                 elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
@@ -6971,6 +7016,9 @@ class DB( ServiceDB ):
                 elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
                 elif action == 'imageboards': result = self._GetYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
                 elif action == 'import_folders': result = self._GetYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+                elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( c, YAML_DUMP_ID_LOCAL_BOORU )
+                elif action == 'local_booru_share': result = self._GetYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+                elif action == 'local_booru_shares': result = self._GetYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU )
                 elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
                 elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
                 elif action == 'media_results_from_ids': result = self._GetMediaResults( c, *args, **kwargs )
@@ -6983,6 +7031,8 @@ class DB( ServiceDB ):
                 elif action == 'pixiv_account': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account' )
                 elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
                 elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
+                elif action == 'remote_booru': result = self._GetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
+                elif action == 'remote_boorus': result = self._GetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU )
                 elif action == 'service': result = self._GetService( c, *args, **kwargs )
                 elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
                 elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
@@ -7011,21 +7061,21 @@ class DB( ServiceDB ):
                 elif action == 'add_uploads': result = self._AddUploads( c, *args, **kwargs )
                 elif action == 'archive_conversation': result = self._ArchiveConversation( c, *args, **kwargs )
                 elif action == 'backup': result = self._Backup( c, *args, **kwargs )
-                elif action == 'booru': result = self._SetYAMLDump( c, YAML_DUMP_ID_BOORU, *args, **kwargs )
                 elif action == 'contact_associated': result = self._AssociateContact( c, *args, **kwargs )
                 elif action == 'content_updates': result = self._ProcessContentUpdates( c, *args, **kwargs )
                 elif action == 'copy_files': result = self._CopyFiles( c, *args, **kwargs )
-                elif action == 'delete_booru': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_BOORU, *args, **kwargs )
                 elif action == 'delete_conversation': result = self._DeleteConversation( c, *args, **kwargs )
                 elif action == 'delete_draft': result = self._DeleteDraft( c, *args, **kwargs )
                 elif action == 'delete_export_folder': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
                 elif action == 'delete_favourite_custom_filter_actions': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
                 elif action == 'delete_gui_session': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
+                elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( c, *args, **kwargs )
                 elif action == 'delete_imageboard': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
                 elif action == 'delete_import_folder': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+                elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
                 elif action == 'delete_orphans': result = self._DeleteOrphans( c, *args, **kwargs )
                 elif action == 'delete_pending': result = self._DeletePending( c, *args, **kwargs )
-                elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( c, *args, **kwargs )
+                elif action == 'delete_remote_booru': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
                 elif action == 'delete_subscription': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
                 elif action == 'draft_message': result = self._DraftMessage( c, *args, **kwargs )
                 elif action == 'export_folder': result = self._SetYAMLDump( c, YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
@@ -7039,10 +7089,12 @@ class DB( ServiceDB ):
                 elif action == 'import_file': result = self._ImportFile( c, *args, **kwargs )
                 elif action == 'import_folder': result = self._SetYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
                 elif action == 'inbox_conversation': result = self._InboxConversation( c, *args, **kwargs )
+                elif action == 'local_booru_share': result = self._SetYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
                 elif action == 'message': result = self._AddMessage( c, *args, **kwargs )
                 elif action == 'message_info_since': result = self._AddMessageInfoSince( c, *args, **kwargs )
                 elif action == 'message_statuses': result = self._UpdateMessageStatuses( c, *args, **kwargs )
                 elif action == 'pixiv_account': result = self._SetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
+                elif action == 'remote_booru': result = self._SetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
                 elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
                 elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
                 elif action == 'service_updates': result = self._ProcessServiceUpdates( c, *args, **kwargs )
@@ -8102,7 +8154,7 @@ def DAEMONSynchroniseSubscriptions():
                         
                         ( booru_name, booru_query_type ) = query_type
                         
-                        try: booru = HC.app.ReadDaemon( 'booru', booru_name )
+                        try: booru = HC.app.ReadDaemon( 'remote_booru', booru_name )
                         except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
                         
                         tags = query.split( ' ' )

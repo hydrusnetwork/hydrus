@@ -9,6 +9,46 @@ from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.python import log
 
+# new stuff starts here
+
+if HC.PLATFORM_LINUX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_linux"'
+elif HC.PLATFORM_OSX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_osx"'
+elif HC.PLATFORM_WINDOWS: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_win32.exe"'
+
+external_ip = None
+external_ip_time = 0
+
+def GetExternalIP():
+    
+    if HC.GetNow() - external_ip_time > 3600 * 24:
+        
+        command = upnpc_path + ' -l'
+        
+        p = subprocess.Popen( command, shell = True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE )
+        
+        p.wait()
+        
+        ( output, error ) = p.communicate()
+        
+        if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch External IP:' + os.linesep + os.linesep + HC.u( error ) )
+        else:
+            
+            try:
+                
+                lines = output.split( os.linesep )
+                
+                i = lines.index( ' i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
+                
+                '''ExternalIPAddress = ip'''
+                
+                ( gumpf, external_ip ) = lines[ i - 1 ].split( ' = ' )
+                
+            except: raise Exception( 'Problem while trying to fetch External IP.' )
+            
+        
+    
+    return external_ip
+    
 def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
 
 # old, win32 only stuff
@@ -76,12 +116,6 @@ def RemoveUPnPMapping( external_port, protocol ):
     try: static_port_mappings.Remove( external_port, protocol )
     except: raise Exception( 'Attempt to remove UPnP mapping failed.' )
     '''
-
-# new stuff starts here
-
-if HC.PLATFORM_LINUX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_linux"'
-elif HC.PLATFORM_OSX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_osx"'
-elif HC.PLATFORM_WINDOWS: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_win32.exe"'
 
 def AddUPnPMapping( internal_client, internal_port, external_port, protocol, description, duration = 3600 ):
     

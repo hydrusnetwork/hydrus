@@ -8,6 +8,7 @@ import ClientGUIPages
 import HydrusDownloading
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusNATPunch
 import HydrusThreading
 import itertools
 import os
@@ -2276,8 +2277,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     elif service_type == HC.LOCAL_BOORU:
                         
-                        self._link = wx.HyperlinkCtrl( self._info_panel, label = 'link', url = 'link', id = -1 )
-                        
                         self._num_shares = wx.StaticText( self._info_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
                         
                         self._bytes = ClientGUICommon.Gauge( self._info_panel )
@@ -2312,6 +2311,25 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._updates = ClientGUICommon.Gauge( self._synchro_panel )
                     
                     self._updates_text = wx.StaticText( self._synchro_panel, style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
+                    
+                
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
+                    
+                    self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ] )
+                    
+                    self._copy_internal_share_link = wx.Button( self._booru_shares_panel, label = 'copy internal share link' )
+                    self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
+                    
+                    self._copy_external_share_link = wx.Button( self._booru_shares_panel, label = 'copy external share link' )
+                    self._copy_external_share_link.Bind( wx.EVT_BUTTON, self.EventCopyExternalShareURL )
+                    
+                    self._booru_edit = wx.Button( self._booru_shares_panel, label = 'edit' )
+                    self._booru_edit.Bind( wx.EVT_BUTTON, self.EventBooruEdit )
+                    
+                    self._booru_delete = wx.Button( self._booru_shares_panel, label = 'delete' )
+                    self._booru_delete.Bind( wx.EVT_BUTTON, self.EventBooruDelete )
                     
                 
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
@@ -2372,7 +2390,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     elif service_type == HC.LOCAL_BOORU:
                         
-                        self._info_panel.AddF( self._link, FLAGS_EXPAND_PERPENDICULAR )
                         self._info_panel.AddF( self._num_shares, FLAGS_EXPAND_PERPENDICULAR )
                         self._info_panel.AddF( self._bytes, FLAGS_EXPAND_PERPENDICULAR )
                         self._info_panel.AddF( self._bytes_text, FLAGS_EXPAND_PERPENDICULAR )
@@ -2400,6 +2417,21 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._synchro_panel.AddF( self._updates_text, FLAGS_EXPAND_PERPENDICULAR )
                     
                     vbox.AddF( self._synchro_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    self._booru_shares_panel.AddF( self._booru_shares, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    b_box = wx.BoxSizer( wx.HORIZONTAL )
+                    b_box.AddF( self._copy_internal_share_link, FLAGS_MIXED )
+                    b_box.AddF( self._copy_external_share_link, FLAGS_MIXED )
+                    b_box.AddF( self._booru_edit, FLAGS_MIXED )
+                    b_box.AddF( self._booru_delete, FLAGS_MIXED )
+                    
+                    self._booru_shares_panel.AddF( b_box, FLAGS_BUTTON_SIZERS )
+                    
+                    vbox.AddF( self._booru_shares_panel, FLAGS_EXPAND_BOTH_WAYS )
                     
                 
                 if service_type in HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG ]:
@@ -2452,6 +2484,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
             HC.pubsub.sub( self, 'AddThumbnailCount', 'add_thumbnail_count' )
+            if service_type == HC.LOCAL_BOORU: HC.pubsub.sub( self, 'RefreshLocalBooruShares', 'refresh_local_booru_shares' )
             
         
         def _DisplayAccountInfo( self ):
@@ -2465,13 +2498,6 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             if service_type == HC.LOCAL_BOORU:
                 
                 info = self._service.GetInfo()
-                
-                port = info[ 'port' ]
-                
-                url = 'http://127.0.0.1:' + str( port ) + '/'
-                
-                self._link.SetLabel( url )
-                self._link.SetURL( url )
                 
                 max_monthly_data = info[ 'max_monthly_data' ]
                 used_monthly_data = info[ 'used_monthly_data' ]
@@ -2640,6 +2666,23 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
             
+            if service_type == HC.LOCAL_BOORU:
+                
+                booru_shares = HC.app.Read( 'local_booru_shares' )
+                
+                self._booru_shares.DeleteAllItems()
+                
+                for ( share_key, info ) in booru_shares.items():
+                    
+                    name = info[ 'name' ]
+                    text = info[ 'text' ]
+                    timeout = info[ 'timeout' ]
+                    hashes = info[ 'hashes' ]
+                    
+                    self._booru_shares.Append( ( name, text, HC.ConvertTimestampToPrettyExpiry( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
+                    
+                
+            
             if service_type == HC.SERVER_ADMIN:
                 
                 if self._service.IsInitialised():
@@ -2662,6 +2705,87 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 self._num_local_thumbs += count
                 
                 self._DisplayNumThumbs()
+                
+            
+        
+        def EventBooruDelete( self, event ):
+            
+            for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
+                
+                HC.app.Write( 'delete_local_booru_share', share_key )
+                
+            
+        
+        def EventBooruEdit( self, event ):
+            
+            writes = []
+            
+            for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
+                
+                with ClientGUIDialogs.DialogInputLocalBooruShare( self, share_key, name, text, timeout, hashes, new_share = False) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( share_key, name, text, timeout, hashes ) = dlg.GetInfo()
+                        
+                        info = {}
+                        
+                        info[ 'name' ] = name
+                        info[ 'text' ] = text
+                        info[ 'timeout' ] = timeout
+                        info[ 'hashes' ] = hashes
+                        
+                        writes.append( ( share_key, info ) )
+                        
+                    
+                
+            
+            for ( share_key, info ) in writes: HC.app.Write( 'local_booru_share', share_key, info )
+            
+        
+        def EventCopyExternalShareURL( self, event ):
+            
+            shares = self._booru_shares.GetSelectedClientData()
+            
+            if len( shares ) > 0:
+                
+                ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
+                
+                self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+                
+                info = self._service.GetInfo()
+                
+                external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
+                
+                external_port = info[ 'upnp' ]
+                
+                if external_port is None: external_port = info[ 'port' ]
+                
+                url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+                
+                HC.pubsub.pub( 'clipboard', 'text', url )
+                
+            
+        
+        def EventCopyInternalShareURL( self, event ):
+            
+            shares = self._booru_shares.GetSelectedClientData()
+            
+            if len( shares ) > 0:
+                
+                ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
+                
+                self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+                
+                info = self._service.GetInfo()
+                
+                internal_ip = '127.0.0.1'
+                
+                internal_port = info[ 'port' ]
+                
+                url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+                
+                HC.pubsub.pub( 'clipboard', 'text', url )
                 
             
         
@@ -2718,6 +2842,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         
                     
                 
+            
+        
+        def RefreshLocalBooruShares( self ):
+            
+            self._DisplayService()
             
         
         def TIMEREventUpdates( self, event ): self._updates_text.SetLabel( self._service.GetUpdateStatus() )
