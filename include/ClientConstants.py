@@ -1097,6 +1097,17 @@ class LocalBooruCache( object ):
         self._RefreshShares()
         
         HC.pubsub.sub( self, 'RefreshShares', 'refresh_local_booru_shares' )
+        HC.pubsub.sub( self, 'RefreshShares', 'restart_booru' )
+        
+    
+    def _CheckDataUsage( self ):
+        
+        info = self._local_booru_service.GetInfo()
+        
+        max_monthly_data = info[ 'max_monthly_data' ]
+        used_monthly_data = info[ 'used_monthly_data' ]
+        
+        if max_monthly_data is not None and used_monthly_data > max_monthly_data: raise HydrusExceptions.ForbiddenException( 'This booru has used all its monthly data. Please try again next month.' )
         
     
     def _CheckFileAuthorised( self, share_key, hash ):
@@ -1109,6 +1120,8 @@ class LocalBooruCache( object ):
         
     
     def _CheckShareAuthorised( self, share_key ):
+        
+        self._CheckDataUsage()
         
         info = self._GetInfo( share_key )
         
@@ -1130,6 +1143,14 @@ class LocalBooruCache( object ):
             
             info[ 'hashes_set' ] = set( hashes )
             
+            media_results = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
+            
+            info[ 'media_results' ] = media_results
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+            
+            info[ 'hashes_to_media_results' ] = hashes_to_media_results
+            
             self._keys_to_infos[ share_key ] = info
             
         
@@ -1137,6 +1158,8 @@ class LocalBooruCache( object ):
         
     
     def _RefreshShares( self ):
+        
+        self._local_booru_service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
         
         self._keys_to_infos = {}
         
@@ -1159,17 +1182,28 @@ class LocalBooruCache( object ):
         
         with self._lock:
             
+            self._CheckShareAuthorised( share_key )
+            
             info = self._GetInfo( share_key )
             
             name = info[ 'name' ]
             text = info[ 'text' ]
             timeout = info[ 'timeout' ]
-            hashes = info[ 'hashes' ]
+            media_results = info[ 'media_results' ]
             
-            # eventually move to a set of media results that has tags from ~whatever~
-            # the media_results should be generated on demand and cached with a timeout
+            return ( name, text, timeout, media_results )
             
-            return ( name, text, timeout, hashes )
+        
+    
+    def GetMediaResult( self, share_key, hash ):
+        
+        with self._lock:
+            
+            info = self._GetInfo( share_key )
+            
+            media_result = info[ 'hashes_to_media_results' ][ hash ]
+            
+            return media_result
             
         
     
@@ -1177,15 +1211,16 @@ class LocalBooruCache( object ):
         
         with self._lock:
             
+            self._CheckFileAuthorised( share_key, hash )
+            
             info = self._GetInfo( share_key )
             
             name = info[ 'name' ]
             text = info[ 'text' ]
             timeout = info[ 'timeout' ]
+            media_result = info[ 'hashes_to_media_results' ][ hash ]
             
-            # eventually move to returning resolution and so on so we can show tags and whatever, doing a proper page
-            
-            return ( name, text, timeout )
+            return ( name, text, timeout, media_result )
             
         
     
@@ -2385,7 +2420,14 @@ class Service( HC.HydrusYAMLBase ):
                         
                         num_bytes = row
                         
-                        self._info[ 'account' ].RequestMade( num_bytes )
+                        service_type = self._service_identifier.GetType()
+                        
+                        if service_type == HC.LOCAL_BOORU:
+                            
+                            self._info[ 'used_monthly_data' ] += num_bytes
+                            self._info[ 'used_monthly_requests' ] += 1
+                            
+                        else: self._info[ 'account' ].RequestMade( num_bytes )
                         
                     elif action == HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP:
                         
@@ -2536,11 +2578,11 @@ class ThumbnailCache():
             
             thumbnail = HydrusFileHandling.GenerateThumbnail( path, HC.options[ 'thumbnail_dimensions' ] )
             
-            temp_path = HC.GetTempPath()
+            resized_path = HC.STATIC_DIR + os.path.sep + name + '_resized.png'
             
-            with open( temp_path, 'wb' ) as f: f.write( thumbnail )
+            with open( resized_path, 'wb' ) as f: f.write( thumbnail )
             
-            hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( temp_path )
+            hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( resized_path )
             
             self._special_thumbs[ name ] = hydrus_bitmap
             

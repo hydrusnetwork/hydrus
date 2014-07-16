@@ -15,12 +15,15 @@ if HC.PLATFORM_LINUX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_linux
 elif HC.PLATFORM_OSX: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_osx"'
 elif HC.PLATFORM_WINDOWS: upnpc_path = '"' + HC.BIN_DIR + os.path.sep + 'upnpc_win32.exe"'
 
-external_ip = None
-external_ip_time = 0
+EXTERNAL_IP = {}
+EXTERNAL_IP[ 'ip' ] = None
+EXTERNAL_IP[ 'time' ] = 0
 
 def GetExternalIP():
     
-    if HC.GetNow() - external_ip_time > 3600 * 24:
+    if HC.GetNow() - EXTERNAL_IP[ 'time' ] > 3600 * 24:
+        
+        EXTERNAL_IP[ 'time' ] = HC.GetNow()
         
         command = upnpc_path + ' -l'
         
@@ -41,13 +44,13 @@ def GetExternalIP():
                 
                 '''ExternalIPAddress = ip'''
                 
-                ( gumpf, external_ip ) = lines[ i - 1 ].split( ' = ' )
+                ( gumpf, EXTERNAL_IP[ 'ip' ] ) = lines[ i - 1 ].split( ' = ' )
                 
             except: raise Exception( 'Problem while trying to fetch External IP.' )
             
         
     
-    return external_ip
+    return EXTERNAL_IP[ 'ip' ]
     
 def GetLocalIP(): return socket.gethostbyname( socket.gethostname() )
 

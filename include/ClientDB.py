@@ -10,6 +10,7 @@ import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusMessageHandling
+import HydrusNATPunch
 import HydrusServer
 import HydrusTags
 import HydrusThreading
@@ -1325,9 +1326,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if service_type == HC.LOCAL_BOORU:
                 
+                current_time_struct = time.gmtime()
+                
+                ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
+                
                 if 'used_monthly_data' not in info: info[ 'used_monthly_data' ] = 0
                 if 'max_monthly_data' not in info: info[ 'max_monthly_data' ] = None
-                if 'port' not in info: info[ 'port' ] = 45866
+                if 'used_monthly_requests' not in info: info[ 'used_monthly_requests' ] = 0
+                if 'current_data_month' not in info: info[ 'current_data_month' ] = ( current_year, current_month )
+                if 'port' not in info: info[ 'port' ] = HC.DEFAULT_LOCAL_BOORU_PORT
                 if 'upnp' not in info: info[ 'upnp' ] = None
                 
             
@@ -3652,9 +3659,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         do_new_permissions = False
         
-        requests_made = []
+        hydrus_requests_made = []
+        local_booru_requests_made = []
         
         for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+            
+            service_type = service_identifier.GetType()
             
             try: service_id = self._GetServiceId( c, service_identifier )
             except: continue
@@ -3683,7 +3693,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     num_bytes = row
                     
-                    requests_made.append( ( service_id, num_bytes ) )
+                    if service_type == HC.LOCAL_BOORU: local_booru_requests_made.append( num_bytes )
+                    else: hydrus_requests_made.append( ( service_id, num_bytes ) )
                     
                 elif action == HC.SERVICE_UPDATE_NEWS:
                     
@@ -3735,13 +3746,39 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             self.pub_service_updates_after_commit( service_identifiers_to_service_updates )
             
         
-        for ( service_id, nums_bytes ) in HC.BuildKeyToListDict( requests_made ).items():
+        for ( service_id, nums_bytes ) in HC.BuildKeyToListDict( hydrus_requests_made ).items():
             
             ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
             account = info[ 'account' ]
             
             for num_bytes in nums_bytes: account.RequestMade( num_bytes )
+            
+            c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+            
+        
+        if len( local_booru_requests_made ) > 0:
+            
+            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+            
+            ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            current_time_struct = time.gmtime()
+            
+            ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
+            
+            ( booru_year, booru_month ) = info[ 'current_data_month' ]
+            
+            if current_year != booru_year or current_month != booru_month:
+                
+                info[ 'used_monthly_data' ] = 0
+                info[ 'used_monthly_requests' ] = 0
+                
+                info[ 'current_data_month' ] = ( current_year, current_month )
+                
+            
+            info[ 'used_monthly_data' ] += sum( local_booru_requests_made )
+            info[ 'used_monthly_requests' ] += len( local_booru_requests_made )
             
             c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
             
@@ -4426,7 +4463,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 self._UpdateServiceInfo( c, service_id, update )
                 
-                if service_type == HC.LOCAL_BOORU: HC.pubsub.pub( 'restart_booru' )
+                if service_type == HC.LOCAL_BOORU:
+                    
+                    HC.pubsub.pub( 'restart_booru' )
+                    HC.pubsub.pub( 'notify_new_upnp_mappings' )
+                    
                 
             
         
@@ -4636,8 +4677,6 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
-            
-            c.execute( 'CREATE TABLE booru_shares ( service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, share_key BLOB_BYTES, share TEXT_YAML, expiry INTEGER, used_monthly_data INTEGER, max_monthly_data INTEGER, ip_restriction TEXT, notes TEXT, PRIMARY KEY( service_id, share_key ) );' )
             
             c.execute( 'CREATE TABLE contacts ( contact_id INTEGER PRIMARY KEY, contact_key BLOB_BYTES, public_key TEXT, name TEXT, host TEXT, port INTEGER );' )
             c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
@@ -5001,6 +5040,24 @@ class DB( ServiceDB ):
                     print( traceback.format_exc())
                     print( 'When updating to v119, ' + path + '\'s thumbnail or phash could not be calculated.' )
                 
+            
+        
+        if version == 121:
+            
+            c.execute( 'DROP TABLE booru_shares;' )
+            
+            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+            
+            ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            current_time_struct = time.gmtime()
+            
+            ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
+            
+            info[ 'used_monthly_requests' ] = 0
+            info[ 'current_data_month' ] = ( current_year, current_month )
+            
+            c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -7248,6 +7305,7 @@ class DB( ServiceDB ):
         HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) )
+        HydrusThreading.DAEMONWorker( 'UPnP', DAEMONUPnP, ( 'notify_new_upnp_mappings', ) )
         HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
     
@@ -8419,5 +8477,56 @@ def DAEMONSynchroniseSubscriptions():
             
         
         time.sleep( 3 )
+        
+    
+def DAEMONUPnP():
+    
+    local_ip = HydrusNATPunch.GetLocalIP()
+    
+    current_mappings = HydrusNATPunch.GetUPnPMappings()
+    
+    our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
+    
+    services = HC.app.ReadDaemon( 'services', ( HC.LOCAL_BOORU, ) )
+    
+    for service in services:
+        
+        info = service.GetInfo()
+        
+        internal_port = info[ 'port' ]
+        upnp = info[ 'upnp' ]
+        
+        if ( local_ip, internal_port ) in our_mappings:
+            
+            current_external_port = our_mappings[ ( local_ip, internal_port ) ]
+            
+            if upnp is None or current_external_port != upnp: HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
+            
+        
+    
+    for service in services:
+        
+        info = service.GetInfo()
+        
+        internal_port = info[ 'port' ]
+        upnp = info[ 'upnp' ]
+        
+        if upnp is not None:
+            
+            if ( local_ip, internal_port ) not in our_mappings:
+                
+                service_identifier = service.GetServiceIdentifier()
+                
+                external_port = upnp
+                
+                protocol = 'TCP'
+                
+                description = HC.service_string_lookup[ service_identifier.GetType() ] + ' at ' + local_ip + ':' + str( internal_port )
+                
+                duration = 3600
+                
+                HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, external_port, protocol, description, duration = duration )
+                
+            
         
     

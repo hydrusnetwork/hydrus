@@ -26,6 +26,7 @@ class TestServer( unittest.TestCase ):
         services = []
         
         self._local_service_identifier = HC.ServerServiceIdentifier( 'local file', HC.LOCAL_FILE )
+        self._booru_service_identifier = HC.ServerServiceIdentifier( 'local booru', HC.LOCAL_BOORU )
         self._file_service_identifier = HC.ServerServiceIdentifier( 'file service', HC.FILE_REPOSITORY )
         self._tag_service_identifier = HC.ServerServiceIdentifier( 'tag service', HC.TAG_REPOSITORY )
         
@@ -46,6 +47,7 @@ class TestServer( unittest.TestCase ):
             
             reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( HC.SERVER_ADMIN_IDENTIFIER, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( self._local_service_identifier, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( self._booru_service_identifier, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service_identifier, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service_identifier, 'hello' ) )
             
@@ -191,6 +193,101 @@ class TestServer( unittest.TestCase ):
         
         try: os.remove( path )
         except: pass
+        
+    
+    def _test_local_booru( self, host, port ):
+        
+        connection = httplib.HTTPConnection( host, port, timeout = 10 )
+        
+        #
+        
+        with open( HC.STATIC_DIR + os.path.sep + 'local_booru_style.css', 'rb' ) as f: css = f.read()
+        
+        connection.request( 'GET', '/style.css' )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( data, css )
+        
+        #
+        
+        share_key = os.urandom( 32 )
+        hashes = [ os.urandom( 32 ) for i in range( 5 ) ]
+        
+        with open( CC.GetExpectedFilePath( hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
+        with open( CC.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
+        
+        local_booru_manager = HC.app.GetManager( 'local_booru' )
+        
+        #
+        
+        self._test_local_booru_requests( connection, share_key, hashes[0], 404 )
+        
+        #
+        
+        info = {}
+        info[ 'name' ] = 'name'
+        info[ 'text' ] = 'text'
+        info[ 'timeout' ] = 0
+        info[ 'hashes' ] = hashes
+        
+        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings
+        
+        media_results = [ CC.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 0, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
+        
+        HC.app.SetRead( 'local_booru_share_keys', [ share_key ] )
+        HC.app.SetRead( 'local_booru_share', info )
+        HC.app.SetRead( 'media_results', media_results )
+        
+        local_booru_manager.RefreshShares()
+        
+        #
+        
+        self._test_local_booru_requests( connection, share_key, hashes[0], 403 )
+        
+        #
+        
+        info[ 'timeout' ] = None
+        HC.app.SetRead( 'local_booru_share', info )
+        
+        local_booru_manager.RefreshShares()
+        
+        #
+        
+        self._test_local_booru_requests( connection, share_key, hashes[0], 200 )
+        
+        #
+        
+        HC.app.SetRead( 'local_booru_share_keys', [] )
+        
+        local_booru_manager.RefreshShares()
+        
+        #
+        
+        self._test_local_booru_requests( connection, share_key, hashes[0], 404 )
+        
+    
+    def _test_local_booru_requests( self, connection, share_key, hash, expected_result ):
+        
+        requests = []
+        
+        requests.append( '/gallery?share_key=' + share_key.encode( 'hex' ) )
+        requests.append( '/page?share_key=' + share_key.encode( 'hex' ) + '&hash=' + hash.encode( 'hex' ) )
+        requests.append( '/file?share_key=' + share_key.encode( 'hex' ) + '&hash=' + hash.encode( 'hex' ) )
+        requests.append( '/thumbnail?share_key=' + share_key.encode( 'hex' ) + '&hash=' + hash.encode( 'hex' ) )
+        
+        for request in requests:
+            
+            connection.request( 'GET', request )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, expected_result )
+            
         
     
     def _test_repo( self, host, port, service_type ):
@@ -481,6 +578,15 @@ class TestServer( unittest.TestCase ):
         self._test_basics( host, port )
         self._test_restricted( host, port, HC.SERVER_ADMIN )
         self._test_server_admin( host, port )
+        
+    
+    def test_local_booru( self ):
+        
+        host = '127.0.0.1'
+        port = HC.DEFAULT_LOCAL_BOORU_PORT
+        
+        self._test_basics( host, port )
+        self._test_local_booru( host, port )
         
     
 class TestAMP( unittest.TestCase ):

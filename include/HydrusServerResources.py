@@ -16,6 +16,7 @@ import random
 import ServerConstants as SC
 import SocketServer
 import threading
+import time
 import traceback
 import urllib
 import wx
@@ -266,7 +267,8 @@ def ParseFileArguments( path ):
     
     return args
     
-hydrus_favicon = FileResource( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', defaultType = HC.IMAGE_ICON )
+hydrus_favicon = FileResource( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', defaultType = 'image/x-icon' )
+local_booru_css = FileResource( HC.STATIC_DIR + os.path.sep + 'local_booru_style.css', defaultType = 'text/css' )
 
 class HydrusDomain( object ):
     
@@ -466,6 +468,9 @@ class HydrusResourceCommand( Resource ):
             request.setHeader( 'Content-Type', content_type )
             request.setHeader( 'Content-Length', str( content_length ) )
             
+            request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
+            request.setHeader( 'Cache-Control', str( 86400 * 365  ) )
+            
             fileObject = open( path, 'rb' )
             
             producer = NoRangeStaticProducer( request, fileObject )
@@ -627,7 +632,7 @@ class HydrusResourceCommand( Resource ):
         return access_key
         
     
-    def _recordDataUsage( self, request ): return request
+    def _recordDataUsage( self, request ): pass
     
     def _threadDoGETJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
     
@@ -719,19 +724,36 @@ class HydrusResourceCommandAccessKeyVerification( HydrusResourceCommand ):
     
 class HydrusResourceCommandBooru( HydrusResourceCommand ):
     
+    RECORD_GET_DATA_USAGE = False
+    RECORD_POST_DATA_USAGE = False
+    
+    def _recordDataUsage( self, request ):
+        
+        p1 = request.method == 'GET' and self.RECORD_GET_DATA_USAGE
+        p2 = request.method == 'POST' and self.RECORD_POST_DATA_USAGE
+        
+        if p1 or p2:
+            
+            num_bytes = request.hydrus_request_data_usage
+            
+            service_identifier = HC.LOCAL_BOORU_SERVICE_IDENTIFIER # this is important, as self._service_identifier is the server identifier
+            
+            HC.pubsub.pub( 'service_updates_delayed', { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
+            
+        
+    
     def _callbackCheckRestrictions( self, request ):
         
         self._checkUserAgent( request )
         
         self._domain.CheckValid( request.getClientIP() )
         
-        # extract booru key, hence fetch booru cache thing and assign it to this request
-        # or fail with a 404
-        
         return request
         
     
 class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
+    
+    RECORD_GET_DATA_USAGE = True
     
     def _threadDoGETJob( self, request ):
         
@@ -744,7 +766,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
         
         local_booru_manager.CheckShareAuthorised( share_key )
         
-        ( name, text, timeout, hashes ) = local_booru_manager.GetGalleryInfo( share_key )
+        ( name, text, timeout, media_results ) = local_booru_manager.GetGalleryInfo( share_key )
         
         body = '''<html>
     <head>'''
@@ -755,27 +777,26 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
         <title>''' + name + '''</title>'''
         
         body += '''
+        
+        <link href="hydrus.ico" rel="shortcut icon" />
+        <link href="style.css" rel="stylesheet" type="text/css" />'''
+        
+        ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
+        
+        body += '''
+        <style>
+            .thumbnail_container { width: ''' + str( thumbnail_width ) + '''px; height: ''' + str( thumbnail_height ) + '''px; }
+        </style>'''
+        
+        body += '''
     </head>
-    <style>
-body { font-family: "Calibri", Arial, sans-serif; color: rgb( 85, 85, 85 ); line-height: 1.5; }
-a { color: #222; text-decoration: none; font-weight: bold; }
-h3 { color: #222; }
-a:hover { color: #555 }
-.footer { text-align: center; font-size: 80% }
-.media { clear: both; }
-.name { font-weight: bold; font-size: 150%; }
-.thumbnail { margin: 1px; border: 1px rgb( 223, 227, 230 ) solid; display: inline-block; }
-.thumbnail_container { text-align: center; width: 200px; height: 200px; display: table-cell; vertical-align: middle; }
-.thumbnail_container img { display: block; margin-left: auto; margin-right: auto; }
-.timeout { font-size: 80%; float: right; margin: 2px }
-    </style>
     <body>'''
         
         body += '''
-        <span class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</span>'''
+        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</div>'''
         
         if name != '': body += '''
-        <div class="name">''' + name + '''</div>'''
+        <h3>''' + name + '''</h3>'''
         
         if text != '':
             
@@ -788,7 +809,12 @@ a:hover { color: #555 }
         body+= '''
         <div class="media">'''
         
-        for hash in hashes:
+        for media_result in media_results:
+            
+            hash = media_result.GetHash()
+            mime = media_result.GetMime()
+            
+            # if mime in flash or pdf or whatever, get other thumbnail
             
             body += '''
             <span class="thumbnail">
@@ -813,6 +839,8 @@ a:hover { color: #555 }
     
 class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
     
+    RECORD_GET_DATA_USAGE = True
+    
     def _threadDoGETJob( self, request ):
         
         share_key = request.hydrus_args[ 'share_key' ]
@@ -831,6 +859,8 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
     
 class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
     
+    RECORD_GET_DATA_USAGE = True
+    
     def _threadDoGETJob( self, request ):
         
         share_key = request.hydrus_args[ 'share_key' ]
@@ -840,7 +870,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
-        ( name, text, timeout ) = local_booru_manager.GetPageInfo( share_key, hash )
+        ( name, text, timeout, media_result ) = local_booru_manager.GetPageInfo( share_key, hash )
         
         body = '''<html>
     <head>'''
@@ -851,27 +881,19 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
         <title>''' + name + '''</title>'''
         
         body += '''
+        
+        <link href="hydrus.ico" rel="shortcut icon" />
+        <link href="style.css" rel="stylesheet" type="text/css" />'''
+        
+        body += '''
     </head>
-    <style>
-body { font-family: "Calibri", Arial, sans-serif; color: rgb( 85, 85, 85 ); line-height: 1.5; }
-a { color: #222; text-decoration: none; font-weight: bold; }
-h3 { color: #222; }
-a:hover { color: #555 }
-.footer { text-align: center; font-size: 80% }
-.media { clear: both; }
-.name { font-weight: bold; font-size: 150%; }
-.thumbnail { margin: 1px; border: 1px rgb( 223, 227, 230 ) solid; display: inline-block; }
-.thumbnail_container { text-align: center; width: 200px; height: 200px; display: table-cell; vertical-align: middle; }
-.thumbnail_container img { display: block; margin-left: auto; margin-right: auto; }
-.timeout { font-size: 80%; float: right; margin: 2px }
-    </style>
     <body>'''
         
         body += '''
-        <span class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</span>'''
+        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</div>'''
         
         if name != '': body += '''
-        <div class="name">''' + name + '''</div>'''
+        <h3>''' + name + '''</h3>'''
         
         if text != '':
             
@@ -879,11 +901,43 @@ a:hover { color: #555 }
         <p>'''
             
             body += '''
-        <p>''' + text.replace( os.linesep, newline ) + '''</p>'''
+        <p>''' + text.replace( os.linesep, newline ).replace( '\n', newline ) + '''</p>'''
         
         body+= '''
-        <div class="media">
-            <img src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
+        <div class="media">'''
+        
+        mime = media_result.GetMime()
+        
+        if mime in HC.IMAGES:
+            
+            ( width, height ) = media_result.GetResolution()
+            
+            body += '''
+            <img width="''' + str( width ) + '''" height="''' + str( height ) + '''" src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />'''
+            
+        elif mime in HC.VIDEO:
+            
+            ( width, height ) = media_result.GetResolution()
+            
+            body += '''
+            <video width="''' + str( width ) + '''" height="''' + str( height ) + '''" controls="" loop="" autoplay="" src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
+            <p><a href="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
+            
+        elif mime == HC.APPLICATION_FLASH:
+            
+            ( width, height ) = media_result.GetResolution()
+            
+            body += '''
+            <embed width="''' + str( width ) + '''" height="''' + str( height ) + '''" src="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''" />
+            <p><a href="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
+            
+        else:
+            
+            body += '''
+            <p><a href="file?share_key=''' + share_key.encode( 'hex' ) + '''&hash=''' + hash.encode( 'hex' ) + '''">link to ''' + HC.mime_string_lookup[ mime ] + ''' file</a></p>'''
+            
+        
+        body += '''
         </div>
         <div class="footer"><a href="http://hydrusnetwork.github.io/hydrus/">hydrus network</a></div>
     </body>
@@ -896,6 +950,8 @@ a:hover { color: #555 }
     
 class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
     
+    RECORD_GET_DATA_USAGE = True
+    
     def _threadDoGETJob( self, request ):
         
         share_key = request.hydrus_args[ 'share_key' ]
@@ -905,7 +961,16 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
-        path = CC.GetThumbnailPath( hash )
+        media_result = local_booru_manager.GetMediaResult( share_key, hash )
+        
+        mime = media_result.GetMime()
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS: path = CC.GetThumbnailPath( hash, full_size = False )
+        elif mime in HC.AUDIO: path = HC.STATIC_DIR + os.path.sep + 'audio_resized.png'
+        elif mime in HC.VIDEO: path = HC.STATIC_DIR + os.path.sep + 'video_resized.png'
+        elif mime == HC.APPLICATION_FLASH: path = HC.STATIC_DIR + os.path.sep + 'flash_resized.png'
+        elif mime == HC.APPLICATION_PDF: path = HC.STATIC_DIR + os.path.sep + 'pdf_resized.png'
+        else: path = HC.STATIC_DIR + os.path.sep + 'hydrus_resized.png'
         
         response_context = HC.ResponseContext( 200, path = path )
         

@@ -312,6 +312,7 @@ class HydrusServiceBooru( HydrusService ):
         root.putChild( 'page', HydrusServerResources.HydrusResourceCommandBooruPage( self._service_identifier, REMOTE_DOMAIN ) )
         root.putChild( 'file', HydrusServerResources.HydrusResourceCommandBooruFile( self._service_identifier, REMOTE_DOMAIN ) )
         root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandBooruThumbnail( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'style.css', HydrusServerResources.local_booru_css )
         
         return root
         

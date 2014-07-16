@@ -2319,6 +2319,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ] )
                     
+                    self._booru_open_search = wx.Button( self._booru_shares_panel, label = 'open share in new page' )
+                    self._booru_open_search.Bind( wx.EVT_BUTTON, self.EventBooruOpenSearch )
+                    
                     self._copy_internal_share_link = wx.Button( self._booru_shares_panel, label = 'copy internal share link' )
                     self._copy_internal_share_link.Bind( wx.EVT_BUTTON, self.EventCopyInternalShareURL )
                     
@@ -2424,6 +2427,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._booru_shares_panel.AddF( self._booru_shares, FLAGS_EXPAND_BOTH_WAYS )
                     
                     b_box = wx.BoxSizer( wx.HORIZONTAL )
+                    b_box.AddF( self._booru_open_search, FLAGS_MIXED )
                     b_box.AddF( self._copy_internal_share_link, FLAGS_MIXED )
                     b_box.AddF( self._copy_external_share_link, FLAGS_MIXED )
                     b_box.AddF( self._booru_edit, FLAGS_MIXED )
@@ -2501,12 +2505,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 max_monthly_data = info[ 'max_monthly_data' ]
                 used_monthly_data = info[ 'used_monthly_data' ]
+                used_monthly_requests = info[ 'used_monthly_requests' ]
+                
+                if used_monthly_requests == 0: monthly_requests_text = ''
+                else: monthly_requests_text = ' in ' + HC.ConvertIntToPrettyString( used_monthly_requests ) + ' requests'
                 
                 if max_monthly_data is None:
                     
                     self._bytes.Hide()
                     
-                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + ' this month' )
+                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 else:
                     
@@ -2515,7 +2523,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._bytes.SetRange( max_monthly_data )
                     self._bytes.SetValue( used_monthly_data )
                     
-                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + '/' + HC.ConvertIntToBytes( max_monthly_data ) + ' this month' )
+                    self._bytes_text.SetLabel( 'used ' + HC.ConvertIntToBytes( used_monthly_data ) + '/' + HC.ConvertIntToBytes( max_monthly_data ) + monthly_requests_text + ' this month' )
                     
                 
             
@@ -2741,6 +2749,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
             for ( share_key, info ) in writes: HC.app.Write( 'local_booru_share', share_key, info )
+            
+        
+        def EventBooruOpenSearch( self, event ):
+            
+            for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
+                
+                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
+                
+                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+                
             
         
         def EventCopyExternalShareURL( self, event ):

@@ -2906,7 +2906,7 @@ def DAEMONUPnP():
         
         if ( local_ip, internal_port ) not in our_mappings:
             
-            external_port = our_mappings[ ( local_ip, internal_port ) ]
+            external_port = upnp
             
             protocol = 'TCP'
             

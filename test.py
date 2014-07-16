@@ -43,6 +43,7 @@ class App( wx.App ):
         self._reads = {}
         
         self._reads[ 'hydrus_sessions' ] = []
+        self._reads[ 'local_booru_share_keys' ] = []
         self._reads[ 'messaging_sessions' ] = []
         self._reads[ 'tag_censorship' ] = []
         self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
@@ -63,12 +64,20 @@ class App( wx.App ):
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
-        
         self._managers[ 'undo' ] = CC.UndoManager()
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
-        
         self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
+        
+        info = {}
+        info[ 'max_monthly_data' ] = None
+        info[ 'used_monthly_data' ] = 0
+        
+        service = CC.Service( HC.LOCAL_BOORU_SERVICE_IDENTIFIER, info )
+        
+        HC.app.SetRead( 'service', service )
+        
+        self._managers[ 'local_booru' ] = CC.LocalBooruCache()
         
         self._cookies = {}
         
