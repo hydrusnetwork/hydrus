@@ -8,6 +8,21 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 122</h3></li>
+				<ul>
+					<li>fixed server upnp daemon to use correct port, I think</li>
+					<li>added client upnp daemon for local booru; it'll update upnp mappings as soon as they are changed</li>
+					<li>added bandwidth tracking for local booru; it'll even magically update before your eyes in review services</li>
+					<li>bandwidth limits are tested, so exceeding data usage will result in 403 errors until the next month</li>
+					<li>moved local booru css to an external file any user can edit</li>
+					<li>added 'open share in new page' button to local booru review services</li>
+					<li>fixed local booru display for video, flash, audio, pdf and miscellaneous</li>
+					<li>fixed local booru render resolution for all media</li>
+					<li>fixed local booru thumbnails for video, flash, audio, pdf and miscellaneous</li>
+					<li>added caching headers to static file requests to reduce browser-hydrus bandwidth</li>
+					<li>fixed local booru page text's newline formatting</li>
+					<li>added local booru unit tests</li>
+				</ul>
 				<li><h3>version 121</h3></li>
 				<ul>
 					<li>first version of local booru</li>
