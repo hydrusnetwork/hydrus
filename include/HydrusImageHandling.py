@@ -513,7 +513,7 @@ def _GetFramesPIL( self ):
 '''
 
 # the cv code was initially written by @fluffy_cub
-class HydrusBitmap():
+class HydrusBitmap( object ):
     
     def __init__( self, data, format, size ):
         

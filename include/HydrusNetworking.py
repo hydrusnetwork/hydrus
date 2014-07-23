@@ -122,7 +122,7 @@ def ParseURL( url ):
     
     return ( location, path, query )
     
-class HTTPConnectionManager():
+class HTTPConnectionManager( object ):
     
     def __init__( self ):
         
@@ -233,7 +233,7 @@ class HTTPConnectionManager():
             
         
     
-class HTTPConnection():
+class HTTPConnection( object ):
     
     read_block_size = 64 * 1024
     

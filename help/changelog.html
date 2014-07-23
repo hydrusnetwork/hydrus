@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 123</h3></li>
+				<ul>
+					<li>rewrote the old gif rendering code to the new system, so gifs with variable framerates now work again!</li>
+					<li>fixed a bug that was stopping the first zoom of an image from showing if it took more than a frame to render</li>
+					<li>webms are now zoomable beyond frame border</li>
+					<li>webms will now respond to keypresses and mouseclicks when cursor is inside their border</li>
+					<li>added service select to import metadata</li>
+					<li>if repo sync is paused, either globally or individually, repo will no longer try to regularly sync their accounts</li>
+					<li>fixed individual repository pause sync</li>
+					<li>I think I fixed a serverside session synchronisation bug that was causing too-small data usage reports</li>
+					<li>improved complicated tag action descriptions in manage tag dialog</li>
+					<li>hastened initialisation of subscriptions daemon</li>
+					<li>hastened initialisation of subscriptions dialog</li>
+					<li>neatened all object declarations</li>
+					<li>fixed a menu bug in OS X</li>
+					<li>added put a little delay in the upnp daemon, hopefully to stop the error popups after waking from sleep</li>
+					<li>updateid a old hacky bit of locale code that was breaking certain platforms of wx 2.9.5.0</li>
+					<li>improved animation and other rendering timings on non-windows platforms</li>
+					<li>improved media focus on non-windows platforms</li>
+				</ul>
 				<li><h3>version 122</h3></li>
 				<ul>
 					<li>fixed server upnp daemon to use correct port, I think</li>

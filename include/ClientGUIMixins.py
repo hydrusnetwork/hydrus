@@ -9,7 +9,7 @@ import time
 import traceback
 import wx
 
-class Media():
+class Media( object ):
     
     def __init__( self ):
         
@@ -22,7 +22,7 @@ class Media():
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
-class MediaList():
+class MediaList( object ):
     
     def __init__( self, file_service_identifier, media_results ):
         

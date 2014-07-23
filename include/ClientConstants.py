@@ -806,7 +806,7 @@ def ShowExceptionClient( e ):
     
 def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
 
-class AutocompleteMatches():
+class AutocompleteMatches( object ):
     
     def __init__( self, matches ):
         
@@ -817,7 +817,7 @@ class AutocompleteMatches():
     
     def GetMatches( self, search ): return [ match for match in self._matches if HC.SearchEntryMatchesTag( search, match ) ]
     
-class AutocompleteMatchesCounted():
+class AutocompleteMatchesCounted( object ):
     
     def __init__( self, matches_to_count ):
         
@@ -831,7 +831,7 @@ class AutocompleteMatchesCounted():
     
     def GetMatches( self, search ): return [ ( match, self._matches_to_count[ match ] ) for match in self._matches if HC.SearchEntryMatchesTag( search, match ) ]
     
-class AutocompleteMatchesPredicates():
+class AutocompleteMatchesPredicates( object ):
     
     def __init__( self, service_identifier, predicates, collapse = True ):
         
@@ -1232,7 +1232,7 @@ class LocalBooruCache( object ):
             
         
     
-class LocalRatings():
+class LocalRatings( object ):
     
     def __init__( self, service_identifiers_to_ratings ):
         
@@ -1267,7 +1267,7 @@ class LocalRatings():
         if service_identifier in self._service_identifiers_to_ratings: del self._service_identifiers_to_ratings[ service_identifier ]
         
     
-class CPRemoteRatingsServiceIdentifiers():
+class CPRemoteRatingsServiceIdentifiers( object ):
     
     def __init__( self, service_identifiers_to_cp ):
         
@@ -1377,7 +1377,7 @@ class Credentials( HC.HydrusYAMLBase ):
     
     def SetAccessKey( self, access_key ): self._access_key = access_key
     
-class DataCache():
+class DataCache( object ):
     
     def __init__( self, cache_size_key, decay_duration = 1200 ):
         
@@ -1503,7 +1503,7 @@ class DataCache():
         wx.CallLater( 60 * 1000, self.MaintainCache )
         
     
-class FileQueryResult():
+class FileQueryResult( object ):
     
     def __init__( self, media_results ):
         
@@ -1601,7 +1601,7 @@ class FileQueryResult():
             
         
     
-class FileSearchContext():
+class FileSearchContext( object ):
     
     def __init__( self, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
         
@@ -1655,7 +1655,7 @@ class FileSearchContext():
     def IncludeCurrentTags( self ): return self._include_current_tags
     def IncludePendingTags( self ): return self._include_pending_tags
 
-class FileSystemPredicates():
+class FileSystemPredicates( object ):
     
     def __init__( self, system_predicates ):
         
@@ -1923,7 +1923,7 @@ class FileSystemPredicates():
     
     def MustNotBeLocal( self ): return self._not_local
     
-class GlobalBMPs():
+class GlobalBMPs( object ):
     
     @staticmethod
     def STATICInitialise():
@@ -2094,7 +2094,7 @@ fourchan_imageboards.append( Imageboard( '/vp/', 'https://sys.4chan.org/vp/post'
 
 DEFAULT_IMAGEBOARDS.append( ( '4chan', fourchan_imageboards ) )
 
-class Log():
+class Log( object ):
     
     def __init__( self ):
         
@@ -2107,7 +2107,7 @@ class Log():
     
     def AddMessage( self, message ): self._entries.append( ( message, HC.GetNow() ) )
 
-class MediaResult():
+class MediaResult( object ):
     
     def __init__( self, tuple ):
         
@@ -2192,7 +2192,7 @@ class MediaResult():
     
     def ToTuple( self ): return self._tuple
     
-class MenuEventIdToActionCache():
+class MenuEventIdToActionCache( object ):
     
     def __init__( self ):
         
@@ -2223,7 +2223,7 @@ class MenuEventIdToActionCache():
     
 MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
 
-class RenderedImageCache():
+class RenderedImageCache( object ):
     
     def __init__( self, type ):
         
@@ -2549,7 +2549,7 @@ class Service( HC.HydrusYAMLBase ):
         if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
         
     
-class ThumbnailCache():
+class ThumbnailCache( object ):
     
     def __init__( self ):
         
@@ -2624,7 +2624,7 @@ class ThumbnailCache():
     
     def DAEMONWaterfall( self ):
         
-        last_paused = time.clock()
+        last_paused = HC.GetNowPrecise()
         
         while not HC.shutdown:
             
@@ -2640,11 +2640,11 @@ class ThumbnailCache():
                     
                     HC.pubsub.pub( 'waterfall_thumbnail', page_key, media, thumbnail )
                     
-                    if time.clock() - last_paused > 0.005:
+                    if HC.GetNowPrecise() - last_paused > 0.005:
                         
                         time.sleep( 0.0001 )
                         
-                        last_paused = time.clock()
+                        last_paused = HC.GetNowPrecise()
                         
                     
                 
@@ -2652,7 +2652,7 @@ class ThumbnailCache():
             
         
     
-class UndoManager():
+class UndoManager( object ):
     
     def __init__( self ):
         
@@ -2851,7 +2851,7 @@ class UndoManager():
             
         
     
-class VPTreeNode():
+class VPTreeNode( object ):
     
     def __init__( self, phashes ):
         
@@ -2932,7 +2932,7 @@ class VPTreeNode():
         return matches
         
     
-class VPTreeNodeEmpty():
+class VPTreeNodeEmpty( object ):
     
     def __init__( self ): pass
     

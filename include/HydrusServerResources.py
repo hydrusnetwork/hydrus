@@ -1022,11 +1022,9 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         access_key = self._parseAccessKey( request )
         
-        account_identifier = HC.AccountIdentifier( access_key = access_key )
-        
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        ( session_key, expiry ) = session_manager.AddSession( self._service_identifier, account_identifier )
+        ( session_key, expiry ) = session_manager.AddSession( self._service_identifier, access_key )
         
         now = HC.GetNow()
         

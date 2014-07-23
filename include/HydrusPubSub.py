@@ -8,7 +8,7 @@ import wx.lib.newevent
 
 ( PubSubEvent, EVT_PUBSUB ) = wx.lib.newevent.NewEvent()
 
-class HydrusPubSub():
+class HydrusPubSub( object ):
     
     def __init__( self ):
         

@@ -39,7 +39,7 @@ YAML_DUMP_ID_EXPORT_FOLDER = 6
 YAML_DUMP_ID_SUBSCRIPTION = 7
 YAML_DUMP_ID_LOCAL_BOORU = 8
 
-class FileDB():
+class FileDB( object ):
     
     def _AddThumbnails( self, c, thumbnails ):
         
@@ -187,7 +187,7 @@ class FileDB():
         return thumbnail
         
     
-class MessageDB():
+class MessageDB( object ):
     
     def _AddContact( self, c, contact ):
         
@@ -1092,7 +1092,7 @@ class MessageDB():
         self.pub_after_commit( 'notify_check_messages' )
         
     
-class RatingDB():
+class RatingDB( object ):
     
     def _GetRatingsMediaResult( self, c, service_identifier, min, max ):
         
@@ -1153,7 +1153,7 @@ class RatingDB():
         #self.pub_after_commit( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_identifier, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
         
     
-class TagDB():
+class TagDB( object ):
     
     def _GenerateTagIdsEfficiently( self, c, tags ):
         
@@ -7096,6 +7096,8 @@ class DB( ServiceDB ):
                 elif action == 'services': result = self._GetServices( c, *args, **kwargs )
                 elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
                 elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
+                elif action == 'subscription_names': result = self._GetYAMLDumpNames( c, YAML_DUMP_ID_SUBSCRIPTION )
+                elif action == 'subscription': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
                 elif action == 'subscriptions': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
                 elif action == 'tag_censorship': result = self._GetTagCensorship( c, *args, **kwargs )
                 elif action == 'tag_service_precedence': result = self._tag_service_precedence
@@ -7305,7 +7307,7 @@ class DB( ServiceDB ):
         HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) )
-        HydrusThreading.DAEMONWorker( 'UPnP', DAEMONUPnP, ( 'notify_new_upnp_mappings', ) )
+        HydrusThreading.DAEMONWorker( 'UPnP', DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
         HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
     
@@ -7713,6 +7715,15 @@ def DAEMONSynchroniseAccounts():
         service_identifier = service.GetServiceIdentifier()
         credentials = service.GetCredentials()
         
+        if service_identifier.GetType() in HC.REPOSITORIES:
+            
+            if HC.options[ 'pause_repo_sync' ]: continue
+            
+            info = service.GetInfo()
+            
+            if info[ 'paused' ]: continue
+            
+        
         if not account.IsBanned() and account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
             
             try:
@@ -7942,6 +7953,10 @@ def DAEMONSynchroniseRepositories():
                 
                 try: service = HC.app.ReadDaemon( 'service', service_identifier )
                 except: continue
+                
+                info = service.GetInfo()
+                
+                if info[ 'paused' ]: continue
                 
                 if service.CanDownloadUpdate():
                     
@@ -8177,9 +8192,11 @@ def DAEMONSynchroniseSubscriptions():
     
     if not HC.options[ 'pause_subs_sync' ]:
         
-        subscriptions = HC.app.ReadDaemon( 'subscriptions' )
+        subscription_names = HC.app.ReadDaemon( 'subscription_names' )
         
-        for ( name, info ) in subscriptions.items():
+        for name in subscription_names:
+            
+            info = HC.app.ReadDaemon( 'subscription', name )
             
             site_type = info[ 'site_type' ]
             query_type = info[ 'query_type' ]
@@ -8454,7 +8471,7 @@ def DAEMONSynchroniseSubscriptions():
                     
                     last_checked = now + HC.UPDATE_DURATION
                     
-                    text = 'Problem with ' + name + ' ' + traceback.format_exc()
+                    text = 'Problem with ' + name + os.linesep * 2 + traceback.format_exc()
                     
                     HC.ShowText( text )
                     

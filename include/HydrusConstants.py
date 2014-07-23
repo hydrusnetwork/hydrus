@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 122
+SOFTWARE_VERSION = 123
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1085,6 +1085,11 @@ def GetEmptyDataDict():
     
 def GetNow(): return int( time.time() )
 
+def GetNowPrecise():
+    
+    if PLATFORM_WINDOWS: return time.clock()
+    else: return time.time()
+    
 def GetShortcutFromEvent( event ):
     
     modifier = wx.ACCEL_NORMAL
@@ -1630,7 +1635,7 @@ class ClientToServerUpdate( HydrusYAMLBase ):
         return num_total == 0
         
     
-class ContentUpdate():
+class ContentUpdate( object ):
     
     def __init__( self, data_type, action, row ):
         
@@ -1677,7 +1682,7 @@ class ContentUpdate():
     
     def ToTuple( self ): return ( self._data_type, self._action, self._row )
     
-class JobDatabase():
+class JobDatabase( object ):
     
     yaml_tag = u'!JobDatabase'
     
@@ -1735,7 +1740,7 @@ class JobDatabase():
         self._result_ready.set()
         
     
-class JobKey():
+class JobKey( object ):
     
     def __init__( self ):
         
@@ -1814,7 +1819,7 @@ class JobKey():
             
         
     
-class JobNetwork():
+class JobNetwork( object ):
     
     yaml_tag = u'!JobNetwork'
     
@@ -1866,7 +1871,7 @@ class JobNetwork():
         self._result_ready.set()
         
     
-class Message():
+class Message( object ):
     
     def __init__( self, message_type, info ):
         
@@ -2167,7 +2172,7 @@ SYSTEM_PREDICATE_ARCHIVE = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_
 SYSTEM_PREDICATE_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_LOCAL, None ) )
 SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ) )
 
-class ResponseContext():
+class ResponseContext( object ):
     
     def __init__( self, status_code, mime = APPLICATION_YAML, body = None, path = None, is_yaml = False, cookies = [] ):
         
@@ -2221,7 +2226,7 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     
 SERVER_ADMIN_IDENTIFIER = ServerServiceIdentifier( 'server admin', SERVER_ADMIN )
 
-class ServiceUpdate():
+class ServiceUpdate( object ):
     
     def __init__( self, action, row = None ):
         
@@ -2230,7 +2235,7 @@ class ServiceUpdate():
         
     
     def ToTuple( self ): return ( self._action, self._row )
-        
+    
 class ServerToClientPetition( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerToClientPetition'
@@ -2403,14 +2408,25 @@ class ServerToClientUpdate( HydrusYAMLBase ):
     
     # this needs work!
     # we need a universal content_update for both client and server
-    def IterateContentUpdates( self ):
+    def IterateContentUpdates( self, as_if_pending = False ):
         
         data_types = [ CONTENT_DATA_TYPE_FILES, CONTENT_DATA_TYPE_MAPPINGS, CONTENT_DATA_TYPE_TAG_SIBLINGS, CONTENT_DATA_TYPE_TAG_PARENTS ]
         actions = [ CONTENT_UPDATE_ADD, CONTENT_UPDATE_DELETE ]
         
         for ( data_type, action ) in itertools.product( data_types, actions ):
             
-            for row in self.GetContentDataIterator( data_type, action ): yield ContentUpdate( data_type, action, row )
+            for row in self.GetContentDataIterator( data_type, action ):
+                
+                yieldee_action = action
+                
+                if as_if_pending:
+                    
+                    if action == CONTENT_UPDATE_ADD: yieldee_action = CONTENT_UPDATE_PENDING
+                    elif action == CONTENT_UPDATE_DELETE: continue
+                    
+                
+                yield ContentUpdate( data_type, yieldee_action, row )
+                
             
         
     
@@ -2448,7 +2464,7 @@ class ServerToClientUpdate( HydrusYAMLBase ):
     
     def GetServiceData( self, service_type ): return self._service_data[ service_type ]
     
-class SortedList():
+class SortedList( object ):
     
     def __init__( self, initial_items = [], sort_function = None ):
         

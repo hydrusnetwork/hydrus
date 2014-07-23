@@ -68,7 +68,7 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3 ):
+    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3, pre_callable_wait = 0 ):
         
         DAEMON.__init__( self, name )
         
@@ -76,6 +76,7 @@ class DAEMONWorker( DAEMON ):
         self._topics = topics
         self._period = period
         self._init_wait = init_wait
+        self._pre_callable_wait = pre_callable_wait
         
         for topic in topics: HC.pubsub.sub( self, 'set', topic )
         
@@ -90,8 +91,14 @@ class DAEMONWorker( DAEMON ):
             
             if HC.shutdown: return
             
+            time.sleep( self._pre_callable_wait )
+            
             try: self._callable()
-            except Exception as e: HC.ShowException( e )
+            except Exception as e:
+                
+                HC.ShowText( 'Daemon ' + name + ' encountered an exception:' )
+                HC.ShowException( e )
+                
             
             if HC.shutdown: return
             

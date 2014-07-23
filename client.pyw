@@ -4,14 +4,9 @@
 # To Public License, Version 2, as published by Sam Hocevar. See
 # http://sam.zoy.org/wtfpl/COPYING for more details.
 
-import string
-string.whitespace
-# this is some woo woo - if you call it after the locale, it has 0xa0 (non-breaking space) (non-ascii!!) included
-# if you call it before, the locale call doesn't update
-# what a mess!
+import wx
 
-import locale
-locale.setlocale( locale.LC_ALL, '' )
+wx.Locale()
 
 from include import HydrusConstants as HC
 

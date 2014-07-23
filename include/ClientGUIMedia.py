@@ -2136,7 +2136,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def TIMEREventAnimation( self, event ):
         
-        started = time.clock()
+        started = HC.GetNowPrecise()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -2190,10 +2190,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
             dc.DrawBitmap( bmp_to_use, x, y, True )
             
-            if time.clock() - started > 0.016: break
+            if HC.GetNowPrecise() - started > 0.016: break
             
         
-        finished = time.clock()
+        finished = HC.GetNowPrecise()
         
         if len( self._thumbnails_being_faded_in ) > 0:
             
@@ -2215,7 +2215,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-class Selectable():
+class Selectable( object ):
     
     def __init__( self ): self._selected = False
     

@@ -21,7 +21,7 @@ import traceback
 import yaml
 import wx
 
-class FileDB():
+class FileDB( object ):
     
     def _AddFile( self, c, service_identifier, account, file_dict ):
         
@@ -331,7 +331,7 @@ class FileDB():
         self._RewardAccounts( c, service_id, HC.SCORE_PETITION, scores )
         
     
-class MessageDB():
+class MessageDB( object ):
     
     def _AddMessage( self, c, contact_key, message ):
         
@@ -403,7 +403,7 @@ class MessageDB():
         return public_key
         
     
-class TagDB():
+class TagDB( object ):
     
     def _AddMappings( self, c, service_id, account_id, tag_id, hash_ids, overwrite_deleted ):
         
@@ -827,7 +827,7 @@ class TagDB():
         self._RewardAccounts( c, service_id, HC.SCORE_PETITION, scores )
         
     
-class RatingDB():
+class RatingDB( object ):
     
     def _GenerateRatingUpdate( self, c, service_id, begin, end ):
         

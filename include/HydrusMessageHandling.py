@@ -164,7 +164,7 @@ class Message( HC.HydrusYAMLBase ):
     
 # here begins the new stuff, I'm pretty sure
 
-class Identity(): # should be a yamlable object
+class Identity( object ): # should be a yamlable object
     
     def __init__( self ):
         
@@ -176,7 +176,7 @@ class Identity(): # should be a yamlable object
         pass
         
     
-class IMManager():
+class IMManager( object ):
     
     def __init__( self ):
         

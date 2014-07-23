@@ -1029,27 +1029,30 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             update = o
                             
-                            service_identifier = HC.LOCAL_TAG_SERVICE_IDENTIFIER
+                            service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_types = ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
                             
-                            content_updates = []
-                            current_weight = 0
-                            
-                            for content_update in update.IterateContentUpdates():
+                            if service_identifier is not None:
                                 
-                                content_updates.append( content_update )
+                                content_updates = []
+                                current_weight = 0
                                 
-                                current_weight += len( content_update.GetHashes() )
-                                
-                                if current_weight > 50:
+                                for content_update in update.IterateContentUpdates():
                                     
-                                    HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                    content_updates.append( content_update )
                                     
-                                    content_updates = []
-                                    current_weight = 0
+                                    current_weight += len( content_update.GetHashes() )
+                                    
+                                    if current_weight > 50:
+                                        
+                                        HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                        
+                                        content_updates = []
+                                        current_weight = 0
+                                        
                                     
                                 
-                            
-                            if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                
                             
                         
                     except Exception as e: HC.ShowException( e )
@@ -2000,6 +2003,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def RefreshMenu( self, name ):
         
         ( menu, label, show ) = self._GenerateMenuInfo( name )
+        
+        if HC.PLATFORM_OSX: menu.SetTitle( label ) # causes bugs in os x if this is not here
         
         ( old_menu, old_label, old_show ) = self._menus[ name ]
         

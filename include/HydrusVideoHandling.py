@@ -281,11 +281,6 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         self._num_frames_backwards = frame_buffer_length * 2 / 3
         self._num_frames_forwards = frame_buffer_length / 3
         
-        if self._media.GetMime() == HC.IMAGE_GIF: self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
-        else: self._frame_duration = GetVideoFrameDuration( self._path )
-        
-        self._render_lock = threading.Lock()
-        
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
@@ -294,7 +289,20 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
         
-        self._ffmpeg_reader = VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
+        if self._media.GetMime() == HC.IMAGE_GIF:
+            
+            self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
+            
+            self._renderer = GIFRendererCV( path, num_frames, target_resolution )
+            
+        else:
+            
+            self._frame_duration = GetVideoFrameDuration( self._path )
+            
+            self._renderer = VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution )
+            
+        
+        self._render_lock = threading.Lock()
         
         self._next_render_index = 0
         self._render_to_index = -1
@@ -342,7 +350,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
             if index == self._next_render_index: return
             else:
                 
-                self._ffmpeg_reader.set_position( index )
+                self._renderer.set_position( index )
                 
                 self._next_render_index = index
                 self._render_to_index = index
@@ -366,7 +374,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
                     
                     frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
                     
-                    try: numpy_image = self._ffmpeg_reader.read_frame()
+                    try: numpy_image = self._renderer.read_frame()
                     except Exception as e:
                         
                         HC.ShowException( e )
@@ -629,45 +637,33 @@ class VideoRendererFFMPEG( object ):
         else: self.skip_frames( pos - self.pos )
         
     
-class OLDCODEVideoRendererCV():
+class GIFRendererCV( object ):
     
-    def __init__( self, image_container, media, target_resolution ):
+    def __init__( self, path, num_frames, target_resolution ):
         
-        self._image_container = image_container
-        self._media = media
+        self._path = path
+        self._num_frames = num_frames
         self._target_resolution = target_resolution
-        
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        self._path = CC.GetFilePath( hash, mime )
-        
-        self._render_lock = threading.Lock()
         
         self._cv_video = cv2.VideoCapture( self._path )
         
         self._cv_video.set( cv2.cv.CV_CAP_PROP_CONVERT_RGB, True )
         
         self._next_render_index = 0
-        self._last_index_rendered = -1
         self._last_frame = None
-        self._render_to_index = -1
         
     
     def _GetCurrentFrame( self ):
         
         ( retval, cv_image ) = self._cv_video.read()
         
-        self._last_index_rendered = self._next_render_index
+        self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
         
-        num_frames = self._media.GetNumFrames()
-        
-        self._next_render_index = ( self._next_render_index + 1 ) % num_frames
-        
-        if self._next_render_index == 0 and self._last_index_rendered != 0:
+        if self._next_render_index == 0:
             
-            if self._media.GetMime() == HC.IMAGE_GIF: self._RewindGIF()
-            else: self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
+            self._RewindGIF()
+            
+            #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
             
         
         if not retval:
@@ -695,7 +691,7 @@ class OLDCODEVideoRendererCV():
             cv_image = self._last_frame
             
         
-        return HydrusImageHandling.GenerateHydrusBitmapFromNumPyImage( cv_image )
+        return cv_image
         
     
     def _RewindGIF( self ):
@@ -706,57 +702,15 @@ class OLDCODEVideoRendererCV():
         self._next_render_index = 0
         
     
-    def SetRenderToPosition( self, index ):
-        
-        with self._render_lock:
-            
-            if self._render_to_index != index:
-                
-                self._render_to_index = index
-                
-                HydrusThreading.CallToThread( self.THREADDoWork )
-                
-            
-        
+    def read_frame( self ): return self._RenderCurrentFrame()
     
-    def SetPosition( self, index ):
+    def set_position( self, index ):
         
-        with self._render_lock:
-            
-            if self._media.GetMime() == HC.IMAGE_GIF:
-                
-                if index == self._next_render_index: return
-                elif index < self._next_render_index: self._RewindGIF()
-                
-                while self._next_render_index < index: self._GetCurrentFrame()
-                
-            else:
-                
-                self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, index )
-                
-            
-            self._render_to_index = index
-            
+        if index == self._next_render_index: return
+        elif index < self._next_render_index: self._RewindGIF()
         
-    
-    def THREADDoWork( self ):
+        while self._next_render_index < index: self._GetCurrentFrame()
         
-        while True:
-            
-            time.sleep( 0.00001 ) # thread yield
-            
-            with self._render_lock:
-                
-                if self._last_index_rendered != self._render_to_index:
-                    
-                    index = self._next_render_index
-                    
-                    frame = self._RenderCurrentFrame()
-                    
-                    wx.CallAfter( self._image_container.AddFrame, index, frame )
-                    
-                else: break
-                
-            
+        #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, index )
         
     

@@ -89,7 +89,7 @@ def GetYoutubeFormats( youtube_url ):
     
     return info
     
-class Downloader():
+class Downloader( object ):
     
     def __init__( self ):
         
@@ -1011,7 +1011,7 @@ class DownloaderTumblr( Downloader ):
     
     def GetTags( self, url, tags ): return tags
     
-class ImportArgsGenerator():
+class ImportArgsGenerator( object ):
     
     def __init__( self, job_key, item, advanced_import_options ):
         
@@ -1308,7 +1308,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         else: return ( status, None )
         
     
-class ImportController():
+class ImportController( object ):
     
     def __init__( self, import_args_generator_factory, import_queue_generator_factory, page_key = None ):
         
@@ -1539,7 +1539,7 @@ class ImportController():
     
     def StartDaemon( self ): threading.Thread( target = self.MainLoop ).start()
     
-class ImportQueueGenerator():
+class ImportQueueGenerator( object ):
     
     def __init__( self, job_key, item ):
         

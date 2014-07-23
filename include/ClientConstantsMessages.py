@@ -17,7 +17,7 @@ import yaml
 import wx
 import zlib
 
-class Conversation():
+class Conversation( object ):
     
     def __init__( self, identity, conversation_key, subject, messages, drafts, search_context ):
         
@@ -223,7 +223,7 @@ class Contact( HC.HydrusYAMLBase ):
     
     def HasPublicKey( self ): return self._public_key is not None
     
-class DraftMessage():
+class DraftMessage( object ):
     
     def __init__( self, draft_key, conversation_key, subject, contact_from, contacts_names_to, recipients_visible, body, attachment_hashes, is_new = False ):
         
@@ -256,7 +256,7 @@ class DraftMessage():
     
     def Saved( self ): self._is_new = False
     
-class Message():
+class Message( object ):
     
     def __init__( self, message_key, contact_from, destinations, timestamp, body, attachment_hashes, inbox ):
         
@@ -314,7 +314,7 @@ class Message():
     
     def Unread( self, identity ): self.UpdateMessageStatuses( [ ( identity.GetContactKey(), 'sent' ) ] )
     
-class MessageSearchContext():
+class MessageSearchContext( object ):
     
     def __init__( self, identity, raw_predicates = [] ):
         
@@ -335,7 +335,7 @@ class MessageSearchContext():
     def GetTermsToExclude( self ): return self._search_terms_to_exclude
     def GetTermsToInclude( self ): return self._search_terms_to_include
 
-class MessageSystemPredicates():
+class MessageSystemPredicates( object ):
     
     STATUS = 0
     CONTACT_STARTED = 1

@@ -5355,11 +5355,11 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            for ( name, info ) in self._original_subscriptions.items():
+            for name in self._original_subscription_names:
                 
-                page = self._Panel( self._listbook, name, info )
+                page_info = ( self._Panel, ( self._listbook, name ), {} )
                 
-                self._listbook.AddPage( page, name )
+                self._listbook.AddPage( page_info, name )
                 
             
         
@@ -5384,7 +5384,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage subscriptions' )
         
-        self._original_subscriptions = HC.app.Read( 'subscriptions' )
+        self._original_subscription_names = HC.app.Read( 'subscription_names' )
         
         InitialiseControls()
         
@@ -5433,7 +5433,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                     
                     if name == '': raise Exception( 'Please enter a nickname for the subscription.' )
                     
-                    page = self._Panel( self._listbook, name )
+                    page = self._Panel( self._listbook, name, new_subscription = True )
                     
                     self._listbook.AddPage( page, name, select = True )
                     
@@ -5504,7 +5504,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             for ( name, info ) in subscriptions: HC.app.Write( 'subscription', name, info )
             
-            deletees = set( self._original_subscriptions.keys() ) - { name for ( name, info ) in subscriptions }
+            deletees = set( self._original_subscription_names ) - { name for ( name, info ) in subscriptions }
             
             for name in deletees: HC.app.Write( 'delete_subscription', name )
             
@@ -5581,7 +5581,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.ScrolledWindow ):
         
-        def __init__( self, parent, name, info = None ):
+        def __init__( self, parent, name, new_subscription = False ):
             
             def InitialiseControls():
                 
@@ -5677,7 +5677,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             wx.ScrolledWindow.__init__( self, parent )
             
-            if info is None:
+            if new_subscription:
                 
                 info = {}
                 
@@ -5692,6 +5692,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 info[ 'url_cache' ] = set()
                 info[ 'paused' ] = False
                 
+            else: info = HC.app.Read( 'subscription', name )
             
             self._original_info = info
             
@@ -7431,18 +7432,18 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if self._i_am_local_tag_service:
                 
-                if num_current < num_files: choices.append( ( 'add ' + tag, HC.CONTENT_UPDATE_ADD ) )
-                if num_current > 0 and not only_add: choices.append( ( 'delete ' + tag, HC.CONTENT_UPDATE_DELETE ) )
+                if num_current < num_files: choices.append( ( 'add ' + tag + ' to ' + HC.ConvertIntToPrettyString( num_files - num_current ) + ' files', HC.CONTENT_UPDATE_ADD ) )
+                if num_current > 0 and not only_add: choices.append( ( 'delete ' + tag + ' from ' + HC.ConvertIntToPrettyString( num_current ) + ' files', HC.CONTENT_UPDATE_DELETE ) )
                 
             else:
                 
                 num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_identifier ) ] )
                 num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_identifier ) ] )
                 
-                if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag, HC.CONTENT_UPDATE_PENDING ) )
-                if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag, HC.CONTENT_UPDATE_PETITION ) )
-                if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag, HC.CONTENT_UPDATE_RESCIND_PENDING ) )
-                if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag, HC.CONTENT_UPDATE_RESCIND_PETITION ) )
+                if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HC.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', HC.CONTENT_UPDATE_PENDING ) )
+                if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HC.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', HC.CONTENT_UPDATE_PETITION ) )
+                if num_pending > 0 and not only_add: choices.append( ( 'rescind pending ' + tag + ' from ' + HC.ConvertIntToPrettyString( num_pending ) + ' files', HC.CONTENT_UPDATE_RESCIND_PENDING ) )
+                if num_petitioned > 0: choices.append( ( 'rescind petitioned ' + tag + ' from ' + HC.ConvertIntToPrettyString( num_petitioned ) + ' files', HC.CONTENT_UPDATE_RESCIND_PETITION ) )
                 
             
             if len( choices ) == 0: return

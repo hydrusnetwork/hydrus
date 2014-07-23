@@ -35,9 +35,9 @@ ANIMATED_SCANBAR_CARET_WIDTH = 10
 ZOOMINS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
 ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01 ]
 
-NON_ZOOMABLE_MIMES = list( HC.AUDIO) + [ HC.APPLICATION_PDF ]
+NON_ZOOMABLE_MIMES = list( HC.AUDIO ) + [ HC.APPLICATION_PDF ]
 
-NON_LARGABLY_ZOOMABLE_MIMES = list( HC.VIDEO ) + [ HC.APPLICATION_FLASH ]
+NON_LARGABLY_ZOOMABLE_MIMES = [ mime for mime in HC.VIDEO if mime != HC.VIDEO_WEBM ] + [ HC.APPLICATION_FLASH ]
 
 # Sizer Flags
 
@@ -106,6 +106,7 @@ class Animation( wx.Window ):
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_TIMER, self.TIMEREventVideo, id = ID_TIMER_VIDEO )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+        self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
         
         self.EventResize( None )
         
@@ -144,7 +145,7 @@ class Animation( wx.Window ):
         
         self._current_frame_drawn = True
         
-        now_in_ms = time.clock()
+        now_in_ms = HC.GetNowPrecise()
         frame_was_supposed_to_be_at = self._current_frame_drawn_at + ( self._video_container.GetDuration( self._current_frame_index ) / 1000 )
         
         if 1000.0 * ( now_in_ms - frame_was_supposed_to_be_at ) > 16.7: self._current_frame_drawn_at = now_in_ms
@@ -163,6 +164,12 @@ class Animation( wx.Window ):
     def CurrentFrame( self ): return self._current_frame_index
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
+    
+    def EventPropagateKey( self, event ):
+        
+        event.ResumePropagation( 1 )
+        event.Skip()
+        
     
     def EventPropagateMouse( self, event ):
         
@@ -241,7 +248,7 @@ class Animation( wx.Window ):
             
             if self._current_frame_drawn:
                 
-                ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
+                ms_since_current_frame_drawn = int( 1000.0 * ( HC.GetNowPrecise() - self._current_frame_drawn_at ) )
                 
                 time_to_update = ms_since_current_frame_drawn + MIN_TIMER_TIME / 2 > self._video_container.GetDuration( self._current_frame_index )
                 
@@ -259,7 +266,7 @@ class Animation( wx.Window ):
             
             if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             
-            ms_since_current_frame_drawn = int( 1000.0 * ( time.clock() - self._current_frame_drawn_at ) )
+            ms_since_current_frame_drawn = int( 1000.0 * ( HC.GetNowPrecise() - self._current_frame_drawn_at ) )
             
             ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
             
@@ -393,12 +400,13 @@ class AnimationBar( wx.Window ):
             
         
     
-class Canvas():
+class Canvas( object ):
     
-    def __init__( self, file_service_identifier, image_cache ):
+    def __init__( self, file_service_identifier, image_cache, claim_focus = True ):
         
         self._file_service_identifier = file_service_identifier
         self._image_cache = image_cache
+        self._claim_focus = claim_focus
         
         self._closing = False
         
@@ -777,6 +785,8 @@ class Canvas():
                         
                         self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
                         
+                        if self._claim_focus: self._media_container.SetFocus()
+                        
                         if not initial_image: self._PrefetchImages()
                         
                     else: self._current_media = None
@@ -793,7 +803,7 @@ class CanvasPanel( Canvas, wx.Window ):
     def __init__( self, parent, page_key, file_service_identifier ):
         
         wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, file_service_identifier, HC.app.GetPreviewImageCache() )
+        Canvas.__init__( self, file_service_identifier, HC.app.GetPreviewImageCache(), claim_focus = False )
         
         self._page_key = page_key
         
@@ -4043,7 +4053,7 @@ class StaticImage( wx.Window ):
                 
                 self._Draw()
                 
-                if not self._image_container.IsRendered(): self._timer_render_wait.Start( 16, wx.TIMER_ONE_SHOT)
+                if not self._image_container.IsRendered(): self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
                 
             
         

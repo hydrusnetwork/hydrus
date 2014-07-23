@@ -18,7 +18,7 @@ from twisted.internet.threads import deferToThread
 
 HYDRUS_SESSION_LIFETIME = 30 * 86400
 
-class HydrusMessagingSessionManagerServer():
+class HydrusMessagingSessionManagerServer( object ):
     
     def __init__( self ):
         
@@ -83,7 +83,7 @@ class HydrusMessagingSessionManagerServer():
         return session_key
         
     
-class HydrusSessionManagerClient():
+class HydrusSessionManagerClient( object ):
     
     def __init__( self ):
         
@@ -137,7 +137,7 @@ class HydrusSessionManagerClient():
             
         
     
-class HydrusSessionManagerServer():
+class HydrusSessionManagerServer( object ):
     
     def __init__( self ):
         
@@ -145,7 +145,7 @@ class HydrusSessionManagerServer():
         
         self._account_ids_to_session_keys = collections.defaultdict( HC.default_dict_set )
         
-        self._account_cache = collections.defaultdict( dict )
+        self._account_ids_to_accounts = collections.defaultdict( dict )
         
         self._sessions = collections.defaultdict( dict )
         
@@ -163,23 +163,22 @@ class HydrusSessionManagerServer():
         HC.pubsub.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
         
     
-    def AddSession( self, service_identifier, account_identifier ):
+    def AddSession( self, service_identifier, access_key ):
         
         with self._lock:
             
-            if account_identifier not in self._account_cache[ service_identifier ]:
-                
-                account = HC.app.Read( 'account', service_identifier, account_identifier )
-                
-                account_identifier = account.GetAccountIdentifier() # get the account_id-based account_identifier
-                
-                if account_identifier not in self._account_cache[ service_identifier ]:
-                    self._account_cache[ service_identifier ][ account_identifier ] = account
-                
+            account_identifier = HC.AccountIdentifier( access_key = access_key )
             
-            account = self._account_cache[ service_identifier ][ account_identifier ]
+            account = HC.app.Read( 'account', service_identifier, account_identifier )
             
             account_id = account.GetAccountId()
+            
+            if account_id not in self._account_ids_to_accounts[ service_identifier ]:
+                
+                self._account_ids_to_accounts[ service_identifier ][ account_id ] = account
+                
+            
+            account = self._account_ids_to_accounts[ service_identifier ][ account_id ]
             
             session_key = os.urandom( 32 )
             
@@ -225,11 +224,9 @@ class HydrusSessionManagerServer():
                 
                 account = HC.app.Read( 'account', service_identifier, account_identifier )
                 
-                account_identifier = account.GetAccountIdentifier() # get the account_id-based account_identifier
-                
-                self._account_cache[ service_identifier ][ account_identifier ] = account
-                
                 account_id = account.GetAccountId()
+                
+                self._account_ids_to_accounts[ service_identifier ][ account_id ] = account
                 
                 if account_id in self._account_ids_to_session_keys[ service_identifier ]:
                     
@@ -252,7 +249,7 @@ class HydrusSessionManagerServer():
         
         self._account_ids_to_session_keys = collections.defaultdict( HC.default_dict_set )
         
-        self._account_cache = collections.defaultdict( dict )
+        self._account_ids_to_accounts = collections.defaultdict( dict )
         
         self._sessions = collections.defaultdict( dict )
         
@@ -266,7 +263,7 @@ class HydrusSessionManagerServer():
             
         
     
-class WebSessionManagerClient():
+class WebSessionManagerClient( object ):
     
     def __init__( self ):
         

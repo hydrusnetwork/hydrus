@@ -247,7 +247,7 @@ def MergeTagsManagers( tag_service_precedence, tags_managers ):
     
     return TagsManagerSimple( merged_service_identifiers_to_statuses_to_tags )
     
-class TagsManagerSimple():
+class TagsManagerSimple( object ):
     
     def __init__( self, service_identifiers_to_statuses_to_tags ):
         
@@ -504,7 +504,7 @@ class TagsManager( TagsManagerSimple ):
             
         
     
-class TagCensorshipManager():
+class TagCensorshipManager( object ):
     
     def __init__( self ):
         
@@ -580,7 +580,7 @@ class TagCensorshipManager():
         return tags
         
     
-class TagParentsManager():
+class TagParentsManager( object ):
     
     def __init__( self ):
         
@@ -689,7 +689,7 @@ class TagParentsManager():
         with self._lock: self._RefreshParents()
         
     
-class TagSiblingsManager():
+class TagSiblingsManager( object ):
     
     def __init__( self ):
         
