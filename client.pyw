@@ -4,9 +4,10 @@
 # To Public License, Version 2, as published by Sam Hocevar. See
 # http://sam.zoy.org/wtfpl/COPYING for more details.
 
-import wx
+import locale
 
-wx.Locale()
+try: locale.setlocale( locale.LC_ALL, '' )
+except: pass
 
 from include import HydrusConstants as HC
 

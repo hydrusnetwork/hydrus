@@ -68,7 +68,7 @@ class DAEMONQueue( DAEMON ):
     
 class DAEMONWorker( DAEMON ):
     
-    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3, pre_callable_wait = 0 ):
+    def __init__( self, name, callable, topics = [], period = 1200, init_wait = 3, pre_callable_wait = 3 ):
         
         DAEMON.__init__( self, name )
         

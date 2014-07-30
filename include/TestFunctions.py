@@ -40,6 +40,17 @@ class TestHydrusDownloadingFunctions( unittest.TestCase ):
         self.assertEqual( HydrusDownloading.ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags ), content_updates )
         
     
+    def test_number_conversion( self ):
+        
+        i = 123456789
+        
+        i_pretty = HC.ConvertIntToPrettyString( i )
+        
+        # this test only works on anglo computers; it is mostly so I can check it is working on mine
+        
+        self.assertEqual( i_pretty, '123,456,789' )
+        
+    
     def test_tags_to_dict( self ):
         
         local = TestConstants.GenerateClientServiceIdentifier( HC.LOCAL_TAG )

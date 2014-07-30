@@ -115,8 +115,25 @@ def GenerateHydrusBitmapFromNumPyImage( cv_image ):
     
     ( y, x, depth ) = cv_image.shape
     
-    if depth == 4: raise Exception( 'CV is bad at alpha!' )
+    if depth == 4: return HydrusBitmap( cv_image.data, wx.BitmapBufferFormat_RGBA, ( x, y ) )
     else: return HydrusBitmap( cv_image.data, wx.BitmapBufferFormat_RGB, ( x, y ) )
+    
+def GenerateNumPyImageFromPILImage( pil_image ):
+    
+    if pil_image.mode == 'RGBA' or ( pil_image.mode == 'P' and pil_image.info.has_key( 'transparency' ) ):
+        
+        if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
+        
+    else:
+        
+        if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
+        
+    
+    ( w, h ) = pil_image.size
+    
+    s = pil_image.tostring()
+    
+    return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     
 def GenerateHydrusBitmapFromPILImage( pil_image ):
     
@@ -124,14 +141,16 @@ def GenerateHydrusBitmapFromPILImage( pil_image ):
         
         if pil_image.mode == 'P': pil_image = pil_image.convert( 'RGBA' )
         
-        return HydrusBitmap( pil_image.tostring(), wx.BitmapBufferFormat_RGBA, pil_image.size )
+        format = wx.BitmapBufferFormat_RGBA
         
     else:
         
         if pil_image.mode != 'RGB': pil_image = pil_image.convert( 'RGB' )
         
-        return HydrusBitmap( pil_image.tostring(), wx.BitmapBufferFormat_RGB, pil_image.size )
+        format = wx.BitmapBufferFormat_RGB
         
+    
+    return HydrusBitmap( pil_image.tostring(), format, pil_image.size )
     
 def GeneratePerceptualHash( path ):
     

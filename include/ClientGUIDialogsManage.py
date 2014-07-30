@@ -5386,6 +5386,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         self._original_subscription_names = HC.app.Read( 'subscription_names' )
         
+        self._names_to_delete = set()
+        
         InitialiseControls()
         
         PopulateControls()
@@ -5498,15 +5500,20 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         all_pages = self._listbook.GetNameToPageDict().values()
         
-        subscriptions = [ page.GetSubscription() for page in all_pages ]
-        
         try:
             
-            for ( name, info ) in subscriptions: HC.app.Write( 'subscription', name, info )
+            for name in self._names_to_delete: HC.app.Write( 'delete_subscription', name )
             
-            deletees = set( self._original_subscription_names ) - { name for ( name, info ) in subscriptions }
-            
-            for name in deletees: HC.app.Write( 'delete_subscription', name )
+            for page in all_pages:
+                
+                ( name, info ) = page.GetSubscription()
+                
+                original_name = page.GetOriginalName()
+                
+                if original_name != name: HC.app.Write( 'delete_subscription', original_name )
+                
+                HC.app.Write( 'subscription', name, info )
+                
             
             HC.subs_changed = True
             
@@ -5529,6 +5536,10 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     def EventRemove( self, event ):
         
         panel = self._listbook.GetCurrentPage()
+        
+        name = panel.GetOriginalName()
+        
+        self._names_to_delete.add( name )
         
         if panel is not None: self._listbook.DeleteCurrentPage()
         
@@ -5694,6 +5705,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             else: info = HC.app.Read( 'subscription', name )
             
+            self._original_name = name
             self._original_info = info
             
             InitialiseControls()
@@ -5869,6 +5881,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             return ( name, info )
             
+        
+        def GetOriginalName( self ): return self._original_name
         
         def GetName( self ): return self._name.GetValue()
         

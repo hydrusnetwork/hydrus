@@ -293,7 +293,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
             
             self._durations = HydrusImageHandling.GetGIFFrameDurations( self._path )
             
-            self._renderer = GIFRendererCV( path, num_frames, target_resolution )
+            self._renderer = GIFRenderer( path, num_frames, target_resolution )
             
         else:
             
@@ -637,13 +637,73 @@ class VideoRendererFFMPEG( object ):
         else: self.skip_frames( pos - self.pos )
         
     
-class GIFRendererCV( object ):
+class GIFRenderer( object ):
     
     def __init__( self, path, num_frames, target_resolution ):
         
         self._path = path
         self._num_frames = num_frames
         self._target_resolution = target_resolution
+        
+        self._cv_mode = True
+        
+        self._InitialiseCV()
+        
+    
+    def _GetCurrentFrame( self ):
+        
+        if self._cv_mode:
+            
+            ( retval, cv_image ) = self._cv_video.read()
+            
+            if not retval:
+                
+                self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
+                
+                raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HC.u( self._next_render_index - 1 ) + '.' )
+                
+            
+        else:
+            
+            if self._pil_image.mode == 'P' and 'transparency' in self._pil_image.info:
+                
+                # I think gif problems are around here somewhere; the transparency info is not converted to RGBA properly, so it starts drawing colours when it should draw nothing
+                
+                current_frame = self._pil_image.convert( 'RGBA' )
+                
+                if self._pil_canvas is None: self._pil_canvas = current_frame
+                else: self._pil_canvas.paste( current_frame, None, current_frame ) # use the rgba image as its own mask
+                
+            else: self._pil_canvas = self._pil_image
+            
+            cv_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
+            
+        
+        self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
+        
+        if self._next_render_index == 0:
+            
+            self._RewindGIF()
+            
+        else:
+            
+            if not self._cv_mode:
+                
+                self._pil_image.seek( self._next_render_index )
+                
+                if self._pil_image.palette == self._pil_global_palette: # for some reason, when pil falls back from local palette to global palette, a bunch of important variables reset!
+                    
+                    pil_image.palette.dirty = self._pil_dirty
+                    pil_image.palette.mode = self._pil_mode
+                    pil_image.palette.rawmode = self._pil_rawmode
+                    
+                
+            
+        
+        return cv_image
+        
+    
+    def _InitialiseCV( self ):
         
         self._cv_video = cv2.VideoCapture( self._path )
         
@@ -653,42 +713,60 @@ class GIFRendererCV( object ):
         self._last_frame = None
         
     
-    def _GetCurrentFrame( self ):
+    def _InitialisePIL( self ):
         
-        ( retval, cv_image ) = self._cv_video.read()
+        self._pil_image = HydrusImageHandling.GeneratePILImage( self._path )
         
-        self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
+        self._pil_canvas = None
         
-        if self._next_render_index == 0:
-            
-            self._RewindGIF()
-            
-            #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
-            
+        self._pil_global_palette = self._pil_image.palette
         
-        if not retval:
-            
-            raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + HC.u( self._next_render_index ) + '.' )
-            
+        self._pil_dirty = self._pil_image.palette.dirty
+        self._pil_mode = self._pil_image.palette.mode
+        self._pil_rawmode = self._pil_image.palette.rawmode
         
-        return cv_image
+        self._next_render_index = 0
+        self._last_frame = None
+        
+        # believe it or not, doing this actually fixed a couple of gifs!
+        self._pil_image.seek( 1 )
+        self._pil_image.seek( 0 )
         
     
     def _RenderCurrentFrame( self ):
         
-        try:
+        if self._cv_mode:
+            
+            try:
+                
+                cv_image = self._GetCurrentFrame()
+                
+                cv_image = HydrusImageHandling.EfficientlyResizeCVImage( cv_image, self._target_resolution )
+                
+                cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
+                
+                self._last_frame = cv_image
+                
+            except HydrusExceptions.CantRenderWithCVException:
+                
+                if self._last_frame is None:
+                    
+                    self._cv_mode = False
+                    
+                    self._InitialisePIL()
+                    
+                    return self._RenderCurrentFrame()
+                    
+                else: cv_image = self._last_frame
+                
+            
+        else:
             
             cv_image = self._GetCurrentFrame()
             
             cv_image = HydrusImageHandling.EfficientlyResizeCVImage( cv_image, self._target_resolution )
             
-            cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
-            
             self._last_frame = cv_image
-            
-        except HydrusExceptions.CantRenderWithCVException:
-            
-            cv_image = self._last_frame
             
         
         return cv_image
@@ -696,10 +774,19 @@ class GIFRendererCV( object ):
     
     def _RewindGIF( self ):
         
-        self._cv_video.release()
-        self._cv_video.open( self._path )
-        
-        self._next_render_index = 0
+        if self._cv_mode:
+            
+            self._cv_video.release()
+            self._cv_video.open( self._path )
+            
+            self._next_render_index = 0
+            
+            #self._cv_video.set( cv2.cv.CV_CAP_PROP_POS_FRAMES, 0.0 )
+            
+        else:
+            
+            self._pil_image.seek( 0 )
+            
         
     
     def read_frame( self ): return self._RenderCurrentFrame()
