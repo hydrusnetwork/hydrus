@@ -8,6 +8,13 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 124</h3></li>
+				<ul>
+					<li>fixed some more broken gifs (those with funky transparency, I think)</li>
+					<li>fixed a critical bug in the subscriptions dialog that was causing subscriptions to be deleted</li>
+					<li>reintroduced old locale code, with minor improvement, to fix number grouping (123,456,789) issue</li>
+					<li>added a short pre-activation wait to all daemons to reduce more wake-from-sleep problems like the UPnP issue last week</li>
+				</ul>
 				<li><h3>version 123</h3></li>
 				<ul>
 					<li>rewrote the old gif rendering code to the new system, so gifs with variable framerates now work again!</li>
@@ -24,7 +31,7 @@
 					<li>neatened all object declarations</li>
 					<li>fixed a menu bug in OS X</li>
 					<li>added put a little delay in the upnp daemon, hopefully to stop the error popups after waking from sleep</li>
-					<li>updateid a old hacky bit of locale code that was breaking certain platforms of wx 2.9.5.0</li>
+					<li>updated an old hacky bit of locale code that was breaking certain platforms of wx 2.9.5.0</li>
 					<li>improved animation and other rendering timings on non-windows platforms</li>
 					<li>improved media focus on non-windows platforms</li>
 				</ul>
