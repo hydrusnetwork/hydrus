@@ -469,7 +469,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        with wx.TextEntryDialog( self, 'Enter new booru\'s name' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter new booru\'s name.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1009,7 +1009,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             return
             
         
-        with wx.TextEntryDialog( self, 'Enter contact\'s address in the form contact_key@hostname:port' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter contact\'s address in the form contact_key@hostname:port.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1062,7 +1062,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             return
             
         
-        with wx.TextEntryDialog( self, 'Enter new contact\'s name' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter new contact\'s name.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1833,7 +1833,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        with wx.TextEntryDialog( self, 'Enter new site\'s name' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter new site\'s name.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -2039,7 +2039,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         def EventAdd( self, event ):
             
-            with wx.TextEntryDialog( self, 'Enter new imageboard\'s name' ) as dlg:
+            with ClientGUIDialogs.DialogTextEntry( self, 'Enter new imageboard\'s name.' ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -2814,6 +2814,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._num_autocomplete_chars = wx.SpinCtrl( self._file_page, min = 1, max = 100 )
             self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
             
+            self._autocomplete_long_wait = wx.SpinCtrl( self._file_page, min = 0, max = 10000 )
+            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
+            
+            self._autocomplete_short_wait_chars = wx.SpinCtrl( self._file_page, min = 1, max = 100 )
+            self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
+            
+            self._autocomplete_short_wait = wx.SpinCtrl( self._file_page, min = 0, max = 10000 )
+            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            
             self._listbook.AddPage( self._file_page, 'files and memory' )
             
             # gui
@@ -3007,6 +3016,14 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
             
+            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+            
+            self._autocomplete_long_wait.SetValue( long_wait )
+            
+            self._autocomplete_short_wait_chars.SetValue( char_limit )
+            
+            self._autocomplete_short_wait.SetValue( short_wait )
+            
             #
             
             gui_sessions = HC.app.Read( 'gui_sessions' )
@@ -3182,6 +3199,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete character threshold: ' ), FLAGS_MIXED )
             gridbox.AddF( self._num_autocomplete_chars, FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete long wait (ms): ' ), FLAGS_MIXED )
+            gridbox.AddF( self._autocomplete_long_wait, FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete short wait threshold: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._autocomplete_short_wait_chars, FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete short wait (ms): ' ), FLAGS_MIXED )
+            gridbox.AddF( self._autocomplete_short_wait, FLAGS_MIXED )
             
             self._file_page.SetSizer( gridbox )
             
@@ -3573,6 +3599,14 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         HC.options[ 'thumbnail_dimensions' ] = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
         
         HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
+        
+        long_wait = self._autocomplete_long_wait.GetValue()
+        
+        char_limit = self._autocomplete_short_wait_chars.GetValue()
+        
+        short_wait = self._autocomplete_short_wait.GetValue()
+        
+        HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
         
         HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
         
@@ -4668,7 +4702,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        with wx.TextEntryDialog( self, 'Enter new service\'s name' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter new service\'s name.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -5143,10 +5177,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         def EventCheckService( self, event ):
             
             ( service_identifier, info ) = self.GetInfo()
-        
-            service_type = service_identifier.GetType()
             
-            service = CC.Service( service_identifier, info )
+            service_key = service_identifier.GetServiceKey()
+            service_type = service_identifier.GetType()
+            name = service_identifier.GetName()
+            
+            service = CC.Service( service_key, service_type, name, info )
             
             try: root = service.Request( HC.GET, '' )
             except HydrusExceptions.WrongServiceTypeException:
@@ -5423,7 +5459,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
     
     def EventAdd( self, event ):
         
-        with wx.TextEntryDialog( self, 'Enter name for subscription' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter name for subscription.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -6317,7 +6353,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                                 
                                 message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
                                 
-                                with wx.TextEntryDialog( self, message ) as dlg:
+                                with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                                     
                                     if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
                                     else: return
@@ -6373,7 +6409,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                             
                             message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
                             
-                            with wx.TextEntryDialog( self, message ) as dlg:
+                            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                                 
                                 if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
                                 else: return
@@ -6787,7 +6823,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                                 
                                 message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
                                 
-                                with wx.TextEntryDialog( self, message ) as dlg:
+                                with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                                     
                                     if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
                                     else: return
@@ -6843,7 +6879,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                             
                             message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
                             
-                            with wx.TextEntryDialog( self, message ) as dlg:
+                            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                                 
                                 if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
                                 else: return
@@ -7489,7 +7525,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                     
                     message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
                     
-                    with wx.TextEntryDialog( self, message ) as dlg:
+                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
                         else: return

@@ -654,7 +654,7 @@ class GIFRenderer( object ):
         
         if self._cv_mode:
             
-            ( retval, cv_image ) = self._cv_video.read()
+            ( retval, numpy_image ) = self._cv_video.read()
             
             if not retval:
                 
@@ -676,7 +676,7 @@ class GIFRenderer( object ):
                 
             else: self._pil_canvas = self._pil_image
             
-            cv_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
+            numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
             
         
         self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
@@ -700,7 +700,7 @@ class GIFRenderer( object ):
                 
             
         
-        return cv_image
+        return numpy_image
         
     
     def _InitialiseCV( self ):
@@ -739,13 +739,13 @@ class GIFRenderer( object ):
             
             try:
                 
-                cv_image = self._GetCurrentFrame()
+                numpy_image = self._GetCurrentFrame()
                 
-                cv_image = HydrusImageHandling.EfficientlyResizeCVImage( cv_image, self._target_resolution )
+                numpy_image = HydrusImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
                 
-                cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
+                numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
                 
-                self._last_frame = cv_image
+                self._last_frame = numpy_image
                 
             except HydrusExceptions.CantRenderWithCVException:
                 
@@ -757,19 +757,19 @@ class GIFRenderer( object ):
                     
                     return self._RenderCurrentFrame()
                     
-                else: cv_image = self._last_frame
+                else: numpy_image = self._last_frame
                 
             
         else:
             
-            cv_image = self._GetCurrentFrame()
+            numpy_image = self._GetCurrentFrame()
             
-            cv_image = HydrusImageHandling.EfficientlyResizeCVImage( cv_image, self._target_resolution )
+            numpy_image = HydrusImageHandling.EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
             
-            self._last_frame = cv_image
+            self._last_frame = numpy_image
             
         
-        return cv_image
+        return numpy_image
         
     
     def _RewindGIF( self ):

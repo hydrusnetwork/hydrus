@@ -1401,7 +1401,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if interval is None:
             
-            with wx.TextEntryDialog( self, 'Enter the interval, in seconds', defaultValue='15' ) as dlg:
+            with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15' ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -1750,7 +1750,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                     
                                     message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
                                     
-                                    with wx.TextEntryDialog( self, message ) as dlg:
+                                    with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                                         
                                         if dlg.ShowModal() == wx.ID_OK:
                                             

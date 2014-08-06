@@ -128,15 +128,13 @@ class TestServer( unittest.TestCase ):
     
     def _test_file_repo( self, host, port ):
         
-        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'service' )
-        
         info = {}
         
         info[ 'host' ] = host
         info[ 'port' ] = port
         info[ 'access_key' ] = self._access_key
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( os.urandom( 32 ), HC.FILE_REPOSITORY, 'service', info )
         
         # file
         
@@ -292,15 +290,13 @@ class TestServer( unittest.TestCase ):
     
     def _test_repo( self, host, port, service_type ):
         
-        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, 'service' )
-        
         info = {}
         
         info[ 'host' ] = host
         info[ 'port' ] = port
         info[ 'access_key' ] = self._access_key
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( os.urandom( 32 ), service_type, 'service', info )
         
         # news
         
@@ -366,14 +362,14 @@ class TestServer( unittest.TestCase ):
     
     def _test_restricted( self, host, port, service_type ):
         
-        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, 'service' )
+        service_key = os.urandom( 32 )
         
         info = {}
         
         info[ 'host' ] = host
         info[ 'port' ] = port
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( service_key, service_type, 'service', info )
         
         # access_key
         
@@ -391,7 +387,7 @@ class TestServer( unittest.TestCase ):
         
         info[ 'access_key' ] = self._access_key
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( service_key, service_type, 'service', info )
         
         # set up session
         
@@ -399,7 +395,7 @@ class TestServer( unittest.TestCase ):
         
         account = self._account
         
-        service_for_session_manager = CC.Service( service_identifier, info )
+        service_for_session_manager = CC.Service( service_key, service_type, 'service', info )
         
         HC.app.SetRead( 'service', service_for_session_manager )
         
@@ -482,14 +478,14 @@ class TestServer( unittest.TestCase ):
     
     def _test_server_admin( self, host, port ):
         
-        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'service' )
+        service_key = os.urandom( 32 )
         
         info = {}
         
         info[ 'host' ] = host
         info[ 'port' ] = port
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( service_key, HC.SERVER_ADMIN, 'service', info )
         
         # init
         
@@ -505,7 +501,7 @@ class TestServer( unittest.TestCase ):
         
         info[ 'access_key' ] = self._access_key
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( service_key, HC.SERVER_ADMIN, 'service', info )
         
         # backup
         

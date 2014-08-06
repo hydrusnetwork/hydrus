@@ -141,24 +141,9 @@ class HydrusSessionManagerServer( object ):
     
     def __init__( self ):
         
-        existing_sessions = HC.app.Read( 'sessions' )
-        
-        self._account_ids_to_session_keys = collections.defaultdict( HC.default_dict_set )
-        
-        self._account_ids_to_accounts = collections.defaultdict( dict )
-        
-        self._sessions = collections.defaultdict( dict )
-        
-        for ( session_key, service_identifier, account, expiry ) in existing_sessions:
-            
-            self._sessions[ service_identifier ][ session_key ] = ( account, expiry )
-            
-            account_id = account.GetAccountId()
-            
-            self._account_ids_to_session_keys[ service_identifier ][ account_id ].add( session_key )
-            
-        
         self._lock = threading.Lock()
+        
+        self.RefreshAllAccounts()
         
         HC.pubsub.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
         
@@ -245,21 +230,26 @@ class HydrusSessionManagerServer( object ):
     
     def RefreshAllAccounts( self ):
         
-        existing_sessions = HC.app.Read( 'sessions' )
-        
-        self._account_ids_to_session_keys = collections.defaultdict( HC.default_dict_set )
-        
-        self._account_ids_to_accounts = collections.defaultdict( dict )
-        
-        self._sessions = collections.defaultdict( dict )
-        
-        for ( session_key, service_identifier, account, expiry ) in existing_sessions:
+        with self._lock:
             
-            self._sessions[ service_identifier ][ session_key ] = ( account, expiry )
+            existing_sessions = HC.app.Read( 'sessions' )
             
-            account_id = account.GetAccountId()
+            self._account_ids_to_session_keys = collections.defaultdict( HC.default_dict_set )
             
-            self._account_ids_to_session_keys[ service_identifier ][ account_id ].add( session_key )
+            self._account_ids_to_accounts = collections.defaultdict( dict )
+            
+            self._sessions = collections.defaultdict( dict )
+            
+            for ( session_key, service_identifier, account, expiry ) in existing_sessions:
+                
+                self._sessions[ service_identifier ][ session_key ] = ( account, expiry )
+                
+                account_id = account.GetAccountId()
+                
+                self._account_ids_to_session_keys[ service_identifier ][ account_id ].add( session_key )
+                
+                self._account_ids_to_accounts[ service_identifier ][ account_id ] = account
+                
             
         
     

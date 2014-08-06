@@ -31,6 +31,8 @@ from twisted.internet import defer
 ID_ANIMATED_EVENT_TIMER = wx.NewId()
 ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
 
+MAINTENANCE_PERIOD = 12 * 60
+
 class Controller( wx.App ):
     
     def _Read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
@@ -110,15 +112,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
         
     
-    def CurrentlyIdle( self ):
-        
-        if HC.GetNow() - self._last_idle_time > 60 * 60: # a long time, so we probably just woke up from a sleep
-            
-            self._last_idle_time = HC.GetNow()
-            
-        
-        return HC.GetNow() - self._last_idle_time > 20 * 60 # 20 mins since last user-initiated db request
-        
+    def CurrentlyIdle( self ): return HC.GetNow() - self._timestamps[ 'last_user_db_use' ] > 30 * 60 # 30 mins since last user-initiated media_results query
     
     def EventPubSub( self, event ):
         
@@ -127,6 +121,8 @@ The database will be locked while the backup occurs, which may lock up your gui 
         try: HC.pubsub.WXProcessQueueItem()
         finally: HC.currently_doing_pubsub = False
         
+    
+    def GetDB( self ): return self._db
     
     def GetFullscreenImageCache( self ): return self._fullscreen_image_cache
     
@@ -139,6 +135,117 @@ The database will be locked while the backup occurs, which may lock up your gui 
     def GetPreviewImageCache( self ): return self._preview_image_cache
     
     def GetThumbnailCache( self ): return self._thumbnail_cache
+    
+    def InitCheckPassword( self ):
+        
+        while True:
+            
+            with wx.PasswordEntryDialog( None, 'Enter your password', 'Enter password' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    if hashlib.sha256( dlg.GetValue() ).digest() == HC.options[ 'password' ]: break
+                    
+                else: raise HydrusExceptions.PermissionException()
+                
+            
+        
+    
+    def InitDB( self ):
+        
+        self._log = CC.Log()
+        
+        try:
+            
+            def make_temp_files_deletable( function_called, path, traceback_gumpf ):
+                
+                os.chmod( path, stat.S_IWRITE )
+                
+                function_called( path ) # try again
+                
+            
+            if os.path.exists( HC.TEMP_DIR ): shutil.rmtree( HC.TEMP_DIR, onerror = make_temp_files_deletable )
+            
+        except: pass
+        
+        try:
+            
+            if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
+            
+        except: pass
+        
+        db_initialised = False
+        
+        while not db_initialised:
+            
+            try:
+                
+                self._db = ClientDB.DB()
+                
+                db_initialised = True
+                
+            except HydrusExceptions.DBAccessException as e:
+                
+                try: print( HC.u( e ) )
+                except: print( repr( HC.u( e ) ) )
+                
+                message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
+                message += os.linesep + os.linesep
+                message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
+                
+                with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
+                    else: raise HydrusExceptions.PermissionException()
+                    
+                
+            
+        
+        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
+        
+    
+    def InitGUI( self ):
+        
+        self._managers = {}
+        
+        self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
+        self._managers[ 'local_booru' ] = CC.LocalBooruCache()
+        self._managers[ 'services' ] = CC.ServiceManager()
+        self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
+        self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
+        self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
+        self._managers[ 'undo' ] = CC.UndoManager()
+        self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
+        
+        self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
+        self._preview_image_cache = CC.RenderedImageCache( 'preview' )
+        
+        self._thumbnail_cache = CC.ThumbnailCache()
+        
+        CC.GlobalBMPs.STATICInitialise()
+        
+        self._gui = ClientGUI.FrameGUI()
+        
+        HC.pubsub.sub( self, 'Clipboard', 'clipboard' )
+        HC.pubsub.sub( self, 'RestartServer', 'restart_server' )
+        HC.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
+        
+        self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
+        self._maintenance_event_timer.Start( MAINTENANCE_PERIOD * 1000, wx.TIMER_CONTINUOUS )
+        
+        # this is because of some bug in wx C++ that doesn't add these by default
+        wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
+        wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
+        
+        if HC.is_first_start: wx.CallAfter( self._gui.DoFirstStart )
+        if HC.is_db_updated: wx.CallLater( 1, HC.ShowText, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
+        
+        self.RestartServer()
+        self.RestartBooru()
+        self._db.StartDaemons()
+        
     
     def MaintainDB( self ):
         
@@ -154,12 +261,18 @@ The database will be locked while the backup occurs, which may lock up your gui 
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > 86400 * 5: self.Write( 'vacuum' )
         if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > 86400 * 3: self.Write( 'delete_orphans' )
         
-        if now - self._timestamps[ 'service_info_cache_fatten' ] > 60 * 20:
+        if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
+            
+            HC.pubsub.pub( 'set_splash_text', 'fattening service info' )
             
             service_identifiers = self.Read( 'service_identifiers' )
             
             for service_identifier in service_identifiers: self.Read( 'service_info', service_identifier )
             
+            self._timestamps[ 'service_info_cache_fatten' ] = HC.GetNow()
+            
+        
+        HC.pubsub.pub( 'clear_closed_pages' )
         
     
     def OnInit( self ):
@@ -174,156 +287,25 @@ The database will be locked while the backup occurs, which may lock up your gui 
         self._local_service = None
         self._booru_service = None
         
-        init_result = True
+        self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
         
         try:
             
-            try:
-                
-                def make_temp_files_deletable( function_called, path, traceback_gumpf ):
-                    
-                    os.chmod( path, stat.S_IWRITE )
-                    
-                    function_called( path ) # try again
-                    
-                
-                if os.path.exists( HC.TEMP_DIR ): shutil.rmtree( HC.TEMP_DIR, onerror = make_temp_files_deletable )
-                
-            except: pass
+            splash = ClientGUI.FrameSplash( 'boot' )
             
-            try:
-                
-                if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
-                
-            except: pass
+            return True
             
-            self._splash = ClientGUI.FrameSplash()
-            
-            self.SetSplashText( 'log' )
-            
-            self._log = CC.Log()
-            
-            self.SetSplashText( 'db' )
-            
-            db_initialised = False
-            
-            while not db_initialised:
-                
-                try:
-                    
-                    self._db = ClientDB.DB()
-                    
-                    db_initialised = True
-                    
-                except HydrusExceptions.DBAccessException as e:
-                    
-                    try: print( HC.u( e ) )
-                    except: print( repr( HC.u( e ) ) )
-                    
-                    message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
-                    message += os.linesep + os.linesep
-                    message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
-                    
-                    with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
-                        else: raise HydrusExceptions.PermissionException()
-                        
-                    
-                
-            
-            threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
-            
-            if HC.options[ 'password' ] is not None:
-                
-                self.SetSplashText( 'waiting for password' )
-                
-                while True:
-                    
-                    with wx.PasswordEntryDialog( None, 'Enter your password', 'Enter password' ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            if hashlib.sha256( dlg.GetValue() ).digest() == HC.options[ 'password' ]: break
-                            
-                        else: raise HydrusExceptions.PermissionException()
-                        
-                    
-                
-            
-            self.SetSplashText( 'caches and managers' )
-            
-            self._managers = {}
-            
-            self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
-            self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
-            self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
-            self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
-            self._managers[ 'undo' ] = CC.UndoManager()
-            self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
-            self._managers[ 'local_booru' ] = CC.LocalBooruCache()
-            
-            self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
-            self._preview_image_cache = CC.RenderedImageCache( 'preview' )
-            
-            self._thumbnail_cache = CC.ThumbnailCache()
-            
-            CC.GlobalBMPs.STATICInitialise()
-            
-            self.SetSplashText( 'gui' )
-            
-            self._gui = ClientGUI.FrameGUI()
-            
-            HC.pubsub.sub( self, 'Clipboard', 'clipboard' )
-            HC.pubsub.sub( self, 'RestartServer', 'restart_server' )
-            HC.pubsub.sub( self, 'RestartBooru', 'restart_booru' )
-            
-            self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
-            
-            # this is because of some bug in wx C++ that doesn't add these by default
-            wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
-            wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
-            
-            self.SetSplashText( 'starting daemons' )
-            
-            if HC.is_first_start: self._gui.DoFirstStart()
-            if HC.is_db_updated: wx.CallLater( 1, HC.ShowText, 'The client has updated to version ' + HC.u( HC.SOFTWARE_VERSION ) + '!' )
-            
-            self.RestartServer()
-            self.RestartBooru()
-            self._db.StartDaemons()
-            
-            self._last_idle_time = 0.0
-            
-            self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
-            
-            self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
-            self._maintenance_event_timer.Start( 20 * 60000, wx.TIMER_CONTINUOUS )
-            
-        except sqlite3.OperationalError as e:
-            
-            message = 'Database error!' + os.linesep + os.linesep + traceback.format_exc()
-            
-            print message
-            
-            wx.MessageBox( message )
-            
-            init_result = False
-            
-        except HydrusExceptions.PermissionException as e: init_result = False
         except:
             
-            wx.MessageBox( 'Woah, bad error:' + os.linesep + os.linesep + traceback.format_exc() )
+            print( 'There was an error trying to start the splash screen!' )
             
-            init_result = False
+            print( traceback.format_exc() )
             
-        finally:
-            
-            try: wx.CallAfter( self._splash.Destroy )
+            try: wx.CallAfter( splash.Destroy )
             except: pass
             
-        
-        return init_result
+            return False
+            
         
     
     def PrepStringForDisplay( self, text ):
@@ -334,7 +316,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
     
     def Read( self, action, *args, **kwargs ):
         
-        if action == 'media_results': self._last_idle_time = HC.GetNow()
+        if action == 'media_results': self._timestamps[ 'last_user_db_use' ] = HC.GetNow()
         
         return self._Read( action, *args, **kwargs )
         
@@ -503,7 +485,7 @@ Once it is done, the client will restart.'''
                         
                         self._db.Shutdown()
                         
-                        while not self._db.GetLoopFinished(): time.sleep( 0.1 )
+                        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
                         
                         self._db.RestoreBackup( path )
                         
@@ -516,12 +498,6 @@ Once it is done, the client will restart.'''
                     
                 
             
-        
-    
-    def SetSplashText( self, text ):
-        
-        self._splash.SetText( text )
-        self.Yield() # this processes the event queue immediately, so the paint event can occur
         
     
     def StartFileQuery( self, query_key, search_context ): HydrusThreading.CallToThread( self.THREADDoFileQuery, query_key, search_context )
@@ -577,11 +553,14 @@ Once it is done, the client will restart.'''
     
     def TIMEREventMaintenance( self, event ):
         
-        gc.collect()
+        last_time_this_ran = self._timestamps[ 'last_check_idle_time' ]
+        
+        self._timestamps[ 'last_check_idle_time' ] = HC.GetNow()
+        
+        # this tests if we probably just woke up from a sleep
+        if HC.GetNow() - last_time_this_ran > MAINTENANCE_PERIOD * 1.2: return
         
         if self.CurrentlyIdle(): self.MaintainDB()
-        
-        HC.pubsub.pub( 'clear_closed_pages' )
         
     
     def WaitUntilGoodTimeToUseGUIThread( self ):
@@ -595,8 +574,6 @@ Once it is done, the client will restart.'''
         
     
     def Write( self, action, *args, **kwargs ):
-        
-        self._last_idle_time = HC.GetNow()
         
         if action == 'content_updates': self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
         

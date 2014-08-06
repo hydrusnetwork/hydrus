@@ -292,9 +292,11 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         num_chars = len( self.GetValue() )
         
+        ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+        
         if num_chars == 0: self._UpdateList()
-        elif num_chars < 3: self._lag_timer.Start( 500, wx.TIMER_ONE_SHOT )
-        else: self._lag_timer.Start( 250, wx.TIMER_ONE_SHOT )
+        elif num_chars < char_limit: self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
+        else: self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
         
     
     def TIMEREventDropdownHide( self, event ):

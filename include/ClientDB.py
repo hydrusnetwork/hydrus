@@ -1505,6 +1505,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _DeleteOrphans( self, c ):
         
+        HC.pubsub.pub( 'set_splash_text', 'deleting orphan files' )
+        
         # careful of the .encode( 'hex' ) business here!
         
         # files
@@ -2670,9 +2672,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         ( service_key, service_type, name, info ) = result
         
-        service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
-        
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( service_key, service_type, name, info )
         
         return service
         
@@ -3856,6 +3856,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self.pub_service_updates_after_commit( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET ) ] } )
         self.pub_after_commit( 'notify_new_pending' )
+        self.pub_after_commit( 'notify_new_services_data' )
+        self.pub_after_commit( 'notify_new_services_gui' )
         self.pub_after_commit( 'permissions_are_stale' )
         HC.ShowText( 'reset ' + service_name )
         
@@ -4388,7 +4390,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         self.pub_after_commit( 'notify_new_pending' )
-        self.pub_after_commit( 'notify_new_services' )
+        self.pub_after_commit( 'notify_new_services_data' )
+        self.pub_after_commit( 'notify_new_services_gui' )
         
     
     def _UpdateServices( self, c, edit_log ):
@@ -4479,7 +4482,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
         self.pub_after_commit( 'notify_new_pending' )
-        self.pub_after_commit( 'notify_new_services' )
+        self.pub_after_commit( 'notify_new_services_data' )
+        self.pub_after_commit( 'notify_new_services_gui' )
         
     
     def _UpdateServiceInfo( self, c, service_id, update ):
@@ -4521,7 +4525,7 @@ class DB( ServiceDB ):
         
         while version < HC.SOFTWARE_VERSION:
             
-            HC.app.SetSplashText( 'updating db to v' + HC.u( version + 1 ) )
+            HC.pubsub.pub( 'set_splash_text', 'updating db to v' + HC.u( version + 1 ) )
             
             time.sleep( 2 )
             
@@ -4993,7 +4997,7 @@ class DB( ServiceDB ):
                         
                         i += 1
                         
-                        if i % 100 == 0: HC.app.SetSplashText( 'reprocessing thumbs: ' + HC.ConvertIntToPrettyString( i ) )
+                        if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'reprocessing thumbs: ' + HC.ConvertIntToPrettyString( i ) )
                         
                     except: print( 'When updating to v118, ' + path + '\'s phash could not be recalculated.' )
                     
@@ -5034,7 +5038,7 @@ class DB( ServiceDB ):
                     
                     i += 1
                     
-                    if i % 100 == 0: HC.app.SetSplashText( 'creating video thumbs: ' + HC.ConvertIntToPrettyString( i ) )
+                    if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'creating video thumbs: ' + HC.ConvertIntToPrettyString( i ) )
                     
                 except:
                     print( traceback.format_exc())
@@ -5316,7 +5320,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( all_local_files ), 100 ):
                 
-                HC.app.SetSplashText( 'updating db to v29 ' + HC.u( i ) + '/' + HC.u( len( all_local_files ) ) )
+                HC.pubsub.pub( 'set_splash_text', 'updating db to v29 ' + HC.u( i ) + '/' + HC.u( len( all_local_files ) ) )
                 
                 local_files_subset = all_local_files[ i : i + 100 ]
                 
@@ -5366,7 +5370,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( all_thumbnails ), 500 ):
                 
-                HC.app.SetSplashText( 'updating db to v30 ' + HC.u( i ) + '/' + HC.u( len( all_thumbnails ) ) )
+                HC.pubsub.pub( 'set_splash_text', 'updating db to v30 ' + HC.u( i ) + '/' + HC.u( len( all_thumbnails ) ) )
                 
                 thumbnails_subset = all_thumbnails[ i : i + 500 ]
                 
@@ -5439,7 +5443,7 @@ class DB( ServiceDB ):
             
             for i in range( 0, len( hashes ), 100 ):
                 
-                HC.app.SetSplashText( 'updating db to v33 ' + HC.u( i ) + '/' + HC.u( len( hashes ) ) )
+                HC.pubsub.pub( 'set_splash_text', 'updating db to v33 ' + HC.u( i ) + '/' + HC.u( len( hashes ) ) )
                 
                 hashes_subset = hashes[ i : i + 100 ]
                 
@@ -5477,7 +5481,7 @@ class DB( ServiceDB ):
                     
                     # can't do it inside transaction
                     
-                    HC.app.SetSplashText( 'consolidating db - preparing' )
+                    HC.pubsub.pub( 'set_splash_text', 'consolidating db - preparing' )
                     
                     c.execute( 'ATTACH database "' + main_db_path + '" as main_db;' )
                     c.execute( 'ATTACH database "' + files_info_db_path + '" as files_info_db;' )
@@ -5509,7 +5513,7 @@ class DB( ServiceDB ):
                     
                     c.execute( 'DELETE FROM main.options;' )
                     
-                    HC.app.SetSplashText( 'consolidating db - 1/4' )
+                    HC.pubsub.pub( 'set_splash_text', 'consolidating db - 1/4' )
                     
                     c.execute( 'REPLACE INTO main.accounts SELECT * FROM main_db.accounts;' )
                     c.execute( 'REPLACE INTO main.addresses SELECT * FROM main_db.addresses;' )
@@ -5528,18 +5532,18 @@ class DB( ServiceDB ):
                     c.execute( 'REPLACE INTO main.tags SELECT * FROM main_db.tags;' )
                     # don't do version, lol
                     
-                    HC.app.SetSplashText( 'consolidating db - 2/4' )
+                    HC.pubsub.pub( 'set_splash_text', 'consolidating db - 2/4' )
                     
                     c.execute( 'REPLACE INTO main.deleted_mappings SELECT * FROM mappings_db.deleted_mappings;' )
                     c.execute( 'REPLACE INTO main.mappings SELECT * FROM mappings_db.mappings;' )
                     c.execute( 'REPLACE INTO main.mapping_petitions SELECT * FROM mappings_db.mapping_petitions;' )
                     c.execute( 'REPLACE INTO main.pending_mappings SELECT * FROM mappings_db.pending_mappings;' )
                     
-                    HC.app.SetSplashText( 'consolidating db - 3/4' )
+                    HC.pubsub.pub( 'set_splash_text', 'consolidating db - 3/4' )
                     
                     c.execute( 'REPLACE INTO main.active_mappings SELECT * FROM active_mappings_db.active_mappings;' )
                     
-                    HC.app.SetSplashText( 'consolidating db - 4/4' )
+                    HC.pubsub.pub( 'set_splash_text', 'consolidating db - 4/4' )
                     
                     c.execute( 'REPLACE INTO main.deleted_files SELECT * FROM files_info_db.deleted_files;' )
                     c.execute( 'REPLACE INTO main.files_info SELECT * FROM files_info_db.files_info;' )
@@ -5551,7 +5555,7 @@ class DB( ServiceDB ):
                     
                     c.execute( 'COMMIT' )
                     
-                    HC.app.SetSplashText( 'consolidating db - cleaning up' )
+                    HC.pubsub.pub( 'set_splash_text', 'consolidating db - cleaning up' )
                     
                     c.execute( 'DETACH database main_db;' )
                     c.execute( 'DETACH database files_info_db;' )
@@ -5959,7 +5963,7 @@ class DB( ServiceDB ):
                 c.execute( 'DELETE FROM active_pending_mappings WHERE tag_id = ?;', ( tag_id, ) )
                 
             
-            HC.app.SetSplashText( 'making new cache, may take a minute' )
+            HC.pubsub.pub( 'set_splash_text', 'making new cache, may take a minute' )
             
             c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
             c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
@@ -6024,7 +6028,7 @@ class DB( ServiceDB ):
         
         if version == 51:
             
-            HC.app.SetSplashText( 'making new indices' )
+            HC.pubsub.pub( 'set_splash_text', 'making new indices' )
             
             c.execute( 'DROP INDEX mappings_namespace_id_index;' )
             c.execute( 'DROP INDEX mappings_tag_id_index;' )
@@ -6032,7 +6036,7 @@ class DB( ServiceDB ):
             c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
             c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
             
-            HC.app.SetSplashText( 'making some more new indices' )
+            HC.pubsub.pub( 'set_splash_text', 'making some more new indices' )
             
             c.execute( 'DROP INDEX pending_mappings_namespace_id_index;' )
             c.execute( 'DROP INDEX pending_mappings_tag_id_index;' )
@@ -6187,7 +6191,7 @@ class DB( ServiceDB ):
         
         if version == 64:
             
-            HC.app.SetSplashText( 'renaming db files' )
+            HC.pubsub.pub( 'set_splash_text', 'renaming db files' )
             
             filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
             
@@ -6214,7 +6218,7 @@ class DB( ServiceDB ):
                 
                 i += 1
                 
-                if i % 250 == 0: HC.app.SetSplashText( 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                if i % 250 == 0: HC.pubsub.pub( 'set_splash_text', 'renaming file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
                 
             
             c.execute( 'CREATE TABLE subscriptions ( subscriptions TEXT_YAML );' )
@@ -6251,7 +6255,7 @@ class DB( ServiceDB ):
             
             #
             
-            HC.app.SetSplashText( 'creating new db directories' )
+            HC.pubsub.pub( 'set_splash_text', 'creating new db directories' )
             
             hex_chars = '0123456789abcdef'
             
@@ -6266,7 +6270,7 @@ class DB( ServiceDB ):
                 if not os.path.exists( dir ): os.mkdir( dir )
                 
             
-            HC.app.SetSplashText( 'generating file cache' )
+            HC.pubsub.pub( 'set_splash_text', 'generating file cache' )
             
             filenames = dircache.listdir( HC.CLIENT_FILES_DIR )
             
@@ -6288,10 +6292,10 @@ class DB( ServiceDB ):
                 
                 i += 1
                 
-                if i % 100 == 0: HC.app.SetSplashText( 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'moving files - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
                 
             
-            HC.app.SetSplashText( 'generating thumbnail cache' )
+            HC.pubsub.pub( 'set_splash_text', 'generating thumbnail cache' )
             
             filenames = dircache.listdir( HC.CLIENT_THUMBNAILS_DIR )
             
@@ -6313,7 +6317,7 @@ class DB( ServiceDB ):
                 
                 i += 1
                 
-                if i % 100 == 0: HC.app.SetSplashText( 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
+                if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'moving thumbnails - ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( filenames ) ) )
                 
             
         
@@ -6958,7 +6962,7 @@ class DB( ServiceDB ):
             
             for ( i, service_id ) in enumerate( service_ids ):
                 
-                HC.app.SetSplashText( 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
+                HC.pubsub.pub( 'set_splash_text', 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
                 
                 c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
                 
@@ -6976,7 +6980,7 @@ class DB( ServiceDB ):
             
             for ( i, filename ) in enumerate( current_updates ):
                 
-                if i % 100 == 0: HC.app.SetSplashText( 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
+                if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'renaming updates ' + str( i ) + '/' + str( len( current_updates ) ) )
                 
                 ( service_key_hex, gumpf ) = filename.split( '_' )
                 
@@ -7024,6 +7028,8 @@ class DB( ServiceDB ):
     
     def _Vacuum( self ):
         
+        HC.pubsub.pub( 'set_splash_text', 'vacuuming db' )
+        
         ( db, c ) = self._GetDBCursor()
         
         c.execute( 'VACUUM' )
@@ -7034,8 +7040,6 @@ class DB( ServiceDB ):
         
         HC.ShowText( 'vacuumed successfully' )
         
-    
-    def GetLoopFinished( self ): return self._loop_finished
     
     def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
     
@@ -7050,6 +7054,8 @@ class DB( ServiceDB ):
         self.pub_after_commit( 'service_updates_data', service_identifiers_to_service_updates )
         self.pub_after_commit( 'service_updates_gui', service_identifiers_to_service_updates )
         
+    
+    def LoopIsFinished( self ): return self._loop_finished
     
     def MainLoop( self ):
         
@@ -7304,7 +7310,7 @@ class DB( ServiceDB ):
         HydrusThreading.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
         HydrusThreading.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
         HydrusThreading.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, init_wait = 600 )
-        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services', 'permissions_are_stale' ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'notify_new_services_gui', 'permissions_are_stale' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ) )
         HydrusThreading.DAEMONWorker( 'UPnP', DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )

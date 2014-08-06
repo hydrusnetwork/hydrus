@@ -6,6 +6,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIPages
 import HydrusDownloading
+import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
 import HydrusNATPunch
@@ -13,6 +14,7 @@ import HydrusThreading
 import itertools
 import os
 import random
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -98,7 +100,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         HC.pubsub.sub( self, 'NotifyNewPending', 'notify_new_pending' )
         HC.pubsub.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
-        HC.pubsub.sub( self, 'NotifyNewServices', 'notify_new_services' )
+        HC.pubsub.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         HC.pubsub.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         HC.pubsub.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         HC.pubsub.sub( self, 'RefreshStatusBar', 'refresh_status' )
@@ -317,7 +319,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _AccountInfo( self, service_identifier ):
         
-        with wx.TextEntryDialog( self, 'Access key' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account\'s access key.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -603,7 +605,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _FetchIP( self, service_identifier ):
         
-        with wx.TextEntryDialog( self, 'File Hash' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the file\'s hash.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1227,7 +1229,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         service = HC.app.Read( 'service', service_identifier )
         
-        with wx.TextEntryDialog( self, 'Enter the access key for the account to be modified' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the access key for the account to be modified.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1387,7 +1389,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _PostNews( self, service_identifier ):
         
-        with wx.TextEntryDialog( self, 'Enter the news you would like to post.' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the news you would like to post.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1494,7 +1496,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             while True:
                 
-                with wx.TextEntryDialog( self, 'enter a name for the new session', 'name session' ) as dlg:
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
@@ -1544,7 +1546,7 @@ Do not ever forget your password! If you do, you'll have to manually insert a ya
 
 The password is cleartext here but obscured in the entry dialog. Enter a blank password to remove.'''
         
-        with wx.TextEntryDialog( self, message, 'Enter new password' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, message, allow_blank = True ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -1580,7 +1582,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _StartURLDownload( self ):
         
-        with wx.TextEntryDialog( self, 'Enter URL' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter URL.' ) as dlg:
             
             result = dlg.ShowModal()
             
@@ -1601,7 +1603,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _StartYoutubeDownload( self ):
         
-        with wx.TextEntryDialog( self, 'Enter YouTube URL' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter YouTube URL.' ) as dlg:
             
             result = dlg.ShowModal()
             
@@ -1704,40 +1706,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        page = self._notebook.GetCurrentPage()
-        
-        if page is not None:
+        try: splash = FrameSplash( 'exit' )
+        except:
             
-            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            print( 'There was an error trying to start the splash screen!' )
             
-        
-        HC.app.Write( 'save_options' )
-        
-        self._SaveGUISession( 'last session' )
-        
-        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
+            print( traceback.format_exc() )
             
-            try: page.TestAbleToClose()
-            except Exception as e: return
+            try: wx.CallAfter( splash.Destroy )
+            except: pass
             
-        
-        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
-            
-            try: page.CleanBeforeDestroy()
-            except: return
-            
-        
-        self._message_manager.CleanBeforeDestroy()
-        self._message_manager.Hide()
-        
-        self.Hide()
-        
-        # for some insane reason, the read makes the controller block until the writes are done!??!
-            # hence the hide, to make it appear the destroy is actually happening on time
-        
-        HC.app.MaintainDB()
-        
-        wx.CallAfter( self.Destroy )
         
     
     def EventFocus( self, event ):
@@ -2078,6 +2056,35 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def Shutdown( self ):
+        
+        self._message_manager.Hide()
+        
+        self.Hide()
+        
+        self._message_manager.CleanBeforeDestroy()
+        
+        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
+        
+        page = self._notebook.GetCurrentPage()
+        
+        if page is not None:
+            
+            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            
+        
+        HC.app.Write( 'save_options' )
+        
+        self._SaveGUISession( 'last session' )
+        
+        wx.CallAfter( self.Destroy )
+        
+    
+    def TestAbleToClose( self ):
+        
+        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.TestAbleToClose()
+        
+    
 class FrameComposeMessage( ClientGUICommon.Frame ):
     
     def __init__( self, empty_draft_message ):
@@ -2167,7 +2174,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         self.Show( True )
         
-        HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services' )
+        HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services_gui' )
         
         wx.CallAfter( self.Raise )
         
@@ -2877,39 +2884,181 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
 class FrameSplash( ClientGUICommon.Frame ):
     
-    def __init__( self ):
+    def __init__( self, action ):
         
-        wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR | wx.FRAME_SHAPED, title = 'hydrus client' )
+        wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR, title = 'hydrus client' )
         
-        self._bmp = wx.EmptyBitmap( 154, 220, 32 ) # 32 bit for transparency?
+        self._bmp = wx.EmptyBitmap( 154, 220, 24 )
         
         self.SetSize( ( 154, 220 ) )
         
         self.Center()
         
+        self._last_drag_coordinates = None
+        self._total_drag_delta = ( 0, 0 )
+        self._initial_position = self.GetPosition()
+        
         # this is 124 x 166
         self._hydrus = wx.Image( HC.STATIC_DIR + os.path.sep + 'hydrus_splash.png', type=wx.BITMAP_TYPE_PNG ).ConvertToBitmap()
         
-        dc = wx.BufferedDC( wx.ClientDC( self ), self._bmp )
-        
-        dc.SetBackground( wx.Brush( wx.WHITE ) )
-        
-        dc.Clear()
-        
-        dc.DrawBitmap( self._hydrus, 15, 15 )
-        
         self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_MOTION, self.EventDrag )
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
+        self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
+        
+        if action == 'boot':
+            
+            self.SetText( 'initialising startup' )
+            
+            my_thread = threading.Thread( target = self.BootApp, name = 'Application Boot Thread' )
+            
+        elif action == 'exit':
+            
+            self.SetText( 'initialising shutdown' )
+            
+            my_thread = threading.Thread( target = self.ExitApp, name = 'Application Boot Thread' )
+            
         
         self.Show( True )
         
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.OnMouseEvents )
+        HC.pubsub.sub( self, 'SetText', 'set_splash_text' )
+        
+        wx.CallAfter( my_thread.start )
+        
+    
+    def BootApp( self ):
+        
+        try:
+            
+            wx.CallAfter( self.SetText, 'booting db' )
+            
+            HC.app.InitDB()
+            
+            if HC.options[ 'password' ] is not None:
+                
+                wx.CallAfter( self.SetText, 'waiting for password' )
+                
+                HC.app.InitCheckPassword()
+                
+            
+            wx.CallAfter( self.SetText, 'booting gui' )
+            
+            wx.CallAfter( HC.app.InitGUI )
+            
+            time.sleep( 1 )
+            
+        except sqlite3.OperationalError as e:
+            
+            text = 'Database error!' + os.linesep + os.linesep + traceback.format_exc()
+            
+            print( text )
+            
+            wx.CallAfter( wx.MessageBox, text )
+            
+        except HydrusExceptions.PermissionException as e: pass
+        except:
+            
+            text = 'Woah, bad error during startup!' + os.linesep * 2 + traceback.format_exc()
+            
+            print( text )
+            
+            wx.CallAfter( wx.MessageBox, text )
+            
+        finally:
+            
+            try: wx.CallAfter( self.Destroy )
+            except: pass
+            
+        
+    
+    def EventDrag( self, event ):
+        
+        if event.Dragging() and self._last_drag_coordinates is not None:
+            
+            ( old_x, old_y ) = self._last_drag_coordinates
+            
+            ( x, y ) = event.GetPosition()
+            
+            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
+            
+            ( old_delta_x, old_delta_y ) = self._total_drag_delta
+            
+            self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+            
+            ( init_x, init_y ) = self._initial_position
+            
+            ( total_delta_x, total_delta_y ) = self._total_drag_delta
+            
+            self.SetPosition( ( init_x + total_delta_x, init_y + total_delta_y ) )
+            
+        
+    
+    def EventDragBegin( self, event ):
+        
+        self._last_drag_coordinates = event.GetPosition()
+        
+        event.Skip()
+        
+    
+    def EventDragEnd( self, event ):
+        
+        self._last_drag_coordinates = None
+        
+        event.Skip()
         
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._bmp )
     
-    def OnMouseEvents( self, event ): pass
+    def ExitApp( self ):
+        
+        try:
+            
+            wx.CallAfter( self.SetText, 'exiting gui' )
+            
+            gui = HC.app.GetGUI()
+            
+            try: gui.TestAbleToClose()
+            except: return
+            
+            gui.Shutdown()
+            
+            wx.CallAfter( self.SetText, 'exiting db' )
+            
+            db = HC.app.GetDB()
+            
+            HC.app.MaintainDB()
+            
+            db.Shutdown()
+            
+            while not db.LoopIsFinished(): time.sleep( 0.1 )
+            
+        except sqlite3.OperationalError as e:
+            
+            text = 'Database error!' + os.linesep + os.linesep + traceback.format_exc()
+            
+            print( text )
+            
+            wx.CallAfter( wx.MessageBox, text )
+            
+        except HydrusExceptions.PermissionException as e: pass
+        except:
+            
+            text = 'Woah, bad error during shutdown!' + os.linesep * 2 + 'You may need to quit the program from task manager.' + os.linesep * 2 + traceback.format_exc()
+            
+            print( text )
+            
+            wx.CallAfter( wx.MessageBox, text )
+            
+        finally:
+            
+            try: wx.CallAfter( self.Destroy )
+            except: pass
+            
+        
     
     def SetText( self, text ):
+        
+        print( text )
         
         dc = wx.BufferedDC( wx.ClientDC( self ), self._bmp )
         

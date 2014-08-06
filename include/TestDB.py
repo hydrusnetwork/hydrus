@@ -51,7 +51,7 @@ class TestClientDB( unittest.TestCase ):
         
         self._db.Shutdown()
         
-        while not self._db.GetLoopFinished(): time.sleep( 0.1 )
+        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
         
         def make_temp_files_deletable( function_called, path, traceback_gumpf ):
             

@@ -477,7 +477,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             if len( hashes ) == 1: message = 'Enter a reason for this file to be removed from ' + file_service_identifier.GetName() + '.'
             else: message = 'Enter a reason for these ' + HC.ConvertIntToPrettyString( len( hashes ) ) + ' files to be removed from ' + file_service_identifier.GetName() + '.'
             
-            with wx.TextEntryDialog( self, message ) as dlg:
+            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     

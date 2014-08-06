@@ -38,16 +38,16 @@ def ConvertToPngIfBmp( path ):
         os.remove( temp_path )
         
     
-def EfficientlyResizeCVImage( cv_image, ( target_x, target_y ) ):
+def EfficientlyResizeNumpyImage( numpy_image, ( target_x, target_y ) ):
     
-    ( im_y, im_x, depth ) = cv_image.shape
+    ( im_y, im_x, depth ) = numpy_image.shape
     
-    if target_x >= im_x and target_y >= im_y: return cv_image
+    if target_x >= im_x and target_y >= im_y: return numpy_image
     
-    result = cv_image
+    result = numpy_image
     
     # this seems to slow things down a lot, at least for cv!
-    #if im_x > 2 * target_x and im_y > 2 * target_y: result = cv2.resize( cv_image, ( 2 * target_x, 2 * target_y ), interpolation = cv2.INTER_NEAREST )
+    #if im_x > 2 * target_x and im_y > 2 * target_y: result = cv2.resize( numpy_image, ( 2 * target_x, 2 * target_y ), interpolation = cv2.INTER_NEAREST )
     
     return cv2.resize( result, ( target_x, target_y ), interpolation = cv2.INTER_LINEAR )
     
@@ -64,15 +64,15 @@ def EfficientlyResizePILImage( pil_image, ( target_x, target_y ) ):
     
     return pil_image.resize( ( target_x, target_y ), PILImage.ANTIALIAS )
     
-def EfficientlyThumbnailCVImage( cv_image, ( target_x, target_y ) ):
+def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
-    ( im_y, im_x, depth ) = cv_image.shape
+    ( im_y, im_x, depth ) = numpy_image.shape
     
-    if target_x >= im_x and target_y >= im_y: return cv_image
+    if target_x >= im_x and target_y >= im_y: return numpy_image
     
     ( target_x, target_y ) = GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) )
     
-    return cv2.resize( cv_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
+    return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
     
 def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
     
@@ -85,24 +85,24 @@ def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
     
     pil_image.thumbnail( ( target_x, target_y ), PILImage.ANTIALIAS )
     
-def GenerateCVImage( path ):
+def GenerateNumpyImage( path ):
     
-    cv_image = cv2.imread( self._path, flags = -1 ) # flags = -1 loads alpha channel, if present
+    numpy_image = cv2.imread( self._path, flags = -1 ) # flags = -1 loads alpha channel, if present
     
-    ( y, x, depth ) = cv_image.shape
+    ( y, x, depth ) = numpy_image.shape
     
     if depth == 4: raise Exception( 'CV is bad at alpha!' )
-    else: cv_image = cv2.cvtColor( cv_image, cv2.COLOR_BGR2RGB )
+    else: numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
     
-    return cv_image
+    return numpy_image
     
 def GenerateHydrusBitmap( path ):
     
     try:
         
-        cv_image = GenerateCVImage( path )
+        numpy_image = GenerateNumpyImage( path )
         
-        return GenerateHydrusBitmapFromNumPyImage( cv_image )
+        return GenerateHydrusBitmapFromNumPyImage( numpy_image )
         
     except:
         
@@ -111,12 +111,12 @@ def GenerateHydrusBitmap( path ):
         return GenerateHydrusBitmapFromPILImage( pil_image )
         
     
-def GenerateHydrusBitmapFromNumPyImage( cv_image ):
+def GenerateHydrusBitmapFromNumPyImage( numpy_image ):
     
-    ( y, x, depth ) = cv_image.shape
+    ( y, x, depth ) = numpy_image.shape
     
-    if depth == 4: return HydrusBitmap( cv_image.data, wx.BitmapBufferFormat_RGBA, ( x, y ) )
-    else: return HydrusBitmap( cv_image.data, wx.BitmapBufferFormat_RGB, ( x, y ) )
+    if depth == 4: return HydrusBitmap( numpy_image.data, wx.BitmapBufferFormat_RGBA, ( x, y ) )
+    else: return HydrusBitmap( numpy_image.data, wx.BitmapBufferFormat_RGB, ( x, y ) )
     
 def GenerateNumPyImageFromPILImage( pil_image ):
     
@@ -154,9 +154,9 @@ def GenerateHydrusBitmapFromPILImage( pil_image ):
     
 def GeneratePerceptualHash( path ):
     
-    cv_image = cv2.imread( path, cv2.CV_LOAD_IMAGE_UNCHANGED )
+    numpy_image = cv2.imread( path, cv2.CV_LOAD_IMAGE_UNCHANGED )
     
-    ( y, x, depth ) = cv_image.shape
+    ( y, x, depth ) = numpy_image.shape
     
     if depth == 4:
         
@@ -164,15 +164,15 @@ def GeneratePerceptualHash( path ):
         
         white = numpy.ones( ( x, y ) ) * 255
         
-        # create weight and transform cv_image to greyscale
+        # create weight and transform numpy_image to greyscale
         
-        cv_alpha = cv_image[ :, :, 3 ]
+        numpy_alpha = numpy_image[ :, :, 3 ]
         
-        cv_image_bgr = cv_image[ :, :, :3 ]
+        numpy_image_bgr = numpy_image[ :, :, :3 ]
         
-        cv_image_gray = cv2.cvtColor( cv_image_bgr, cv2.COLOR_BGR2GRAY )
+        numpy_image_gray = cv2.cvtColor( numpy_image_bgr, cv2.COLOR_BGR2GRAY )
         
-        cv_image_result = numpy.empty( ( y, x ), numpy.float32 )
+        numpy_image_result = numpy.empty( ( y, x ), numpy.float32 )
         
         # paste greyscale onto the white
         
@@ -182,33 +182,33 @@ def GeneratePerceptualHash( path ):
             
             for j in range( x ):
                 
-                opacity = float( cv_alpha[ i, j ] ) / 255.0
+                opacity = float( numpy_alpha[ i, j ] ) / 255.0
                 
-                grey_part = cv_image_gray[ i, j ] * opacity
+                grey_part = numpy_image_gray[ i, j ] * opacity
                 white_part = 255 * ( 1 - opacity )
                 
                 pixel = grey_part + white_part
                 
-                cv_image_result[ i, j ] = pixel
+                numpy_image_result[ i, j ] = pixel
                 
             
         
-        cv_image_gray = cv_image_result
+        numpy_image_gray = numpy_image_result
         
         # use 255 for white weight, alpha for image weight
         
     else:
         
-        cv_image_gray = cv2.cvtColor( cv_image, cv2.COLOR_BGR2GRAY )
+        numpy_image_gray = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2GRAY )
         
     
-    cv_image_tiny = cv2.resize( cv_image_gray, ( 32, 32 ), interpolation = cv2.INTER_AREA )
+    numpy_image_tiny = cv2.resize( numpy_image_gray, ( 32, 32 ), interpolation = cv2.INTER_AREA )
     
     # convert to float and calc dct
     
-    cv_image_tiny_float = numpy.float32( cv_image_tiny )
+    numpy_image_tiny_float = numpy.float32( numpy_image_tiny )
     
-    dct = cv2.dct( cv_image_tiny_float )
+    dct = cv2.dct( numpy_image_tiny_float )
     
     # take top left 8x8 of dct
     
@@ -282,19 +282,19 @@ def old_GeneratePerceptualHash( path ):
     
     # convert to mat
     
-    cv_thumbnail_8 = cv.CreateMatHeader( 32, 32, cv.CV_8UC1 )
+    numpy_thumbnail_8 = cv.CreateMatHeader( 32, 32, cv.CV_8UC1 )
     
-    cv.SetData( cv_thumbnail_8, thumbnail.tostring() )
+    cv.SetData( numpy_thumbnail_8, thumbnail.tostring() )
     
-    cv_thumbnail_32 = cv.CreateMat( 32, 32, cv.CV_32FC1 )
+    numpy_thumbnail_32 = cv.CreateMat( 32, 32, cv.CV_32FC1 )
     
-    cv.Convert( cv_thumbnail_8, cv_thumbnail_32 )
+    cv.Convert( numpy_thumbnail_8, numpy_thumbnail_32 )
     
     # compute dct
     
     dct = cv.CreateMat( 32, 32, cv.CV_32FC1 )
     
-    cv.DCT( cv_thumbnail_32, dct, cv.CV_DXT_FORWARD )
+    cv.DCT( numpy_thumbnail_32, dct, cv.CV_DXT_FORWARD )
     
     # take top left 8x8 of dct
     
@@ -594,11 +594,11 @@ class ImageContainer( RasterContainer ):
         
         try:
             
-            cv_image = GenerateCVImage( self._path )
+            numpy_image = GenerateNumpyImage( self._path )
             
-            resized_cv_image = EfficientlyResizeCVImage( cv_image, self._target_resolution )
+            resized_numpy_image = EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
             
-            return GenerateHydrusBitmapFromNumPyImage( resized_cv_image )
+            return GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
             
         except:
             

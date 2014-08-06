@@ -96,7 +96,7 @@ class DAEMONWorker( DAEMON ):
             try: self._callable()
             except Exception as e:
                 
-                HC.ShowText( 'Daemon ' + name + ' encountered an exception:' )
+                HC.ShowText( 'Daemon ' + self._name + ' encountered an exception:' )
                 HC.ShowException( e )
                 
             

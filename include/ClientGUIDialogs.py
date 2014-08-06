@@ -2560,7 +2560,7 @@ class DialogInputLocalFiles( Dialog ):
                         
                         while aes_key is None:
                             
-                            with wx.TextEntryDialog( HC.app.GetTopWindow(), 'Please enter the key for ' + path ) as dlg:
+                            with ClientGUIDialogs.DialogTextEntry( HC.app.GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
                                 
                                 result = dlg.ShowModal()
                                 
@@ -3589,7 +3589,7 @@ class DialogModifyAccounts( Dialog ):
     
     def EventBan( self, event ):
         
-        with wx.TextEntryDialog( self, 'Enter reason for the ban' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter reason for the ban.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.BAN, reason = dlg.GetValue() )
             
@@ -3608,7 +3608,7 @@ class DialogModifyAccounts( Dialog ):
     
     def EventSuperban( self, event ):
         
-        with wx.TextEntryDialog( self, 'Enter reason for the superban' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter reason for the superban.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.SUPERBAN, reason = dlg.GetValue() )
             
@@ -4602,11 +4602,12 @@ class DialogRegisterService( Dialog ):
             return
             
         
-        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), self._service_type, 'temp registering service' )
+        service_key = os.urandom( 32 )
+        name = 'temp registering service'
         
         info = { 'host' : host, 'port' : port }
         
-        service = CC.Service( service_identifier, info )
+        service = CC.Service( service_key, self._service_type, name, info )
         
         response = service.Request( HC.GET, 'access_key', request_headers = { 'Hydrus-Key' : registration_key_encoded } )
         
@@ -5148,7 +5149,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         existing_names = { self._favourites.GetString( i ) for i in range( self._favourites.GetCount() ) }
         
-        with wx.TextEntryDialog( self, 'Enter name for these favourite actions' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter name for these favourite actions.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -5505,6 +5506,90 @@ class DialogSetupExport( Dialog ):
         
         self._tags_box.SetTagsByMedia( all_media )
         
+    
+class DialogTextEntry( Dialog ):
+    
+    def __init__( self, parent, message, default = '', allow_blank = False ):
+        
+        def InitialiseControls():
+            
+            self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+            self._text.Bind( wx.EVT_CHAR, self.EventChar )
+            self._text.Bind( wx.EVT_TEXT_ENTER, self.EventEnter )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+    
+        def PopulateControls():
+            
+            self._text.SetValue( default )
+            
+            self._CheckText()
+            
+        
+        def ArrangeControls():
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._ok, FLAGS_SMALL_INDENT )
+            hbox.AddF( self._cancel, FLAGS_SMALL_INDENT )
+            
+            st_message = wx.StaticText( self, label = message )
+            
+            st_message.Wrap( 480 )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( st_message, FLAGS_BIG_INDENT )
+            vbox.AddF( self._text, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( hbox, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            x = max( x, 250 )
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, 'enter text', position = 'center' )
+        
+        self._allow_blank = allow_blank
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+    
+    def _CheckText( self ):
+        
+        if not self._allow_blank:
+            
+            if self._text.GetValue() == '': self._ok.Disable()
+            else: self._ok.Enable()
+            
+        
+    
+    def EventChar( self, event ):
+        
+        wx.CallAfter( self._CheckText )
+        
+        event.Skip()
+        
+    
+    def EventEnter( self, event ):
+        
+        if self._text.GetValue() != '': self.EndModal( wx.ID_OK )
+        
+    
+    def GetValue( self ): return self._text.GetValue()
     
 class DialogYesNo( Dialog ):
     

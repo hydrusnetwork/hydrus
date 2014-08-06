@@ -78,7 +78,11 @@ class App( wx.App ):
         info[ 'max_monthly_data' ] = None
         info[ 'used_monthly_data' ] = 0
         
-        service = CC.Service( HC.LOCAL_BOORU_SERVICE_IDENTIFIER, info )
+        service_key = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey()
+        service_type = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetType()
+        name = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetName()
+        
+        service = CC.Service( service_key, service_type, name, info )
         
         HC.app.SetRead( 'service', service )
         

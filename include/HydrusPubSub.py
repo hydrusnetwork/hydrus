@@ -106,13 +106,9 @@ class HydrusPubSub( object ):
         
         with self._lock:
             
-            # this stops the pubsubs started at the beginning of the program screwing with the queue
-            if HC.app.IsMainLoopRunning():
-                
-                self._pubsubs.append( ( topic, args, kwargs ) )
-                
-                wx.PostEvent( HC.app, PubSubEvent() )
-                
+            self._pubsubs.append( ( topic, args, kwargs ) )
+            
+            wx.PostEvent( HC.app, PubSubEvent() )
             
         
     

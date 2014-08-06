@@ -47,11 +47,11 @@ class Controller( wx.App ):
         
         try:
             
+            self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
+            
             self._db = ServerDB.DB()
             
             self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
-            
-            self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
             
             self._managers = {}
             

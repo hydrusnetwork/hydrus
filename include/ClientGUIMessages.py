@@ -982,7 +982,7 @@ class DraftBodyPanel( wx.Panel ):
             if text_attribute.HasURL(): initial_url = text_attribute.GetURL()
             else: initial_url = 'http://'
             
-            with wx.TextEntryDialog( self, 'Enter url', defaultValue = initial_url ) as dlg:
+            with ClientGUIDialogs.DialogTextEntry( self, 'Enter url.', default = initial_url ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
