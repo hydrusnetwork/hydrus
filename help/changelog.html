@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 125</h3></li>
+				<ul>
+					<li>moved client splash screen and client boot to application event loop (i.e. your mouse won't hourglass over it now)</li>
+					<li>splash screen is now draggable</li>
+					<li>added splash screen for client shutdown</li>
+					<li>cleaned up shutdown procedure</li>
+					<li>added detailed A/C timing options</li>
+					<li>created a new text entry dialog that won't allow ok on empty text</li>
+					<li>hence fixed a startup bug when a session was created with no name (and likely others!)</li>
+					<li>further tweaked idle calculation to improve maintenance routine</li>
+					<li>revised a bunch of the maintenance timer logic</li>
+					<li>fixed some bugs in the maintenance timer logic</li>
+					<li>fixed a daemon error reporting typo</li>
+					<li>fixed another way session data usage tracking could split, server-side</li>
+					<li>brushed some more dust off the server-side session code</li>
+					<li>improved some bad image processing nomenclature</li>
+					<li>took first steps in service_identifier replacement rewrite</li>
+				</ul>
 				<li><h3>version 124</h3></li>
 				<ul>
 					<li>fixed some more broken gifs (those with funky transparency, I think)</li>
