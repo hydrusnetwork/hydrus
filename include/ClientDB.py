@@ -1316,11 +1316,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expiry ) )
         
     
-    def _AddService( self, c, service_identifier, info ):
-        
-        service_key = service_identifier.GetServiceKey()
-        service_type = service_identifier.GetType()
-        name = service_identifier.GetName()
+    def _AddService( self, c, service_key, service_type, name, info ):
         
         if service_type in HC.LOCAL_SERVICES:
             
@@ -2497,10 +2493,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service_type = service_identifier.GetType()
         
-        repository = self._GetService( c, service_id )
-        
-        account = repository.GetInfo( 'account' )
-        
         if service_type == HC.TAG_REPOSITORY:
             
             updates = []
@@ -2657,57 +2649,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return reason_id
         
     
-    def _GetService( self, c, parameter ):
-        
-        try:
-            
-            if type( parameter ) == int: service_id = parameter
-            elif type( parameter ) == HC.ClientServiceIdentifier: service_id = self._GetServiceId( c, parameter )
-            
-        except: raise Exception( 'Service error in database.' )
-        
-        result = c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
-        
-        if result is None: raise Exception( 'Service error in database.' )
-        
-        ( service_key, service_type, name, info ) = result
-        
-        service = CC.Service( service_key, service_type, name, info )
-        
-        return service
-        
-    
     def _GetServices( self, c, limited_types = HC.ALL_SERVICES ):
         
-        service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ) ]
+        services = []
         
-        services = [ self._GetService( c, service_id ) for service_id in service_ids ]
+        for result in c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ):
+            
+            ( service_key, service_type, name, info ) = result
+            
+            services.append( CC.Service( service_key, service_type, name, info ) )
+            
         
         return services
         
     
     def _GetServiceId( self, c, parameter ):
         
-        if type( parameter ) in ( str, unicode ):
-            
-            result = c.execute( 'SELECT service_id FROM services WHERE name = ?;', ( parameter, ) ).fetchone()
-            
-            if result is None: raise Exception( 'Service id error in database' )
-            
-            ( service_id, ) = result
-            
-        elif type( parameter ) == HC.ClientServiceIdentifier:
-            
-            service_type = parameter.GetType()
-            
-            service_key = parameter.GetServiceKey()
-            
-            result = c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
-            
-            if result is None: raise Exception( 'Service id error in database' )
-            
-            ( service_id, ) = result
-            
+        if type( parameter ) == HC.ClientServiceIdentifier: service_key = parameter.GetServiceKey()
+        else: service_key = parameter
+        
+        result = c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
+        
+        if result is None: raise Exception( 'Service id error in database' )
+        
+        ( service_id, ) = result
         
         return service_id
         
@@ -2727,11 +2692,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _GetServiceIdentifiers( self, c, limited_types = HC.ALL_SERVICES ): return { HC.ClientServiceIdentifier( service_key, service_type, name ) for ( service_key, service_type, name ) in c.execute( 'SELECT service_key, service_type, name FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ) }
     
-    def _GetServiceInfo( self, c, service_identifier ):
+    def _GetServiceInfo( self, c, service_key ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
-        service_type = service_identifier.GetType()
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.LOCAL_FILE: info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
         elif service_type == HC.FILE_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES, HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL }
@@ -3022,14 +2987,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 result = { dump_name.decode( 'hex' ) : data for ( dump_name, data ) in result.items() }
                 
             
-            if dump_type == YAML_DUMP_ID_SUBSCRIPTION:
-                
-                for ( dump_name, data ) in result.items():
-                    
-                    data[ 'advanced_tag_options' ] = dict( data[ 'advanced_tag_options' ] )
-                    
-                
-            
         else:
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
@@ -3046,15 +3003,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if result is None: raise Exception( dump_name + ' was not found!' )
                 
-            else:
-                
-                ( result, ) = result
-                
-                if dump_type == YAML_DUMP_ID_SUBSCRIPTION:
-                    
-                    result[ 'advanced_tag_options' ] = dict( result[ 'advanced_tag_options' ] )
-                    
-                
+            else: ( result, ) = result
             
         
         return result
@@ -3827,14 +3776,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _ResetService( self, c, service_identifier ):
         
-        service_name = service_identifier.GetName()
+        name = service_identifier.GetName()
         service_type = service_identifier.GetType()
         
         service_id = self._GetServiceId( c, service_identifier )
         
-        service = self._GetService( c, service_id )
-        
-        info = service.GetInfo()
+        ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
         c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
@@ -3852,14 +3799,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             self.pub_after_commit( 'notify_restart_repo_sync_daemon' )
             
         
-        self._AddService( c, service_identifier, info )
+        service_key = service_identifier.GetServiceKey()
+        
+        self._AddService( c, service_key, service_type, name, info )
         
         self.pub_service_updates_after_commit( { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET ) ] } )
         self.pub_after_commit( 'notify_new_pending' )
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
         self.pub_after_commit( 'permissions_are_stale' )
-        HC.ShowText( 'reset ' + service_name )
+        HC.ShowText( 'reset ' + name )
         
     
     def _SetTagCensorship( self, c, info ):
@@ -3900,8 +3849,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
         
         c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
-        
-        if dump_type == YAML_DUMP_ID_SUBSCRIPTION: data[ 'advanced_tag_options' ] = data[ 'advanced_tag_options' ].items()
         
         try: c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
         except:
@@ -4290,11 +4237,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         server_admin_service_id = self._GetServiceId( c, server_admin_service_identifier )
         
-        server_admin = self._GetService( c, server_admin_service_id )
+        ( server_admin_info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( server_admin_service_id, ) ).fetchone()
         
-        server_admin_credentials = server_admin.GetCredentials()
-        
-        ( host, server_admin_port ) = server_admin_credentials.GetAddress()
+        host = server_admin_info[ 'host' ]
+        server_admin_port = server_admin_info[ 'port' ]
         
         recalc_combined_mappings = False
         
@@ -4315,9 +4261,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( info[ 'port' ] )
                 
-                client_service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
-                
-                self._AddService( c, client_service_identifier, info )
+                self._AddService( c, service_key, service_type, name, info )
                 
             elif action == HC.DELETE:
                 
@@ -4406,7 +4350,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( service_identifier, info ) = details
                 
-                self._AddService( c, service_identifier, info )
+                service_key = service_identifier.GetServiceKey()
+                service_type = service_identifier.GetType()
+                name = service_identifier.GetName()
+                
+                self._AddService( c, service_key, service_type, name, info )
                 
             elif action == HC.DELETE:
                 
@@ -4570,10 +4518,10 @@ class DB( ServiceDB ):
             raise
             
         
-        self._local_file_service_id = self._GetServiceId( c, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
-        self._local_tag_service_id = self._GetServiceId( c, HC.LOCAL_TAG_SERVICE_IDENTIFIER )
-        self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_IDENTIFIER )
-        self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+        self._local_file_service_id = self._GetServiceId( c, HC.LOCAL_FILE_SERVICE_KEY )
+        self._local_tag_service_id = self._GetServiceId( c, HC.LOCAL_TAG_SERVICE_KEY )
+        self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_KEY )
+        self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_KEY )
         
         options = self._GetOptions( c )
         
@@ -4820,9 +4768,12 @@ class DB( ServiceDB ):
             
             for init_service_identifier in init_service_identifiers:
                 
+                service_key = init_service_identifier.GetServiceKey()
+                service_type = init_service_identifier.GetType()
+                name  = init_service_identifier.GetName()
                 info = {}
                 
-                self._AddService( c, init_service_identifier, info )
+                self._AddService( c, service_key, service_type, name, info )
                 
             
             c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
@@ -4940,6 +4891,9 @@ class DB( ServiceDB ):
         
         if version == 114:
             
+            service_key = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey()
+            service_type = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetType()
+            name  = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetName()
             info = {}
             
             self._AddService( c, HC.LOCAL_BOORU_SERVICE_IDENTIFIER, info )
@@ -5062,6 +5016,35 @@ class DB( ServiceDB ):
             info[ 'current_data_month' ] = ( current_year, current_month )
             
             c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+            
+        
+        if version == 125:
+            
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            HC.options[ 'default_tag_repository' ] = HC.options[ 'default_tag_repository' ].GetServiceKey()
+            
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            
+            #
+            
+            results = c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
+            
+            for ( dump_type, dump_name, dump ) in results:
+                
+                advanced_tag_options = dump[ 'advanced_tag_options' ]
+                
+                new_advanced_tag_options = {}
+                
+                for ( service_identifier, namespaces ) in advanced_tag_options:
+                    
+                    new_advanced_tag_options[ service_identifier.GetServiceKey() ] = namespaces
+                    
+                
+                dump[ 'advanced_tag_options' ] = new_advanced_tag_options
+                
+                c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
+                
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -7096,7 +7079,6 @@ class DB( ServiceDB ):
                 elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
                 elif action == 'remote_booru': result = self._GetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
                 elif action == 'remote_boorus': result = self._GetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU )
-                elif action == 'service': result = self._GetService( c, *args, **kwargs )
                 elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
                 elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
                 elif action == 'services': result = self._GetServices( c, *args, **kwargs )
@@ -7557,7 +7539,7 @@ def DAEMONDownloadFiles():
             
             if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: break
             
-            try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
+            try: file_repository = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             except: continue
             
             HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
@@ -7611,7 +7593,7 @@ def DAEMONDownloadThumbnails():
         
         if len( thumbnail_hashes_i_need ) > 0:
             
-            try: file_repository = HC.app.ReadDaemon( 'service', service_identifier )
+            try: file_repository = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             except: continue
             
             if file_repository.CanDownload():
@@ -7711,7 +7693,7 @@ def DAEMONResizeThumbnails():
     
 def DAEMONSynchroniseAccounts():
     
-    services = HC.app.ReadDaemon( 'services', HC.RESTRICTED_SERVICES )
+    services = HC.app.GetManager( 'services' ).GetServices( HC.RESTRICTED_SERVICES )
     
     do_notify = False
     
@@ -7771,7 +7753,7 @@ def DAEMONSynchroniseMessages():
             
             service_type = service_identifier.GetType()
             
-            try: service = HC.app.ReadDaemon( 'service', service_identifier )
+            try: service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             except: continue
             
             if service.CanCheck():
@@ -7794,7 +7776,7 @@ def DAEMONSynchroniseMessages():
                         
                         HC.app.WriteSynchronous( 'contact_associated', service_identifier )
                         
-                        service = HC.app.ReadDaemon( 'service', service_identifier )
+                        service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                         
                         contact = service.GetContact()
                         
@@ -7893,7 +7875,7 @@ def DAEMONSynchroniseMessages():
             my_public_key = contact_from.GetPublicKey()
             my_contact_key = contact_from.GetContactKey()
             
-            my_message_depot = HC.app.ReadDaemon( 'service', contact_from )
+            my_message_depot = HC.app.GetManager( 'services' ).GetService( contact_from.GetServiceKey() )
             
             from_connection = my_message_depot.GetConnection()
             
@@ -7957,7 +7939,7 @@ def DAEMONSynchroniseRepositories():
                 service_type = service_identifier.GetType()
                 service_key = service_identifier.GetServiceKey()
                 
-                try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                try: service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 except: continue
                 
                 info = service.GetInfo()
@@ -7966,19 +7948,34 @@ def DAEMONSynchroniseRepositories():
                 
                 if service.CanDownloadUpdate():
                     
-                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' repository' )
+                    job_key = HC.JobKey( pausable = True, cancellable = False )
+                    
+                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' repository', job_key )
                     
                     HC.pubsub.pub( 'message', message )
                     
                     while service.CanDownloadUpdate():
                         
+                        while job_key.IsPaused():
+                            
+                            message.SetInfo( 'text', 'paused' )
+                            
+                            time.sleep( 1 )
+                            
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
+                            
+                            if message.IsClosed(): return
+                            
+                        
                         while HC.options[ 'pause_repo_sync' ]:
                             
-                            message.SetInfo( 'text', 'Repository synchronisation paused' )
+                            message.SetInfo( 'text', 'repository synchronisation paused' )
                             
                             time.sleep( 5 )
                             
-                            if HC.shutdown: raise Exception( 'Application shutting down!' )
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
+                            
+                            if message.IsClosed(): return
                             
                             if HC.repos_changed:
                                 
@@ -7990,7 +7987,7 @@ def DAEMONSynchroniseRepositories():
                                 
                             
                         
-                        if HC.shutdown: raise Exception( 'Application shutting down!' )
+                        if HC.shutdown: raise Exception( 'application shutting down!' )
                         
                         now = HC.GetNow()
                         
@@ -8036,7 +8033,7 @@ def DAEMONSynchroniseRepositories():
                         
                         time.sleep( 0.10 )
                         
-                        try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                        try: service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                         except: break
                         
                     
@@ -8045,19 +8042,34 @@ def DAEMONSynchroniseRepositories():
                 
                 if service.CanProcessUpdate():
                     
-                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'processing ' + name + ' repository' )
+                    job_key = HC.JobKey( pausable = True, cancellable = False )
+                    
+                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'processing ' + name + ' repository', job_key )
                     
                     HC.pubsub.pub( 'message', message )
                     
                     while service.CanProcessUpdate():
                         
+                        while job_key.IsPaused():
+                            
+                            message.SetInfo( 'text', 'paused' )
+                            
+                            time.sleep( 1 )
+                            
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
+                            
+                            if message.IsClosed(): return
+                            
+                        
                         while HC.options[ 'pause_repo_sync' ]:
                             
-                            message.SetInfo( 'text', 'Repository synchronisation paused' )
+                            message.SetInfo( 'text', 'repository synchronisation paused' )
                             
                             time.sleep( 5 )
                             
-                            if HC.shutdown: raise Exception( 'Application shutting down!' )
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
+                            
+                            if message.IsClosed(): return
                             
                             if HC.repos_changed:
                                 
@@ -8069,7 +8081,7 @@ def DAEMONSynchroniseRepositories():
                                 
                             
                         
-                        if HC.shutdown: raise Exception( 'Application shutting down!' )
+                        if HC.shutdown: raise Exception( 'application shutting down!' )
                         
                         now = HC.GetNow()
                         
@@ -8168,7 +8180,7 @@ def DAEMONSynchroniseRepositories():
                         
                         time.sleep( 0.10 )
                         
-                        try: service = HC.app.ReadDaemon( 'service', service_identifier )
+                        try: service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                         except: break
                         
                     
@@ -8225,7 +8237,9 @@ def DAEMONSynchroniseSubscriptions():
                 
                 try:
                     
-                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' subscription' )
+                    job_key = HC.JobKey( pausable = True, cancellable = False )
+                    
+                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' subscription', job_key )
                     
                     HC.pubsub.pub( 'message', message )
                     
@@ -8291,6 +8305,17 @@ def DAEMONSynchroniseSubscriptions():
                     
                     while True:
                         
+                        while job_key.IsPaused():
+                            
+                            message.SetInfo( 'text', 'paused' )
+                            
+                            time.sleep( 1 )
+                            
+                            if HC.shutdown: return
+                            
+                            if message.IsClosed(): return
+                            
+                        
                         while HC.options[ 'pause_subs_sync' ]:
                             
                             message.SetInfo( 'text', 'subscriptions paused' )
@@ -8298,6 +8323,8 @@ def DAEMONSynchroniseSubscriptions():
                             time.sleep( 5 )
                             
                             if HC.shutdown: return
+                            
+                            if message.IsClosed(): return
                             
                             if HC.subs_changed:
                                 
@@ -8467,6 +8494,8 @@ def DAEMONSynchroniseSubscriptions():
                         message.SetInfo( 'hashes', successful_hashes )
                         message.SetInfo( 'mode', 'files' )
                         
+                        job_key.SetPausable( False )
+                        
                     else: message.Close()
                     
                     last_checked = now
@@ -8504,13 +8533,17 @@ def DAEMONSynchroniseSubscriptions():
     
 def DAEMONUPnP():
     
-    local_ip = HydrusNATPunch.GetLocalIP()
+    try:
+        
+        local_ip = HydrusNATPunch.GetLocalIP()
+        
+        current_mappings = HydrusNATPunch.GetUPnPMappings()
+        
+        our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
+        
+    except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
     
-    current_mappings = HydrusNATPunch.GetUPnPMappings()
-    
-    our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
-    
-    services = HC.app.ReadDaemon( 'services', ( HC.LOCAL_BOORU, ) )
+    services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_BOORU, ) )
     
     for service in services:
         

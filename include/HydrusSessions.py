@@ -120,7 +120,7 @@ class HydrusSessionManagerClient( object ):
             
             # session key expired or not found
             
-            service = HC.app.Read( 'service', service_identifier )
+            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             ( response, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
             

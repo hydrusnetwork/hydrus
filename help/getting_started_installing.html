@@ -18,11 +18,11 @@
 			<p>Because hydrus stores everything inside itself, it is entirely portable. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer will write some unavoidable uninstall registry stuff to windows that'll mess with this, but the client itself will run fine in a different location.</p>
 			<h3>updating</h3>
 			<p>You don't <i>have</i> to update every week, but I generally recommend it. The different versions of client and server can talk with each other until I increment the private <i>network protocol version</i> (which happens every couple of months), at which point you will get polite error messages if you try to connect to a newer server with an older client or <i>vice versa</i>. Read my tumblr posts and judge for yourself what you want to do.</p>
-			<p>All your files and settings and synchronisation progress will be remembered after the update. Unless the update specifically disables something, nothing will be deleted or lost.</p>
-			<p>Whenever you start the client, it checks the version of its database. If the database is old, it makes the appropriate changes, in sequential order (i.e. to do v70->v75, the client would first apply v70->v71, then v71->v72 and so on), until the database is caught up.</p>
 			<p>If the client you want to update is running, remember to close it first!</p>
 			<p>If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.</p>
 			<p>If you extract, then just extract right on top of your current install and overwrite manually. Then run client.exe as normal.</p>
+			<p>All your files and settings and synchronisation progress will be remembered after the update. Unless the update specifically disables something, nothing will be deleted or lost.</p>
+			<p>Whenever you start the client, it checks the version of its database. If the database is old, it makes the appropriate changes, in sequential order (i.e. to do v70->v75, the client would first apply v70->v71, then v71->v72 and so on), until the database is caught up. If this process will take a while (like an hour, sometimes!) I will say so in my tumblr post.</p>
 			<h3>backing up</h3>
 			<p>You <i>do</i> backup, right? <i>Right</i>?</p>
 			<p>I run a backup every week so that if my computer blows up, I'll at worst have lost a few days' work. Before I had a backup regime, I once lost an entire drive with tens of thousands of files, and it didn't feel great at all. I only push backups so hard so you might avoid what I felt. ;_;</p>
@@ -30,7 +30,7 @@
 			<p>If you want to backup hydrus, you can either go <i>database->create database backup</i> or just shut the client down and copy the entire install directory somewhere.</p>
 			<p>I recommend you do it before you update, just in case there is a problem with my code that breaks your database. If that happens, please <a href="contact.html">contact me</a>, describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.</p>
 			<h3>linux and os x</h3>
-			<p>I now make an OS X release, although it is very prototype. A linux release should follow in a few weeks.</p>
+			<p>I now make OS X and Linux releases. They are not as good as the Windows releases because I am not as experienced in their OSs' weirdnesses. When I find time, I improve them.</p>
 			<p class="right"><a href="getting_started_files.html">Let's import some files! ----></a></p>
 		</div>
 	</body>

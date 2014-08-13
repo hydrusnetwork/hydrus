@@ -639,9 +639,14 @@ class ManagementPanelDumper( ManagementPanel ):
         
         advanced_tag_options = self._advanced_tag_options.GetInfo()
         
-        for ( service_identifier, namespaces ) in advanced_tag_options.items():
+        for ( service_key, namespaces ) in advanced_tag_options.items():
             
             tags_manager = media.GetTagsManager()
+            
+            try: service = HC.app.GetManager( 'services' ).GetService( service_key )
+            except: continue
+            
+            service_identifier = service.GetKey()
             
             current = tags_manager.GetCurrent( service_identifier )
             pending = tags_manager.GetPending( service_identifier )
@@ -1820,7 +1825,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier, starting_from_session = starting_from_session )
         
-        self._service = HC.app.Read( 'service', self._petition_service_identifier )
+        self._service = HC.app.GetManager( 'services' ).GetService( self._petition_service_identifier.GetServiceKey() )
         self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None

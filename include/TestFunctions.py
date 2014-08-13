@@ -58,8 +58,8 @@ class TestHydrusDownloadingFunctions( unittest.TestCase ):
         
         advanced_tag_options = {}
         
-        advanced_tag_options[ local ] = [ '', 'character' ]
-        advanced_tag_options[ remote ] = [ '', 'character' ]
+        advanced_tag_options[ local.GetServiceKey() ] = [ '', 'character' ]
+        advanced_tag_options[ remote.GetServiceKey() ] = [ '', 'character' ]
         
         tags = [ 'a', 'character:b', 'series:c' ]
         

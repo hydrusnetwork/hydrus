@@ -56,7 +56,10 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
     siblings_manager = HC.app.GetManager( 'tag_siblings' )
     parents_manager = HC.app.GetManager( 'tag_parents' )
     
-    for ( service_identifier, namespaces ) in advanced_tag_options.items():
+    for ( service_key, namespaces ) in advanced_tag_options.items():
+        
+        try: service_identifier = HC.app.GetManager( 'services' ).GetService( service_key ).GetServiceIdentifier()
+        except: continue
         
         if len( namespaces ) > 0:
             
@@ -1766,6 +1769,7 @@ def THREADDownloadURL( message, url, url_string ):
         message.SetInfo( 'range', None )
         message.SetInfo( 'value', None )
         message.SetInfo( 'mode', 'gauge' )
+        
         temp_path = HC.http.Request( HC.GET, url, response_to_path = True, report_hooks = [ hook ] )
         
         message.SetInfo( 'range', None )

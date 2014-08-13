@@ -961,14 +961,6 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'service', HC.LOCAL_FILE_SERVICE_IDENTIFIER )
-        
-        self.assertEqual( result.GetServiceIdentifier(), HC.LOCAL_FILE_SERVICE_IDENTIFIER )
-        
-        result = self._read( 'service', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
-        
-        self.assertEqual( result.GetServiceIdentifier(), HC.LOCAL_TAG_SERVICE_IDENTIFIER )
-        
         result = self._read( 'services', ( HC.LOCAL_FILE, HC.LOCAL_TAG ) )
         
         result_s_is = { service.GetServiceIdentifier() for service in result }
@@ -977,7 +969,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'service_info', HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        result = self._read( 'service_info', HC.LOCAL_FILE_SERVICE_IDENTIFIER.GetServiceKey() )
         
         self.assertEqual( type( result ), dict )
         
@@ -1055,18 +1047,7 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'update_services', edit_log )
         
-        with self.assertRaises( HydrusExceptions.DBException ):
-            
-            self._read( 'service', new_local_like )
-            
-        
-        result = self._read( 'service', other_new_tag_repo )
-        
-        host = other_new_tag_repo_info_updated[ 'host' ]
-        port = other_new_tag_repo_info_updated[ 'port' ]
-        access_key = other_new_tag_repo_info_updated[ 'access_key' ]
-        
-        self.assertEqual( result.GetCredentials(), CC.Credentials( host, port, access_key ) )
+        # update this ~sometime~ to test the new services manager object, which should update with these changes!
         
         #
         
@@ -1076,10 +1057,7 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'update_services', edit_log )
         
-        with self.assertRaises( HydrusExceptions.DBException ):
-            
-            self._read( 'service', other_new_tag_repo )
-            
+        # update this ~sometime~ to test the new services manager object, which should update with these changes!
         
         #
         

@@ -31,7 +31,7 @@ from twisted.internet import defer
 ID_ANIMATED_EVENT_TIMER = wx.NewId()
 ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
 
-MAINTENANCE_PERIOD = 12 * 60
+MAINTENANCE_PERIOD = 5 * 60
 
 class Controller( wx.App ):
     
@@ -112,7 +112,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
         
     
-    def CurrentlyIdle( self ): return HC.GetNow() - self._timestamps[ 'last_user_db_use' ] > 30 * 60 # 30 mins since last user-initiated media_results query
+    def CurrentlyIdle( self ): return HC.GetNow() - self._timestamps[ 'last_user_action' ] > 30 * 60 # 30 mins since last canvas media swap
     
     def EventPubSub( self, event ):
         
@@ -208,9 +208,10 @@ The database will be locked while the backup occurs, which may lock up your gui 
         
         self._managers = {}
         
+        self._managers[ 'services' ] = CC.ServiceManager()
+        
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'local_booru' ] = CC.LocalBooruCache()
-        self._managers[ 'services' ] = CC.ServiceManager()
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
@@ -265,9 +266,9 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
             HC.pubsub.pub( 'set_splash_text', 'fattening service info' )
             
-            service_identifiers = self.Read( 'service_identifiers' )
+            services = self.GetManager( 'services' ).GetServices()
             
-            for service_identifier in service_identifiers: self.Read( 'service_info', service_identifier )
+            for service in services: self.Read( 'service_info', service.GetKey() )
             
             self._timestamps[ 'service_info_cache_fatten' ] = HC.GetNow()
             
@@ -314,12 +315,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
         else: return text.lower()
         
     
-    def Read( self, action, *args, **kwargs ):
-        
-        if action == 'media_results': self._timestamps[ 'last_user_db_use' ] = HC.GetNow()
-        
-        return self._Read( action, *args, **kwargs )
-        
+    def Read( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
     
     def ReadDaemon( self, action, *args, **kwargs ):
         
@@ -330,9 +326,11 @@ The database will be locked while the backup occurs, which may lock up your gui 
         return result
         
     
+    def ResetIdleTimer( self ): self._timestamps[ 'last_user_action' ] = HC.GetNow()
+    
     def RestartBooru( self ):
         
-        service = self.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        service = self.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
         
         info = service.GetInfo()
         
@@ -506,7 +504,7 @@ Once it is done, the client will restart.'''
         
         try:
             
-            query_hash_ids = HC.app.Read( 'file_query_ids', search_context )
+            query_hash_ids = self.Read( 'file_query_ids', search_context )
             
             query_hash_ids = list( query_hash_ids )
             
@@ -537,13 +535,13 @@ Once it is done, the client will restart.'''
                 
                 sub_query_hash_ids = query_hash_ids[ last_i : i ]
                 
-                more_media_results = HC.app.Read( 'media_results_from_ids', file_service_identifier, sub_query_hash_ids )
+                more_media_results = self.Read( 'media_results_from_ids', file_service_identifier, sub_query_hash_ids )
                 
                 media_results.extend( more_media_results )
                 
                 HC.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
                 
-                HC.app.WaitUntilGoodTimeToUseGUIThread()
+                self.WaitUntilGoodTimeToUseGUIThread()
                 
             
             HC.pubsub.pub( 'file_query_done', query_key, media_results )
@@ -558,7 +556,7 @@ Once it is done, the client will restart.'''
         self._timestamps[ 'last_check_idle_time' ] = HC.GetNow()
         
         # this tests if we probably just woke up from a sleep
-        if HC.GetNow() - last_time_this_ran > MAINTENANCE_PERIOD * 1.2: return
+        if HC.GetNow() - last_time_this_ran > MAINTENANCE_PERIOD + ( 5 * 60 ): return
         
         if self.CurrentlyIdle(): self.MaintainDB()
         

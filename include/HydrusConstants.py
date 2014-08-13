@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 13
-SOFTWARE_VERSION = 125
+SOFTWARE_VERSION = 126
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1522,12 +1522,17 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     def GetType( self ): return self._type
     
-LOCAL_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local files', LOCAL_FILE, 'local files' )
-LOCAL_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local tags', LOCAL_TAG, 'local tags' )
-LOCAL_BOORU_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'local booru', LOCAL_BOORU, 'local booru' )
-COMBINED_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known files', COMBINED_FILE, 'all known files' )
-COMBINED_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( 'all known tags', COMBINED_TAG, 'all known tags' )
-NULL_SERVICE_IDENTIFIER = ClientServiceIdentifier( '', NULL_SERVICE, 'no service' )
+LOCAL_FILE_SERVICE_KEY = 'local files'
+LOCAL_TAG_SERVICE_KEY = 'local tags'
+LOCAL_BOORU_SERVICE_KEY = 'local booru'
+COMBINED_FILE_SERVICE_KEY = 'all known files'
+COMBINED_TAG_SERVICE_KEY = 'all known tags'
+
+LOCAL_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( LOCAL_FILE_SERVICE_KEY, LOCAL_FILE, 'local files' )
+LOCAL_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( LOCAL_TAG_SERVICE_KEY, LOCAL_TAG, 'local tags' )
+LOCAL_BOORU_SERVICE_IDENTIFIER = ClientServiceIdentifier( LOCAL_BOORU_SERVICE_KEY, LOCAL_BOORU, 'local booru' )
+COMBINED_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( COMBINED_FILE_SERVICE_KEY, COMBINED_FILE, 'all known files' )
+COMBINED_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( COMBINED_TAG_SERVICE_KEY, COMBINED_TAG, 'all known tags' )
 
 class ClientToServerUpdate( HydrusYAMLBase ):
     
@@ -1742,9 +1747,12 @@ class JobDatabase( object ):
     
 class JobKey( object ):
     
-    def __init__( self ):
+    def __init__( self, pausable = True, cancellable = True ):
         
         self._key = os.urandom( 32 )
+        
+        self._pausable = pausable
+        self._cancellable = cancellable
         
         self._begun = threading.Event()
         self._done = threading.Event()
@@ -1770,6 +1778,11 @@ class JobKey( object ):
         self.Finish()
         
     
+    def DeleteVariable( self, name ):
+        
+        with self._variable_lock: del self._variables[ name ]
+        
+    
     def Finish( self ): self._done.set()
     
     def GetKey( self ): return self._key
@@ -1786,9 +1799,13 @@ class JobKey( object ):
     
     def IsBegun( self ): return self._begun.is_set()
     
+    def IsCancellable( self ): return self._cancellable
+    
     def IsCancelled( self ): return shutdown or self._cancelled.is_set()
     
     def IsDone( self ): return shutdown or self._done.is_set()
+    
+    def IsPausable( self ): return self._pausable
     
     def IsPaused( self ): return self._paused.is_set()
     
@@ -1803,6 +1820,10 @@ class JobKey( object ):
         
     
     def Resume( self ): self._paused.clear()
+    
+    def SetCancellable( self, value ): self._cancellable = value
+    
+    def SetPausable( self, value ): self._pausable = value
     
     def SetVariable( self, name, value ):
         
@@ -1906,15 +1927,17 @@ class Message( object ):
     
 class MessageGauge( Message ):
     
-    def __init__( self, message_type, text ):
+    def __init__( self, message_type, text, job_key ):
         
-        info = {}
+        Message.__init__( self, message_type, {} )
         
-        info[ 'mode' ] = 'text'
-        info[ 'text' ] = text
+        self._info[ 'mode' ] = 'text'
+        self._info[ 'text' ] = text
         
-        Message.__init__( self, message_type, info )
+        self._job_key = job_key
         
+    
+    def GetJobKey( self ): return self._job_key
     
 class Predicate( HydrusYAMLBase ):
     
@@ -2224,7 +2247,8 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     
     def GetType( self ): return self._type
     
-SERVER_ADMIN_IDENTIFIER = ServerServiceIdentifier( 'server admin', SERVER_ADMIN )
+SERVER_ADMIN_KEY = 'server admin'
+SERVER_ADMIN_IDENTIFIER = ServerServiceIdentifier( SERVER_ADMIN_KEY, SERVER_ADMIN )
 
 class ServiceUpdate( object ):
     

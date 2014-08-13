@@ -626,7 +626,7 @@ class DestinationPanel( wx.Panel ):
                 elif command == 'read': status = 'read'
                 elif command == 'unread': status = 'sent'
                 
-                my_message_depot = HC.app.Read( 'service', self._identity )
+                my_message_depot = HC.app.GetManager( 'services' ).GetService( self._identity.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 
@@ -1250,7 +1250,7 @@ class DraftPanel( wx.Panel ):
             
             try:
                 
-                my_message_depot = HC.app.Read( 'service', self._contact_from )
+                my_message_depot = HC.app.GetManager( 'services' ).GetService( self._contact_from.GetServiceKey() )
                 
                 connection = my_message_depot.GetConnection()
                 

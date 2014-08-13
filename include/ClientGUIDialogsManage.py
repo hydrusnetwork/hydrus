@@ -209,7 +209,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            service = HC.app.Read( 'service', service_identifier )
+            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -383,7 +383,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service = HC.app.Read( 'service', self._service_identifier )
+        service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
         
         service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
         
@@ -2845,7 +2845,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._default_tag_sort.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
             self._default_tag_sort.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
             
-            self._default_tag_repository = wx.Choice( self._gui_page )
+            self._default_tag_repository = ClientGUICommon.BetterChoice( self._gui_page )
             
             self._fullscreen_borderless = wx.CheckBox( self._gui_page )
             
@@ -3050,11 +3050,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 2 )
             elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 3 )
             
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
-            for service_identifier in service_identifiers: self._default_tag_repository.Append( service_identifier.GetName(), service_identifier )
+            for service in services: self._default_tag_repository.Append( service.GetName(), service.GetKey() )
             
-            self._default_tag_repository.SetStringSelection( HC.options[ 'default_tag_repository' ].GetName() )
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+            
+            self._default_tag_repository.SelectClientData( default_tag_repository_key )
             
             self._fullscreen_borderless.SetValue( HC.options[ 'fullscreen_borderless' ] )
             
@@ -3644,7 +3646,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         HC.options[ 'shortcuts' ] = shortcuts
         
-        HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetClientData( self._default_tag_repository.GetSelection() )
+        HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
         HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
         
         new_local_port = self._local_port.GetValue()
@@ -3948,7 +3950,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             wx.Panel.__init__( self, parent )
             
             self._service_identifier = service_identifier
-            self._service = HC.app.Read( 'service', service_identifier )
+            self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             self._media = media
             
@@ -4290,7 +4292,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         self._service_identifier = service_identifier
         
-        self._service = HC.app.Read( 'service', self._service_identifier )
+        self._service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
         
         InitialiseControls()
         
@@ -4606,7 +4608,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 parent_listbook.AddPage( listbook, name )
                 
             
-            services = HC.app.Read( 'services', manageable_service_types )
+            services = HC.app.GetManager( 'services' ).GetServices( manageable_service_types )
             
             for service in services:
                 
@@ -5960,9 +5962,11 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
                 self._tag_services.AddPage( page, name )
                 
             
-            default_tag_repository = HC.options[ 'default_tag_repository' ]
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            self._tag_services.Select( default_tag_repository.GetName() )
+            service = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
+            
+            self._tag_services.Select( service.GetName() )
             
         
         def ArrangeControls():
@@ -6130,7 +6134,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            services = HC.app.Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -6154,9 +6158,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            default_tag_repository = HC.options[ 'default_tag_repository' ]
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            self._tag_repositories.Select( default_tag_repository.GetName() )
+            service = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
+            
+            self._tag_repositories.Select( service.GetName() )
             
         
         def ArrangeControls():
@@ -6309,7 +6315,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 self._account = service.GetInfo( 'account' )
                 
@@ -6598,7 +6604,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            services = HC.app.Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -6616,9 +6622,11 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 
             
-            default_tag_repository = HC.options[ 'default_tag_repository' ]
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            self._tag_repositories.Select( default_tag_repository.GetName() )
+            service = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
+            
+            self._tag_repositories.Select( service.GetName() )
             
         
         def ArrangeControls():
@@ -6777,7 +6785,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 self._account = service.GetInfo( 'account' )
                 
@@ -7273,9 +7281,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 self._tag_repositories.AddPage( page_info, name )
                 
             
-            default_tag_repository = HC.options[ 'default_tag_repository' ]
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
-            self._tag_repositories.Select( default_tag_repository.GetName() )
+            service = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
+            
+            self._tag_repositories.Select( service.GetName() )
             
         
         def ArrangeControls():
@@ -7449,7 +7459,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if not self._i_am_local_tag_service:
                 
-                service = HC.app.Read( 'service', tag_service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( tag_service_identifier.GetServiceKey() )
                 
                 self._account = service.GetInfo( 'account' )
                 

@@ -144,17 +144,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         try:
             
-            job_key = HC.JobKey()
+            job_key = HC.JobKey( pausable = False, cancellable = False )
             
-            message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'gathering pending and petitioned' )
+            message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'gathering pending and petitioned', job_key )
             
             HC.pubsub.pub( 'message', message )
             
             result = HC.app.Read( 'pending', service_identifier )
             
-            service_type = service_identifier.GetType()
+            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
-            service = HC.app.Read( 'service', service_identifier )
+            service_type = service.GetType()
             
             if service_type == HC.FILE_REPOSITORY:
                 
@@ -172,7 +172,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 i = 1
                 
-                message.SetInfo( 'job_key', job_key )
                 message.SetInfo( 'range', gauge_range )
                 message.SetInfo( 'value', i )
                 message.SetInfo( 'text', 'connecting to repository' )
@@ -325,7 +324,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 subject_access_key = dlg.GetValue().decode( 'hex' )
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 response = service.Request( HC.GET, 'account_info', { 'subject_access_key' : subject_access_key.encode( 'hex' ) } )
                 
@@ -338,178 +337,193 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _AutoRepoSetup( self ):
         
+        def do_it():
+        
+            edit_log = []
+            
+            tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
+            
+            tag_repo_info = {}
+            
+            tag_repo_info[ 'host' ] = 'hydrus.no-ip.org'
+            tag_repo_info[ 'port' ] = 45871
+            tag_repo_info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
+            
+            edit_log.append( ( HC.ADD, ( tag_repo_identifier, tag_repo_info ) ) )
+            
+            file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
+            
+            file_repo_info = {}
+            
+            file_repo_info[ 'host' ] = 'hydrus.no-ip.org'
+            file_repo_info[ 'port' ] = 45872
+            file_repo_info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
+            
+            edit_log.append( ( HC.ADD, ( file_repo_identifier, file_repo_info ) ) )
+            
+            HC.app.Write( 'update_services', edit_log )
+            
+            HC.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
+            
+        
         message = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                edit_log = []
-                
-                tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
-                
-                tag_repo_info = {}
-                
-                tag_repo_info[ 'host' ] = 'hydrus.no-ip.org'
-                tag_repo_info[ 'port' ] = 45871
-                tag_repo_info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
-                
-                edit_log.append( ( HC.ADD, ( tag_repo_identifier, tag_repo_info ) ) )
-                
-                file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
-                
-                file_repo_info = {}
-                
-                file_repo_info[ 'host' ] = 'hydrus.no-ip.org'
-                file_repo_info[ 'port' ] = 45872
-                file_repo_info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
-                
-                edit_log.append( ( HC.ADD, ( file_repo_identifier, file_repo_info ) ) )
-                
-                HC.app.Write( 'update_services', edit_log )
-                
-                HC.ShowText( 'Auto repo setup done!' )
-                
+            if dlg.ShowModal() == wx.ID_YES: HydrusThreading.CallToThread( do_it )
             
         
     
     def _AutoServerSetup( self ):
         
-        host = '127.0.0.1'
-        port = HC.DEFAULT_SERVER_ADMIN_PORT
+        def do_it():
+            
+            host = '127.0.0.1'
+            port = HC.DEFAULT_SERVER_ADMIN_PORT
+            
+            try:
+                
+                connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
+                
+                connection.connect()
+                
+                connection.close()
+                
+                already_running = True
+                
+            except:
+                
+                already_running = False
+                
+            
+            if already_running:
+                
+                HC.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + HC.u( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
+                
+                return
+                
+            else:
+                
+                try:
+                    
+                    HC.ShowText( 'starting server' )
+                    
+                    my_scriptname = sys.argv[0]
+                    
+                    if my_scriptname.endswith( 'pyw' ): subprocess.Popen( [ 'pythonw', HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
+                    else:
+                        
+                        # The problem here is that, for mystical reasons, a PyInstaller exe can't launch another using subprocess, so we do it via explorer.
+                        
+                        subprocess.Popen( [ 'explorer', HC.BASE_DIR + os.path.sep + 'server.exe' ] )
+                        
+                    
+                    time.sleep( 10 ) # give it time to init its db
+                    
+                except:
+                    
+                    HC.ShowText( 'I tried to start the server, but something failed!' )
+                    HC.ShowText( traceback.format_exc() )
+                    
+                    return
+                    
+                
+            
+            HC.ShowText( 'creating admin service' )
+            
+            edit_log = []
+            
+            admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
+            
+            admin_service_info = {}
+            
+            admin_service_info[ 'host' ] = host
+            admin_service_info[ 'port' ] = port
+            admin_service_info[ 'access_key' ] = ''
+            
+            edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_info ) ) )
+            
+            HC.app.Write( 'update_services', edit_log )
+            
+            time.sleep( 5 )
+            
+            i = 0
+            
+            while True:
+                
+                time.sleep( i + 1 )
+                
+                try:
+                    
+                    service = HC.app.GetManager( 'services' ).GetService( admin_service_identifier.GetServiceKey() )
+                    
+                    break
+                    
+                except: pass
+                
+                i += 1
+                
+                if i > 5:
+                    
+                    HC.ShowText( 'For some reason, I could not add the new server to the db! Perhaps it is very busy. Please email the hydrus developer, or sort it out yourself!' )
+                    
+                    return
+                    
+                
+            
+            #
+            
+            response = service.Request( HC.GET, 'init' )
+            
+            access_key = response[ 'access_key' ]
+            
+            update = { 'access_key' : access_key }
+            
+            edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, update ) ) ) ]
+            
+            HC.app.Write( 'update_services', edit_log )
+            
+            HC.ShowText( 'admin service initialised' )
+            
+            wx.CallAfter( ClientGUICommon.ShowKeys, 'access', ( access_key, ) )
+            
+            time.sleep( 5 )
+            
+            service = HC.app.GetManager( 'services' ).GetService( admin_service_identifier.GetServiceKey() )
+            
+            #
+            
+            HC.ShowText( 'creating tag and file services' )
+            
+            tag_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
+            
+            tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
+            tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
+            
+            file_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY )
+            
+            file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
+            file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
+            
+            edit_log = []
+            
+            edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
+            edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
+            
+            response = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
+            
+            service_identifiers_to_access_keys = dict( response[ 'service_identifiers_to_access_keys' ] )
+            
+            HC.app.Write( 'update_server_services', admin_service_identifier, edit_log, service_identifiers_to_access_keys )
+            
+            HC.ShowText( 'Done! Check services->review services to see your new server and its services.' )
+            
         
         message = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                try:
-                    
-                    connection = httplib.HTTPConnection( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, timeout = 20 )
-                    
-                    connection.connect()
-                    
-                    connection.close()
-                    
-                    already_running = True
-                    
-                except:
-                    
-                    already_running = False
-                    
-                
-                if already_running:
-                    
-                    message = 'The server appears to be already running. Either that, or something else is using port ' + HC.u( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' + os.linesep + 'Would you like to try to initialise the server that is already running?'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                        
-                        if dlg.ShowModal() != wx.ID_YES: return
-                        
-                    
-                else:
-                    
-                    try:
-                        
-                        my_scriptname = sys.argv[0]
-                        
-                        if my_scriptname.endswith( 'pyw' ): subprocess.Popen( [ 'pythonw', HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
-                        else:
-                            
-                            # The problem here is that, for mystical reasons, a PyInstaller exe can't launch another using subprocess, so we do it via explorer.
-                            
-                            subprocess.Popen( [ 'explorer', HC.BASE_DIR + os.path.sep + 'server.exe' ] )
-                            
-                        
-                        time.sleep( 10 ) # give it time to init its db
-                        
-                    except:
-                        
-                        wx.MessageBox( 'I tried to start the server, but something failed!' )
-                        wx.MessageBox( traceback.format_exc() )
-                        
-                        return
-                        
-                    
-                
-                edit_log = []
-                
-                admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
-                
-                admin_service_info = {}
-                
-                admin_service_info[ 'host' ] = host
-                admin_service_info[ 'port' ] = port
-                admin_service_info[ 'access_key' ] = ''
-                
-                edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_info ) ) )
-                
-                HC.app.Write( 'update_services', edit_log )
-                
-                i = 0
-                
-                while True:
-                    
-                    time.sleep( i + 1 )
-                    
-                    try:
-                        
-                        service = HC.app.Read( 'service', admin_service_identifier )
-                        
-                        break
-                        
-                    except: pass
-                    
-                    i += 1
-                    
-                    if i > 5:
-                        
-                        wx.MessageBox( 'For some reason, I could not add the new server to the db! Perhaps it is very busy. Please contact the administrator, or sort it out yourself!' )
-                        
-                        return
-                        
-                    
-                
-                #
-                
-                response = service.Request( HC.GET, 'init' )
-                
-                access_key = response[ 'access_key' ]
-                
-                update = { 'access_key' : access_key }
-                
-                edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, update ) ) ) ]
-                
-                HC.app.Write( 'update_services', edit_log )
-                
-                ClientGUICommon.ShowKeys( 'access', ( access_key, ) )
-                
-                #
-                
-                tag_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
-                
-                tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
-                tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
-                
-                file_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY )
-                
-                file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
-                file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
-                
-                edit_log = []
-                
-                edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
-                edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
-                
-                response = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
-                
-                service_identifiers_to_access_keys = dict( response[ 'service_identifiers_to_access_keys' ] )
-                
-                HC.app.Write( 'update_server_services', admin_service_identifier, edit_log, service_identifiers_to_access_keys )
-                
-                wx.MessageBox( 'Done! Check services->review services to see your new server and its services.' )
-                
+            if dlg.ShowModal() == wx.ID_YES: HydrusThreading.CallToThread( do_it )
             
         
     
@@ -521,7 +535,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
@@ -611,7 +625,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 hash = dlg.GetValue().decode( 'hex' )
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
                 
@@ -746,13 +760,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def view():
             
-            services = HC.app.Read( 'services' )
+            services = HC.app.GetManager( 'services' ).GetServices()
             
-            tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
+            tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
             
             petition_resolve_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
-            file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
+            file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
             
             file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories ]
             petition_resolve_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
@@ -897,15 +911,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def admin():
             
-            services = HC.app.Read( 'services' )
+            services = HC.app.GetManager( 'services' ).GetServices()
             
-            tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
+            tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
             admin_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
+            file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
             admin_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            servers_admin = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.SERVER_ADMIN ]
+            servers_admin = [ service for service in services if service.GetType() == HC.SERVER_ADMIN ]
             server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
             if len( admin_tag_service_identifiers ) > 0 or len( admin_file_service_identifiers ) > 0 or len( server_admin_identifiers ) > 0:
@@ -1227,7 +1241,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _ModifyAccount( self, service_identifier ):
         
-        service = HC.app.Read( 'service', service_identifier )
+        service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the access key for the account to be modified.' ) as dlg:
             
@@ -1313,7 +1327,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if service_identifier is not None:
             
-            service = HC.app.Read( 'service', service_identifier )
+            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             account = service.GetInfo( 'account' )
             
@@ -1395,7 +1409,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 news = dlg.GetValue()
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
                 
@@ -1592,7 +1606,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url_string = url
                 
-                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string )
+                job_key = HC.JobKey( pausable = False, cancellable = False )
+                
+                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string, job_key )
                 
                 HC.pubsub.pub( 'message', message )
                 
@@ -1620,7 +1636,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _Stats( self, service_identifier ):
         
-        service = HC.app.Read( 'service', service_identifier )
+        service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
         
         response = service.Request( HC.GET, 'stats' )
         
@@ -2505,7 +2521,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def _DisplayAccountInfo( self ):
             
-            self._service = HC.app.Read( 'service', self._service_identifier )
+            self._service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
             
             service_type = self._service_identifier.GetType()
             
@@ -2636,7 +2652,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                 
-                service_info = HC.app.Read( 'service_info', self._service_identifier )
+                service_info = HC.app.Read( 'service_info', self._service_identifier.GetServiceKey() )
                 
                 if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                     
@@ -2781,7 +2797,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
                 
                 info = self._service.GetInfo()
                 
@@ -2805,7 +2821,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
                 
                 info = self._service.GetInfo()
                 

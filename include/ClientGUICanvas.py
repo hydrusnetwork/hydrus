@@ -433,6 +433,19 @@ class Canvas( object ):
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         
     
+    def _CopyHashToClipboard( self ):
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject( self._current_display_media.GetHash().encode( 'hex' ) )
+            
+            wx.TheClipboard.SetData( data )
+            
+            wx.TheClipboard.Close()
+            
+        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        
+    
     def _DrawBackgroundBitmap( self ):
         
         ( client_width, client_height ) = self.GetClientSize()
@@ -539,7 +552,7 @@ class Canvas( object ):
                 if service_identifier in self._service_identifiers_to_services: service = self._service_identifiers_to_services[ service_identifier ]
                 else:
                     
-                    service = HC.app.Read( 'service', service_identifier )
+                    service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                     
                     self._service_identifiers_to_services[ service_identifier ] = service
                     
@@ -756,6 +769,8 @@ class Canvas( object ):
         initial_image = self._current_media == None
         
         if media != self._current_media:
+            
+            HC.app.ResetIdleTimer()
             
             with wx.FrozenWindow( self ):
                 
@@ -1049,6 +1064,30 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 if not self._image_cache.HasImage( hash, resolution_to_request ): wx.CallLater( delay, self._image_cache.GetImage, media, resolution_to_request )
                 
             
+        
+    
+    def _Remove( self ):
+        
+        next_media = self._GetNext( self._current_media )
+        
+        if next_media == self._current_media: next_media = None
+        
+        hashes = { self._current_display_media.GetHash() }
+        
+        HC.pubsub.pub( 'remove_media', self._page_key, hashes )
+        
+        singleton_media = { self._current_display_media }
+        
+        ClientGUIMixins.ListeningMediaList._RemoveMedia( self, singleton_media, {} )
+        
+        if self.HasNoMedia(): self.EventClose( None )
+        elif self.HasMedia( self._current_media ):
+            
+            self._DrawBackgroundBitmap()
+            
+            self._DrawCurrentMedia()
+            
+        else: self.SetMedia( next_media )
         
     
     def _ShowFirst( self ): self.SetMedia( self._GetFirst() )
@@ -1459,6 +1498,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete()
@@ -1481,6 +1521,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                     elif command == 'pan_left': self._DoManualPan( -distance, 0 )
                     elif command == 'pan_right': self._DoManualPan( distance, 0 )
                     
+                elif command == 'remove': self._Remove()
                 elif command == 'slideshow': self._StartSlideshow( data )
                 elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
                 elif command == 'zoom_in': self._ZoomIn()
@@ -1511,9 +1552,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
     def EventShowMenu( self, event ):
         
-        services = HC.app.Read( 'services' )
+        services = HC.app.GetManager( 'services' ).GetServices()
         
-        local_ratings_services = [ service for service in services if service.GetServiceIdentifier().GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+        local_ratings_services = [ service for service in services if service.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
         i_can_post_ratings = len( local_ratings_services ) > 0
         
@@ -1550,25 +1591,33 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         menu.AppendSeparator()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'manage tags' )
+        manage_menu = wx.Menu()
         
-        if i_can_post_ratings: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'manage ratings' )
+        manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+        
+        if i_can_post_ratings: manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+        
+        menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
         
         menu.AppendSeparator()
         
         if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&remove' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
         
-        menu.AppendSeparator()
+        share_menu = wx.Menu()
         
         copy_menu = wx.Menu()
         
         copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
         copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
         copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
         
-        menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+        share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+        
+        menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
         
         menu.AppendSeparator()
         
@@ -1582,7 +1631,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 80 ), 'william gibson' )
         slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow' ), 'custom interval' )
         
-        menu.AppendMenu( CC.ID_NULL, 'Start Slideshow', slideshow )
+        menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
         if self._timer_slideshow.IsRunning(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow_pause_play' ), 'stop slideshow' )
         
         self._menu_open = True
@@ -1838,6 +1887,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
                     with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete()
@@ -1851,6 +1901,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
                 elif command == 'manage_tags': self._ManageTags()
+                elif command == 'remove': self._Remove()
                 elif command == 'slideshow': self._StartSlideshow( data )
                 elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
                 elif command == 'zoom_in': self._ZoomIn()
@@ -1914,19 +1965,35 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         menu.AppendSeparator()
         
+        manage_menu = wx.Menu()
+        
+        manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+        
+        if i_can_post_ratings: manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+        
+        menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+        
+        menu.AppendSeparator()
+        
         if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&remove' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
         
         menu.AppendSeparator()
         
+        share_menu = wx.Menu()
+        
         copy_menu = wx.Menu()
         
         copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
         copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
         copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
         
-        menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+        share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+        
+        menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
         
         menu.AppendSeparator()
         
@@ -2578,7 +2645,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
         CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
         
         self._rating_service_identifier = service_identifier
-        self._service = HC.app.Read( 'service', service_identifier )
+        self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
         
         FullscreenPopoutFilterLike( self )
         
@@ -2651,7 +2718,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         if service_identifier.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
             
-            self._service = HC.app.Read( 'service', service_identifier )
+            self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             ( self._lower, self._upper ) = self._service.GetLowerUpper()
             

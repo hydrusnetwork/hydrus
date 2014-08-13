@@ -63,7 +63,7 @@ def SelectServiceIdentifier( permission = None, service_types = HC.ALL_SERVICES,
     
     if service_identifiers is None:
         
-        services = HC.app.Read( 'services', service_types )
+        services = HC.app.GetManager( 'services' ).GetServices( service_types )
         
         if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
@@ -608,7 +608,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._num.SetValue( 1 )
             
-            service = HC.app.Read( 'service', service_identifier )
+            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -670,7 +670,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
         
-        service = HC.app.Read( 'service', self._service_identifier )
+        service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
         
         try:
             
@@ -894,7 +894,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_identifier = self._ratings_like_service_identifiers.GetClientData( selection )
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 self._current_ratings_like_service = service
                 
@@ -918,7 +918,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 service_identifier = self._ratings_numerical_service_identifiers.GetClientData( selection )
                 
-                service = HC.app.Read( 'service', service_identifier )
+                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
                 
                 self._current_ratings_numerical_service = service
                 
@@ -1535,8 +1535,8 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             def PopulateControls():
                 
-                self._local_numericals = HC.app.Read( 'services', ( HC.LOCAL_RATING_NUMERICAL, ) )
-                self._local_likes = HC.app.Read( 'services', ( HC.LOCAL_RATING_LIKE, ) )
+                self._local_numericals = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+                self._local_likes = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
                 
                 for service in self._local_numericals: self._service_numerical.Append( service.GetServiceIdentifier().GetName(), service )
                 
@@ -2108,7 +2108,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
         
         info = self._service.GetInfo()
         
@@ -2125,7 +2125,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
         
         info = self._service.GetInfo()
         
@@ -3550,7 +3550,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = HC.app.Read( 'service', service_identifier )
+        self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
         self._subject_identifiers = list( subject_identifiers )
         
         InitialiseControls()
@@ -3766,9 +3766,9 @@ class DialogPageChooser( Dialog ):
         
         ArrangeControls()
         
-        self._services = HC.app.Read( 'services' )
+        self._services = HC.app.GetManager( 'services' ).GetServices()
         
-        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetServiceIdentifier().GetType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
         self._InitButtons( 'home' )
         
@@ -3975,7 +3975,7 @@ class DialogPathsToTagsRegex( Dialog ):
         
         def PopulateControls():
             
-            services = HC.app.Read( 'services', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for service in services:
                 
@@ -3999,7 +3999,9 @@ class DialogPathsToTagsRegex( Dialog ):
             
             self._tag_repositories.AddPage( page, name )
             
-            default_tag_repository = HC.options[ 'default_tag_repository' ]
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+            
+            default_tag_repository = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
             
             self._tag_repositories.Select( default_tag_repository.GetName() )
             
@@ -4889,6 +4891,8 @@ class DialogSelectYoutubeURL( Dialog ):
                 ( url, title ) = self._info[ ( extension, resolution ) ]
                 
                 url_string = title + ' ' + resolution + ' ' + extension
+                
+                job_key = HC.JobKey( pausable = False, cancellable = False )
                 
                 message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string )
                 

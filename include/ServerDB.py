@@ -2884,9 +2884,9 @@ def DAEMONUPnP():
     
     service_identifiers = HC.app.ReadDaemon( 'service_identifiers' )
     
-    all_options = { service_identifier : HC.app.ReadDaemon( 'options', service_identifier ) for service_identifier in service_identifiers }
+    all_infos = HC.app.ReadDaemon( 'services' )
     
-    for ( service_identifier, options ) in all_options.items():
+    for ( service_identifier, options ) in all_infos:
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
@@ -2899,12 +2899,12 @@ def DAEMONUPnP():
             
         
     
-    for ( service_identifier, options ) in all_options.items():
+    for ( service_identifier, options ) in all_infos:
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
         
-        if ( local_ip, internal_port ) not in our_mappings:
+        if upnp is not None and ( local_ip, internal_port ) not in our_mappings:
             
             external_port = upnp
             

@@ -283,7 +283,7 @@ CLIENT_DEFAULT_OPTIONS[ 'shortcuts' ] = shortcuts
 
 CLIENT_DEFAULT_OPTIONS[ 'confirm_client_exit' ] = False
 
-CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_IDENTIFIER
+CLIENT_DEFAULT_OPTIONS[ 'default_tag_repository' ] = HC.LOCAL_TAG_SERVICE_KEY
 CLIENT_DEFAULT_OPTIONS[ 'default_tag_sort' ] = SORT_BY_LEXICOGRAPHIC_ASC
 
 CLIENT_DEFAULT_OPTIONS[ 'pause_export_folders_sync' ] = False
@@ -1160,7 +1160,7 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = HC.app.Read( 'service', HC.LOCAL_BOORU_SERVICE_IDENTIFIER )
+        self._local_booru_service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
         
         self._keys_to_infos = {}
         
@@ -2293,6 +2293,8 @@ class Service( HC.HydrusYAMLBase ):
         self._name = name
         self._info = info
         
+        self._lock = threading.Lock()
+        
         HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
@@ -2565,29 +2567,14 @@ class ServiceManager( object ):
         HC.pubsub.sub( self, 'RefreshServices', 'notify_new_services_data' )
         
     
-    def GetName( self, service_key ):
-        
-        with self._lock:
-            
-            service = self._keys_to_services[ service_key ]
-            
-            return service.GetName()
-            
-        
-    
     def GetService( self, service_key ):
         
         with self._lock: return self._keys_to_services[ service_key ]
         
     
-    def GetType( self, service_key ):
+    def GetServices( self, types = HC.ALL_SERVICES ):
         
-        with self._lock:
-            
-            service = self._keys_to_services[ service_key ]
-            
-            return service.GetType()
-            
+        with self._lock: return [ service for service in self._keys_to_services.values() if service.GetType() in types ]
         
     
     def RefreshServices( self ):

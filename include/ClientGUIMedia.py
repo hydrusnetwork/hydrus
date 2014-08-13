@@ -91,6 +91,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         HC.pubsub.sub( self, 'Collect', 'collect_media' )
         HC.pubsub.sub( self, 'Sort', 'sort_media' )
         HC.pubsub.sub( self, 'FileDumped', 'file_dumped' )
+        HC.pubsub.sub( self, 'RemoveMedia', 'remove_media' )
         
         self._PublishSelectionChange()
         
@@ -812,6 +813,16 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                 
                 self._PublishSelectionChange( force_reload = True )
                 
+            
+        
+    
+    def RemoveMedia( self, page_key, hashes ):
+        
+        if page_key == self._page_key:
+            
+            media = self._GetMedia( hashes )
+            
+            self._RemoveMedia( media, {} )
             
         
     
@@ -1678,13 +1689,13 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 multiple_selected = num_selected > 1
                 
-                services = HC.app.Read( 'services' )
+                services = HC.app.GetManager( 'services' ).GetServices()
                 
-                tag_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.TAG_REPOSITORY ]
+                tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
                 
-                file_repositories = [ service for service in services if service.GetServiceIdentifier().GetType() == HC.FILE_REPOSITORY ]
+                file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
                 
-                local_ratings_services = [ service for service in services if service.GetServiceIdentifier().GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+                local_ratings_services = [ service for service in services if service.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
                 
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 

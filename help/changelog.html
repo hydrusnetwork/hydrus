@@ -8,6 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 126</h3></li>
+				<ul>
+					<li>restored a dll that I thought was no longer needed, but was actually doing some weirder gif rendering</li>
+					<li>added 'remove' to fullscreen menu</li>
+					<li>harmonised thumbnail and fullscreen right click menus a bit more</li>
+					<li>added pause button to popup messages for repo update and subscription processing</li>
+					<li>moved service_identifier switchover forward</li>
+					<li>moved all service fetching to streamlined and non-laggy manager</li>
+					<li>changed client options to store default tag repository in a better way</li>
+					<li>changed subscriptions to store their advanced tag options in a better way</li>
+					<li>fixed a 'missing service' bug in advanced tag options</li>
+					<li>remade idle calculation into a much better gui-based rather than db-based test</li>
+					<li>fiddled more with maintenance timing, hopefully for the good</li>
+					<li>new screenshots in the help index pages!</li>
+					<li>improved how auto repo and server setup work and report their status</li>
+					<li>the client's UPnP daemon will no longer spam errors if your IGD doesn't support UPnP</li>
+					<li>fixed a bad db call in server's UPnP  daemon</li>
+				</ul>
 				<li><h3>version 125</h3></li>
 				<ul>
 					<li>moved client splash screen and client boot to application event loop (i.e. your mouse won't hourglass over it now)</li>

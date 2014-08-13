@@ -52,6 +52,11 @@ class App( wx.App ):
         self._reads[ 'messaging_sessions' ] = []
         self._reads[ 'tag_censorship' ] = []
         self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
+        
+        services = []
+        services.append( CC.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru', {} ) )
+        self._reads[ 'services' ] = services
+        
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_service_precedence' ] = []
@@ -64,6 +69,8 @@ class App( wx.App ):
         self._writes = collections.defaultdict( list )
         
         self._managers = {}
+        
+        self._managers[ 'services' ] = CC.ServiceManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()

@@ -2607,6 +2607,8 @@ class PopupMessageGauge( PopupMessage ):
         
         PopupMessage.__init__( self, parent, message )
         
+        self._job_key = self._message.GetJobKey()
+        
         self._done = False
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2620,11 +2622,16 @@ class PopupMessageGauge( PopupMessage ):
         self._gauge = Gauge( self, size = ( 380, -1 ) )
         self._gauge.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
+        self._pause_button = wx.Button( self, label = 'pause' )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPauseButton )
+        self._pause_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        
         self._cancel_button = wx.Button( self, label = 'cancel' )
         self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
         self._cancel_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         hbox.AddF( self._gauge, FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._pause_button, FLAGS_MIXED )
         hbox.AddF( self._cancel_button, FLAGS_MIXED )
         
         self._show_file_button = wx.Button( self )
@@ -2636,6 +2643,8 @@ class PopupMessageGauge( PopupMessage ):
         vbox.AddF( self._show_file_button, FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+        self._created = HC.GetNow()
         
     
     def Dismiss( self ):
@@ -2653,6 +2662,8 @@ class PopupMessageGauge( PopupMessage ):
                 
             
         
+        if self._job_key.IsPaused(): self._job_key.Cancel()
+        
         PopupMessage.Dismiss( self )
         
     
@@ -2660,11 +2671,25 @@ class PopupMessageGauge( PopupMessage ):
         
         if self._message.GetInfo( 'mode' ) == 'cancelable gauge':
             
-            job_key = self._message.GetInfo( 'job_key' )
-            
-            job_key.Cancel()
+            self._job_key.Cancel()
             
             self._cancel_button.Disable()
+            
+        
+    
+    def EventPauseButton( self, event ):
+        
+        if self._job_key.IsPaused():
+            
+            self._job_key.Resume()
+            
+            self._pause_button.SetLabel( 'pause' )
+            
+        else:
+            
+            self._job_key.Pause()
+            
+            self._pause_button.SetLabel( 'resume' )
             
         
     
@@ -2681,6 +2706,9 @@ class PopupMessageGauge( PopupMessage ):
         
         mode = self._message.GetInfo( 'mode' )
         text = self._message.GetInfo( 'text' )
+    
+        if self._job_key.IsPausable(): self._pause_button.Show()
+        else: self._pause_button.Hide()
         
         if mode == 'files':
             
@@ -3667,7 +3695,7 @@ class AdvancedTagOptions( AdvancedOptions ):
         self._namespaces = namespaces
         self._initial_settings = initial_settings
         
-        self._service_identifiers_to_checkbox_info = {}
+        self._service_keys_to_checkbox_info = {}
         
         AdvancedOptions.__init__( self, parent, 'advanced tag options' )
         
@@ -3678,21 +3706,23 @@ class AdvancedTagOptions( AdvancedOptions ):
         
         self._vbox.Clear( True )
         
-        self._service_identifiers_to_checkbox_info = {}
+        self._service_keys_to_checkbox_info = {}
         
-        service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
-        if len( service_identifiers ) > 0:
+        if len( services ) > 0:
             
             outer_gridbox = wx.FlexGridSizer( 0, 2 )
             
             outer_gridbox.AddGrowableCol( 1, 1 )
             
-            for service_identifier in service_identifiers:
+            for service in services:
                 
-                self._service_identifiers_to_checkbox_info[ service_identifier ] = []
+                service_key = service.GetKey()
                 
-                outer_gridbox.AddF( wx.StaticText( panel, label = service_identifier.GetName() ), FLAGS_MIXED )
+                self._service_keys_to_checkbox_info[ service_key ] = []
+                
+                outer_gridbox.AddF( wx.StaticText( panel, label = service.GetName() ), FLAGS_MIXED )
             
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
@@ -3703,12 +3733,12 @@ class AdvancedTagOptions( AdvancedOptions ):
                     
                     namespace_checkbox = wx.CheckBox( panel, label = label )
                     
-                    if service_identifier in self._initial_settings and namespace in self._initial_settings[ service_identifier ]: namespace_checkbox.SetValue( True )
+                    if service_key in self._initial_settings and namespace in self._initial_settings[ service_key ]: namespace_checkbox.SetValue( True )
                     else: namespace_checkbox.SetValue( False )
                     
                     namespace_checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
                     
-                    self._service_identifiers_to_checkbox_info[ service_identifier ].append( ( namespace, namespace_checkbox ) )
+                    self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
                     
                     vbox.AddF( namespace_checkbox, FLAGS_EXPAND_BOTH_WAYS )
                     
@@ -3746,11 +3776,11 @@ class AdvancedTagOptions( AdvancedOptions ):
         
         result = {}
         
-        for ( service_identifier, checkbox_info ) in self._service_identifiers_to_checkbox_info.items():
+        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
             
             namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
             
-            result[ service_identifier ] = namespaces
+            result[ service_key ] = namespaces
             
         
         return result
@@ -3767,13 +3797,13 @@ class AdvancedTagOptions( AdvancedOptions ):
     
     def SetInfo( self, info ):
         
-        for ( service_identifier, checkbox_info ) in self._service_identifiers_to_checkbox_info.items():
+        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
             
-            if service_identifier in info:
+            if service_key in info:
                 
                 for ( namespace, checkbox ) in checkbox_info:
                     
-                    if namespace in info[ service_identifier ]: checkbox.SetValue( True )
+                    if namespace in info[ service_key ]: checkbox.SetValue( True )
                     else: checkbox.SetValue( False )
                     
                 
