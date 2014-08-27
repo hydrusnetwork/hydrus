@@ -402,15 +402,17 @@ class AnimationBar( wx.Window ):
     
 class Canvas( object ):
     
-    def __init__( self, file_service_identifier, image_cache, claim_focus = True ):
+    def __init__( self, file_service_key, image_cache, claim_focus = True ):
         
-        self._file_service_identifier = file_service_identifier
+        self._file_service_key = file_service_key
         self._image_cache = image_cache
         self._claim_focus = claim_focus
         
+        self._file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
+        
         self._closing = False
         
-        self._service_identifiers_to_services = {}
+        self._service_keys_to_services = {}
         
         self._focus_holder = wx.Window( self )
         self._focus_holder.Hide()
@@ -510,16 +512,16 @@ class Canvas( object ):
             
             if self._current_media.HasInbox(): icons_to_show.append( CC.GlobalBMPs.inbox_bmp )
             
-            file_service_identifiers = self._current_media.GetFileServiceIdentifiersCDPP()
+            locations_manager = self._current_media.GetLocationsManager()
             
-            if self._file_service_identifier.GetType() == HC.LOCAL_FILE:
+            if self._file_service.GetType() == HC.LOCAL_FILE:
                 
-                if len( file_service_identifiers.GetPendingRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_pending_bmp )
-                elif len( file_service_identifiers.GetCurrentRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_bmp )
+                if len( locations_manager.GetPendingRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_pending_bmp )
+                elif len( locations_manager.GetCurrentRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_bmp )
                 
-            elif self._file_service_identifier in file_service_identifiers.GetCurrentRemote():
+            elif self._file_service_key in locations_manager.GetCurrentRemote():
                 
-                if self._file_service_identifier in file_service_identifiers.GetPetitionedRemote(): icons_to_show.append( CC.GlobalBMPs.file_repository_petitioned_bmp )
+                if self._file_service_key in locations_manager.GetPetitionedRemote(): icons_to_show.append( CC.GlobalBMPs.file_repository_petitioned_bmp )
                 
             
             current_x = client_width - 18
@@ -541,21 +543,22 @@ class Canvas( object ):
             
             ( local_ratings, remote_ratings ) = self._current_display_media.GetRatings()
             
-            service_identifiers_to_ratings = local_ratings.GetServiceIdentifiersToRatings()
+            service_keys_to_ratings = local_ratings.GetServiceKeysToRatings()
             
-            for ( service_identifier, rating ) in service_identifiers_to_ratings.items():
+            for ( service_key, rating ) in service_keys_to_ratings.items():
                 
                 if rating is None: continue
                 
-                service_type = service_identifier.GetType()
+                if service_key not in self._service_keys_to_services:
+                    
+                    service = HC.app.GetManager( 'services' ).GetService( service_key )
+                    
+                    self._service_keys_to_services[ service_key ] = service
+                    
                 
-                if service_identifier in self._service_identifiers_to_services: service = self._service_identifiers_to_services[ service_identifier ]
-                else:
-                    
-                    service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
-                    
-                    self._service_identifiers_to_services[ service_identifier ] = service
-                    
+                service = self._service_keys_to_services[ service_key ]
+                
+                service_type = service.GetType()
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
@@ -670,7 +673,7 @@ class Canvas( object ):
         if self._current_media is not None:
             
             try:
-                with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_identifier, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ) ) as dlg: dlg.ShowModal()
             except: wx.MessageBox( 'Had a problem displaying the manage tags dialog from fullscreen.' )
             
         
@@ -792,7 +795,7 @@ class Canvas( object ):
                     
                     self._current_display_media = self._current_media.GetDisplayMedia()
                     
-                    if self._current_display_media.GetFileServiceIdentifiersCDPP().HasLocal():
+                    if self._current_display_media.GetLocationsManager().HasLocal():
                         
                         self._RecalcZoom()
                         
@@ -815,10 +818,10 @@ class Canvas( object ):
         
 class CanvasPanel( Canvas, wx.Window ):
     
-    def __init__( self, parent, page_key, file_service_identifier ):
+    def __init__( self, parent, page_key, file_service_key ):
         
         wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER )
-        Canvas.__init__( self, file_service_identifier, HC.app.GetPreviewImageCache(), claim_focus = False )
+        Canvas.__init__( self, file_service_key, HC.app.GetPreviewImageCache(), claim_focus = False )
         
         self._page_key = page_key
         
@@ -833,7 +836,7 @@ class CanvasPanel( Canvas, wx.Window ):
         if page_key == self._page_key: self.SetMedia( media )
         
     
-    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         if self._current_display_media is not None:
             
@@ -841,7 +844,7 @@ class CanvasPanel( Canvas, wx.Window ):
             
             do_redraw = False
             
-            for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -862,11 +865,11 @@ class CanvasPanel( Canvas, wx.Window ):
     
 class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, ClientGUICommon.FrameThatResizes ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, media_results ):
+    def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
-        Canvas.__init__( self, file_service_identifier, HC.app.GetFullscreenImageCache() )
-        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_identifier, media_results )
+        Canvas.__init__( self, file_service_key, HC.app.GetFullscreenImageCache() )
+        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._page_key = page_key
         
@@ -1338,13 +1341,13 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
     def KeepCursorAlive( self ): self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
     
-    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         next_media = self._GetNext( self._current_media )
         
         if next_media == self._current_media: next_media = None
         
-        ClientGUIMixins.ListeningMediaList.ProcessContentUpdates( self, service_identifiers_to_content_updates )
+        ClientGUIMixins.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
         if self.HasNoMedia(): self.EventClose( None )
         elif self.HasMedia( self._current_media ):
@@ -1366,9 +1369,9 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     
 class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, media_results, first_hash ):
+    def __init__( self, my_parent, page_key, file_service_key, media_results, first_hash ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
         
@@ -1388,7 +1391,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
-    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1420,13 +1423,13 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
     
     def _PausePlaySlideshow( self ):
         
@@ -1603,8 +1606,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&remove' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         share_menu = wx.Menu()
         
@@ -1649,9 +1652,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, media_results, actions ):
+    def __init__( self, my_parent, page_key, file_service_key, media_results, actions ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
         
         self._actions = actions
         
@@ -1671,7 +1674,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
-    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
@@ -1703,13 +1706,13 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
     
     def EventActions( self, event ):
         
@@ -1732,9 +1735,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
             
             if key in key_dict:
                 
-                ( service_identifier, action ) = key_dict[ key ]
+                ( service_key, action ) = key_dict[ key ]
                 
-                if service_identifier is None:
+                if service_key is None:
                     
                     if action == 'archive': self._Archive()
                     elif action == 'delete': self._Delete()
@@ -1760,7 +1763,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                 else:
                     
-                    service_type = service_identifier.GetType()
+                    service = HC.app.GetManager( 'services' ).GetService( service_key )
+                    
+                    service_type = service.GetType()
                     
                     if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                         
@@ -1783,7 +1788,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                 
                                 tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                                 
-                                parents = tag_parents_manager.GetParents( service_identifier, tag )
+                                parents = tag_parents_manager.GetParents( service_key, tag )
                                 
                                 tags.extend( parents )
                                 
@@ -1822,7 +1827,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                                     
                                     tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                                     
-                                    parents = tag_parents_manager.GetParents( service_identifier, tag )
+                                    parents = tag_parents_manager.GetParents( service_key, tag )
                                     
                                     tags.extend( parents )
                                     
@@ -1845,7 +1850,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                         content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
                         
                     
-                    HC.app.Write( 'content_updates', { service_identifier : content_updates } )
+                    HC.app.Write( 'content_updates', { service_key : content_updates } )
                     
                 
             else:
@@ -1977,8 +1982,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&remove' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), '&delete' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         menu.AppendSeparator()
         
@@ -2010,9 +2015,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, media_results ):
+    def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_identifier, media_results )
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
         
         self._kept = set()
         self._deleted = set()
@@ -2102,7 +2107,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                             content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
                             content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
                             
-                            HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_IDENTIFIER : content_updates } )
+                            HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : content_updates } )
                             
                             self._kept = set()
                             self._deleted = set()
@@ -2228,9 +2233,9 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
     
 class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
     
-    def __init__( self, my_parent, page_key, file_service_identifier, media_results ):
+    def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_identifier, media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_key, media_results )
         
         FullscreenPopoutFilterInbox( self )
         
@@ -2640,12 +2645,12 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
     
 class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
     
-    def __init__( self, my_parent, page_key, service_identifier, media_results ):
+    def __init__( self, my_parent, page_key, service_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, [], media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_KEY, [], media_results )
         
-        self._rating_service_identifier = service_identifier
-        self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+        self._rating_service_key = service_key
+        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
         
         FullscreenPopoutFilterLike( self )
         
@@ -2680,7 +2685,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
                             content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, set( ( hash, ) ) ) ) for hash in self._deleted_hashes ] )
                             content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, set( ( hash, ) ) ) ) for hash in self._kept_hashes ] )
                             
-                            HC.app.Write( 'content_updates', { self._rating_service_identifier : content_updates } )
+                            HC.app.Write( 'content_updates', { self._rating_service_key : content_updates } )
                             
                             self._kept = set()
                             self._deleted = set()
@@ -2704,28 +2709,28 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     RATINGS_FILTER_EQUALITY_HALF = 1
     RATINGS_FILTER_EQUALITY_QUARTER = 2
     
-    def __init__( self, parent, page_key, service_identifier, media_results ):
+    def __init__( self, parent, page_key, service_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, parent, resize_option_prefix = 'fs_', title = 'hydrus client ratings frame' )
         
         self._page_key = page_key
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         self._media_still_to_rate = { ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results }
         self._current_media_to_rate = None
         
+        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+        
         self._file_query_result = CC.FileQueryResult( media_results )
         
-        if service_identifier.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
+        if self._service.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
-            
-            self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
             
             ( self._lower, self._upper ) = self._service.GetLowerUpper()
             
             self._score_gap = 1.0 / ( self._upper - self._lower )
             
         
-        hashes_to_min_max = HC.app.Read( 'ratings_filter', service_identifier, [ media_result.GetHash() for media_result in media_results ] )
+        hashes_to_min_max = HC.app.Read( 'ratings_filter', service_key, [ media_result.GetHash() for media_result in media_results ] )
         
         self._media_to_initial_scores_dict = { media : hashes_to_min_max[ media.GetHash() ] for media in self._media_still_to_rate }
         
@@ -2824,7 +2829,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         certain_ratings = [ ( media, ( min, max ) ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min < self._score_gap ]
         uncertain_ratings = [ ( media, ( min, max ) ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min >= self._score_gap and self._media_to_current_scores_dict[ media ] != self._media_to_initial_scores_dict[ media ] ]
         
-        service_type = self._service_identifier.GetType()
+        service_type = self._service.GetType()
         
         if service_type == HC.LOCAL_RATING_LIKE:
             
@@ -2845,7 +2850,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     
                     ( local_ratings, remote_ratings ) = self._current_media_to_rate_against.GetRatings()
                     
-                    rating = local_ratings.GetRating( self._service_identifier )
+                    rating = local_ratings.GetRating( self._service_key )
                     
                 
                 if rating == 0.0: against_string += ' - dislike'
@@ -2880,7 +2885,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     
                     ( local_ratings, remote_ratings ) = self._current_media_to_rate_against.GetRatings()
                     
-                    rating = local_ratings.GetRating( self._service_identifier )
+                    rating = local_ratings.GetRating( self._service_key )
                     
                 
                 against_string += ' - ' + HC.ConvertNumericalRatingToPrettyString( self._lower, self._upper, rating )
@@ -2939,7 +2944,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         ( min, max ) = self._media_to_current_scores_dict[ self._current_media_to_rate ]
         
-        media_result_to_rate_against = HC.app.Read( 'ratings_media_result', self._service_identifier, min, max )
+        media_result_to_rate_against = HC.app.Read( 'ratings_media_result', self._service_key, min, max )
         
         if media_result_to_rate_against is not None:
             
@@ -3148,7 +3153,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             
             ( local_ratings, remote_ratings ) = self._current_media_to_rate_against.GetRatings()
             
-            rating = local_ratings.GetRating( self._service_identifier )
+            rating = local_ratings.GetRating( self._service_key )
             
             if action in ( 'left', 'right' ):
                 
@@ -3259,7 +3264,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, set( ( hash, ) ) ) ) for ( rating, hash ) in certain_ratings ] )
                     content_updates.extend( [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_RATINGS_FILTER, ( min, max, set( ( hash, ) ) ) ) for ( min, max, hash ) in uncertain_ratings ] )
                     
-                    HC.app.Write( 'content_updates', { self._service_identifier : content_updates } )
+                    HC.app.Write( 'content_updates', { self._service_key : content_updates } )
                     
                 
             
@@ -3319,13 +3324,13 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         elif event.ButtonDown( wx.MOUSE_BTN_MIDDLE ): self._ProcessAction( 'equal' )
         
     
-    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         redraw = False
         
         my_hashes = self._file_query_result.GetHashes()
         
-        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             for content_update in content_updates:
                 
@@ -3347,7 +3352,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
         self._left_window.RefreshBackground()
         self._right_window.RefreshBackground()
@@ -3391,7 +3396,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         def __init__( self, parent ):
             
             wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            Canvas.__init__( self, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.app.GetFullscreenImageCache() )
+            Canvas.__init__( self, HC.LOCAL_FILE_SERVICE_KEY, HC.app.GetFullscreenImageCache() )
             
             wx.CallAfter( self.Refresh )
             

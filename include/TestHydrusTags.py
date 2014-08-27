@@ -9,54 +9,54 @@ class TestMergeTagsManagers( unittest.TestCase ):
     
     def test_merge( self ):
         
-        first = TestConstants.GenerateClientServiceIdentifier( HC.LOCAL_TAG )
-        second = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
-        third = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
+        first = os.urandom( 32 )
+        second = os.urandom( 32 )
+        third = os.urandom( 32 )
         
         tag_service_precedence = [ first, second, third ]
         
         #
         
-        service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
         
-        service_identifiers_to_statuses_to_tags[ first ][ HC.CURRENT ] = { 'current_1', 'series:blame!' }
+        service_keys_to_statuses_to_tags[ first ][ HC.CURRENT ] = { 'current_1', 'series:blame!' }
         
-        service_identifiers_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'current_duplicate_1', 'character:cibo' }
-        service_identifiers_to_statuses_to_tags[ second ][ HC.DELETED ] = { 'current_1' }
-        service_identifiers_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'pending_1', 'creator:tsutomu nihei' }
-        service_identifiers_to_statuses_to_tags[ second ][ HC.PETITIONED ] = { 'petitioned_1' }
+        service_keys_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'current_duplicate_1', 'character:cibo' }
+        service_keys_to_statuses_to_tags[ second ][ HC.DELETED ] = { 'current_1' }
+        service_keys_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'pending_1', 'creator:tsutomu nihei' }
+        service_keys_to_statuses_to_tags[ second ][ HC.PETITIONED ] = { 'petitioned_1' }
         
-        service_identifiers_to_statuses_to_tags[ third ][ HC.CURRENT ] = { 'current_duplicate', 'current_duplicate_1' }
-        service_identifiers_to_statuses_to_tags[ third ][ HC.PENDING ] = { 'volume:3' }
+        service_keys_to_statuses_to_tags[ third ][ HC.CURRENT ] = { 'current_duplicate', 'current_duplicate_1' }
+        service_keys_to_statuses_to_tags[ third ][ HC.PENDING ] = { 'volume:3' }
         
-        tags_manager_1 = HydrusTags.TagsManager( tag_service_precedence, service_identifiers_to_statuses_to_tags )
+        tags_manager_1 = HydrusTags.TagsManager( tag_service_precedence, service_keys_to_statuses_to_tags )
         
         tags_manager_1._RecalcCombined()
         
         #
         
-        service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
         
-        service_identifiers_to_statuses_to_tags[ first ][ HC.CURRENT ] = { 'current_2', 'series:blame!', 'chapter:1' }
-        service_identifiers_to_statuses_to_tags[ first ][ HC.DELETED ] = { 'deleted_2' }
+        service_keys_to_statuses_to_tags[ first ][ HC.CURRENT ] = { 'current_2', 'series:blame!', 'chapter:1' }
+        service_keys_to_statuses_to_tags[ first ][ HC.DELETED ] = { 'deleted_2' }
         
-        service_identifiers_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'current_duplicate'  }
-        service_identifiers_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'architecture', 'chapter:2' }
+        service_keys_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'current_duplicate'  }
+        service_keys_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'architecture', 'chapter:2' }
         
-        service_identifiers_to_statuses_to_tags[ third ][ HC.CURRENT ] = { 'current_duplicate' }
+        service_keys_to_statuses_to_tags[ third ][ HC.CURRENT ] = { 'current_duplicate' }
         
-        tags_manager_2 = HydrusTags.TagsManager( tag_service_precedence, service_identifiers_to_statuses_to_tags )
+        tags_manager_2 = HydrusTags.TagsManager( tag_service_precedence, service_keys_to_statuses_to_tags )
         
         tags_manager_2._RecalcCombined()
         
         #
         
-        service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
         
-        service_identifiers_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'page:4', 'page:5' }
-        service_identifiers_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'title:double page spread' }
+        service_keys_to_statuses_to_tags[ second ][ HC.CURRENT ] = { 'page:4', 'page:5' }
+        service_keys_to_statuses_to_tags[ second ][ HC.PENDING ] = { 'title:double page spread' }
         
-        tags_manager_3 = HydrusTags.TagsManager( tag_service_precedence, service_identifiers_to_statuses_to_tags )
+        tags_manager_3 = HydrusTags.TagsManager( tag_service_precedence, service_keys_to_statuses_to_tags )
         
         tags_manager_3._RecalcCombined()
         
@@ -64,7 +64,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         tags_managers = ( tags_manager_1, tags_manager_2, tags_manager_3 )
         
-        tags_manager = HydrusTags.MergeTagsManagers( tag_service_precedence, tags_managers )
+        tags_manager = HydrusTags.MergeTagsManagers( tags_managers )
         
         #
         
@@ -80,54 +80,54 @@ class TestTagsManager( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._first = TestConstants.GenerateClientServiceIdentifier( HC.LOCAL_TAG )
-        self._second = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
-        self._third = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
+        self._first_key = os.urandom( 32 )
+        self._second_key = os.urandom( 32 )
+        self._third_key = os.urandom( 32 )
         
-        tag_service_precedence = [ self._first, self._second, self._third ]
+        tag_service_precedence = [ self._first_key, self._second_key, self._third_key ]
         
-        service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
         
-        service_identifiers_to_statuses_to_tags[ self._first ][ HC.CURRENT ] = { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
-        service_identifiers_to_statuses_to_tags[ self._first ][ HC.DELETED ] = { 'deleted' }
+        service_keys_to_statuses_to_tags[ self._first_key ][ HC.CURRENT ] = { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
+        service_keys_to_statuses_to_tags[ self._first_key ][ HC.DELETED ] = { 'deleted' }
         
-        service_identifiers_to_statuses_to_tags[ self._second ][ HC.CURRENT ] = { 'deleted', u'\u2835' }
-        service_identifiers_to_statuses_to_tags[ self._second ][ HC.DELETED ] = { 'current' }
-        service_identifiers_to_statuses_to_tags[ self._second ][ HC.PENDING ] = { 'pending' }
-        service_identifiers_to_statuses_to_tags[ self._second ][ HC.PETITIONED ] = { 'petitioned' }
+        service_keys_to_statuses_to_tags[ self._second_key ][ HC.CURRENT ] = { 'deleted', u'\u2835' }
+        service_keys_to_statuses_to_tags[ self._second_key ][ HC.DELETED ] = { 'current' }
+        service_keys_to_statuses_to_tags[ self._second_key ][ HC.PENDING ] = { 'pending' }
+        service_keys_to_statuses_to_tags[ self._second_key ][ HC.PETITIONED ] = { 'petitioned' }
         
-        service_identifiers_to_statuses_to_tags[ self._third ][ HC.CURRENT ] = { 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' }
-        service_identifiers_to_statuses_to_tags[ self._third ][ HC.DELETED ] = { 'pending' }
+        service_keys_to_statuses_to_tags[ self._third_key ][ HC.CURRENT ] = { 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' }
+        service_keys_to_statuses_to_tags[ self._third_key ][ HC.DELETED ] = { 'pending' }
         
-        self._tags_manager = HydrusTags.TagsManager( tag_service_precedence, service_identifiers_to_statuses_to_tags )
+        self._tags_manager = HydrusTags.TagsManager( tag_service_precedence, service_keys_to_statuses_to_tags )
         
         self._tags_manager._RecalcCombined()
         
-        self._service_identifiers_to_statuses_to_tags = service_identifiers_to_statuses_to_tags
+        self._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
         
         #
         
-        self._pending_service_identifier = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
-        self._content_update_service_identifier = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
-        self._reset_service_identifier = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
+        self._pending_service_key = os.urandom( 32 )
+        self._content_update_service_key = os.urandom( 32 )
+        self._reset_service_key = os.urandom( 32 )
         
-        tag_service_precedence = [ self._pending_service_identifier, self._content_update_service_identifier, self._reset_service_identifier ]
+        tag_service_precedence = [ self._pending_service_key, self._content_update_service_key, self._reset_service_key ]
         
-        other_service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        other_service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
         
-        other_service_identifiers_to_statuses_to_tags[ self._pending_service_identifier ][ HC.PENDING ] = { 'pending' }
-        other_service_identifiers_to_statuses_to_tags[ self._pending_service_identifier ][ HC.PETITIONED ] = { 'petitioned' }
+        other_service_keys_to_statuses_to_tags[ self._pending_service_key ][ HC.PENDING ] = { 'pending' }
+        other_service_keys_to_statuses_to_tags[ self._pending_service_key ][ HC.PETITIONED ] = { 'petitioned' }
         
-        other_service_identifiers_to_statuses_to_tags[ self._reset_service_identifier ][ HC.CURRENT ] = { 'reset_current' }
-        other_service_identifiers_to_statuses_to_tags[ self._reset_service_identifier ][ HC.DELETED ] = { 'reset_deleted' }
-        other_service_identifiers_to_statuses_to_tags[ self._reset_service_identifier ][ HC.PENDING ] = { 'reset_pending' }
-        other_service_identifiers_to_statuses_to_tags[ self._reset_service_identifier ][ HC.PETITIONED ] = { 'reset_petitioned' }
+        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.CURRENT ] = { 'reset_current' }
+        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.DELETED ] = { 'reset_deleted' }
+        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.PENDING ] = { 'reset_pending' }
+        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.PETITIONED ] = { 'reset_petitioned' }
         
-        self._other_tags_manager = HydrusTags.TagsManager( tag_service_precedence, other_service_identifiers_to_statuses_to_tags )
+        self._other_tags_manager = HydrusTags.TagsManager( tag_service_precedence, other_service_keys_to_statuses_to_tags )
         
         self._other_tags_manager._RecalcCombined()
         
-        self._other_service_identifiers_to_statuses_to_tags = other_service_identifiers_to_statuses_to_tags
+        self._other_service_keys_to_statuses_to_tags = other_service_keys_to_statuses_to_tags
         
     
     def test_get_cstvcp( self ):
@@ -139,29 +139,29 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_delete_pending( self ):
         
-        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_identifier ), { 'pending' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_identifier ), { 'petitioned' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_key ), { 'pending' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_key ), { 'petitioned' } )
         
-        self._other_tags_manager.DeletePending( self._pending_service_identifier )
+        self._other_tags_manager.DeletePending( self._pending_service_key )
         
-        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._pending_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._pending_service_key ), set() )
         
     
     def test_get_current( self ):
         
-        self.assertEqual( self._tags_manager.GetCurrent( self._first ), { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
-        self.assertEqual( self._tags_manager.GetCurrent( self._second ), { 'deleted', u'\u2835' } )
-        self.assertEqual( self._tags_manager.GetCurrent( self._third ), { 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._first_key ), { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._second_key ), { 'deleted', u'\u2835' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._third_key ), { 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' } )
         
         self.assertEqual( self._tags_manager.GetCurrent(), { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' } )
         
     
     def test_get_deleted( self ):
         
-        self.assertEqual( self._tags_manager.GetDeleted( self._first ), { 'deleted' } )
-        self.assertEqual( self._tags_manager.GetDeleted( self._second ), { 'current' } )
-        self.assertEqual( self._tags_manager.GetDeleted( self._third ), { 'pending' } )
+        self.assertEqual( self._tags_manager.GetDeleted( self._first_key ), { 'deleted' } )
+        self.assertEqual( self._tags_manager.GetDeleted( self._second_key ), { 'current' } )
+        self.assertEqual( self._tags_manager.GetDeleted( self._third_key ), { 'pending' } )
         
         self.assertEqual( self._tags_manager.GetDeleted(), set() ) # combined tag service does not track deleted
         
@@ -177,62 +177,59 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_num_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._first, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first, include_current_tags = True, include_pending_tags = False ), 8 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._first, include_current_tags = True, include_pending_tags = True ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = True, include_pending_tags = False ), 8 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = False, include_pending_tags = True ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._first_key, include_current_tags = True, include_pending_tags = True ), 8 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._second, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second, include_current_tags = True, include_pending_tags = False ), 2 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._second, include_current_tags = True, include_pending_tags = True ), 3 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = True, include_pending_tags = False ), 2 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = False, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = True, include_pending_tags = True ), 3 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( self._third, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third, include_current_tags = True, include_pending_tags = False ), 4 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third, include_current_tags = True, include_pending_tags = True ), 4 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = False ), 4 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = True ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = True ), 4 )
         
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = False ), 12 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True ), 13 )
+        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
+        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 12 )
+        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
+        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 13 )
         
     
     def test_get_pending( self ):
         
-        self.assertEqual( self._tags_manager.GetPending( self._first ), set() )
-        self.assertEqual( self._tags_manager.GetPending( self._second ), { 'pending' } )
-        self.assertEqual( self._tags_manager.GetPending( self._third ), set() )
+        self.assertEqual( self._tags_manager.GetPending( self._first_key ), set() )
+        self.assertEqual( self._tags_manager.GetPending( self._second_key ), { 'pending' } )
+        self.assertEqual( self._tags_manager.GetPending( self._third_key ), set() )
         
         self.assertEqual( self._tags_manager.GetPending(), { 'pending' } )
         
     
     def test_get_petitioned( self ):
         
-        self.assertEqual( self._tags_manager.GetPetitioned( self._first ), set() )
-        self.assertEqual( self._tags_manager.GetPetitioned( self._second ), { 'petitioned' } )
-        self.assertEqual( self._tags_manager.GetPetitioned( self._third ), set() )
+        self.assertEqual( self._tags_manager.GetPetitioned( self._first_key ), set() )
+        self.assertEqual( self._tags_manager.GetPetitioned( self._second_key ), { 'petitioned' } )
+        self.assertEqual( self._tags_manager.GetPetitioned( self._third_key ), set() )
         
         self.assertEqual( self._tags_manager.GetPetitioned(), set() ) # combined tag service does not track petitioned
         
     
-    def test_get_service_identifiers_to_statuses_to_tags( self ):
+    def test_get_service_keys_to_statuses_to_tags( self ):
         
-        s = self._tags_manager.GetServiceIdentifiersToStatusesToTags()
+        s = self._tags_manager.GetServiceKeysToStatusesToTags()
         
-        self.assertEqual( s[ self._first ], self._service_identifiers_to_statuses_to_tags[ self._first ] )
-        self.assertEqual( s[ self._second ], self._service_identifiers_to_statuses_to_tags[ self._second ] )
-        self.assertEqual( s[ self._third ], self._service_identifiers_to_statuses_to_tags[ self._third ] )
-        
-        # there is also s[ HC.COMBINED_TAG_S_I ], auto-generated on tags_manager init
-        # so can't just do a straight s == self._s
+        self.assertEqual( s[ self._first_key ], self._service_keys_to_statuses_to_tags[ self._first_key ] )
+        self.assertEqual( s[ self._second_key ], self._service_keys_to_statuses_to_tags[ self._second_key ] )
+        self.assertEqual( s[ self._third_key ], self._service_keys_to_statuses_to_tags[ self._third_key ] )
         
     
     def test_get_statuses_to_tags( self ):
         
-        self.assertEqual( self._tags_manager.GetStatusesToTags( self._first ), self._service_identifiers_to_statuses_to_tags[ self._first ] )
-        self.assertEqual( self._tags_manager.GetStatusesToTags( self._second ), self._service_identifiers_to_statuses_to_tags[ self._second ] )
-        self.assertEqual( self._tags_manager.GetStatusesToTags( self._third ), self._service_identifiers_to_statuses_to_tags[ self._third ] )
+        self.assertEqual( self._tags_manager.GetStatusesToTags( self._first_key ), self._service_keys_to_statuses_to_tags[ self._first_key ] )
+        self.assertEqual( self._tags_manager.GetStatusesToTags( self._second_key ), self._service_keys_to_statuses_to_tags[ self._second_key ] )
+        self.assertEqual( self._tags_manager.GetStatusesToTags( self._third_key ), self._service_keys_to_statuses_to_tags[ self._third_key ] )
         
     
     def test_has_tag( self ):
@@ -247,10 +244,10 @@ class TestTagsManager( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -259,12 +256,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -273,12 +270,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertIn( 'hello', self._other_tags_manager.GetPending() )
@@ -287,12 +284,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PENDING, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -301,12 +298,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertIn( 'hello', self._other_tags_manager.GetPending() )
@@ -315,12 +312,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -329,12 +326,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'hello', hashes, 'reason' ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), { 'hello' } )
         
         self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -343,12 +340,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -357,12 +354,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'hello', hashes, 'reason' ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), { 'hello' } )
         
         self.assertIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -371,12 +368,12 @@ class TestTagsManager( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'hello', hashes ) )
         
-        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_identifier, content_update )
+        self._other_tags_manager.ProcessContentUpdate( self._content_update_service_key, content_update )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_identifier ), { 'hello' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._content_update_service_key ), { 'hello' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._content_update_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._content_update_service_key ), set() )
         
         self.assertNotIn( 'hello', self._other_tags_manager.GetCurrent() )
         self.assertNotIn( 'hello', self._other_tags_manager.GetPending() )
@@ -384,17 +381,17 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_reset_service( self ):
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_identifier ), { 'reset_current' } )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_identifier ), { 'reset_deleted' } )
-        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_identifier ), { 'reset_pending' } )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_identifier ), { 'reset_petitioned' } )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_key ), { 'reset_current' } )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_key ), { 'reset_deleted' } )
+        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_key ), { 'reset_pending' } )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key ), { 'reset_petitioned' } )
         
-        self._other_tags_manager.ResetService( self._reset_service_identifier )
+        self._other_tags_manager.ResetService( self._reset_service_key )
         
-        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_identifier ), set() )
-        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_identifier ), set() )
+        self.assertEqual( self._other_tags_manager.GetCurrent( self._reset_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetDeleted( self._reset_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPending( self._reset_service_key ), set() )
+        self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key ), set() )
         
     
 class TestTagParents( unittest.TestCase ):
@@ -402,13 +399,11 @@ class TestTagParents( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._first = TestConstants.GenerateClientServiceIdentifier( HC.LOCAL_TAG )
-        self._second = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
-        self._third = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
+        self._first_key = os.urandom( 32 )
+        self._second_key = os.urandom( 32 )
+        self._third_key = os.urandom( 32 )
         
-        tag_service_precedence = [ self._first, self._second, self._third ]
-        
-        tag_parents = collections.defaultdict( HC.default_dict_set )
+        tag_service_precedence = [ self._first_key, self._second_key, self._third_key ]
         
         first_dict = HC.default_dict_set()
         
@@ -427,9 +422,11 @@ class TestTagParents( unittest.TestCase ):
         third_dict[ HC.CURRENT ] = { ( 'petitioned_a', 'petitioned_b' ) }
         third_dict[ HC.DELETED ] = { ( 'pending_a', 'pending_b' ) }
         
-        tag_parents[ self._first ] = first_dict
-        tag_parents[ self._second ] = second_dict
-        tag_parents[ self._third ] = third_dict
+        tag_parents = collections.defaultdict( HC.default_dict_set )
+        
+        tag_parents[ self._first_key ] = first_dict
+        tag_parents[ self._second_key ] = second_dict
+        tag_parents[ self._third_key ] = third_dict
         
         HC.app.SetRead( 'tag_service_precedence', tag_service_precedence )
         HC.app.SetRead( 'tag_parents', tag_parents )
@@ -445,7 +442,7 @@ class TestTagParents( unittest.TestCase ):
         predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'grandfather' ), { HC.CURRENT : 15 } ) )
         predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'not_exist' ), { HC.CURRENT : 20 } ) )
         
-        self.assertEqual( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_IDENTIFIER, predicates ), predicates )
+        self.assertEqual( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_KEY, predicates ), predicates )
         
         predicates = []
         
@@ -459,7 +456,7 @@ class TestTagParents( unittest.TestCase ):
         results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
         results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
-        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_IDENTIFIER, predicates ) ), set( results ) )
+        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
         predicates = []
         
@@ -481,83 +478,83 @@ class TestTagParents( unittest.TestCase ):
         results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandmother' ) )
         results.append( HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'grandfather' ) )
         
-        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_IDENTIFIER, predicates ) ), set( results ) )
+        self.assertEqual( set( self._tag_parents_manager.ExpandPredicates( HC.COMBINED_TAG_SERVICE_KEY, predicates ) ), set( results ) )
         
     
     def test_expand_tags( self ):
         
         tags = { 'grandmother', 'grandfather' }
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, tags ), tags )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, tags ), tags )
         
         tags = { 'child', 'cousin' }
         
         results = { 'child', 'mother', 'father', 'grandmother', 'grandfather', 'cousin', 'aunt', 'uncle', 'grandmother', 'grandfather' }
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, tags ), results )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, tags ), results )
         
     
     def test_grandparents( self ):
         
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'child' ) ), { 'mother', 'father', 'grandmother', 'grandfather' } )
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'mother' ) ), { 'grandmother', 'grandfather' } )
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'grandmother' ) ), set() )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'child' ) ), { 'mother', 'father', 'grandmother', 'grandfather' } )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'mother' ) ), { 'grandmother', 'grandfather' } )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'grandmother' ) ), set() )
         
     
     def test_current_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'current_a' ), [ 'current_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'current_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'current_a' ), [ 'current_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'current_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'current_a' ] ), { 'current_a', 'current_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'current_b' ] ), { 'current_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'current_a' ] ), { 'current_a', 'current_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'current_b' ] ), { 'current_b' } )
         
     
     def test_deleted_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'deleted_a' ), [] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'deleted_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'deleted_a' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'deleted_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'deleted_a' ] ), { 'deleted_a' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'deleted_b' ] ), { 'deleted_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'deleted_a' ] ), { 'deleted_a' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'deleted_b' ] ), { 'deleted_b' } )
         
     
     def test_no_loop( self ):
         
-        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'loop_a' ) ), { 'loop_b', 'loop_c' } )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'loop_b' ), [ 'loop_c' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'loop_c' ), [] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'closed_loop' ), [] )
+        self.assertEqual( set( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'loop_a' ) ), { 'loop_b', 'loop_c' } )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'loop_b' ), [ 'loop_c' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'loop_c' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'closed_loop' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'loop_a' ] ), { 'loop_a', 'loop_b', 'loop_c' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'loop_b' ] ), { 'loop_b', 'loop_c' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'loop_c' ] ), { 'loop_c' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'closed_loop' ] ), { 'closed_loop' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'loop_a' ] ), { 'loop_a', 'loop_b', 'loop_c' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'loop_b' ] ), { 'loop_b', 'loop_c' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'loop_c' ] ), { 'loop_c' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'closed_loop' ] ), { 'closed_loop' } )
         
     
     def test_not_exist( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'not_exist' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'not_exist' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'not_exist' ] ), { 'not_exist' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'not_exist' ] ), { 'not_exist' } )
         
     
     def test_pending_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'pending_a' ), [ 'pending_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'pending_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'pending_a' ), [ 'pending_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'pending_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'pending_b' ] ), { 'pending_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'pending_a' ] ), { 'pending_a', 'pending_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'pending_b' ] ), { 'pending_b' } )
         
     
     def test_petitioned_no_overwrite( self ):
         
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'petitioned_a' ), [ 'petitioned_b' ] )
-        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_IDENTIFIER, 'petitioned_b' ), [] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'petitioned_a' ), [ 'petitioned_b' ] )
+        self.assertEqual( self._tag_parents_manager.GetParents( HC.COMBINED_TAG_SERVICE_KEY, 'petitioned_b' ), [] )
         
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'petitioned_a' ] ), { 'petitioned_a', 'petitioned_b' } )
-        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_IDENTIFIER, [ 'petitioned_b' ] ), { 'petitioned_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'petitioned_a' ] ), { 'petitioned_a', 'petitioned_b' } )
+        self.assertEqual( self._tag_parents_manager.ExpandTags( HC.COMBINED_TAG_SERVICE_KEY, [ 'petitioned_b' ] ), { 'petitioned_b' } )
         
     
 class TestTagSiblings( unittest.TestCase ):
@@ -565,11 +562,11 @@ class TestTagSiblings( unittest.TestCase ):
     @classmethod
     def setUpClass( self ):
         
-        self._first = TestConstants.GenerateClientServiceIdentifier( HC.LOCAL_TAG )
-        self._second = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
-        self._third = TestConstants.GenerateClientServiceIdentifier( HC.TAG_REPOSITORY )
+        self._first_key = os.urandom( 32 )
+        self._second_key = os.urandom( 32 )
+        self._third_key = os.urandom( 32 )
         
-        tag_service_precedence = [ self._first, self._second, self._third ]
+        tag_service_precedence = [ self._first_key, self._second_key, self._third_key ]
         
         tag_siblings = collections.defaultdict( HC.default_dict_set )
         
@@ -590,9 +587,9 @@ class TestTagSiblings( unittest.TestCase ):
         third_dict[ HC.CURRENT ] = { ( 'petitioned_a', 'petitioned_b' ) }
         third_dict[ HC.DELETED ] = { ( 'pending_a', 'pending_b' ) }
         
-        tag_siblings[ self._first ] = first_dict
-        tag_siblings[ self._second ] = second_dict
-        tag_siblings[ self._third ] = third_dict
+        tag_siblings[ self._first_key ] = first_dict
+        tag_siblings[ self._second_key ] = second_dict
+        tag_siblings[ self._third_key ] = third_dict
         
         HC.app.SetRead( 'tag_service_precedence', tag_service_precedence )
         HC.app.SetRead( 'tag_siblings', tag_siblings )

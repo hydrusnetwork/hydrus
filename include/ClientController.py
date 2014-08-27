@@ -208,7 +208,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
         
         self._managers = {}
         
-        self._managers[ 'services' ] = CC.ServiceManager()
+        self._managers[ 'services' ] = CC.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'local_booru' ] = CC.LocalBooruCache()
@@ -330,7 +330,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
     
     def RestartBooru( self ):
         
-        service = self.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
+        service = self.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
         
         info = service.GetInfo()
         
@@ -359,9 +359,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                         
                     except:
                         
-                        booru_server_service_identifier = HC.ServerServiceIdentifier( 'local booru', HC.LOCAL_BOORU )
-                        
-                        self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( booru_server_service_identifier, 'This is the local booru.' ) )
+                        self._booru_service = reactor.listenTCP( port, HydrusServer.HydrusServiceBooru( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
                         
                         connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                         
@@ -423,9 +421,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                         
                     except:
                         
-                        local_file_server_service_identifier = HC.ServerServiceIdentifier( 'local file', HC.LOCAL_FILE )
-                        
-                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( local_file_server_service_identifier, 'This is the local file service.' ) )
+                        self._local_service = reactor.listenTCP( port, HydrusServer.HydrusServiceLocal( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'This is the local file service.' ) )
                         
                         connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                         
@@ -514,7 +510,7 @@ Once it is done, the client will restart.'''
             
             if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
             
-            file_service_identifier = search_context.GetFileServiceIdentifier()
+            service_key = search_context.GetFileServiceKey()
             
             include_current_tags = search_context.IncludeCurrentTags()
             
@@ -535,7 +531,7 @@ Once it is done, the client will restart.'''
                 
                 sub_query_hash_ids = query_hash_ids[ last_i : i ]
                 
-                more_media_results = self.Read( 'media_results_from_ids', file_service_identifier, sub_query_hash_ids )
+                more_media_results = self.Read( 'media_results_from_ids', service_key, sub_query_hash_ids )
                 
                 media_results.extend( more_media_results )
                 

@@ -46,18 +46,77 @@ class TestFunctions( unittest.TestCase ):
     
 class TestManagers( unittest.TestCase ):
     
+    def test_services( self ):
+        
+        def test_service( service, key, type, name, info ):
+            
+            self.assertEqual( service.GetKey(), key )
+            self.assertEqual( service.GetType(), type )
+            self.assertEqual( service.GetName(), name )
+            self.assertEqual( service.GetInfo(), info )
+            
+        
+        repo_key = os.urandom( 32 )
+        repo_type = HC.TAG_REPOSITORY
+        repo_name = 'test tag repo'
+        repo_info = { 'blah' : 5 }
+        
+        repo = CC.Service( repo_key, repo_type, repo_name, repo_info )
+        
+        other_key = os.urandom( 32 )
+        
+        other = CC.Service( other_key, HC.LOCAL_BOORU, 'booru', {} )
+        
+        services = []
+        
+        services.append( repo )
+        services.append( other )
+        
+        HC.app.SetRead( 'services', services )
+        
+        services_manager = CC.ServicesManager()
+        
+        #
+        
+        service = services_manager.GetService( repo_key )
+        
+        test_service( service, repo_key, repo_type, repo_name, repo_info )
+        
+        service = services_manager.GetService( other_key )
+        
+        #
+        
+        services = services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+        
+        self.assertEqual( len( services ), 1 )
+        
+        self.assertEqual( services[0].GetKey(), repo_key )
+        
+        #
+        
+        services = []
+        
+        services.append( repo )
+        
+        HC.app.SetRead( 'services', services )
+        
+        services_manager.RefreshServices()
+        
+        self.assertRaises( Exception, services_manager.GetService, other_key )
+        
+    
     def test_undo( self ):
         
         hash_1 = os.urandom( 32 )
         hash_2 = os.urandom( 32 )
         hash_3 = os.urandom( 32 )
         
-        command_1 = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
-        command_2 = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
-        command_3 = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
+        command_1 = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
+        command_2 = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
+        command_3 = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
         
-        command_1_inverted = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
-        command_2_inverted = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
+        command_1_inverted = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
+        command_2_inverted = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
         
         undo_manager = CC.UndoManager()
         

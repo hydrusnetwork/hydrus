@@ -345,7 +345,7 @@ class Comment( wx.Panel ):
     
 class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, file_service_key = HC.LOCAL_FILE_SERVICE_KEY, starting_from_session = False ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
@@ -356,8 +356,8 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self._page = page
         self._page_key = page_key
-        self._file_service_identifier = file_service_identifier
-        self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+        self._file_service_key = file_service_key
+        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
         self._starting_from_session = starting_from_session
         
         self._paused = False
@@ -646,10 +646,10 @@ class ManagementPanelDumper( ManagementPanel ):
             try: service = HC.app.GetManager( 'services' ).GetService( service_key )
             except: continue
             
-            service_identifier = service.GetKey()
+            service_key = service.GetKey()
             
-            current = tags_manager.GetCurrent( service_identifier )
-            pending = tags_manager.GetPending( service_identifier )
+            current = tags_manager.GetCurrent( service_key )
+            pending = tags_manager.GetPending( service_key )
             
             tags = current.union( pending )
             
@@ -1819,13 +1819,13 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
 class ManagementPanelPetitions( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier, petition_service_identifier, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, file_service_key, petition_service_key, starting_from_session = False ):
         
-        self._petition_service_identifier = petition_service_identifier
+        self._petition_service_key = petition_service_key
         
-        ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier, starting_from_session = starting_from_session )
+        ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
         
-        self._service = HC.app.GetManager( 'services' ).GetService( self._petition_service_identifier.GetServiceKey() )
+        self._service = HC.app.GetManager( 'services' ).GetService( self._petition_service_key )
         self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
         
         self._num_petitions = None
@@ -1905,7 +1905,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Disable()
             
-            panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_identifier )
+            panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_key )
             
         else:
             
@@ -1915,9 +1915,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._can_ban: self._modify_petitioner.Enable()
             
-            with wx.BusyCursor(): media_results = HC.app.Read( 'media_results', self._file_service_identifier, self._current_petition.GetHashes() )
+            with wx.BusyCursor(): media_results = HC.app.Read( 'media_results', self._file_service_key, self._current_petition.GetHashes() )
             
-            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, media_results )
+            panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_key, media_results )
             
             panel.Collect( self._page_key, self._collect_by.GetChoice() )
             
@@ -1941,7 +1941,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._service.Request( HC.POST, 'update', { 'update' : update } )
         
-        HC.app.Write( 'content_updates', { self._petition_service_identifier : update.GetContentUpdates( for_client = True ) } )
+        HC.app.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
         
         self._current_petition = None
         
@@ -1985,7 +1985,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventModifyPetitioner( self, event ):
         
-        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_identifier, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg: dlg.ShowModal()
         
     
     def EventRefreshNumPetitions( self, event ):
@@ -2012,9 +2012,9 @@ class ManagementPanelPetitions( ManagementPanel ):
     
 class ManagementPanelQuery( ManagementPanel ):
     
-    def __init__( self, parent, page, page_key, file_service_identifier, show_search = True, initial_predicates = [], starting_from_session = False ):
+    def __init__( self, parent, page, page_key, file_service_key, show_search = True, initial_predicates = [], starting_from_session = False ):
         
-        ManagementPanel.__init__( self, parent, page, page_key, file_service_identifier, starting_from_session = starting_from_session )
+        ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
         
         self._query_key = HC.JobKey()
         self._synchronised = True
@@ -2029,7 +2029,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_identifier, HC.COMBINED_TAG_SERVICE_IDENTIFIER, self._page.GetMedia )
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_key, HC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
             
             self._search_panel.AddF( self._current_predicates_box, FLAGS_EXPAND_PERPENDICULAR )
             self._search_panel.AddF( self._searchbox, FLAGS_EXPAND_PERPENDICULAR )
@@ -2077,13 +2077,13 @@ class ManagementPanelQuery( ManagementPanel ):
                     include_current = self._include_current_tags
                     include_pending = self._include_pending_tags
                     
-                    search_context = CC.FileSearchContext( self._file_service_identifier, self._tag_service_identifier, include_current, include_pending, current_predicates )
+                    search_context = CC.FileSearchContext( self._file_service_key, self._tag_service_key, include_current, include_pending, current_predicates )
                     
                     HC.app.StartFileQuery( self._query_key, search_context )
                     
-                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, self._file_service_identifier )
+                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, self._file_service_key )
                     
-                else: panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_identifier )
+                else: panel = ClientGUIMedia.MediaPanelNoQuery( self._page, self._page_key, self._file_service_key )
                 
                 HC.pubsub.pub( 'swap_media_panel', self._page_key, panel )
                 
@@ -2127,21 +2127,21 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ChangeFileRepositoryPubsub( self, page_key, service_identifier ):
+    def ChangeFileRepositoryPubsub( self, page_key, service_key ):
         
         if page_key == self._page_key:
             
-            self._file_service_identifier = service_identifier
+            self._file_service_key = service_key
             
             self._DoQuery()
             
         
     
-    def ChangeTagRepositoryPubsub( self, page_key, service_identifier ):
+    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
         
         if page_key == self._page_key:
             
-            self._tag_service_identifier = service_identifier
+            self._tag_service_key = service_key
             
             self._DoQuery()
             
@@ -2225,7 +2225,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 current_predicates = self._current_predicates_box.GetPredicates()
                 
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_identifier, media_results )
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, self._file_service_key, media_results )
                 
                 panel.Collect( self._page_key, self._collect_by.GetChoice() )
                 

@@ -23,9 +23,9 @@ import wx
 
 class FileDB( object ):
     
-    def _AddFile( self, c, service_identifier, account, file_dict ):
+    def _AddFile( self, c, service_key, account, file_dict ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         account_id = account.GetAccountId()
         
@@ -55,7 +55,7 @@ class FileDB( object ):
             if 'num_words' in file_dict: num_words = file_dict[ 'num_words' ]
             else: num_words = None
             
-            options = self._GetOptions( c, service_identifier )
+            options = self._GetOptions( c, service_key )
             
             max_storage = options[ 'max_storage' ]
             
@@ -302,9 +302,9 @@ class FileDB( object ):
     
     def _GetHashIdsToHashes( self, c, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
     
-    def _GetIPTimestamp( self, c, service_identifier, hash ):
+    def _GetIPTimestamp( self, c, service_key, hash ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         hash_id = self._GetHashId( c, hash )
         
@@ -894,27 +894,27 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _AccountTypeExists( self, c, service_id, title ): return c.execute( 'SELECT 1 FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
-    def _AddNews( self, c, service_identifier, news ):
+    def _AddNews( self, c, service_key, news ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         now = HC.GetNow()
         
         c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, now ) )
         
     
-    def _AddMessagingSession( self, c, service_identifier, session_key, account, identifier, name, expiry ):
+    def _AddMessagingSession( self, c, service_key, session_key, account, identifier, name, expiry ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         account_id = account.GetAccountId()
         
         c.execute( 'INSERT INTO sessions ( service_id, session_key, account_id, identifier, name, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), account_id, sqlite3.Binary( identifier ), name, expiry ) )
         
     
-    def _AddSession( self, c, session_key, service_identifier, account, expiry ):
+    def _AddSession( self, c, session_key, service_key, account, expiry ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         account_id = account.GetAccountId()
         
@@ -949,7 +949,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             if len( hash_ids ) > 0: self._DeleteLocalFiles( c, admin_account_id, hash_ids, reason_id )
             
-            mappings_dict = HC.BuildKeyToListDict( c.execute( 'SELECT tag_id, hash_id FROM mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_keys_ids + ';', ( service_id, ) ) )
+            mappings_dict = HC.BuildKeyToListDict( c.execute( 'SELECT tag_id, hash_id FROM mappings WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ';', ( service_id, ) ) )
             
             if len( mappings_dict ) > 0:
                 
@@ -985,19 +985,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _CheckMonthlyData( self, c ):
         
-        service_identifiers = self._GetServiceIdentifiers( c )
+        service_info = self._GetServicesInfo( c )
         
         running_total = 0
         
         self._services_over_monthly_data = set()
         
-        for service_identifier in service_identifiers:
+        for ( service_key, service_type, options ) in service_info:
             
-            service_id = self._GetServiceId( c, service_identifier )
-            
-            options = self._GetOptions( c, service_identifier )
-            
-            service_type = service_identifier.GetType()
+            service_id = self._GetServiceId( c, service_key )
             
             if service_type != HC.SERVER_ADMIN:
                 
@@ -1011,14 +1007,14 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                     
                     max_monthly_data = options[ 'max_monthly_data' ]
                     
-                    if max_monthly_data is not None and total_used_bytes > max_monthly_data: self._services_over_monthly_data.add( service_identifier )
+                    if max_monthly_data is not None and total_used_bytes > max_monthly_data: self._services_over_monthly_data.add( service_key )
                     
                 
             
         
         # have to do this after
         
-        server_admin_options = self._GetOptions( c, HC.SERVER_ADMIN_IDENTIFIER )
+        server_admin_options = self._GetOptions( c, HC.SERVER_ADMIN_KEY )
         
         self._over_monthly_data = False
         
@@ -1030,16 +1026,16 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _CleanUpdate( self, c, service_identifier, begin, end ):
+    def _CleanUpdate( self, c, service_key, begin, end ):
         
-        service_type = service_identifier.GetType()
+        service_id = self._GetServiceId( c, service_key )
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY: clean_update = self._GenerateFileUpdate( c, service_id, begin, end )
         elif service_type == HC.TAG_REPOSITORY: clean_update = self._GenerateTagUpdate( c, service_id, begin, end )
         
-        path = SC.GetExpectedUpdatePath( service_identifier, begin )
+        path = SC.GetExpectedUpdatePath( service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
@@ -1053,16 +1049,16 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.execute( 'DELETE FROM bans WHERE expires < ?;', ( now, ) )
         
     
-    def _CreateUpdate( self, c, service_identifier, begin, end ):
+    def _CreateUpdate( self, c, service_key, begin, end ):
         
-        service_type = service_identifier.GetType()
+        service_id = self._GetServiceId( c, service_key )
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY: update = self._GenerateFileUpdate( c, service_id, begin, end )
         elif service_type == HC.TAG_REPOSITORY: update = self._GenerateTagUpdate( c, service_id, begin, end )
         
-        path = SC.GetExpectedUpdatePath( service_identifier, begin )
+        path = SC.GetExpectedUpdatePath( service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
@@ -1101,11 +1097,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _FlushRequestsMade( self, c, all_services_requests ):
         
-        all_services_request_dict = HC.BuildKeyToListDict( [ ( service_identifier, ( account, num_bytes ) ) for ( service_identifier, account, num_bytes ) in all_services_requests ] )
+        all_services_request_dict = HC.BuildKeyToListDict( [ ( service_key, ( account, num_bytes ) ) for ( service_key, account, num_bytes ) in all_services_requests ] )
         
-        for ( service_identifier, requests ) in all_services_request_dict.items():
+        for ( service_key, requests ) in all_services_request_dict.items():
             
-            service_id = self._GetServiceId( c, service_identifier )
+            service_id = self._GetServiceId( c, service_key )
             
             requests_dict = HC.BuildKeyToListDict( requests )
             
@@ -1113,9 +1109,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _GenerateRegistrationKeys( self, c, service_identifier, num, title, lifetime = None ):
+    def _GenerateRegistrationKeys( self, c, service_key, num, title, lifetime = None ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         account_type_id = self._GetAccountTypeId( c, service_id, title )
         
@@ -1139,9 +1135,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return access_key
         
     
-    def _GetAccount( self, c, service_identifier, account_identifier ):
+    def _GetAccount( self, c, service_key, account_identifier ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         if account_identifier.HasAccessKey():
             
@@ -1279,15 +1275,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_ids
         
     
-    def _GetAccountInfo( self, c, service_identifier, account_identifier ):
+    def _GetAccountInfo( self, c, service_key, account_identifier ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
-        account = self._GetAccount( c, service_identifier, account_identifier )
+        account = self._GetAccount( c, service_key, account_identifier )
         
         account_id = account.GetAccountId()
         
-        service_type = service_identifier.GetType()
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY: account_info = self._GetAccountFileInfo( c, service_id, account_id )
         elif service_type == HC.TAG_REPOSITORY: account_info = self._GetAccountMappingInfo( c, service_id, account_id )
@@ -1333,9 +1329,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_type_id
         
     
-    def _GetAccountTypes( self, c, service_identifier ):
+    def _GetAccountTypes( self, c, service_key ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         return [ account_type for ( account_type, ) in c.execute( 'SELECT account_type FROM account_type_map, account_types USING ( account_type_id ) WHERE service_id = ?;', ( service_id, ) ) ]
         
@@ -1344,16 +1340,16 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_ids_to_tuples = HC.BuildKeyToListDict( [ ( service_id, ( begin, end ) ) for ( service_id, begin, end ) in c.execute( 'SELECT service_id, begin, end FROM update_cache WHERE dirty = ?;', ( True, ) ) ] )
         
-        service_identifiers_to_tuples = {}
+        service_keys_to_tuples = {}
         
         for ( service_id, tuples ) in service_ids_to_tuples.items():
             
-            service_identifier = self._GetServiceIdentifier( c, service_id )
+            service_key = self._GetServiceKey( c, service_id )
             
-            service_identifiers_to_tuples[ service_identifier ] = tuples
+            service_keys_to_tuples[ service_key ] = tuples
             
         
-        return service_identifiers_to_tuples
+        return service_keys_to_tuples
         
     
     def _GetMessagingSessions( self, c ):
@@ -1368,7 +1364,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         for ( service_id, tuples ) in existing_session_ids.items():
             
-            service_identifier = self._GetServiceIdentifier( c, service_id )
+            service_key = self._GetServiceKey( c, service_id )
             
             processed_tuples = []
             
@@ -1376,22 +1372,22 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 account_identifier = HC.AccountIdentifier( account_id = account_id )
                 
-                account = self._GetAccount( c, service_identifier, account_identifier )
+                account = self._GetAccount( c, service_key, account_identifier )
                 
                 processed_tuples.append( ( account, identifier, name, expiry ) )
                 
             
-            existing_sessions[ service_identifier ] = processed_tuples
+            existing_sessions[ service_key ] = processed_tuples
             
         
         return existing_sessions
         
     
-    def _GetNumPetitions( self, c, service_identifier ):
+    def _GetNumPetitions( self, c, service_key ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
-        service_type = service_identifier.GetType()
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY:
             
@@ -1411,20 +1407,20 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return num_petitions
         
     
-    def _GetOptions( self, c, service_identifier ):
+    def _GetOptions( self, c, service_key ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         ( options, ) = c.execute( 'SELECT options FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
         return options
         
     
-    def _GetPetition( self, c, service_identifier ):
+    def _GetPetition( self, c, service_key ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
-        service_type = service_identifier.GetType()
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY: petition = self._GetFilePetition( c, service_id )
         elif service_type == HC.TAG_REPOSITORY: petition = self._GetTagPetition( c, service_id )
@@ -1463,9 +1459,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _GetServiceId( self, c, service_identifier ):
-        
-        service_key = service_identifier.GetServiceKey()
+    def _GetServiceId( self, c, service_key ):
         
         result = c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
         
@@ -1478,14 +1472,14 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetServiceIds( self, c, limited_types = HC.ALL_SERVICES ): return [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services WHERE type IN ' + HC.SplayListForDB( limited_types ) + ';' ) ]
     
-    def _GetServiceIdentifier( self, c, service_id ):
+    def _GetServiceKey( self, c, service_id ):
         
-        ( service_key, service_type ) = c.execute( 'SELECT service_key, type FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        ( service_key, ) = c.execute( 'SELECT service_key FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
-        return HC.ServerServiceIdentifier( service_key, service_type )
+        return service_key
         
     
-    def _GetServiceIdentifiers( self, c, limited_types = HC.ALL_SERVICES ): return [ HC.ServerServiceIdentifier( service_key, service_type ) for ( service_key, service_type ) in c.execute( 'SELECT service_key, type FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ) ]
+    def _GetServiceKeys( self, c, limited_types = HC.ALL_SERVICES ): return [ service_key for ( service_key, ) in c.execute( 'SELECT service_key FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ) ]
     
     def _GetServiceType( self, c, service_id ):
         
@@ -1498,14 +1492,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return service_type
         
     
-    def _GetServicesInfo( self, c, limited_types = HC.ALL_SERVICES ):
-        
-        service_identifiers = self._GetServiceIdentifiers( c, limited_types )
-        
-        services_info = [ ( service_identifier, self._GetOptions( c, service_identifier ) ) for service_identifier in service_identifiers ]
-        
-        return services_info
-        
+    def _GetServicesInfo( self, c, limited_types = HC.ALL_SERVICES ): return c.execute( 'SELECT service_key, type, options FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ).fetchall()
     
     def _GetSessions( self, c ):
         
@@ -1517,27 +1504,27 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         results = c.execute( 'SELECT session_key, service_id, account_id, expiry FROM sessions;' ).fetchall()
         
-        service_ids_to_service_identifiers = {}
+        service_ids_to_service_keys = {}
         
         for ( session_key, service_id, account_id, expiry ) in results:
             
-            if service_id not in service_ids_to_service_identifiers: service_ids_to_service_identifiers[ service_id ] = self._GetServiceIdentifier( c, service_id )
+            if service_id not in service_ids_to_service_keys: service_ids_to_service_keys[ service_id ] = self._GetServiceKey( c, service_id )
             
-            service_identifier = service_ids_to_service_identifiers[ service_id ]
+            service_key = service_ids_to_service_keys[ service_id ]
             
             account_identifier = HC.AccountIdentifier( account_id = account_id )
             
-            account = self._GetAccount( c, service_identifier, account_identifier )
+            account = self._GetAccount( c, service_key, account_identifier )
             
-            sessions.append( ( session_key, service_identifier, account, expiry ) )
+            sessions.append( ( session_key, service_key, account, expiry ) )
             
         
         return sessions
         
     
-    def _GetStats( self, c, service_identifier ):
+    def _GetStats( self, c, service_key ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         stats = {}
         
@@ -1558,9 +1545,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             ( end, ) = c.execute( 'SELECT end FROM update_cache WHERE service_id = ? ORDER BY end DESC LIMIT 1;', ( service_id, ) ).fetchone()
             
-            service_identifier = self._GetServiceIdentifier( c, service_id )
+            service_key = self._GetServiceKey( c, service_id )
             
-            results[ service_identifier ] = end
+            results[ service_key ] = end
             
         
         return results
@@ -1570,28 +1557,26 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         if c.execute( 'SELECT 1 FROM account_map;' ).fetchone() is not None: raise HydrusExceptions.ForbiddenException( 'This server is already initialised!' )
         
-        service_id = self._GetServiceId( c, HC.SERVER_ADMIN_IDENTIFIER )
-        
         # this is a little odd, but better to keep it all the same workflow
         
         num = 1
         
         title = 'server admin'
         
-        ( registration_key, ) = self._GenerateRegistrationKeys( c, HC.SERVER_ADMIN_IDENTIFIER, num, title )
+        ( registration_key, ) = self._GenerateRegistrationKeys( c, HC.SERVER_ADMIN_KEY, num, title )
         
         access_key = self._GetAccessKey( c, registration_key )
         
         return access_key
         
     
-    def _ModifyAccount( self, c, service_identifier, admin_account, action, subject_identifiers, kwargs ):
+    def _ModifyAccount( self, c, service_key, admin_account, action, subject_identifiers, kwargs ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         admin_account_id = admin_account.GetAccountId()
         
-        subjects = [ self._GetAccount( c, service_identifier, subject_identifier ) for subject_identifier in subject_identifiers ]
+        subjects = [ self._GetAccount( c, service_key, subject_identifier ) for subject_identifier in subject_identifiers ]
         
         subject_account_ids = [ subject.GetAccountId() for subject in subjects ]
         
@@ -1633,9 +1618,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _ModifyAccountTypes( self, c, service_identifier, edit_log ):
+    def _ModifyAccountTypes( self, c, service_key, edit_log ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         for ( action, details ) in edit_log:
             
@@ -1687,7 +1672,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         account_id = account.GetAccountId()
         
-        service_identifiers_to_access_keys = []
+        service_keys_to_access_keys = {}
         
         modified_services = {}
         
@@ -1697,10 +1682,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             if action == HC.ADD:
                 
-                ( service_identifier, options ) = data
-                
-                service_key = service_identifier.GetServiceKey()
-                service_type = service_identifier.GetType()
+                ( service_key, service_type, options ) = data
                 
                 c.execute( 'INSERT INTO services ( service_key, type, options ) VALUES ( ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, options ) )
                 
@@ -1714,56 +1696,57 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
                 
-                [ registration_key ] = self._GenerateRegistrationKeys( c, service_identifier, 1, 'service admin', None )
+                [ registration_key ] = self._GenerateRegistrationKeys( c, service_key, 1, 'service admin', None )
                 
                 access_key = self._GetAccessKey( c, registration_key )
                 
-                service_identifiers_to_access_keys.append( ( service_identifier, access_key ) )
+                service_keys_to_access_keys[ service_key ] = access_key
                 
                 if service_type in HC.REPOSITORIES:
                     
                     begin = 0
                     end = HC.GetNow()
                     
-                    self._CreateUpdate( c, service_identifier, begin, end )
+                    self._CreateUpdate( c, service_key, begin, end )
                     
                 
-                modified_services[ service_identifier ] = options
+                modified_services[ service_key ] = ( service_type, options )
                 
             elif action == HC.DELETE:
                 
-                service_identifier = data
+                service_key = data
                 
-                service_id = self._GetServiceId( c, service_identifier )
+                service_id = self._GetServiceId( c, service_key )
                 
                 c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
-                modified_services[ service_identifier ] = {}
+                # this needs to be a 'shutdown service' call or whatever
+                #modified_services[ service_key ] = {}
                 
             elif action == HC.EDIT:
                 
-                ( service_identifier, options ) = data
+                ( service_key, service_type, options ) = data
                 
-                service_id = self._GetServiceId( c, service_identifier )
+                service_id = self._GetServiceId( c, service_key )
                 
                 c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
                 
-                modified_services[ service_identifier ] = options
+                modified_services[ service_key ] = ( service_type, options )
                 
             
         
-        for ( service_identifier, options ) in modified_services.items(): self.pub_after_commit( 'restart_service', service_identifier, options )
+        for ( service_key, ( service_type, options ) ) in modified_services.items(): self.pub_after_commit( 'restart_service', service_key, options )
         
-        return service_identifiers_to_access_keys
+        return service_keys_to_access_keys
         
     
-    def _ProcessUpdate( self, c, service_identifier, account, update ):
+    def _ProcessUpdate( self, c, service_key, account, update ):
         
-        service_id = self._GetServiceId( c, service_identifier )
+        service_id = self._GetServiceId( c, service_key )
         
         account_id = account.GetAccountId()
         
-        service_type = service_identifier.GetType()
+        service_type = self._GetServiceType( c, service_id )
         
         if service_type == HC.FILE_REPOSITORY:
             
@@ -1961,13 +1944,15 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _SetExpiry( self, c, service_id, account_ids, expiry ): c.execute( 'UPDATE account_map SET expires = ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expiry, service_id ) )
     
-    def _SetOptions( self, c, service_identifier, options ):
+    def _SetOptions( self, c, service_key, options ):
         
-        service_id = self._GetServiceIdentifier( c, service_identifier )
+        service_id = self._GetServiceKey( c, service_key )
         
         c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
         
-        self.pub_after_commit( 'restart_service', service_identifier )
+        service_type = self._GetServiceType( c, service_id )
+        
+        self.pub_after_commit( 'restart_service', service_key, service_type, options )
         self.pub_after_commit( 'notify_new_options' )
         
     
@@ -2014,7 +1999,7 @@ class DB( ServiceDB ):
             ( version, ) = c.execute( 'SELECT version FROM version;' ).fetchone()
             
         
-        service_identifiers = self._GetServiceIdentifiers( c )
+        service_keys = self._GetServiceKeys( c )
         
         threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
         
@@ -2158,11 +2143,9 @@ class DB( ServiceDB ):
             
             # set up server admin
             
-            service_identifier = HC.SERVER_ADMIN_IDENTIFIER
+            service_key = HC.SERVER_ADMIN_KEY
             
-            service_key = service_identifier.GetServiceKey()
-            
-            service_type = service_identifier.GetType()
+            service_type = HC.SERVER_ADMIN
             
             options = HC.DEFAULT_OPTIONS[ HC.SERVER_ADMIN ]
             
@@ -2687,7 +2670,7 @@ class DB( ServiceDB ):
                 elif action == 'num_petitions': result = self._GetNumPetitions( c, *args, **kwargs )
                 elif action == 'petition': result = self._GetPetition( c, *args, **kwargs )
                 elif action == 'registration_keys': result = self._GenerateRegistrationKeys( c, *args, **kwargs )
-                elif action == 'service_identifiers': result = self._GetServiceIdentifiers( c, *args, **kwargs )
+                elif action == 'service_keys': result = self._GetServiceKeys( c, *args, **kwargs )
                 elif action == 'services': result = self._GetServicesInfo( c, *args, **kwargs )
                 elif action == 'sessions': result = self._GetSessions( c, *args, **kwargs )
                 elif action == 'stats': result = self._GetStats( c, *args, **kwargs )
@@ -2847,14 +2830,14 @@ def DAEMONGenerateUpdates():
     
     dirty_updates = HC.app.ReadDaemon( 'dirty_updates' )
     
-    for ( service_identifier, tuples ) in dirty_updates.items():
+    for ( service_key, tuples ) in dirty_updates.items():
         
-        for ( begin, end ) in tuples: HC.app.WriteDaemon( 'clean_update', service_identifier, begin, end )
+        for ( begin, end ) in tuples: HC.app.WriteDaemon( 'clean_update', service_key, begin, end )
         
     
     update_ends = HC.app.ReadDaemon( 'update_ends' )
     
-    for ( service_identifier, biggest_end ) in update_ends.items():
+    for ( service_key, biggest_end ) in update_ends.items():
         
         now = HC.GetNow()
         
@@ -2863,7 +2846,7 @@ def DAEMONGenerateUpdates():
         
         while next_end < now:
             
-            HC.app.WriteDaemon( 'create_update', service_identifier, next_begin, next_end )
+            HC.app.WriteDaemon( 'create_update', service_key, next_begin, next_end )
             
             biggest_end = next_end
             
@@ -2882,11 +2865,9 @@ def DAEMONUPnP():
     
     our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
     
-    service_identifiers = HC.app.ReadDaemon( 'service_identifiers' )
-    
     all_infos = HC.app.ReadDaemon( 'services' )
     
-    for ( service_identifier, options ) in all_infos:
+    for ( service_key, service_type, options ) in all_infos:
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
@@ -2899,7 +2880,7 @@ def DAEMONUPnP():
             
         
     
-    for ( service_identifier, options ) in all_infos:
+    for ( service_key, service_type, options ) in all_infos:
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
@@ -2910,7 +2891,7 @@ def DAEMONUPnP():
             
             protocol = 'TCP'
             
-            description = HC.service_string_lookup[ service_identifier.GetType() ] + ' at ' + local_ip + ':' + str( internal_port )
+            description = HC.service_string_lookup[ service_type ] + ' at ' + local_ip + ':' + str( internal_port )
             
             duration = 3600
             

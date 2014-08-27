@@ -201,7 +201,7 @@ class PageMessages( PageBase, wx.SplitterWindow ):
         self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
         
         self._InitManagementPanel()
-        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, HC.LOCAL_FILE_SERVICE_KEY )
         self._InitMessagesPanel()
         
         self.SplitVertically( self._search_preview_split, self._messages_panel, HC.options[ 'hpos' ] )
@@ -235,17 +235,14 @@ class PageMessages( PageBase, wx.SplitterWindow ):
     
 class PageWithMedia( PageBase, wx.SplitterWindow ):
     
-    def __init__( self, parent, file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_hashes = [], initial_media_results = [], starting_from_session = False ):
+    def __init__( self, parent, file_service_key = HC.LOCAL_FILE_SERVICE_KEY, initial_hashes = [], initial_media_results = [], starting_from_session = False ):
         
         wx.SplitterWindow.__init__( self, parent )
         PageBase.__init__( self, starting_from_session = starting_from_session )
         
-        if len( initial_hashes ) > 0:
-            
-            initial_media_results = HC.app.Read( 'media_results', file_service_identifier, initial_hashes )
-            
+        if len( initial_hashes ) > 0: initial_media_results = HC.app.Read( 'media_results', file_service_key, initial_hashes )
         
-        self._file_service_identifier = file_service_identifier
+        self._file_service_key = file_service_key
         self._initial_media_results = initial_media_results
         
         self.SetMinimumPaneSize( 120 )
@@ -261,7 +258,7 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
         self._search_preview_split.Bind( wx.EVT_SPLITTER_DCLICK, self.EventPreviewUnsplit )
         
         self._InitManagementPanel()
-        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, self._file_service_identifier )
+        self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key, self._file_service_key )
         self._InitMediaPanel()
         
         self.SplitVertically( self._search_preview_split, self._media_panel, HC.options[ 'hpos' ] )
@@ -346,7 +343,7 @@ class PageImport( PageWithMedia ):
         return factory
         
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_media_results )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_key, self._initial_media_results )
     
     def _InitControllers( self ):
         
@@ -684,46 +681,48 @@ class PageImportURL( PageImport ):
     
 class PagePetitions( PageWithMedia ):
     
-    def __init__( self, parent, petition_service_identifier, starting_from_session = False ):
+    def __init__( self, parent, petition_service_key, starting_from_session = False ):
         
-        self._petition_service_identifier = petition_service_identifier
+        self._petition_service_key = petition_service_key
         
-        petition_service_type = petition_service_identifier.GetType()
+        petition_service = HC.app.GetManager( 'services' ).GetService( petition_service_key )
         
-        if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): self._file_service_identifier = self._petition_service_identifier
-        else: self._file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
+        petition_service_type = petition_service.GetType()
         
-        PageWithMedia.__init__( self, parent, self._file_service_identifier, starting_from_session = starting_from_session )
+        if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): self._file_service_key = self._petition_service_key
+        else: self._file_service_key = HC.COMBINED_FILE_SERVICE_KEY
+        
+        PageWithMedia.__init__( self, parent, self._file_service_key, starting_from_session = starting_from_session )
         
     
-    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelPetitions( self._search_preview_split, self, self._page_key, self._file_service_identifier, self._petition_service_identifier, starting_from_session = self._starting_from_session )
+    def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelPetitions( self._search_preview_split, self, self._page_key, self._file_service_key, self._petition_service_key, starting_from_session = self._starting_from_session )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_key )
     
 class PageQuery( PageWithMedia ):
     
-    def __init__( self, parent, file_service_identifier, initial_hashes = [], initial_media_results = [], initial_predicates = [], starting_from_session = False ):
+    def __init__( self, parent, file_service_key, initial_hashes = [], initial_media_results = [], initial_predicates = [], starting_from_session = False ):
         
         self._initial_predicates = initial_predicates
         
-        PageWithMedia.__init__( self, parent, file_service_identifier, initial_hashes = initial_hashes, initial_media_results = initial_media_results, starting_from_session = starting_from_session )
+        PageWithMedia.__init__( self, parent, file_service_key, initial_hashes = initial_hashes, initial_media_results = initial_media_results, starting_from_session = starting_from_session )
         
     
     def _InitManagementPanel( self ):
         
         show_search = len( self._initial_predicates ) > 0 or len( self._initial_media_results ) == 0
         
-        self._management_panel = ClientGUIManagement.ManagementPanelQuery( self._search_preview_split, self, self._page_key, self._file_service_identifier, show_search = show_search, initial_predicates = self._initial_predicates, starting_from_session = self._starting_from_session )
+        self._management_panel = ClientGUIManagement.ManagementPanelQuery( self._search_preview_split, self, self._page_key, self._file_service_key, show_search = show_search, initial_predicates = self._initial_predicates, starting_from_session = self._starting_from_session )
         
     
     def _InitMediaPanel( self ):
         
-        if len( self._initial_media_results ) == 0: self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_identifier )
+        if len( self._initial_media_results ) == 0: self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_key )
         else:
             
             refreshable = len( self._initial_predicates ) > 0 or len( self._initial_media_results ) == 0
             
-            self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_identifier, self._initial_media_results, refreshable = refreshable )
+            self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, self._file_service_key, self._initial_media_results, refreshable = refreshable )
             
         
     
@@ -732,7 +731,7 @@ class PageQuery( PageWithMedia ):
         hashes = [ media.GetHash() for media in self._media_panel.GetFlatMedia() ]
         predicates = self._management_panel.GetPredicates()
         
-        args = ( self._file_service_identifier, )
+        args = ( self._file_service_key, )
         kwargs = { 'initial_hashes' : hashes, 'initial_predicates' : predicates }
         
         return ( args, kwargs )
@@ -744,7 +743,7 @@ class PageThreadDumper( PageWithMedia ):
         
         self._imageboard = imageboard
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
         
         hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
         
@@ -752,12 +751,12 @@ class PageThreadDumper( PageWithMedia ):
         
         self._media_results = filter( self._imageboard.IsOkToPost, self._media_results )
         
-        PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, starting_from_session = starting_from_session )
+        PageWithMedia.__init__( self, parent, HC.LOCAL_FILE_SERVICE_KEY, starting_from_session = starting_from_session )
         
     
     def _InitManagementPanel( self ): self._management_panel = ClientGUIManagement.ManagementPanelDumper( self._search_preview_split, self, self._page_key, self._imageboard, self._media_results, starting_from_session = self._starting_from_session )
     
-    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._media_results )
+    def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, HC.LOCAL_FILE_SERVICE_KEY, self._media_results )
     
 class_to_text = {}
 text_to_class = {}

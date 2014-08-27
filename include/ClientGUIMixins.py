@@ -24,9 +24,9 @@ class Media( object ):
     
 class MediaList( object ):
     
-    def __init__( self, file_service_identifier, media_results ):
+    def __init__( self, file_service_key, media_results ):
         
-        self._file_service_identifier = file_service_identifier
+        self._file_service_key = file_service_key
         
         self._sort_by = CC.SORT_BY_SMALLEST
         self._collect_by = None
@@ -45,8 +45,10 @@ class MediaList( object ):
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
-        local_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
-        remote_ratings_to_collect_by = [ service_identifier for service_identifier in ratings_to_collect_by if service_identifier.GetType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
+        services_manager = HC.app.GetManager( 'services' )
+        
+        local_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+        remote_ratings_to_collect_by = [ service_key for service_key in ratings_to_collect_by if services_manager.GetService( service_key ).GetType() in ( HC.RATING_LIKE_REPOSITORY, HC.RATING_NUMERICAL_REPOSITORY ) ]
         
         keys_to_medias = collections.defaultdict( list )
         
@@ -75,7 +77,7 @@ class MediaList( object ):
         return keys_to_medias
         
     
-    def _GenerateMediaCollection( self, media_results ): return MediaCollection( self._file_service_identifier, media_results )
+    def _GenerateMediaCollection( self, media_results ): return MediaCollection( self._file_service_key, media_results )
     
     def _GenerateMediaSingleton( self, media_result ): return MediaSingleton( media_result )
     
@@ -165,9 +167,9 @@ class MediaList( object ):
         self._sorted_media = HC.SortedList( list( self._singleton_media ) + list( self._collected_media ) )
         
     
-    def DeletePending( self, service_identifier ):
+    def DeletePending( self, service_key ):
         
-        for media in self._collected_media: media.DeletePending( service_identifier )
+        for media in self._collected_media: media.DeletePending( service_key )
         
     
     def GenerateMediaResults( self, discriminant = None, selected_media = None, unrated = None ):
@@ -182,7 +184,7 @@ class MediaList( object ):
             else:
                 
                 if discriminant is not None:
-                    if ( discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox() ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not media.GetFileServiceIdentifiersCDPP().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and media.GetFileServiceIdentifiersCDPP().HasLocal() ): continue
+                    if ( discriminant == CC.DISCRIMINANT_INBOX and not media.HasInbox() ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not media.GetLocationsManager().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and media.GetLocationsManager().HasLocal() ): continue
                 
                 if unrated is not None:
                     
@@ -234,17 +236,17 @@ class MediaList( object ):
     
     def HasNoMedia( self ): return len( self._sorted_media ) == 0
     
-    def ProcessContentUpdate( self, service_identifier, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
         hashes = content_update.GetHashes()
         
-        for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( service_identifier, content_update )
+        for media in self._GetMedia( hashes, 'collections' ): media.ProcessContentUpdate( service_key, content_update )
         
         if data_type == HC.CONTENT_DATA_TYPE_FILES:
             
-            if action == HC.CONTENT_UPDATE_DELETE and service_identifier == self._file_service_identifier:
+            if action == HC.CONTENT_UPDATE_DELETE and service_key == self._file_service_key:
                 
                 affected_singleton_media = self._GetMedia( hashes, 'singletons' )
                 affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
@@ -254,34 +256,34 @@ class MediaList( object ):
             
         
     
-    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
-        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
-            for content_update in content_updates: self.ProcessContentUpdate( service_identifier, content_update )
+            for content_update in content_updates: self.ProcessContentUpdate( service_key, content_update )
             
         
     
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
             for service_update in service_updates:
                 
                 ( action, row ) = service_update.ToTuple()
                 
-                if action == HC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_identifier )
-                elif action == HC.SERVICE_UPDATE_RESET: self.ResetService( service_identifier )
+                if action == HC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_key )
+                elif action == HC.SERVICE_UPDATE_RESET: self.ResetService( service_key )
                 
             
         
     
-    def ResetService( self, service_identifier ):
+    def ResetService( self, service_key ):
         
-        if service_identifier == self._file_service_identifier: self._RemoveMedia( self._singleton_media, self._collected_media )
+        if service_key == self._file_service_key: self._RemoveMedia( self._singleton_media, self._collected_media )
         else:
             
-            for media in self._collected_media: media.ResetService( service_identifier )
+            for media in self._collected_media: media.ResetService( service_key )
             
         
     
@@ -325,14 +327,16 @@ class MediaList( object ):
             
         elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
             
-            service_identifier = sort_by_data
+            service_key = sort_by_data
             
-            def ratings_sort_function( service_identifier, reverse, x ):
+            def ratings_sort_function( service_key, reverse, x ):
                 
                 ( x_local_ratings, x_remote_ratings ) = x.GetRatings()
                 
-                if service_identifier.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_identifier ) )
-                else: rating = deal_with_none( x_remote_ratings.GetScore( service_identifier ) )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                
+                if service.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): rating = deal_with_none( x_local_ratings.GetRating( service_key ) )
+                else: rating = deal_with_none( x_remote_ratings.GetScore( service_key ) )
                 
                 if reverse: rating *= -1
                 
@@ -341,7 +345,7 @@ class MediaList( object ):
             
             reverse = sort_by_type == 'rating_descend'
             
-            sort_function = lambda x: ratings_sort_function( service_identifier, reverse, x )
+            sort_function = lambda x: ratings_sort_function( service_key, reverse, x )
             
         
         self._sorted_media.sort( sort_function )
@@ -349,9 +353,9 @@ class MediaList( object ):
     
 class ListeningMediaList( MediaList ):
     
-    def __init__( self, file_service_identifier, media_results ):
+    def __init__( self, file_service_key, media_results ):
         
-        MediaList.__init__( self, file_service_identifier, media_results )
+        MediaList.__init__( self, file_service_key, media_results )
         
         self._file_query_result = CC.FileQueryResult( media_results )
         
@@ -452,10 +456,10 @@ class ListeningMediaList( MediaList ):
     
 class MediaCollection( MediaList, Media ):
     
-    def __init__( self, file_service_identifier, media_results ):
+    def __init__( self, file_service_key, media_results ):
         
         Media.__init__( self )
-        MediaList.__init__( self, file_service_identifier, media_results )
+        MediaList.__init__( self, file_service_key, media_results )
         
         self._hashes = set()
         
@@ -473,7 +477,7 @@ class MediaCollection( MediaList, Media ):
         self._num_frames = None
         self._num_words = None
         self._tags_manager = None
-        self._file_service_identifiers = None
+        self._locations_manager = None
         
         self._RecalcInternals()
         
@@ -502,27 +506,25 @@ class MediaCollection( MediaList, Media ):
         
         tags_managers = [ m.GetTagsManager() for m in self._sorted_media ]
         
-        t_s_p = HC.app.Read( 'tag_service_precedence' )
-        
-        self._tags_manager = HydrusTags.MergeTagsManagers( t_s_p, tags_managers )
+        self._tags_manager = HydrusTags.MergeTagsManagers( tags_managers )
         
         # horrible compromise
         if len( self._sorted_media ) > 0: self._ratings = self._sorted_media[0].GetRatings()
-        else: self._ratings = ( CC.LocalRatings( {} ), CC.CPRemoteRatingsServiceIdentifiers( {} ) )
+        else: self._ratings = ( CC.LocalRatingsManager( {} ), CC.CPRemoteRatingsServiceKeys( {} ) )
         
-        all_file_service_identifiers = [ media.GetFileServiceIdentifiersCDPP() for media in self._sorted_media ]
+        all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         
-        current = HC.IntelligentMassIntersect( [ file_service_identifiers.GetCurrent() for file_service_identifiers in all_file_service_identifiers ] )
-        deleted = HC.IntelligentMassIntersect( [ file_service_identifiers.GetDeleted() for file_service_identifiers in all_file_service_identifiers ] )
-        pending = HC.IntelligentMassIntersect( [ file_service_identifiers.GetPending() for file_service_identifiers in all_file_service_identifiers ] )
-        petitioned = HC.IntelligentMassIntersect( [ file_service_identifiers.GetPetitioned() for file_service_identifiers in all_file_service_identifiers ] )
+        current = HC.IntelligentMassIntersect( [ locations_manager.GetCurrent() for locations_manager in all_locations_managers ] )
+        deleted = HC.IntelligentMassIntersect( [ locations_manager.GetDeleted() for locations_manager in all_locations_managers ] )
+        pending = HC.IntelligentMassIntersect( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
+        petitioned = HC.IntelligentMassIntersect( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        self._file_service_identifiers = CC.CDPPFileServiceIdentifiers( current, deleted, pending, petitioned )
+        self._locations_manager = CC.LocationsManager( current, deleted, pending, petitioned )
         
     
-    def DeletePending( self, service_identifier ):
+    def DeletePending( self, service_key ):
         
-        MediaList.DeletePending( self, service_identifier )
+        MediaList.DeletePending( self, service_key )
         
         self._RecalcInternals()
         
@@ -549,15 +551,15 @@ class MediaCollection( MediaList, Media ):
     def GetHashes( self, discriminant = None, not_uploaded_to = None ):
         
         if discriminant is not None:
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not self._inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and not self._archive ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not self.GetFileServiceIdentifiersCDPP().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and self.GetFileServiceIdentifiersCDPP().HasLocal() ): return set()
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not self._inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and not self._archive ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not self._locations_manager().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and self._locations_manager().HasLocal() ): return set()
         
         if not_uploaded_to is not None:
-            if not_uploaded_to in self._file_service_identifiers.GetCurrentRemote(): return set()
+            if not_uploaded_to in self._locations_manager.GetCurrentRemote(): return set()
         
         return self._hashes
         
     
-    def GetFileServiceIdentifiersCDPP( self ): return self._file_service_identifiers
+    def GetLocationsManager( self ): return self._locations_manager
     
     def GetMime( self ): return HC.APPLICATION_HYDRUS_CLIENT_COLLECTION
     
@@ -617,16 +619,16 @@ class MediaCollection( MediaList, Media ):
     
     def IsSizeDefinite( self ): return self._size_definite
     
-    def ProcessContentUpdate( self, service_identifier, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update ):
         
-        MediaList.ProcessContentUpdate( self, service_identifier, content_update )
+        MediaList.ProcessContentUpdate( self, service_key, content_update )
         
         self._RecalcInternals()
         
     
-    def ResetService( self, service_identifier ):
+    def ResetService( self, service_key ):
         
-        MediaList.ResetService( self, service_identifier )
+        MediaList.ResetService( self, service_key )
         
         self._RecalcInternals()
         
@@ -654,22 +656,22 @@ class MediaSingleton( Media ):
             
             inbox = self._media_result.GetInbox()
             
-            file_service_identifiers = self._media_result.GetFileServiceIdentifiersCDPP()
+            locations_manager = self._media_result.GetLocationsManager()
             
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not file_service_identifiers.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and file_service_identifiers.HasLocal() ): return set()
+            if ( discriminant == CC.DISCRIMINANT_INBOX and not inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and inbox ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not locations_manager.HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and locations_manager.HasLocal() ): return set()
             
         
         if not_uploaded_to is not None:
             
-            file_service_identifiers = self._media_result.GetFileServiceIdentifiersCDPP()
+            locations_manager = self._media_result.GetLocationsManager()
             
-            if not_uploaded_to in file_service_identifiers.GetCurrentRemote(): return set()
+            if not_uploaded_to in locations_manager.GetCurrentRemote(): return set()
             
         
         return { self._media_result.GetHash() }
         
     
-    def GetFileServiceIdentifiersCDPP( self ): return self._media_result.GetFileServiceIdentifiersCDPP()
+    def GetLocationsManager( self ): return self._media_result.GetLocationsManager()
     
     def GetMediaResult( self ): return self._media_result
     
@@ -693,7 +695,7 @@ class MediaSingleton( Media ):
     
     def GetPrettyInfo( self ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers, local_ratings, remote_ratings ) = self._media_result.ToTuple()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._media_result.ToTuple()
         
         info_string = HC.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         

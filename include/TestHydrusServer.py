@@ -25,10 +25,15 @@ class TestServer( unittest.TestCase ):
         
         services = []
         
-        self._local_service_identifier = HC.ServerServiceIdentifier( 'local file', HC.LOCAL_FILE )
-        self._booru_service_identifier = HC.ServerServiceIdentifier( 'local booru', HC.LOCAL_BOORU )
-        self._file_service_identifier = HC.ServerServiceIdentifier( 'file service', HC.FILE_REPOSITORY )
-        self._tag_service_identifier = HC.ServerServiceIdentifier( 'tag service', HC.TAG_REPOSITORY )
+        self._file_service = CC.Service( os.urandom( 32 ), HC.FILE_REPOSITORY, 'file repo', {} )
+        self._tag_service = CC.Service( os.urandom( 32 ), HC.TAG_REPOSITORY, 'tag repo', {} )
+        self._admin_service = CC.Service( os.urandom( 32 ), HC.SERVER_ADMIN, 'server admin', {} )
+        
+        services_manager = HC.app.GetManager( 'services' )
+        
+        services_manager._keys_to_services[ self._file_service.GetKey() ] = self._file_service
+        services_manager._keys_to_services[ self._tag_service.GetKey() ] = self._tag_service
+        services_manager._keys_to_services[ self._admin_service.GetKey() ] = self._admin_service
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
@@ -45,11 +50,11 @@ class TestServer( unittest.TestCase ):
         
         def TWISTEDSetup():
             
-            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( HC.SERVER_ADMIN_IDENTIFIER, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( self._local_service_identifier, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( self._booru_service_identifier, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service_identifier, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service_identifier, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( self._admin_service.GetKey(), HC.SERVER_ADMIN, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service.GetKey(), HC.FILE_REPOSITORY, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service.GetKey(), HC.TAG_REPOSITORY, 'hello' ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -126,15 +131,11 @@ class TestServer( unittest.TestCase ):
         except: pass
         
     
-    def _test_file_repo( self, host, port ):
+    def _test_file_repo( self, service, host, port ):
         
-        info = {}
+        info = service.GetInfo()
         
-        info[ 'host' ] = host
-        info[ 'port' ] = port
         info[ 'access_key' ] = self._access_key
-        
-        service = CC.Service( os.urandom( 32 ), HC.FILE_REPOSITORY, 'service', info )
         
         # file
         
@@ -159,7 +160,7 @@ class TestServer( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = written
         
-        ( written_service_identifier, written_account, written_file_dict ) = args
+        ( written_service_key, written_account, written_file_dict ) = args
         
         self.assertEqual( written_file_dict[ 'hash' ], '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3' )
         self.assertEqual( written_file_dict[ 'ip' ], '127.0.0.1' )
@@ -231,7 +232,7 @@ class TestServer( unittest.TestCase ):
         info[ 'timeout' ] = 0
         info[ 'hashes' ] = hashes
         
-        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings
+        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
         
         media_results = [ CC.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 0, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
         
@@ -308,7 +309,7 @@ class TestServer( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = written
         
-        ( written_service_identifier, written_news ) = args
+        ( written_service_key, written_news ) = args
         
         self.assertEqual( news, written_news )
         
@@ -337,8 +338,8 @@ class TestServer( unittest.TestCase ):
         update = 'update'
         begin = 100
         
-        if service_type == HC.FILE_REPOSITORY: path = SC.GetExpectedUpdatePath( self._file_service_identifier, begin )
-        elif service_type == HC.TAG_REPOSITORY: path = SC.GetExpectedUpdatePath( self._tag_service_identifier, begin )
+        if service_type == HC.FILE_REPOSITORY: path = SC.GetExpectedUpdatePath( self._file_service_key, begin )
+        elif service_type == HC.TAG_REPOSITORY: path = SC.GetExpectedUpdatePath( self._tag_service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( update )
         
@@ -355,21 +356,12 @@ class TestServer( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = written
         
-        ( written_service_identifier, written_account, written_update ) = args
+        ( written_service_key, written_account, written_update ) = args
         
         self.assertEqual( update, written_update )
         
     
-    def _test_restricted( self, host, port, service_type ):
-        
-        service_key = os.urandom( 32 )
-        
-        info = {}
-        
-        info[ 'host' ] = host
-        info[ 'port' ] = port
-        
-        service = CC.Service( service_key, service_type, 'service', info )
+    def _test_restricted( self, service, host, port ):
         
         # access_key
         
@@ -385,9 +377,9 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response[ 'access_key' ], self._access_key )
         
-        info[ 'access_key' ] = self._access_key
+        info = service.GetInfo()
         
-        service = CC.Service( service_key, service_type, 'service', info )
+        info[ 'access_key' ] = self._access_key
         
         # set up session
         
@@ -395,9 +387,7 @@ class TestServer( unittest.TestCase ):
         
         account = self._account
         
-        service_for_session_manager = CC.Service( service_key, service_type, 'service', info )
-        
-        HC.app.SetRead( 'service', service_for_session_manager )
+        HC.app.SetRead( 'service', service )
         
         HC.app.SetRead( 'account', self._account )
         
@@ -447,7 +437,7 @@ class TestServer( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = written
         
-        ( written_service_identifier, written_edit_log ) = args
+        ( written_service_key, written_edit_log ) = args
         
         self.assertEqual( edit_log, written_edit_log )
         
@@ -476,16 +466,12 @@ class TestServer( unittest.TestCase ):
         self.assertEqual( response[ 'stats' ], stats )
         
     
-    def _test_server_admin( self, host, port ):
+    def _test_server_admin( self, service, host, port ):
         
-        service_key = os.urandom( 32 )
-        
-        info = {}
+        info = service.GetInfo()
         
         info[ 'host' ] = host
         info[ 'port' ] = port
-        
-        service = CC.Service( service_key, HC.SERVER_ADMIN, 'service', info )
         
         # init
         
@@ -500,8 +486,6 @@ class TestServer( unittest.TestCase ):
         #
         
         info[ 'access_key' ] = self._access_key
-        
-        service = CC.Service( service_key, HC.SERVER_ADMIN, 'service', info )
         
         # backup
         
@@ -525,7 +509,7 @@ class TestServer( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = written
         
-        ( written_service_identifier, written_edit_log ) = args
+        ( written_service_key, written_edit_log ) = args
         
         self.assertEqual( edit_log, written_edit_log )
         
@@ -549,10 +533,15 @@ class TestServer( unittest.TestCase ):
         host = '127.0.0.1'
         port = HC.DEFAULT_SERVICE_PORT
         
+        info = self._file_service.GetInfo()
+        
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        
         self._test_basics( host, port )
-        self._test_restricted( host, port, HC.FILE_REPOSITORY )
-        self._test_repo( host, port, HC.FILE_REPOSITORY )
-        self._test_file_repo( host, port )
+        self._test_restricted( self._file_service, host, port )
+        self._test_repo( self._file_service, host, port )
+        self._test_file_repo( self._file_service, host, port )
         
     
     def test_repository_tag( self ):
@@ -560,10 +549,15 @@ class TestServer( unittest.TestCase ):
         host = '127.0.0.1'
         port = HC.DEFAULT_SERVICE_PORT + 1
         
+        info = self._tag_service.GetInfo()
+        
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        
         self._test_basics( host, port )
-        self._test_restricted( host, port, HC.TAG_REPOSITORY )
-        self._test_repo( host, port, HC.TAG_REPOSITORY )
-        self._test_tag_repo( host, port )
+        self._test_restricted( self._tag_service, host, port )
+        self._test_repo( self._tag_service, host, port )
+        self._test_tag_repo( self._tag_service, host, port )
         
     
     def test_server_admin( self ):
@@ -571,9 +565,14 @@ class TestServer( unittest.TestCase ):
         host = '127.0.0.1'
         port = HC.DEFAULT_SERVER_ADMIN_PORT
         
+        info = self._admin_service.GetInfo()
+        
+        info[ 'host' ] = host
+        info[ 'port' ] = port
+        
         self._test_basics( host, port )
-        self._test_restricted( host, port, HC.SERVER_ADMIN )
-        self._test_server_admin( host, port )
+        self._test_restricted( self._admin_service, host, port )
+        self._test_server_admin( self._admin_service, host, port )
         
     
     def test_local_booru( self ):
@@ -595,11 +594,11 @@ class TestAMP( unittest.TestCase ):
         
         self._server_port = HC.DEFAULT_SERVICE_PORT + 10
         
-        self._service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.MESSAGE_DEPOT )
+        self._service_key = os.urandom( 32 )
         
         def TWISTEDSetup():
             
-            self._factory = HydrusServer.MessagingServiceFactory( self._service_identifier )
+            self._factory = HydrusServer.MessagingServiceFactory( self._service_key )
             
             reactor.listenTCP( self._server_port, self._factory )
             

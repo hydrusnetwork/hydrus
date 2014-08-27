@@ -128,7 +128,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         if HC.options[ 'default_gui_session' ] == 'just a blank page':
             
-            wx.CallLater( 1, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+            wx.CallLater( 1, self._NewPageQuery, HC.LOCAL_FILE_SERVICE_KEY )
             
         else:
             
@@ -140,7 +140,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
         
     
-    def _THREADUploadPending( self, service_identifier ):
+    def _THREADUploadPending( self, service_key ):
         
         try:
             
@@ -150,17 +150,18 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             HC.pubsub.pub( 'message', message )
             
-            result = HC.app.Read( 'pending', service_identifier )
+            result = HC.app.Read( 'pending', service_key )
             
-            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+            service = HC.app.GetManager( 'services' ).GetService( service_key )
             
+            service_key = service.GetKey()
             service_type = service.GetType()
             
             if service_type == HC.FILE_REPOSITORY:
                 
                 ( upload_hashes, update ) = result
                 
-                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, upload_hashes )
+                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
                 
                 num_uploads = len( media_results )
                 
@@ -206,7 +207,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         service.Request( HC.POST, 'file', { 'file' : file } )
                         
-                        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = media_result.ToTuple()
+                        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
                         
                         timestamp = HC.GetNow()
                         
@@ -214,9 +215,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
-                        service_identifiers_to_content_updates = { service_identifier : content_updates }
-                        
-                        HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                        HC.app.Write( 'content_updates', { service_key : content_updates } )
                         
                     except Exception as e:
                         
@@ -241,9 +240,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     content_updates = update.GetContentUpdates( for_client = True )
                     
-                    service_identifiers_to_content_updates = { service_identifier : content_updates }
-                    
-                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                    HC.app.Write( 'content_updates', { service_key : content_updates } )
                     
                 
             elif service_type == HC.TAG_REPOSITORY:
@@ -279,9 +276,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
-                    service_identifiers_to_content_updates = { service_identifier : update.GetContentUpdates( for_client = True ) }
+                    content_updates = update.GetContentUpdates( for_client = True )
                     
-                    HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                    HC.app.Write( 'content_updates', { service_key : content_updates } )
                     
                     time.sleep( 0.5 )
                     
@@ -316,7 +313,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         wx.AboutBox( aboutinfo )
         
     
-    def _AccountInfo( self, service_identifier ):
+    def _AccountInfo( self, service_key ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account\'s access key.' ) as dlg:
             
@@ -324,7 +321,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 subject_access_key = dlg.GetValue().decode( 'hex' )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 response = service.Request( HC.GET, 'account_info', { 'subject_access_key' : subject_access_key.encode( 'hex' ) } )
                 
@@ -341,25 +338,29 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
             edit_log = []
             
-            tag_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'public tag repository' )
+            service_key = os.urandom( 32 )
+            service_type = HC.TAG_REPOSITORY
+            name = 'public tag repository'
             
-            tag_repo_info = {}
+            info = {}
             
-            tag_repo_info[ 'host' ] = 'hydrus.no-ip.org'
-            tag_repo_info[ 'port' ] = 45871
-            tag_repo_info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
+            info[ 'host' ] = 'hydrus.no-ip.org'
+            info[ 'port' ] = 45871
+            info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
             
-            edit_log.append( ( HC.ADD, ( tag_repo_identifier, tag_repo_info ) ) )
+            edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
             
-            file_repo_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY, 'read-only art file repository' )
+            service_key = os.urandom( 32 )
+            service_type = HC.FILE_REPOSITORY
+            name = 'read-only art file repository'
             
-            file_repo_info = {}
+            info = {}
             
-            file_repo_info[ 'host' ] = 'hydrus.no-ip.org'
-            file_repo_info[ 'port' ] = 45872
-            file_repo_info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
+            info[ 'host' ] = 'hydrus.no-ip.org'
+            info[ 'port' ] = 45872
+            info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
             
-            edit_log.append( ( HC.ADD, ( file_repo_identifier, file_repo_info ) ) )
+            edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -433,15 +434,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             edit_log = []
             
-            admin_service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.SERVER_ADMIN, 'local server admin' )
+            admin_service_key = os.urandom( 32 )
+            service_type = HC.SERVER_ADMIN
+            name = 'local server admin'
             
-            admin_service_info = {}
+            info = {}
             
-            admin_service_info[ 'host' ] = host
-            admin_service_info[ 'port' ] = port
-            admin_service_info[ 'access_key' ] = ''
+            info[ 'host' ] = host
+            info[ 'port' ] = port
+            info[ 'access_key' ] = ''
             
-            edit_log.append( ( HC.ADD, ( admin_service_identifier, admin_service_info ) ) )
+            edit_log.append( ( HC.ADD, ( admin_service_key, service_type, name, info ) ) )
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -455,7 +458,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 try:
                     
-                    service = HC.app.GetManager( 'services' ).GetService( admin_service_identifier.GetServiceKey() )
+                    service = HC.app.GetManager( 'services' ).GetService( admin_service_key )
                     
                     break
                     
@@ -477,9 +480,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             access_key = response[ 'access_key' ]
             
-            update = { 'access_key' : access_key }
+            info_update = { 'access_key' : access_key }
             
-            edit_log = [ ( HC.EDIT, ( admin_service_identifier, ( admin_service_identifier, update ) ) ) ]
+            edit_log = [ ( HC.EDIT, ( admin_service_key, service_type, name, info_update ) ) ]
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -489,32 +492,28 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             time.sleep( 5 )
             
-            service = HC.app.GetManager( 'services' ).GetService( admin_service_identifier.GetServiceKey() )
+            admin_service = HC.app.GetManager( 'services' ).GetService( admin_service_key )
             
             #
             
             HC.ShowText( 'creating tag and file services' )
             
-            tag_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY )
-            
             tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
             tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
-            
-            file_server_service_identifier = HC.ServerServiceIdentifier( os.urandom( 32 ), HC.FILE_REPOSITORY )
             
             file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
             file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
             
             edit_log = []
             
-            edit_log.append( ( HC.ADD, ( tag_server_service_identifier, tag_options ) ) )
-            edit_log.append( ( HC.ADD, ( file_server_service_identifier, file_options ) ) )
+            edit_log.append( ( HC.ADD, ( os.urandom( 32 ), HC.TAG_REPOSITORY, tag_options ) ) )
+            edit_log.append( ( HC.ADD, ( os.urandom( 32 ), HC.FILE_REPOSITORY, file_options ) ) )
             
-            response = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
+            response = admin_service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
             
-            service_identifiers_to_access_keys = dict( response[ 'service_identifiers_to_access_keys' ] )
+            service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
             
-            HC.app.Write( 'update_server_services', admin_service_identifier, edit_log, service_identifiers_to_access_keys )
+            HC.app.Write( 'update_server_services', admin_service_key, edit_log, service_keys_to_access_keys )
             
             HC.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
@@ -527,7 +526,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _BackupService( self, service_identifier ):
+    def _BackupService( self, service_key ):
         
         message = 'This will tell the service to lock and copy its database files. It will probably take a few minutes to complete, and will not be able to serve any requests during that time. The GUI will lock up as well.'
         
@@ -535,7 +534,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
@@ -600,11 +599,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _DeletePending( self, service_identifier ):
+    def _DeletePending( self, service_key ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service_identifier.GetName() + '?' ) as dlg:
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_identifier )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_key )
             
         
     
@@ -617,7 +618,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         wx.CallAfter( page.Destroy )
         
     
-    def _FetchIP( self, service_identifier ):
+    def _FetchIP( self, service_key ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the file\'s hash.' ) as dlg:
             
@@ -625,7 +626,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 hash = dlg.GetValue().decode( 'hex' )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
                 
@@ -764,12 +765,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
             
-            petition_resolve_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+            petition_resolve_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
             file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
             
-            file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories ]
-            petition_resolve_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+            petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
             menu = wx.Menu()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), p( '&Refresh' ), p( 'Refresh the current view.' ) )
@@ -777,13 +777,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
             menu.AppendSeparator()
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
-            for s_i in file_service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', s_i ), p( 'New ' + s_i.GetName() + ' Search' ), p( 'Open a new search tab for ' + s_i.GetName() + '.' ) )
-            if len( petition_resolve_tag_service_identifiers ) > 0 or len( petition_resolve_file_service_identifiers ) > 0:
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
+            for service in file_repositories: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
+            if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
                 
                 menu.AppendSeparator()
-                for s_i in petition_resolve_tag_service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', s_i ), p( s_i.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + s_i.GetName() ) )
-                for s_i in petition_resolve_file_service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', s_i ), p( s_i.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + s_i.GetName() ) )
+                for service in petition_resolve_tag_services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', service ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
+                for service in petition_resolve_file_services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'petitions', service ), p( service.GetName() + ' Petitions' ), p( 'Open a petition tab for ' + service.GetName() ) )
                 
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
@@ -825,9 +825,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             total_num_pending = 0
             
-            for ( service_identifier, info ) in nums_pending.items():
+            for ( service_key, info ) in nums_pending.items():
                 
-                service_type = service_identifier.GetType()
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                
+                service_type = service.GetType()
+                name = service.GetName()
                 
                 if service_type == HC.TAG_REPOSITORY:
                     
@@ -844,10 +847,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_identifier ), p( '&Upload' ), p( 'Upload ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_identifier ), p( '&Forget' ), p( 'Clear ' + service_identifier.GetName() + '\'s Pending and Petitions.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'upload_pending', service_key ), p( '&Upload' ), p( 'Upload ' + name + '\'s Pending and Petitions.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_pending', service_key ), p( '&Forget' ), p( 'Clear ' + name + '\'s Pending and Petitions.' ) )
                     
-                    menu.AppendMenu( CC.ID_NULL, p( service_identifier.GetName() + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + '/' + HC.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
+                    menu.AppendMenu( CC.ID_NULL, p( name + ' Pending (' + HC.ConvertIntToPrettyString( num_pending ) + '/' + HC.ConvertIntToPrettyString( num_petitioned ) + ')' ), submenu )
                     
                 
                 total_num_pending += num_pending + num_petitioned
@@ -860,10 +863,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def services():
             
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) )
-            
-            tag_service_identifiers = [ s_i for s_i in service_identifiers if s_i.GetType() == HC.TAG_REPOSITORY ]
-            file_service_identifiers = [ s_i for s_i in service_identifiers if s_i.GetType() == HC.FILE_REPOSITORY ]
+            tag_services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            file_services = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
             
             submenu = wx.Menu()
             
@@ -899,11 +900,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
             menu.AppendSeparator()
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_IDENTIFIER ), p( 'Manage Local UPnP' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_KEY ), p( 'Manage Local UPnP' ) )
             menu.AppendSeparator()
             submenu = wx.Menu()
-            for s_i in tag_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
-            for s_i in file_service_identifiers: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', s_i ), p( s_i.GetName() ), p( 'Review ' + s_i.GetName() + '\'s past news.' ) )
+            for service in tag_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+            for service in file_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
             menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
             
             return ( menu, p( '&Services' ), True )
@@ -911,62 +912,66 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         def admin():
             
-            services = HC.app.GetManager( 'services' ).GetServices()
+            tag_repositories = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, ) )
+            admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
-            admin_tag_service_identifiers = [ repository.GetServiceIdentifier() for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            file_repositories = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, ) )
+            admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
-            admin_file_service_identifiers = [ repository.GetServiceIdentifier() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            servers_admin = HC.app.GetManager( 'services' ).GetServices( ( HC.SERVER_ADMIN, ) )
+            server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
             
-            servers_admin = [ service for service in services if service.GetType() == HC.SERVER_ADMIN ]
-            server_admin_identifiers = [ service.GetServiceIdentifier() for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
-            
-            if len( admin_tag_service_identifiers ) > 0 or len( admin_file_service_identifiers ) > 0 or len( server_admin_identifiers ) > 0:
+            if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
                 
                 show = True
                 
-                for s_i in admin_tag_service_identifiers:
+                for service in admin_tag_services:
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
+                    service_key = service.GetKey()
                     
-                    menu.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
                     
                 
-                for s_i in admin_file_service_identifiers:
+                for service in admin_file_services:
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', s_i ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', s_i ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', s_i ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', s_i ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fetch_ip', s_i ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', s_i ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', s_i ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
+                    service_key = service.GetKey()
                     
-                    menu.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fetch_ip', service_key ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
+                    submenu.AppendSeparator()
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
                     
                 
-                for s_i in server_admin_identifiers:
+                for service in server_admins:
                     
                     submenu = wx.Menu()
                     
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', s_i ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
-                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', s_i ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
+                    service_key = service.GetKey()
                     
-                    menu.AppendMenu( CC.ID_NULL, p( s_i.GetName() ), submenu )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
+                    submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
+                    
+                    menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
                     
                 
             else: show = False
@@ -1015,9 +1020,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         elif name == 'help': return help()
         
     
-    def _GenerateNewAccounts( self, service_identifier ):
+    def _GenerateNewAccounts( self, service_key ):
         
-        with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_identifier ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.ShowModal()
         
     
     def _ImportFiles( self, paths = [] ):
@@ -1045,9 +1050,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             update = o
                             
-                            service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_types = ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+                            service_key = ClientGUIDialogs.SelectServiceKey( service_types = ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
                             
-                            if service_identifier is not None:
+                            if service_key is not None:
                                 
                                 content_updates = []
                                 current_weight = 0
@@ -1060,14 +1065,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                     
                                     if current_weight > 50:
                                         
-                                        HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                        HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                         
                                         content_updates = []
                                         current_weight = 0
                                         
                                     
                                 
-                                if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_identifier : content_updates } )
+                                if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
                                 
                             
                         
@@ -1096,7 +1101,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         names_to_info = HC.app.Read( 'gui_sessions' )
         
-        if name not in names_to_info: self._NewPageQuery( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        if name not in names_to_info: self._NewPageQuery( HC.LOCAL_FILE_SERVICE_KEY )
         else:
             
             info = names_to_info[ name ]
@@ -1143,9 +1148,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManage4chanPass( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageAccountTypes( self, service_identifier ):
+    def _ManageAccountTypes( self, service_key ):
         
-        with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_identifier ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_key ) as dlg: dlg.ShowModal()
         
     
     def _ManageBoorus( self ):
@@ -1183,9 +1188,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManagePixivAccount( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageServer( self, service_identifier ):
+    def _ManageServer( self, service_key ):
         
-        with ClientGUIDialogsManage.DialogManageServer( self, service_identifier ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogsManage.DialogManageServer( self, service_key ) as dlg: dlg.ShowModal()
         
     
     def _ManageServices( self ):
@@ -1234,14 +1239,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageUPnP( self, service_identifier ):
+    def _ManageUPnP( self, service_key ):
         
-        with ClientGUIDialogsManage.DialogManageUPnP( self, service_identifier ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogsManage.DialogManageUPnP( self, service_key ) as dlg: dlg.ShowModal()
         
     
-    def _ModifyAccount( self, service_identifier ):
+    def _ModifyAccount( self, service_key ):
         
-        service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the access key for the account to be modified.' ) as dlg:
             
@@ -1257,7 +1262,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 subject_identifiers = ( HC.AccountIdentifier( access_key = access_key ), )
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, service_identifier, subject_identifiers ) as dlg2: dlg2.ShowModal()
+                with ClientGUIDialogs.DialogModifyAccounts( self, service_key, subject_identifiers ) as dlg2: dlg2.ShowModal()
                 
             
         
@@ -1321,29 +1326,29 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
         
     
-    def _NewPagePetitions( self, service_identifier = None ):
+    def _NewPagePetitions( self, service_key = None ):
         
-        if service_identifier is None: service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_types = HC.REPOSITORIES, permission = HC.RESOLVE_PETITIONS )
+        if service_key is None: service_key = ClientGUIDialogs.SelectServiceKey( service_types = HC.REPOSITORIES, permission = HC.RESOLVE_PETITIONS )
         
-        if service_identifier is not None:
+        if service_key is not None:
             
-            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+            service = HC.app.GetManager( 'services' ).GetService( service_key )
             
             account = service.GetInfo( 'account' )
             
             if not account.HasPermission( HC.RESOLVE_PETITIONS ): return
             
-            self._notebook.AddPage( ClientGUIPages.PagePetitions( self._notebook, service_identifier ), service_identifier.GetName() + ' petitions', select = True )
+            self._notebook.AddPage( ClientGUIPages.PagePetitions( self._notebook, service_key ), service.GetName() + ' petitions', select = True )
             
         
     
-    def _NewPageQuery( self, service_identifier, initial_media_results = [], initial_predicates = [] ):
+    def _NewPageQuery( self, service_key, initial_media_results = [], initial_predicates = [] ):
         
-        if service_identifier is None: service_identifier = ClientGUIDialogs.SelectServiceIdentifier( service_types = ( HC.FILE_REPOSITORY, ) )
+        if service_key is None: service_key = ClientGUIDialogs.SelectServiceKey( service_types = ( HC.FILE_REPOSITORY, ) )
         
-        if service_identifier is not None:
+        if service_key is not None:
             
-            new_page = ClientGUIPages.PageQuery( self._notebook, service_identifier, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
+            new_page = ClientGUIPages.PageQuery( self._notebook, service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
             
             self._notebook.AddPage( new_page, 'files', select = True )
             
@@ -1351,9 +1356,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _News( self, service_identifier ):
+    def _News( self, service_key ):
         
-        with ClientGUIDialogs.DialogNews( self, service_identifier ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogs.DialogNews( self, service_key ) as dlg: dlg.ShowModal()
         
     
     def _OpenExportFolder( self ):
@@ -1401,7 +1406,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         except: wx.MessageBox( traceback.format_exc() )
         
     
-    def _PostNews( self, service_identifier ):
+    def _PostNews( self, service_key ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the news you would like to post.' ) as dlg:
             
@@ -1409,7 +1414,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 news = dlg.GetValue()
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
                 
@@ -1634,9 +1639,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _Stats( self, service_identifier ):
+    def _Stats( self, service_key ):
         
-        service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
         
         response = service.Request( HC.GET, 'stats' )
         
@@ -1660,9 +1665,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         HC.pubsub.pub( 'notify_new_undo' )
         
     
-    def _UploadPending( self, service_identifier ):
+    def _UploadPending( self, service_key ):
         
-        HydrusThreading.CallToThread( self._THREADUploadPending, service_identifier )
+        HydrusThreading.CallToThread( self._THREADUploadPending, service_key )
         
     
     def _VacuumDatabase( self ):
@@ -1934,9 +1939,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPageImportURL( self ): self._NewPageImportURL()
     
-    def NewPagePetitions( self, service_identifier ): self._NewPagePetitions( service_identifier )
+    def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     
-    def NewPageQuery( self, service_identifier, initial_media_results = [], initial_predicates = [] ): self._NewPageQuery( service_identifier, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
+    def NewPageQuery( self, service_key, initial_media_results = [], initial_predicates = [] ): self._NewPageQuery( service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
     
     def NewPageThreadDumper( self, hashes ):
         
@@ -1955,7 +1960,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewSimilarTo( self, file_service_identifier, hash ): self._NewPageQuery( file_service_identifier, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ) ) ] )
+    def NewSimilarTo( self, file_service_key, hash ): self._NewPageQuery( file_service_key, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( hash, 5 ) ) ) ] )
     
     def NotifyNewOptions( self ):
         
@@ -2204,20 +2209,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         listbook_dict = {}
         
-        service_identifiers = HC.app.Read( 'service_identifiers' )
+        services = HC.app.GetManager( 'services' ).GetServices()
         
-        for service_identifier in service_identifiers:
+        for service in services:
             
-            service_type = service_identifier.GetType()
+            service_type = service.GetType()
             
             if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
             else: parent_listbook = self._remote_listbook
             
             if service_type not in listbook_dict:
-                
-                listbook = ClientGUICommon.ListBook( parent_listbook )
-                
-                listbook_dict[ service_type ] = listbook
                 
                 if service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
                 elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
@@ -2228,15 +2229,20 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 elif service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
                 elif service_type == HC.LOCAL_BOORU: name = 'booru'
+                else: continue
+                
+                listbook = ClientGUICommon.ListBook( parent_listbook )
+                
+                listbook_dict[ service_type ] = listbook
                 
                 parent_listbook.AddPage( listbook, name )
                 
             
             listbook = listbook_dict[ service_type ]
             
-            page = ( self._Panel, [ listbook, service_identifier ], {} )
+            page = ( self._Panel, [ listbook, service.GetKey() ], {} )
             
-            name = service_identifier.GetName()
+            name = service.GetName()
             
             listbook.AddPage( page, name )
             
@@ -2266,7 +2272,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
     class _Panel( wx.ScrolledWindow ):
         
-        def __init__( self, parent, service_identifier ):
+        def __init__( self, parent, service_key ):
             
             def InitialiseControls():
                 
@@ -2495,9 +2501,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self.SetScrollRate( 0, 20 )
             
-            self._service_identifier = service_identifier
+            self._service_key = service_key
             
-            service_type = service_identifier.GetType()
+            self._service = HC.app.GetManager( 'services' ).GetService( service_key )
+            
+            service_type = self._service.GetType()
             
             InitialiseControls()
             
@@ -2521,9 +2529,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def _DisplayAccountInfo( self ):
             
-            self._service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
-            
-            service_type = self._service_identifier.GetType()
+            service_type = self._service.GetType()
             
             now = HC.GetNow()
             
@@ -2646,13 +2652,13 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def _DisplayService( self ):
             
-            service_type = self._service_identifier.GetType()
+            service_type = self._service.GetType()
             
             self._DisplayAccountInfo()
             
             if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
                 
-                service_info = HC.app.Read( 'service_info', self._service_identifier.GetServiceKey() )
+                service_info = HC.app.Read( 'service_info', self._service_key )
                 
                 if service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): 
                     
@@ -2734,9 +2740,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
-        def AddThumbnailCount( self, service_identifier, count ):
+        def AddThumbnailCount( self, service_key, count ):
             
-            if service_identifier == self._service_identifier:
+            if service_key == self._service_key:
                 
                 self._num_local_thumbs += count
                 
@@ -2783,9 +2789,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
-                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
+                media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
                 
-                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 
             
         
@@ -2797,7 +2803,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
+                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -2821,7 +2827,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
                 
-                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
+                self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
                 
                 info = self._service.GetInfo()
                 
@@ -2837,7 +2843,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventServiceWideUpdate( self, event ):
             
-            with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_identifier ) as dlg:
+            with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_key ) as dlg:
                 
                 dlg.ShowModal()
                 
@@ -2845,13 +2851,17 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventServerInitialise( self, event ):
             
+            service_key = self._service.GetKey()
+            service_type = self._service.GetType()
+            name = self._service.GetName()
+            
             response = self._service.Request( HC.GET, 'init' )
             
             access_key = response[ 'access_key' ]
             
-            update = { 'access_key' : access_key }
+            info_update = { 'access_key' : access_key }
             
-            edit_log = [ ( HC.EDIT, ( self._service_identifier, ( self._service_identifier, update ) ) ) ]
+            edit_log = [ ( HC.EDIT, ( service_key, service_type, name, info_update ) ) ]
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -2868,16 +2878,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             account.MakeFresh()
             
-            HC.app.Write( 'service_updates', { self._service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
+            HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
             
         
-        def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
+        def ProcessServiceUpdates( self, service_keys_to_service_updates ):
             
-            for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+            for ( service_key, service_updates ) in service_keys_to_service_updates.items():
                 
                 for service_update in service_updates:
                     
-                    if service_identifier == self._service_identifier:
+                    if service_key == self._service_key:
                         
                         ( action, row ) = service_update.ToTuple()
                         

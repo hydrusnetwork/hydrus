@@ -137,7 +137,7 @@ class MessagingServiceProtocol( HydrusAMP ):
             
             session_manager = HC.app.GetManager( 'messaging_sessions' )
             
-            ( identifier, name ) = session_manager.GetIdentityAndName( self.factory.service_identifier, session_key )
+            ( identifier, name ) = session_manager.GetIdentityAndName( self.factory.service_key, session_key )
             
             self._identifier = identifier
             self._name = name
@@ -221,7 +221,7 @@ class MessagingServiceProtocol( HydrusAMP ):
             
             session_manager = HC.app.GetManager( 'messaging_sessions' )
             
-            d = deferToThread( session_manager.AddSession, self.factory.service_identifier, access_key, name )
+            d = deferToThread( session_manager.AddSession, self.factory.service_key, access_key, name )
             
             d.addCallback( catch_session_key )
             

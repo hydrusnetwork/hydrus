@@ -59,33 +59,35 @@ FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-def SelectServiceIdentifier( permission = None, service_types = HC.ALL_SERVICES, service_identifiers = None, unallowed = None ):
+def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
-    if service_identifiers is None:
+    if service_keys is None:
         
         services = HC.app.GetManager( 'services' ).GetServices( service_types )
         
         if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
-        service_identifiers = [ service.GetServiceIdentifier() for service in services ]
+        service_keys = [ service.GetKey() for service in services ]
         
     
-    if unallowed is not None: service_identifiers.difference_update( unallowed )
+    if unallowed is not None: service_keys.difference_update( unallowed )
     
-    if len( service_identifiers ) == 0: return None
-    elif len( service_identifiers ) == 1:
+    if len( service_keys ) == 0: return None
+    elif len( service_keys ) == 1:
         
-        ( service_identifier, ) = service_identifiers
+        ( service_key, ) = service_keys
         
-        return service_identifier
+        return service_key
         
     else:
         
-        names_to_service_identifiers = { service_identifier.GetName() : service_identifier for service_identifier in service_identifiers }
+        services = { HC.app.GetManager( 'services' ).GetService( service_key ) for service_key in service_keys }
         
-        with DialogSelectFromListOfStrings( HC.app.GetGUI(), 'select service', [ service_identifier.GetName() for service_identifier in service_identifiers ] ) as dlg:
+        names_to_service_keys = { service.GetName() : service_key for service in services }
+        
+        with DialogSelectFromListOfStrings( HC.app.GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK: return names_to_service_identifiers[ dlg.GetString() ]
+            if dlg.ShowModal() == wx.ID_OK: return names_to_service_keys[ dlg.GetString() ]
             else: return None
             
         
@@ -127,19 +129,19 @@ class DialogAdvancedContentUpdate( Dialog ):
     SPECIFIC_MAPPINGS = 1
     SPECIFIC_NAMESPACE = 2
     
-    def __init__( self, parent, service_identifier, hashes = None ):
+    def __init__( self, parent, service_key, hashes = None ):
         
         def InitialiseControls():
             
             self._action_dropdown = ClientGUICommon.BetterChoice( self )
             self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
             self._tag_type_dropdown = ClientGUICommon.BetterChoice( self )
-            self._service_identifier_dropdown = ClientGUICommon.BetterChoice( self )
+            self._service_key_dropdown = ClientGUICommon.BetterChoice( self )
             
             self._go = wx.Button( self, label = 'Go!' )
             self._go.Bind( wx.EVT_BUTTON, self.EventGo )
             
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_IDENTIFIER, self._service_identifier )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_KEY, self._service_key )
             self._specific_tag = wx.StaticText( self, label = '', size = ( 100, -1 ) )
             
             self._done = wx.Button( self, label = 'done' )
@@ -148,7 +150,7 @@ class DialogAdvancedContentUpdate( Dialog ):
         def PopulateControls():
             
             self._action_dropdown.Append( 'copy', self.COPY )
-            if self._service_identifier.GetType() == HC.LOCAL_TAG:
+            if self._service_key == HC.LOCAL_TAG_SERVICE_KEY:
                 
                 self._action_dropdown.Append( 'delete', self.DELETE )
                 self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
@@ -166,14 +168,14 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             #
             
-            service_identifiers = [ service_identifier for service_identifier in HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service_identifier != self._service_identifier ]
+            services = [ service for service in HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetKey() != self._service_key ]
             
-            for service_identifier in service_identifiers:
+            for service in services:
                 
-                self._service_identifier_dropdown.Append( service_identifier.GetName(), service_identifier )
+                self._service_key_dropdown.Append( service.GetName(), service.GetKey() )
                 
             
-            self._service_identifier_dropdown.Select( 0 )
+            self._service_key_dropdown.Select( 0 )
             
         
         def ArrangeControls():
@@ -193,7 +195,7 @@ class DialogAdvancedContentUpdate( Dialog ):
             hbox.AddF( self._action_dropdown, FLAGS_MIXED )
             hbox.AddF( self._tag_type_dropdown, FLAGS_MIXED )
             hbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
-            hbox.AddF( self._service_identifier_dropdown, FLAGS_MIXED )
+            hbox.AddF( self._service_key_dropdown, FLAGS_MIXED )
             hbox.AddF( self._go, FLAGS_MIXED )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -218,7 +220,7 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         Dialog.__init__( self, parent, 'Advanced Content Update' )
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         self._tag = ''
         self._hashes = hashes
         
@@ -233,8 +235,8 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         data = self._action_dropdown.GetChoice()
         
-        if data in ( self.DELETE, self.DELETE_DELETED ): self._service_identifier_dropdown.Disable()
-        else: self._service_identifier_dropdown.Enable()
+        if data in ( self.DELETE, self.DELETE_DELETED ): self._service_key_dropdown.Disable()
+        else: self._service_key_dropdown.Enable()
         
     
     def EventGo( self, event ):
@@ -256,11 +258,11 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         if tag == '': return
         
-        service_identifier_target = self._service_identifier_dropdown.GetChoice()
+        service_key_target = self._service_key_dropdown.GetChoice()
         
         if action == self.COPY:
             
-            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_identifier_target ) ) )
+            content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
             
         elif action == self.DELETE:
             
@@ -271,9 +273,9 @@ class DialogAdvancedContentUpdate( Dialog ):
             content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
             
         
-        service_identifiers_to_content_updates = { self._service_identifier : [ content_update ] }
+        service_keys_to_content_updates = { self._service_key : [ content_update ] }
         
-        HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+        HC.app.Write( 'content_updates', service_keys_to_content_updates )
         
     
     def SetSomeTag( self, tag, parents = [] ):
@@ -586,7 +588,7 @@ class DialogFirstStart( Dialog ):
     
 class DialogGenerateNewAccounts( Dialog ):
     
-    def __init__( self, parent, service_identifier ):
+    def __init__( self, parent, service_key ):
         
         def InitialiseControls():
             
@@ -608,7 +610,7 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self._num.SetValue( 1 )
             
-            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+            service = HC.app.GetManager( 'services' ).GetService( service_key )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -649,7 +651,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'configure new accounts' )
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         
         InitialiseControls()
         
@@ -670,7 +672,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
         
-        service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
+        service = HC.app.GetManager( 'services' ).GetService( self._service_key )
         
         try:
             
@@ -689,13 +691,11 @@ class DialogGenerateNewAccounts( Dialog ):
     
 class DialogInputCustomFilterAction( Dialog ):
     
-    def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_identifier = None, action = 'archive' ):
+    def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_key = None, action = 'archive' ):
         
         def InitialiseControls():
             
             self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
-            
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
             self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
             
@@ -711,9 +711,9 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._tag_panel = ClientGUICommon.StaticBox( self, 'tag service actions' )
             
-            self._tag_service_identifiers = wx.Choice( self._tag_panel )
+            self._tag_service_keys = wx.Choice( self._tag_panel )
             self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTag, HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY )
             
             self._ok_tag = wx.Button( self._tag_panel, label = 'ok' )
             self._ok_tag.Bind( wx.EVT_BUTTON, self.EventOKTag )
@@ -721,8 +721,8 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'like/dislike ratings service actions' )
             
-            self._ratings_like_service_identifiers = wx.Choice( self._ratings_like_panel )
-            self._ratings_like_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+            self._ratings_like_service_keys = wx.Choice( self._ratings_like_panel )
+            self._ratings_like_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
             self._ratings_like_like = wx.RadioButton( self._ratings_like_panel, style = wx.RB_GROUP, label = 'like' )
             self._ratings_like_dislike = wx.RadioButton( self._ratings_like_panel, label = 'dislike' )
             self._ratings_like_remove = wx.RadioButton( self._ratings_like_panel, label = 'remove rating' )
@@ -733,8 +733,8 @@ class DialogInputCustomFilterAction( Dialog ):
             
             self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'numerical ratings service actions' )
             
-            self._ratings_numerical_service_identifiers = wx.Choice( self._ratings_numerical_panel )
-            self._ratings_numerical_service_identifiers.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+            self._ratings_numerical_service_keys = wx.Choice( self._ratings_numerical_panel )
+            self._ratings_numerical_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
             self._ratings_numerical_slider = wx.Slider( self._ratings_numerical_panel, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
             self._ratings_numerical_remove = wx.CheckBox( self._ratings_numerical_panel, label = 'remove rating' )
             
@@ -742,37 +742,41 @@ class DialogInputCustomFilterAction( Dialog ):
             self._ok_ratings_numerical.Bind( wx.EVT_BUTTON, self.EventOKRatingsNumerical )
             self._ok_ratings_numerical.SetForegroundColour( ( 0, 128, 0 ) )
             
-            for service_identifier in service_identifiers:
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+            
+            for service in services:
                 
-                service_type = service_identifier.GetType()
+                service_type = service.GetType()
                 
-                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): choice = self._tag_service_identifiers
-                elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_identifiers
-                elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_identifiers
+                if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): choice = self._tag_service_keys
+                elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
+                elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
                 
-                choice.Append( service_identifier.GetName(), service_identifier )
+                choice.Append( service.GetName(), service.GetKey() )
                 
             
             self._SetActions()
             
-            if self._service_identifier is None:
+            if self._service_key is None:
                 
                 self._none_actions.SetStringSelection( self._action )
                 
             else:
                 
-                service_name = self._service_identifier.GetName()
-                service_type = self._service_identifier.GetType()
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                
+                service_name = self._service.GetName()
+                service_type = self._service.GetType()
                 
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
-                    self._tag_service_identifiers.SetStringSelection( service_name )
+                    self._tag_service_keys.SetStringSelection( service_name )
                     
                     self._tag_value.SetValue( self._action )
                     
                 elif service_type == HC.LOCAL_RATING_LIKE:
                     
-                    self._ratings_like_service_identifiers.SetStringSelection( service_name )
+                    self._ratings_like_service_keys.SetStringSelection( service_name )
                     
                     self._SetActions()
                     
@@ -782,7 +786,7 @@ class DialogInputCustomFilterAction( Dialog ):
                     
                 elif service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    self._ratings_numerical_service_identifiers.SetStringSelection( service_name )
+                    self._ratings_numerical_service_keys.SetStringSelection( service_name )
                     
                     self._SetActions()
                     
@@ -822,7 +826,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            tag_hbox.AddF( self._tag_service_identifiers, FLAGS_EXPAND_DEPTH_ONLY )
+            tag_hbox.AddF( self._tag_service_keys, FLAGS_EXPAND_DEPTH_ONLY )
             tag_hbox.AddF( tag_sub_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             tag_hbox.AddF( self._ok_tag, FLAGS_MIXED )
             
@@ -830,7 +834,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            ratings_like_hbox.AddF( self._ratings_like_service_identifiers, FLAGS_EXPAND_DEPTH_ONLY )
+            ratings_like_hbox.AddF( self._ratings_like_service_keys, FLAGS_EXPAND_DEPTH_ONLY )
             ratings_like_hbox.AddF( self._ratings_like_like, FLAGS_MIXED )
             ratings_like_hbox.AddF( self._ratings_like_dislike, FLAGS_MIXED )
             ratings_like_hbox.AddF( self._ratings_like_remove, FLAGS_MIXED )
@@ -840,7 +844,7 @@ class DialogInputCustomFilterAction( Dialog ):
             
             ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            ratings_numerical_hbox.AddF( self._ratings_numerical_service_identifiers, FLAGS_EXPAND_DEPTH_ONLY )
+            ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, FLAGS_EXPAND_DEPTH_ONLY )
             ratings_numerical_hbox.AddF( self._ratings_numerical_slider, FLAGS_MIXED )
             ratings_numerical_hbox.AddF( self._ratings_numerical_remove, FLAGS_MIXED )
             ratings_numerical_hbox.AddF( self._ok_ratings_numerical, FLAGS_MIXED )
@@ -869,7 +873,7 @@ class DialogInputCustomFilterAction( Dialog ):
         
         Dialog.__init__( self, parent, 'input custom filter action' )
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         self._action = action
         
         self._current_ratings_like_service = None
@@ -886,15 +890,15 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def _SetActions( self ):
         
-        if self._ratings_like_service_identifiers.GetCount() > 0:
+        if self._ratings_like_service_keys.GetCount() > 0:
             
-            selection = self._ratings_like_service_identifiers.GetSelection()
+            selection = self._ratings_like_service_keys.GetSelection()
             
             if selection != wx.NOT_FOUND:
                 
-                service_identifier = self._ratings_like_service_identifiers.GetClientData( selection )
+                service_key = self._ratings_like_service_keys.GetClientData( selection )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 self._current_ratings_like_service = service
                 
@@ -910,15 +914,15 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             
         
-        if self._ratings_numerical_service_identifiers.GetCount() > 0:
+        if self._ratings_numerical_service_keys.GetCount() > 0:
             
-            selection = self._ratings_numerical_service_identifiers.GetSelection()
+            selection = self._ratings_numerical_service_keys.GetSelection()
             
             if selection != wx.NOT_FOUND:
                 
-                service_identifier = self._ratings_numerical_service_identifiers.GetClientData( selection )
+                service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 self._current_ratings_numerical_service = service
                 
@@ -932,7 +936,7 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def EventOKNone( self, event ):
         
-        self._service_identifier = None
+        self._service_key = None
         self._action = self._none_actions.GetStringSelection()
         self._pretty_action = self._action
         
@@ -941,11 +945,11 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def EventOKRatingsLike( self, event ):
         
-        selection = self._ratings_like_service_identifiers.GetSelection()
+        selection = self._ratings_like_service_keys.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            self._service_identifier = self._ratings_like_service_identifiers.GetClientData( selection )
+            self._service_key = self._ratings_like_service_keys.GetClientData( selection )
             
             ( like, dislike ) = self._current_ratings_like_service.GetLikeDislike()
             
@@ -972,11 +976,11 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def EventOKRatingsNumerical( self, event ):
         
-        selection = self._ratings_numerical_service_identifiers.GetSelection()
+        selection = self._ratings_numerical_service_keys.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            self._service_identifier = self._ratings_numerical_service_identifiers.GetClientData( selection )
+            self._service_key = self._ratings_numerical_service_keys.GetClientData( selection )
             
             if self._ratings_numerical_remove.GetValue():
                 
@@ -999,11 +1003,11 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def EventOKTag( self, event ):
         
-        selection = self._tag_service_identifiers.GetSelection()
+        selection = self._tag_service_keys.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            self._service_identifier = self._tag_service_identifiers.GetClientData( selection )
+            self._service_key = self._tag_service_keys.GetClientData( selection )
             
             self._action = self._tag_value.GetValue()
             self._pretty_action = self._action
@@ -1024,13 +1028,13 @@ class DialogInputCustomFilterAction( Dialog ):
         
         ( modifier, key ) = self._shortcut.GetValue()
         
-        if self._service_identifier is None: pretty_service_identifier = ''
-        else: pretty_service_identifier = self._service_identifier.GetName()
+        if self._service_key is None: pretty_service_key = ''
+        else: pretty_service_key = HC.app.GetManager( 'services' ).GetService( self._service_key ).GetName()
         
         # ignore this pretty_action
         ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, self._action )
         
-        return ( ( pretty_modifier, pretty_key, pretty_service_identifier, self._pretty_action ), ( modifier, key, self._service_identifier, self._action ) )
+        return ( ( pretty_modifier, pretty_key, pretty_service_key, self._pretty_action ), ( modifier, key, self._service_key, self._action ) )
         
     
     def SetTag( self, tag, parents = [] ): self._tag_value.SetValue( tag )
@@ -1169,7 +1173,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._current_pending.Append( 'currently in', HC.CURRENT )
                 self._current_pending.Append( 'pending to', HC.PENDING )
                 
-                self._file_service_identifier = wx.Choice( self )
+                self._file_service_key = wx.Choice( self )
                 
                 self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
                 self._ok.SetDefault()
@@ -1182,10 +1186,10 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._sign.SetSelection( 0 )
                 self._current_pending.SetSelection( 0 )
                 
-                service_identifiers = HC.app.Read( 'service_identifiers', ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
+                services = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
                 
-                for service_identifier in service_identifiers: self._file_service_identifier.Append( service_identifier.GetName(), service_identifier )
-                self._file_service_identifier.SetSelection( 0 )
+                for service in services: self._file_service_key.Append( service.GetName(), service.GetKey() )
+                self._file_service_key.SetSelection( 0 )
                 
             
             def ArrangeControls():
@@ -1195,7 +1199,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 hbox.AddF( wx.StaticText( self, label = 'system:file service:' ), FLAGS_MIXED )
                 hbox.AddF( self._sign, FLAGS_MIXED )
                 hbox.AddF( self._current_pending, FLAGS_MIXED )
-                hbox.AddF( self._file_service_identifier, FLAGS_MIXED )
+                hbox.AddF( self._file_service_key, FLAGS_MIXED )
                 hbox.AddF( self._ok, FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
@@ -1538,7 +1542,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._local_numericals = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
                 self._local_likes = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
                 
-                for service in self._local_numericals: self._service_numerical.Append( service.GetServiceIdentifier().GetName(), service )
+                for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetKey() )
                 
                 ( sign, value ) = system_predicates[ 'local_rating_numerical' ]
                 
@@ -1546,7 +1550,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._value_numerical.SetValue( value )
                 
-                for service in self._local_likes: self._service_like.Append( service.GetServiceIdentifier().GetName(), service )
+                for service in self._local_likes: self._service_like.Append( service.GetName(), service.GetKey() )
                 
                 value = system_predicates[ 'local_rating_like' ]
                 
@@ -1898,7 +1902,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             if id == HC.LOCAL_RATING_LIKE:
                 
-                service_identifier = self._service_like.GetClientData( self._service_like.GetSelection() ).GetServiceIdentifier()
+                service_key = self._service_like.GetClientData( self._service_like.GetSelection() )
                 
                 operator = '='
                 
@@ -1909,13 +1913,11 @@ class DialogInputFileSystemPredicate( Dialog ):
                 elif selection == 2: value = 'rated'
                 elif selection == 3: value = 'not rated'
                 
-                info = ( service_identifier, operator, value )
+                info = ( service_key, operator, value )
                 
             elif id == HC.LOCAL_RATING_NUMERICAL:
                 
-                service = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
-                
-                service_identifier = service.GetServiceIdentifier()
+                service_key = self._service_numerical.GetClientData( self._service_numerical.GetSelection() )
                 
                 operator = self._sign_numerical.GetStringSelection()
                 
@@ -1927,6 +1929,8 @@ class DialogInputFileSystemPredicate( Dialog ):
                     
                 else:
                     
+                    service = HC.app.GetManager( 'services' ).GetService( service_key )
+                    
                     ( lower, upper ) = service.GetLowerUpper()
                     
                     value_raw = self._value_numerical.GetValue()
@@ -1934,7 +1938,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                     value = float( value_raw - lower ) / float( upper - lower )
                     
                 
-                info = ( service_identifier, operator, value )
+                info = ( service_key, operator, value )
                 
             
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_RATIO: info = ( self._sign.GetStringSelection(), self._width.GetValue(), self._height.GetValue() )
@@ -1951,7 +1955,7 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             info = ( hash.decode( 'hex' ), self._max_hamming.GetValue() )
             
-        elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_identifier.GetClientData( self._file_service_identifier.GetSelection() ) )
+        elif self._type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE: info = ( self._sign.GetClientData( self._sign.GetSelection() ), self._current_pending.GetClientData( self._current_pending.GetSelection() ), self._file_service_key.GetClientData( self._file_service_key.GetSelection() ) )
         
         self._predicate = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( self._type, info ) )
         
@@ -2108,7 +2112,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
+        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -2125,7 +2129,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
+        self._service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
         
         info = self._service.GetInfo()
         
@@ -3411,7 +3415,7 @@ class DialogInputUPnPMapping( Dialog ):
     
 class DialogModifyAccounts( Dialog ):
     
-    def __init__( self, parent, service_identifier, subject_identifiers ):
+    def __init__( self, parent, service_key, subject_identifiers ):
         
         def InitialiseControls():
             
@@ -3550,7 +3554,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
         InitialiseControls()
@@ -3616,7 +3620,7 @@ class DialogModifyAccounts( Dialog ):
     
 class DialogNews( Dialog ):
     
-    def __init__( self, parent, service_identifier ):
+    def __init__( self, parent, service_key ):
         
         def InitialiseControls():
             
@@ -3635,7 +3639,7 @@ class DialogNews( Dialog ):
     
         def PopulateControls():
             
-            self._newslist = HC.app.Read( 'news', service_identifier )
+            self._newslist = HC.app.Read( 'news', service_key )
             
             self._current_news_position = len( self._newslist )
             
@@ -3768,7 +3772,7 @@ class DialogPageChooser( Dialog ):
         
         self._services = HC.app.GetManager( 'services' ).GetServices()
         
-        self._petition_service_identifiers = [ service.GetServiceIdentifier() for service in self._services if service.GetType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+        self._petition_service_keys = [ service.GetKey() for service in self._services if service.GetType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
         self._InitButtons( 'home' )
         
@@ -3815,7 +3819,7 @@ class DialogPageChooser( Dialog ):
         if entry_type == 'menu': button.SetLabel( obj )
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = obj.GetName()
+            name = HC.app.GetManager( 'services' ).GetService( obj ).GetName()
             
             button.SetLabel( name )
             
@@ -3841,13 +3845,13 @@ class DialogPageChooser( Dialog ):
             
             entries = [ ( 'menu', 'files' ), ( 'menu', 'download' ) ]
             
-            if len( self._petition_service_identifiers ) > 0: entries.append( ( 'menu', 'petitions' ) )
+            if len( self._petition_service_keys ) > 0: entries.append( ( 'menu', 'petitions' ) )
             
         elif menu_keyword == 'files':
             
-            file_repos = [ ( 'page_query', service_identifier ) for service_identifier in [ service.GetServiceIdentifier() for service in self._services ] if service_identifier.GetType() == HC.FILE_REPOSITORY ]
+            file_repos = [ ( 'page_query', service_key ) for service_key in [ service.GetKey() for service in self._services if service.GetType() == HC.FILE_REPOSITORY ] ]
             
-            entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER ) ] + file_repos
+            entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_KEY ) ] + file_repos
             
         elif menu_keyword == 'download': entries = [ ( 'page_import_url', None ), ( 'page_import_thread_watcher', None ), ( 'menu', 'gallery' ) ]
         elif menu_keyword == 'gallery':
@@ -3862,7 +3866,7 @@ class DialogPageChooser( Dialog ):
             
         elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry', 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry', 'tags' ) ) ]
         elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
-        elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_identifier ) for service_identifier in self._petition_service_identifiers ]
+        elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_key ) for service_key in self._petition_service_keys ]
         
         if len( entries ) <= 4:
             
@@ -3983,19 +3987,19 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 if account.HasPermission( HC.POST_DATA ):
                     
-                    service_identifier = service.GetServiceIdentifier()
+                    service_key = service.GetKey()
                     
-                    page_info = ( self._Panel, ( self._tag_repositories, service_identifier, paths ), {} )
+                    page_info = ( self._Panel, ( self._tag_repositories, service_key, paths ), {} )
                     
-                    name = service_identifier.GetName()
+                    name = service.GetName()
                     
                     self._tag_repositories.AddPage( page_info, name )
                     
                 
             
-            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER, paths )
+            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_KEY, paths )
             
-            name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
+            name = HC.LOCAL_TAG_SERVICE_KEY
             
             self._tag_repositories.AddPage( page, name )
             
@@ -4079,11 +4083,9 @@ class DialogPathsToTagsRegex( Dialog ):
         
         for page in self._tag_repositories.GetNameToPageDict().values():
             
-            page_of_paths_to_tags = page.GetInfo()
+            ( service_key, page_of_paths_to_tags ) = page.GetInfo()
             
-            service_identifier = page.GetServiceIdentifier()
-            
-            for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_identifier ] = tags
+            for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_key ] = tags
             
         
         return paths_to_tags
@@ -4091,7 +4093,7 @@ class DialogPathsToTagsRegex( Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, paths ):
+        def __init__( self, parent, service_key, paths ):
             
             def InitialiseControls():
                 
@@ -4150,7 +4152,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
                 
-                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 #
                 
@@ -4160,7 +4162,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._single_tags = ClientGUICommon.TagsBoxFlat( self._single_tags_panel, self.SingleTagRemoved )
                 
-                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
             
             def PopulateControls():
@@ -4249,7 +4251,7 @@ class DialogPathsToTagsRegex( Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
+            self._service_key = service_key
             self._paths = paths
             
             InitialiseControls()
@@ -4484,9 +4486,12 @@ class DialogPathsToTagsRegex( Dialog ):
                 
             
         
-        def GetInfo( self ): return { path : tags for ( ( original_num, processed_num ), path, tags ) in self._paths_list.GetClientData() }
-        
-        def GetServiceIdentifier( self ): return self._service_identifier
+        def GetInfo( self ):
+            
+            paths_to_tags = { path : tags for ( ( original_num, processed_num ), path, tags ) in self._paths_list.GetClientData() }
+            
+            return ( self._service_key, paths_to_tags )
+            
         
         def SetTagBoxFocus( self ): self._tag_box.SetFocus()
         
@@ -5034,16 +5039,16 @@ class DialogSetupCustomFilterActions( Dialog ):
                 
                 if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'previous', 'next', 'first', 'last', 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
-                    service_identifier = None
+                    service_key = None
                     
-                    default_actions.append( ( modifier, key, service_identifier, action ) )
+                    default_actions.append( ( modifier, key, service_key, action ) )
                     
                 
             
         
-        ( modifier, key, service_identifier, action ) = ( wx.ACCEL_NORMAL, wx.WXK_DELETE, None, 'delete' )
+        ( modifier, key, service_key, action ) = ( wx.ACCEL_NORMAL, wx.WXK_DELETE, None, 'delete' )
         
-        default_actions.append( ( modifier, key, service_identifier, action ) )
+        default_actions.append( ( modifier, key, service_key, action ) )
         
         return default_actions
         
@@ -5090,9 +5095,9 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         for index in self._actions.GetAllSelected():
             
-            ( modifier, key, service_identifier, action ) = self._actions.GetClientData( index )
+            ( modifier, key, service_key, action ) = self._actions.GetClientData( index )
             
-            with DialogInputCustomFilterAction( self, modifier = modifier, key = key, service_identifier = service_identifier, action = action ) as dlg:
+            with DialogInputCustomFilterAction( self, modifier = modifier, key = key, service_key = service_key, action = action ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -5195,14 +5200,19 @@ class DialogSetupCustomFilterActions( Dialog ):
                 
                 actions = self._favourites.GetClientData( selection )
                 
-                for ( modifier, key, service_identifier, action ) in actions:
+                for ( modifier, key, service_key, action ) in actions:
                     
                     ( pretty_modifier, pretty_key, pretty_action ) = HC.ConvertShortcutToPrettyShortcut( modifier, key, action )
                     
-                    if service_identifier is None: pretty_service_identifier = ''
-                    else: pretty_service_identifier = service_identifier.GetName()
+                    if service_key is None: pretty_service_key = ''
+                    else:
+                        
+                        service = HC.app.GetManager( 'services' ).GetService( service_key )
+                        
+                        pretty_service_key = service.GetName()
+                        
                     
-                    self._actions.Append( ( pretty_modifier, pretty_key, pretty_service_identifier, pretty_action ), ( modifier, key, service_identifier, action ) )
+                    self._actions.Append( ( pretty_modifier, pretty_key, pretty_service_key, pretty_action ), ( modifier, key, service_key, action ) )
                     
                 
                 self._SortListCtrl()
@@ -5216,7 +5226,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         actions = collections.defaultdict( dict )
         
-        for ( modifier, key, service_identifier, action ) in raw_data: actions[ modifier ][ key ] = ( service_identifier, action )
+        for ( modifier, key, service_key, action ) in raw_data: actions[ modifier ][ key ] = ( service_key, action )
         
         return actions
         

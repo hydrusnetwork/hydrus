@@ -9,18 +9,6 @@ import weakref
 
 tinest_gif = '\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
 
-def GenerateClientServiceIdentifier( service_type ):
-    
-    if service_type == HC.LOCAL_TAG: return HC.LOCAL_TAG_SERVICE_IDENTIFIER
-    elif service_type == HC.LOCAL_FILE: return HC.LOCAL_FILE_SERVICE_IDENTIFIER
-    else:
-        
-        service_key = os.urandom( 32 )
-        service_name = random.sample( 'abcdefghijklmnopqrstuvwxyz ', 12 )
-        
-        return HC.ClientServiceIdentifier( service_key, service_type, service_name )
-        
-    
 class FakeHTTPConnectionManager():
     
     def __init__( self ):

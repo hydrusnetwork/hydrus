@@ -182,7 +182,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
     
 class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, service_identifier ):
+    def __init__( self, parent, service_key ):
         
         def InitialiseControls():
             
@@ -209,7 +209,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+            service = HC.app.GetManager( 'services' ).GetService( service_key )
             
             response = service.Request( HC.GET, 'account_types' )
             
@@ -259,7 +259,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage account types' )
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         
         self._edit_log = []
         
@@ -383,7 +383,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
+        service = HC.app.GetManager( 'services' ).GetService( self._service_key )
         
         service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
         
@@ -1619,7 +1619,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             self._predicates_box = ClientGUICommon.TagsBoxPredicates( self._query_box, self._page_key, predicates )
             
-            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_TAG_SERVICE_IDENTIFIER )
+            self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY )
             
             #
             
@@ -3838,15 +3838,15 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            service_identifiers = HC.app.Read( 'service_identifiers', HC.RATINGS_SERVICES )
+            services = HC.app.GetManager( 'services' ).GetServices( HC.RATINGS_SERVICES )
             
             # sort according to local/remote, I guess
             # and maybe sub-sort according to name?
-            # maybe just do two get s_i queries
+            # maybe just do two get service_key queries
             
             self._panels = []
             
-            for service_identifier in service_identifiers: self._panels.append( self._Panel( self, service_identifier, media ) )
+            for service in services: self._panels.append( self._Panel( self, service.GetKey(), media ) )
             
             self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -3915,19 +3915,19 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         try:
             
-            service_identifiers_to_content_updates = {}
+            service_keys_to_content_updates = {}
             
             for panel in self._panels:
                 
                 if panel.HasChanges():
                     
-                    ( service_identifier, content_updates ) = panel.GetContentUpdates()
+                    ( service_key, content_updates ) = panel.GetContentUpdates()
                     
-                    service_identifiers_to_content_updates[ service_identifier ] = content_updates
+                    service_keys_to_content_updates[ service_key ] = content_updates
                     
                 
             
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -3945,20 +3945,20 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, media ):
+        def __init__( self, parent, service_key, media ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
-            self._service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+            self._service_key = service_key
+            self._service = HC.app.GetManager( 'services' ).GetService( service_key )
             
             self._media = media
             
-            service_type = service_identifier.GetType()
+            service_type = service.GetType()
             
             def InitialiseControls():
                 
-                self._ratings_panel = ClientGUICommon.StaticBox( self, self._service_identifier.GetName() )
+                self._ratings_panel = ClientGUICommon.StaticBox( self, self._service.GetName() )
                 
                 self._current_score = wx.StaticText( self._ratings_panel, style = wx.ALIGN_CENTER )
                 
@@ -3975,7 +3975,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                     
                     if service_type == HC.LOCAL_RATING_LIKE:
                         
-                        ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
+                        ratings = [ rating_services.GetRating( self._service_key ) for rating_services in all_rating_services ]
                         
                         if all( ( i is None for i in ratings ) ):
                             
@@ -4055,7 +4055,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                         self._slider = wx.Slider( self._ratings_panel, minValue = min, maxValue = max, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
                         self._slider.Bind( wx.EVT_SLIDER, self.EventSlider )
                         
-                        ratings = [ rating_services.GetRating( self._service_identifier ) for rating_services in all_rating_services ]
+                        ratings = [ rating_services.GetRating( self._service_key ) for rating_services in all_rating_services ]
                         
                         if all( ( i is None for i in ratings ) ):
                             
@@ -4178,7 +4178,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         def GetContentUpdates( self ):
             
-            service_type = self._service_identifier.GetType()
+            service_type = self._service.GetType()
             
             choice_text = self._choices.GetSelectedClientData()
             
@@ -4199,7 +4199,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
             
-            return ( self._service_identifier, [ content_update ] )
+            return ( self._service_key, [ content_update ] )
             
         
         def HasChanges( self ):
@@ -4210,12 +4210,12 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             else: return True
             
         
-        def GetServiceIdentifier( self ): return self._service_identifier
+        def GetServiceKey( self ): return self._service_key
         
     
 class DialogManageServer( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, service_identifier ):
+    def __init__( self, parent, service_key ):
         
         def InitialiseControls():
             
@@ -4253,11 +4253,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             services_info = response[ 'services_info' ]
             
-            for ( service_identifier, options ) in services_info:
+            for ( service_key, service_type, options ) in services_info:
                 
-                page = self._Panel( self._services_listbook, service_identifier, options )
+                page = self._Panel( self._services_listbook, service_key, service_type, options )
                 
-                name = HC.service_string_lookup[ service_identifier.GetType() ] + '@' + HC.u( options[ 'port' ] )
+                name = HC.service_string_lookup[ service_type ] + '@' + HC.u( options[ 'port' ] )
                 
                 self._services_listbook.AddPage( page, name )
                 
@@ -4288,11 +4288,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( 680, y ) )
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + service_identifier.GetName() + ' services' )
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        self._service_identifier = service_identifier
-        
-        self._service = HC.app.GetManager( 'services' ).GetService( self._service_identifier.GetServiceKey() )
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + service.GetName() + ' services' )
         
         InitialiseControls()
         
@@ -4311,16 +4309,16 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         if service_panel is not None:
             
-            ( service_identifier, options ) = service_panel.GetInfo()
+            ( service_key, service_type, options ) = service_panel.GetInfo()
             
-            for ( existing_service_identifier, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() if page != service_panel ]:
+            for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() if page != service_panel ]:
                 
                 if options[ 'port' ] == existing_options[ 'port' ]: raise Exception( 'That port is already in use!' )
                 
             
             name = self._services_listbook.GetCurrentName()
             
-            new_name = HC.service_string_lookup[ service_identifier.GetType() ] + '@' + HC.u( options[ 'port' ] )
+            new_name = HC.service_string_lookup[ service_type ] + '@' + HC.u( options[ 'port' ] )
             
             if name != new_name: self._services_listbook.RenamePage( name, new_name )
             
@@ -4334,13 +4332,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
         
-        service_identifier = HC.ServerServiceIdentifier( service_key, service_type )
-
         port = HC.DEFAULT_SERVICE_PORT
         
         existing_ports = set()
         
-        for ( existing_service_identifier, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]: existing_ports.add( existing_options[ 'port' ] )
+        for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetNameToPageDict().values() ]: existing_ports.add( existing_options[ 'port' ] )
         
         while port in existing_ports: port += 1
         
@@ -4348,9 +4344,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         options[ 'port' ] = port
         
-        self._edit_log.append( ( HC.ADD, ( service_identifier, options ) ) )
+        self._edit_log.append( ( HC.ADD, ( service_key, service_type, options ) ) )
         
-        page = self._Panel( self._services_listbook, service_identifier, options )
+        page = self._Panel( self._services_listbook, service_key, service_type, options )
         
         name = HC.service_string_lookup[ service_type ] + '@' + HC.u( port )
         
@@ -4371,9 +4367,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             if page.HasChanges():
                 
-                ( service_identifier, options ) = page.GetInfo()
+                ( service_key, service_type, options ) = page.GetInfo()
                 
-                self._edit_log.append( ( HC.EDIT, ( service_identifier, options ) ) )
+                self._edit_log.append( ( HC.EDIT, ( service_key, service_type, options ) ) )
                 
             
         
@@ -4383,9 +4379,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 response = self._service.Request( HC.POST, 'services', { 'edit_log' : self._edit_log } )
                 
-                service_identifiers_to_access_keys = dict( response[ 'service_identifiers_to_access_keys' ] )
+                service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
                 
-                HC.app.Write( 'update_server_services', self._service_identifier, self._edit_log, service_identifiers_to_access_keys )
+                admin_service_key = self._service_key
+                
+                HC.app.Write( 'update_server_services', admin_service_key, self._edit_log, service_keys_to_access_keys )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -4397,9 +4395,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         if service_panel is not None:
             
-            ( service_identifier, options ) = service_panel.GetInfo()
+            ( service_key, service_type, options ) = service_panel.GetInfo()
             
-            self._edit_log.append( ( HC.DELETE, service_identifier ) )
+            self._edit_log.append( ( HC.DELETE, service_key ) )
             
             self._services_listbook.DeleteCurrentPage()
             
@@ -4409,9 +4407,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
         
         page = self._services_listbook.GetCurrentPage()
         
-        ( service_identifier, options ) = page.GetInfo()
+        ( service_key, service_type, options ) = page.GetInfo()
         
-        if service_identifier.GetType() == HC.SERVER_ADMIN: self._remove.Disable()
+        if service_type == HC.SERVER_ADMIN: self._remove.Disable()
         else: self._remove.Enable()
         
     
@@ -4428,11 +4426,12 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, options ):
+        def __init__( self, parent, service_key, service_type, options ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
+            self._service_key = service_key
+            self._service_type = service_type
             self._options = options
             
             def InitialiseControls():
@@ -4528,12 +4527,12 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             if 'message' in self._options: options[ 'message' ] = self._message.GetValue()
             if 'upnp' in self._options: options[ 'upnp' ] = self._upnp.GetValue()
             
-            return ( self._service_identifier, options )
+            return ( self._service_key, self._service_type, options )
             
         
         def HasChanges( self ):
             
-            ( service_identifier, options ) = self.GetInfo()
+            ( service_key, service_type, options ) = self.GetInfo()
             
             if options != self._options: return True
             
@@ -4612,16 +4611,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             for service in services:
                 
-                service_identifier = service.GetServiceIdentifier()
-                
-                service_type = service_identifier.GetType()
-                name = service_identifier.GetName()
-                
+                service_key = service.GetKey()
+                service_type = service.GetType()
+                name = service.GetName()
                 info = service.GetInfo()
                 
                 listbook = self._service_types_to_listbooks[ service_type ]
                 
-                page_info = ( self._Panel, ( listbook, service_identifier, info ), {} )
+                page_info = ( self._Panel, ( listbook, service_key, service_type, name, info ), {} )
                 
                 listbook.AddPage( page_info, name )
                 
@@ -4686,10 +4683,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if service_panel is not None:
                     
-                    ( service_identifier, info ) = service_panel.GetInfo()
+                    ( service_key, service_type, name, info ) = service_panel.GetInfo()
                     
                     old_name = services_listbook.GetCurrentName()
-                    name = service_identifier.GetName()
                     
                     if old_name is not None and name != old_name:
                         
@@ -4722,9 +4718,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if name == '': raise Exception( 'Please enter a nickname for the service.' )
                         
+                        service_key = os.urandom( 32 )
                         service_type = self._listbooks_to_service_types[ services_listbook ]
-                        
-                        service_identifier = HC.ClientServiceIdentifier( os.urandom( 32 ), service_type, name )
                         
                         info = {}
                         
@@ -4780,9 +4775,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                             info[ 'upper' ] = 5
                             
                         
-                        self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
+                        self._edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
                         
-                        page = self._Panel( services_listbook, service_identifier, info )
+                        page = self._Panel( services_listbook, service_key, service_type, name, info )
                         
                         services_listbook.AddPage( page, name, select = True )
                         
@@ -4817,9 +4812,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 service_panel = services_listbook.GetCurrentPage()
                 
-                ( service_identifier, info ) = service_panel.GetInfo()
-                
-                name = service_identifier.GetName()
+                ( service_key, service_type, name, info ) = service_panel.GetInfo()
                 
                 try:
                     
@@ -4827,7 +4820,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
                             
                         
                     
@@ -4837,7 +4830,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_identifier, info ) ) )
+                            with open( dlg.GetPath(), 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
                             
                         
                     
@@ -4863,7 +4856,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             for page in all_pages:
                 
-                if page.HasChanges(): self._edit_log.append( ( HC.EDIT, ( page.GetOriginalServiceIdentifier(), page.GetInfo() ) ) )
+                if page.HasChanges(): self._edit_log.append( ( HC.EDIT, page.GetInfo() ) )
                 
             
         
@@ -4897,9 +4890,9 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             if service_panel is not None:
                 
-                service_identifier = service_panel.GetOriginalServiceIdentifier()
+                ( service_key, service_type, name, info ) = service_panel.GetInfo()
                 
-                self._edit_log.append( ( HC.DELETE, service_identifier ) )
+                self._edit_log.append( ( HC.DELETE, service_key ) )
                 
                 services_listbook.DeleteCurrentPage()
                 
@@ -4956,11 +4949,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             with open( path, 'rb' ) as f: file = f.read()
             
-            ( service_identifier, info ) = yaml.safe_load( file )
-            
-            name = service_identifier.GetName()
-            
-            service_type = service_identifier.GetType()
+            ( service_key, service_type, name, info ) = yaml.safe_load( file )
             
             services_listbook = self._service_types_to_listbooks[ service_type ]
             
@@ -4974,15 +4963,15 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         page = services_listbook.GetNameToPageDict()[ name ]
                         
-                        page.Update( service_identifier, info )
+                        page.Update( service_key, service_type, name, info )
                         
                     
                 
             else:
                 
-                self._edit_log.append( ( HC.ADD, ( service_identifier, info ) ) )
+                self._edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
                 
-                page = self._Panel( services_listbook, service_identifier, info )
+                page = self._Panel( services_listbook, service_key, service_type, name, info )
                 
                 services_listbook.AddPage( page, name, select = True )
                 
@@ -4991,14 +4980,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, info ):
+        def __init__( self, parent, service_key, service_type, name, info ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
-            self._info = info
-            
-            service_type = service_identifier.GetType()
+            self._original_info = ( service_key, service_type, name, info )
             
             def InitialiseControls():
                 
@@ -5011,10 +4997,10 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if service_type in HC.REMOTE_SERVICES:
                     
-                    host = self._info[ 'host' ]
-                    port = self._info[ 'port' ]
+                    host = info[ 'host' ]
+                    port = info[ 'port' ]
                     
-                    if 'access_key' in self._info: access_key = self._info[ 'access_key' ]
+                    if 'access_key' in info: access_key = info[ 'access_key' ]
                     else: access_key = None
                     
                     credentials = CC.Credentials( host, port, access_key )
@@ -5041,16 +5027,16 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     if service_type == HC.LOCAL_RATING_LIKE:
                         
-                        like = self._info[ 'like' ]
-                        dislike = self._info[ 'dislike' ]
+                        like = info[ 'like' ]
+                        dislike = info[ 'dislike' ]
                         
                         self._like = wx.TextCtrl( self._local_rating_panel, value = like )
                         self._dislike = wx.TextCtrl( self._local_rating_panel, value = dislike )
                         
                     elif service_type == HC.LOCAL_RATING_NUMERICAL:
                         
-                        lower = self._info[ 'lower' ]
-                        upper = self._info[ 'upper' ]
+                        lower = info[ 'lower' ]
+                        upper = info[ 'upper' ]
                         
                         self._lower = wx.SpinCtrl( self._local_rating_panel, min = -2000, max = 2000 )
                         self._lower.SetValue( lower )
@@ -5072,18 +5058,18 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                self._service_name.SetValue( self._service_identifier.GetName() )
+                self._service_name.SetValue( name )
                 
                 if service_type in HC.REPOSITORIES:
                     
-                    self._pause_synchronisation.SetValue( self._info[ 'paused' ] )
+                    self._pause_synchronisation.SetValue( info[ 'paused' ] )
                     
                 
                 if service_type == HC.LOCAL_BOORU:
                     
-                    self._port.SetValue( self._info[ 'port' ] )
-                    self._upnp.SetValue( self._info[ 'upnp' ] )
-                    self._max_monthly_data.SetValue( self._info[ 'max_monthly_data' ] )
+                    self._port.SetValue( info[ 'port' ] )
+                    self._upnp.SetValue( info[ 'upnp' ] )
+                    self._max_monthly_data.SetValue( info[ 'max_monthly_data' ] )
                     
                 
             
@@ -5178,11 +5164,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         def EventCheckService( self, event ):
             
-            ( service_identifier, info ) = self.GetInfo()
-            
-            service_key = service_identifier.GetServiceKey()
-            service_type = service_identifier.GetType()
-            name = service_identifier.GetName()
+            ( service_key, service_type, name, info ) = self.GetInfo()
             
             service = CC.Service( service_key, service_type, name, info )
             
@@ -5224,15 +5206,11 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         def GetInfo( self ):
             
-            service_key = self._service_identifier.GetServiceKey()
-            
-            service_type = self._service_identifier.GetType()
+            ( service_key, service_type, name, info ) = self._original_info
             
             name = self._service_name.GetValue()
             
             if name == '': raise Exception( 'Please enter a name' )
-            
-            service_identifier = HC.ClientServiceIdentifier( service_key, service_type, name )
             
             info = {}
             
@@ -5296,40 +5274,29 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 # listctrl stuff here
                 
             
-            return ( service_identifier, info )
+            return ( service_key, service_type, name, info )
             
         
         def EventServiceReset( self, event ):
             
-            message = 'This will remove all the information for ' + self._service_identifier.GetName() + ' from the database, so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep + os.linesep + 'Once the service is reset, the client will have to reprocess all the information that was deleted, which will take another long time.' + os.linesep + os.linesep + 'If you do not understand what this button does, you probably want to click no!'
+            ( service_key, service_type, name, info ) = self._original_info
+            
+            message = 'This will remove all the information for ' + name + ' from the database so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep + os.linesep + 'Once the service is reset, the client will have to reprocess all the information that was deleted, which will take another long time.' + os.linesep + os.linesep + 'If you do not understand what this button does, you probably want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    with wx.BusyCursor(): HC.app.Write( 'reset_service', self._service_identifier )
+                    with wx.BusyCursor(): HC.app.Write( 'reset_service', service_key )
                     
                 
             
         
-        def HasChanges( self ):
-            
-            ( service_identifier, info ) = self.GetInfo()
-            
-            if service_identifier != self._service_identifier: return True
-            
-            if info != self._info: return True
-            
-            return False
-            
+        def HasChanges( self ): return self._original_info != self.GetInfo()
         
-        def GetOriginalServiceIdentifier( self ): return self._service_identifier
-        
-        def Update( self, service_identifier, info ):
+        def Update( self, service_key, service_type, name, info ):
             
-            service_type = service_identifier.GetType()
-            
-            self._service_name.SetValue( service_identifier.GetName() )
+            self._service_name.SetValue( name )
             
             if service_type in HC.REMOTE_SERVICES:
                 
@@ -5951,22 +5918,23 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
-            for service_identifier in service_identifiers:
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+            
+            for service in services:
                 
-                page = self._Panel( self._tag_services, service_identifier )
+                service_key = service.GetKey()
+                name = service.GetName()
                 
-                name = service_identifier.GetName()
+                if service_key == default_tag_repository_key: default_name = name
+                
+                page = self._Panel( self._tag_services, service_key )
                 
                 self._tag_services.AddPage( page, name )
                 
             
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            service = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
-            
-            self._tag_services.Select( service.GetName() )
+            self._tag_services.Select( default_name )
             
         
         def ArrangeControls():
@@ -6037,7 +6005,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier ):
+        def __init__( self, parent, service_key ):
             
             def InitialiseControls():
                 
@@ -6053,7 +6021,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                ( blacklist, tags ) = HC.app.Read( 'tag_censorship', self._service_identifier )
+                ( blacklist, tags ) = HC.app.Read( 'tag_censorship', service_key )
                 
                 if blacklist: self._blacklist.SetSelection( 0 )
                 else: self._blacklist.SetSelection( 1 )
@@ -6074,7 +6042,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
+            self._service_key = service_key
             
             InitialiseControls()
             
@@ -6102,12 +6070,12 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             tags = self._tags.GetClientData()
             
-            return ( self._service_identifier, blacklist, tags )
+            return ( self._service_key, blacklist, tags )
             
         
         def HasInfo( self ):
             
-            ( service_identifier, blacklist, tags ) = self.GetInfo()
+            ( service_key, blacklist, tags ) = self.GetInfo()
             
             return len( tags ) > 0
             
@@ -6142,19 +6110,18 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if account.HasPermission( HC.POST_DATA ):
                     
-                    service_identifier = service.GetServiceIdentifier()
+                    name = service.GetName()
+                    service_key = service.GetKey()
                     
-                    page_info = ( self._Panel, ( self._tag_repositories, service_identifier, tag ), {} )
-                    
-                    name = service_identifier.GetName()
+                    page_info = ( self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
                     self._tag_repositories.AddPage( page_info, name )
                     
                 
             
-            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER, tag )
+            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_KEY, tag )
             
-            name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
+            name = HC.LOCAL_TAG_SERVICE_KEY
             
             self._tag_repositories.AddPage( page, name )
             
@@ -6223,18 +6190,18 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
         try:
             
             for page in self._tag_repositories.GetNameToPageDict().values():
                 
-                ( service_identifier, content_updates ) = page.GetContentUpdates()
+                ( service_key, content_updates ) = page.GetContentUpdates()
                 
-                service_identifiers_to_content_updates[ service_identifier ] = content_updates
+                service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -6248,7 +6215,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, tag = None ):
+        def __init__( self, parent, service_key, tag = None ):
             
             def InitialiseControls():
                 
@@ -6262,8 +6229,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._children = ClientGUICommon.TagsBoxFlat( self, removed_callable )
                 self._parents = ClientGUICommon.TagsBoxFlat( self, removed_callable )
                 
-                self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
-                self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, HC.LOCAL_FILE_SERVICE_KEY, service_key )
+                self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 self._add = wx.Button( self, label = 'add' )
                 self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -6311,16 +6278,16 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
+            self._service_key = service_key
             
-            if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+            if service_key != HC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
-            self._original_statuses_to_pairs = HC.app.Read( 'tag_parents', service_identifier )
+            self._original_statuses_to_pairs = HC.app.Read( 'tag_parents', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -6350,7 +6317,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
                     
-                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                    if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
@@ -6408,7 +6375,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if self._CanAdd( child, parent ):
                     
-                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                    if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
                         if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
                         else:
@@ -6544,7 +6511,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             content_updates = []
             
-            if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+            if self._service_key == HC.LOCAL_TAG_SERVICE_KEY:
                 
                 for pair in self._current_statuses_to_pairs[ HC.PENDING ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
                 for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
@@ -6569,7 +6536,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 
             
-            return ( self._service_identifier, content_updates )
+            return ( self._service_key, content_updates )
             
         
         def SetTagBoxFocus( self ):
@@ -6598,9 +6565,9 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_IDENTIFIER, tag )
+            page = self._Panel( self._tag_repositories, HC.LOCAL_TAG_SERVICE_KEY, tag )
             
-            name = HC.LOCAL_TAG_SERVICE_IDENTIFIER.GetName()
+            name = HC.LOCAL_TAG_SERVICE_KEY
             
             self._tag_repositories.AddPage( page, name )
             
@@ -6612,11 +6579,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 if account.HasPermission( HC.POST_DATA ):
                     
-                    service_identifier = service.GetServiceIdentifier()
+                    name = service.GetName()
+                    service_key = service.GetKey()
                     
-                    page_info = ( self._Panel, ( self._tag_repositories, service_identifier, tag ), {} )
-                    
-                    name = service_identifier.GetName()
+                    page_info = ( self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
                     self._tag_repositories.AddPage( page_info, name )
                     
@@ -6687,18 +6653,18 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
         try:
             
             for page in self._tag_repositories.GetNameToPageDict().values():
                 
-                ( service_identifier, content_updates ) = page.GetContentUpdates()
+                ( service_key, content_updates ) = page.GetContentUpdates()
                 
-                service_identifiers_to_content_updates[ service_identifier ] = content_updates
+                service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            HC.app.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -6712,7 +6678,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, service_identifier, tag = None ):
+        def __init__( self, parent, service_key, tag = None ):
             
             def InitialiseControls():
                 
@@ -6726,8 +6692,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._old_siblings = ClientGUICommon.TagsBoxFlat( self, removed_callable )
                 self._new_sibling = wx.StaticText( self )
                 
-                self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
-                self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, HC.LOCAL_FILE_SERVICE_IDENTIFIER, service_identifier )
+                self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, HC.LOCAL_FILE_SERVICE_KEY, service_key )
+                self._new_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetNew, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
                 self._add = wx.Button( self, label = 'add' )
                 self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -6781,16 +6747,16 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self._service_identifier = service_identifier
+            self._service_key = service_key
             
-            if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+            if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
-            self._original_statuses_to_pairs = HC.app.Read( 'tag_siblings', service_identifier )
+            self._original_statuses_to_pairs = HC.app.Read( 'tag_siblings', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -6822,7 +6788,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
                     
-                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                    if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
@@ -6880,7 +6846,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 if self._CanAdd( old, new ):
                     
-                    if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                    if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
                         if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
                         else:
@@ -6987,7 +6953,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I want to overwrite it', no_label = 'do nothing' ) as dlg:
                         
-                        if self._service_identifier != HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+                        if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                             
                             if dlg.ShowModal() != wx.ID_YES: return
                             
@@ -7054,7 +7020,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             content_updates = []
             
-            if self._service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER:
+            if self._service_key == HC.LOCAL_TAG_SERVICE_KEY:
                 
                 for pair in self._current_statuses_to_pairs[ HC.PENDING ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
                 for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
@@ -7079,7 +7045,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 content_updates.extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
                 
             
-            return ( self._service_identifier, content_updates )
+            return ( self._service_key, content_updates )
             
         
         def SetNew( self, new, parents = [] ):
@@ -7135,11 +7101,15 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
             
             tag_service_precedence = HC.app.Read( 'tag_service_precedence' )
             
-            for service_identifier in tag_service_precedence:
+            service_manager = HC.app.GetManager( 'services' )
+            
+            for service_key in tag_service_precedence:
                 
-                name = service_identifier.GetName()
+                service = service_manager.GetService( service_key )
                 
-                self._tag_services.Append( name, service_identifier )
+                name = service.GetName()
+                
+                self._tag_services.Append( name, service_key )
                 
             
         
@@ -7196,9 +7166,9 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
                 
                 try:
                     
-                    service_identifiers = [ self._tag_services.GetClientData( i ) for i in range( self._tag_services.GetCount() ) ]
+                    service_keys = [ self._tag_services.GetClientData( i ) for i in range( self._tag_services.GetCount() ) ]
                     
-                    HC.app.Write( 'set_tag_service_precedence', service_identifiers )
+                    HC.app.Write( 'set_tag_service_precedence', service_keys )
                     
                 except Exception as e: wx.MessageBox( 'Something went wrong when trying to save tag service precedence to the database: ' + HC.u( e ) )
                 
@@ -7215,13 +7185,12 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
             
             if selection > 0:
                 
-                service_identifier = self._tag_services.GetClientData( selection )
-                
-                name = service_identifier.GetName()
+                name = self._tag_services.GetString( selection )
+                service_key = self._tag_services.GetClientData( selection )
                 
                 self._tag_services.Delete( selection )
                 
-                self._tag_services.Insert( name, selection - 1, service_identifier )
+                self._tag_services.Insert( name, selection - 1, service_key )
                 
                 self._tag_services.Select( selection - 1 )
                 
@@ -7236,13 +7205,12 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
             
             if selection + 1 < self._tag_services.GetCount():
                 
-                service_identifier = self._tag_services.GetClientData( selection )
-                
-                name = service_identifier.GetName()
+                name = self._tag_services.GetString( selection )
+                service_key = self._tag_services.GetClientData( selection )
                 
                 self._tag_services.Delete( selection )
                 
-                self._tag_services.Insert( name, selection + 1, service_identifier )
+                self._tag_services.Insert( name, selection + 1, service_key )
                 
                 self._tag_services.Select( selection + 1 )
                 
@@ -7251,7 +7219,7 @@ class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
     
 class DialogManageTags( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, file_service_identifier, media ):
+    def __init__( self, parent, file_service_key, media ):
         
         def InitialiseControls():
             
@@ -7268,24 +7236,24 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            service_identifiers = HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) )
+            services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
             
-            for service_identifier in list( service_identifiers ) + [ HC.LOCAL_TAG_SERVICE_IDENTIFIER ]:
+            name_to_select = None
+            
+            for service in services:
                 
-                service_type = service_identifier.GetType()
+                service_key = service.GetKey()
+                service_type = service.GetType()
+                name = service.GetName()
                 
-                page_info = ( self._Panel, ( self._tag_repositories, self._file_service_identifier, service_identifier, media ), {} )
-                
-                name = service_identifier.GetName()
+                page_info = ( self._Panel, ( self._tag_repositories, self._file_service_key, service.GetKey(), media ), {} )
                 
                 self._tag_repositories.AddPage( page_info, name )
                 
+                if service_key == HC.options[ 'default_tag_repository' ]: name_to_select = name
+                
             
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            service = HC.app.GetManager( 'services' ).GetService( default_tag_repository_key )
-            
-            self._tag_repositories.Select( service.GetName() )
+            if name_to_select is not None: self._tag_repositories.Select( name_to_select )
             
         
         def ArrangeControls():
@@ -7307,7 +7275,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( x + 200, 500 ) )
             
         
-        self._file_service_identifier = file_service_identifier
+        self._file_service_key = file_service_key
         
         self._hashes = set()
         
@@ -7352,16 +7320,16 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         try:
             
-            service_identifiers_to_content_updates = {}
+            service_keys_to_content_updates = {}
             
             for page in self._tag_repositories.GetNameToPageDict().values():
                 
-                ( service_identifier, content_updates ) = page.GetContentUpdates()
+                ( service_key, content_updates ) = page.GetContentUpdates()
                 
-                service_identifiers_to_content_updates[ service_identifier ] = content_updates
+                service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            if len( service_identifiers_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+            if len( service_keys_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -7386,7 +7354,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     class _Panel( wx.Panel ):
         
-        def __init__( self, parent, file_service_identifier, tag_service_identifier, media ):
+        def __init__( self, parent, file_service_key, tag_service_key, media ):
             
             def InitialiseControls():
                 
@@ -7401,7 +7369,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 self._tags_box_sorter.AddF( self._show_deleted_checkbox, FLAGS_LONE_BUTTON )
                 
-                self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_identifier, self._tag_service_identifier )
+                self._add_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddTag, self._file_service_key, self._tag_service_key )
                 
                 self._modify_mappers = wx.Button( self, label = 'Modify mappers' )
                 self._modify_mappers.Bind( wx.EVT_BUTTON, self.EventModify )
@@ -7415,7 +7383,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                self._tags_box.ChangeTagRepository( self._tag_service_identifier )
+                self._tags_box.ChangeTagRepository( self._tag_service_key )
                 
                 self._tags_box.SetTagsByMedia( self._media )
                 
@@ -7448,10 +7416,10 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self._file_service_identifier = file_service_identifier
-            self._tag_service_identifier = tag_service_identifier
+            self._file_service_key = file_service_key
+            self._tag_service_key = tag_service_key
             
-            self._i_am_local_tag_service = self._tag_service_identifier.GetType() == HC.LOCAL_TAG
+            self._i_am_local_tag_service = self._tag_service_key == HC.LOCAL_TAG_SERVICE_KEY
             
             self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
             
@@ -7459,14 +7427,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if not self._i_am_local_tag_service:
                 
-                service = HC.app.GetManager( 'services' ).GetService( tag_service_identifier.GetServiceKey() )
+                service = HC.app.GetManager( 'services' ).GetService( tag_service_key )
                 
                 self._account = service.GetInfo( 'account' )
                 
             
             hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )
             
-            media_results = HC.app.Read( 'media_results', self._file_service_identifier, hashes )
+            media_results = HC.app.Read( 'media_results', self._file_service_key, hashes )
             
             # this should now be a nice clean copy of the original media
             self._media = [ ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results ]
@@ -7486,7 +7454,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             num_files = len( self._media )
             
-            num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_identifier ) ] )
+            num_current = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetCurrent( self._tag_service_key ) ] )
             
             choices = []
             
@@ -7497,8 +7465,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
             else:
                 
-                num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_identifier ) ] )
-                num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_identifier ) ] )
+                num_pending = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPending( self._tag_service_key ) ] )
+                num_petitioned = len( [ 1 for tag_manager in tag_managers if tag in tag_manager.GetPetitioned( self._tag_service_key ) ] )
                 
                 if num_current + num_pending < num_files: choices.append( ( 'pend ' + tag + ' to ' + HC.ConvertIntToPrettyString( num_files - ( num_current + num_pending ) ) + ' files', HC.CONTENT_UPDATE_PENDING ) )
                 if num_current > num_petitioned and not only_add: choices.append( ( 'petition ' + tag + ' from ' + HC.ConvertIntToPrettyString( num_current - num_petitioned ) + ' files', HC.CONTENT_UPDATE_PETITION ) )
@@ -7519,12 +7487,12 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
             else: [ ( text, choice ) ] = choices
             
-            if choice == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) )
-            elif choice == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) )
-            elif choice == HC.CONTENT_UPDATE_PENDING: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) and tag not in m.GetTagsManager().GetPending( self._tag_service_identifier ) )
-            elif choice == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_identifier ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_identifier ) )
-            elif choice == HC.CONTENT_UPDATE_RESCIND_PENDING: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_identifier ) )
-            elif choice == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_identifier ) )
+            if choice == HC.CONTENT_UPDATE_ADD: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+            elif choice == HC.CONTENT_UPDATE_DELETE: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) )
+            elif choice == HC.CONTENT_UPDATE_PENDING: media_to_affect = ( m for m in self._media if tag not in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPending( self._tag_service_key ) )
+            elif choice == HC.CONTENT_UPDATE_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetCurrent( self._tag_service_key ) and tag not in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
+            elif choice == HC.CONTENT_UPDATE_RESCIND_PENDING: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPending( self._tag_service_key ) )
+            elif choice == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = ( m for m in self._media if tag in m.GetTagsManager().GetPetitioned( self._tag_service_key ) )
             
             hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
             
@@ -7546,7 +7514,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
             else: content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, choice, ( tag, hashes ) )
             
-            for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_identifier, content_update )
+            for m in self._media: m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
             
             self._content_updates.append( content_update )
             
@@ -7568,7 +7536,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if wx.TheClipboard.Open():
                 
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( self._media, self._tag_service_identifier )
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( self._media, self._tag_service_key )
                 
                 tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
                 
@@ -7591,7 +7559,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 subject_identifiers = [ HC.AccountIdentifier( hash = hash, tag = tag ) for hash in self._hashes ]
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_identifier, subject_identifiers ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_identifiers ) as dlg: dlg.ShowModal()
                 
             
         
@@ -7623,9 +7591,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             self._tags_box.SetShow( 'deleted', self._show_deleted_checkbox.GetValue() )
             
         
-        def GetContentUpdates( self ): return ( self._tag_service_identifier, self._content_updates )
+        def GetContentUpdates( self ): return ( self._tag_service_key, self._content_updates )
         
-        def GetServiceIdentifier( self ): return self._tag_service_identifier
+        def GetServiceKey( self ): return self._tag_service_key
         
         def HasChanges( self ): return len( self._content_updates ) > 0
         
@@ -7637,7 +7605,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
 class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, service_identifier ):
+    def __init__( self, parent, service_key ):
         
         def InitialiseControls():
             
@@ -7671,7 +7639,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             edit_buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            if self._service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: self._add_local.Hide()
+            if self._service_key == HC.LOCAL_FILE_SERVICE_KEY: self._add_local.Hide()
             
             edit_buttons.AddF( self._add_local, FLAGS_MIXED )
             edit_buttons.AddF( self._add_custom, FLAGS_MIXED )
@@ -7693,17 +7661,17 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( x, y ) )
             
         
-        if service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: title = 'manage local upnp'
+        if service_key == HC.LOCAL_FILE_SERVICE_KEY: title = 'manage local upnp'
         else:
             
-            # fetch self._service
+            service = HC.app.GetManager( 'services' ).GetService( service_key )
             
-            title = 'manage upnp for ' + service_identifier.GetName()
+            title = 'manage upnp for ' + service.GetName()
             
         
         ClientGUIDialogs.Dialog.__init__( self, parent, title )
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         
         InitialiseControls()
         
@@ -7718,7 +7686,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
         self._mappings_list_ctrl.DeleteAllItems()
         
-        if self._service_identifier == HC.LOCAL_FILE_SERVICE_IDENTIFIER: self._mappings = HydrusNATPunch.GetUPnPMappings()
+        if self._service_key == HC.LOCAL_FILE_SERVICE_KEY: self._mappings = HydrusNATPunch.GetUPnPMappings()
         else:
             
             wx.MessageBox( 'get mappings from service' )

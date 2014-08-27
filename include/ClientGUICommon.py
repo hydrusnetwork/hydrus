@@ -418,30 +418,26 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
-    def __init__( self, parent, file_service_identifier, tag_service_identifier ):
+    def __init__( self, parent, file_service_key, tag_service_key ):
         
         AutoCompleteDropdown.__init__( self, parent )
         
         self._current_namespace = ''
         self._current_matches = []
         
-        self._file_service_identifier = file_service_identifier
-        self._tag_service_identifier = tag_service_identifier
+        self._file_service = HC.app.GetManager( 'services' ).GetService( file_service_key )
+        self._tag_service = HC.app.GetManager( 'services' ).GetService( tag_service_key )
         
-        name = self._file_service_identifier.GetName()
-        
-        self._file_repo_button = wx.Button( self._dropdown_window, label = name )
+        self._file_repo_button = wx.Button( self._dropdown_window, label = self._file_service.GetName() )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
         
-        name = self._tag_service_identifier.GetName()
-        
-        self._tag_repo_button = wx.Button( self._dropdown_window, label = name )
+        self._tag_repo_button = wx.Button( self._dropdown_window, label = self._tag_service.GetName() )
         self._tag_repo_button.Bind( wx.EVT_BUTTON, self.EventTagButton )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
-    def _InitCachedResults( self ): return CC.AutocompleteMatchesPredicates( HC.LOCAL_FILE_SERVICE_IDENTIFIER, [] )
+    def _InitCachedResults( self ): return CC.AutocompleteMatchesPredicates( HC.LOCAL_FILE_SERVICE_KEY, [] )
     
     def _InitDropDownList( self ): return TagsBoxActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
@@ -453,17 +449,23 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._current_matches = matches
         
+        num_chars = len( self.GetValue() )
+        
+        if num_chars == 0: self._lag_timer.Start( 5 * 60 * 1000, wx.TIMER_ONE_SHOT )
+        
     
     def EventFileButton( self, event ):
         
-        service_identifiers = []
-        service_identifiers.append( HC.COMBINED_FILE_SERVICE_IDENTIFIER )
-        service_identifiers.append( HC.LOCAL_FILE_SERVICE_IDENTIFIER )
-        service_identifiers.extend( HC.app.Read( 'service_identifiers', ( HC.FILE_REPOSITORY, ) ) )
+        services_manager = HC.app.GetManager( 'services' )
+        
+        services = []
+        services.append( services_manager.GetService( HC.COMBINED_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( HC.LOCAL_FILE_SERVICE_KEY ) )
+        services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
         
         menu = wx.Menu()
         
-        for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service_identifier ), service_identifier.GetName() )
+        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service ), service.GetName() )
         
         self.PopupMenu( menu )
         
@@ -480,27 +482,27 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
             if command == 'change_file_repository':
                 
-                service_identifier = data
+                service = data
                 
-                self._file_service_identifier = service_identifier
+                self._file_service = service
                 
-                name = service_identifier.GetName()
+                name = service.GetName()
                 
                 self._file_repo_button.SetLabel( name )
                 
-                HC.pubsub.pub( 'change_file_repository', self._page_key, service_identifier )
+                HC.pubsub.pub( 'change_file_repository', self._page_key, service.GetKey() )
                 
             elif command == 'change_tag_repository':
                 
-                service_identifier = data
+                service = data
                 
-                self._tag_service_identifier = service_identifier
+                self._tag_service = service
                 
-                name = service_identifier.GetName()
+                name = service.GetName()
                 
                 self._tag_repo_button.SetLabel( name )
                 
-                HC.pubsub.pub( 'change_tag_repository', self._page_key, service_identifier )
+                HC.pubsub.pub( 'change_tag_repository', self._page_key, service )
                 
             else:
                 
@@ -518,14 +520,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventTagButton( self, event ):
         
-        service_identifiers = []
-        service_identifiers.append( HC.COMBINED_TAG_SERVICE_IDENTIFIER )
-        service_identifiers.append( HC.LOCAL_TAG_SERVICE_IDENTIFIER )
-        service_identifiers.extend( HC.app.Read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) ) )
+        services_manager = HC.app.GetManager( 'services' )
+        
+        services = []
+        services.append( services_manager.GetService( HC.COMBINED_TAG_SERVICE_KEY ) )
+        services.append( services_manager.GetService( HC.LOCAL_TAG_SERVICE_KEY ) )
+        services.extend( services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         menu = wx.Menu()
         
-        for service_identifier in service_identifiers: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service_identifier ), service_identifier.GetName() )
+        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service ), service.GetName() )
         
         self.PopupMenu( menu )
         
@@ -534,9 +538,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
 class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, page_key, file_service_identifier, tag_service_identifier, media_callable = None ):
+    def __init__( self, parent, page_key, file_service_key, tag_service_key, media_callable = None ):
         
-        AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
+        AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
         self._media_callable = media_callable
         self._page_key = page_key
@@ -605,10 +609,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._first_letters = ''
             self._current_namespace = ''
             
-            if self._file_service_identifier == HC.COMBINED_FILE_SERVICE_IDENTIFIER: s_i = self._tag_service_identifier
-            else: s_i = self._file_service_identifier
+            if self._file_service.GetKey() == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service.GetKey()
+            else: search_service_key = self._file_service.GetKey()
             
-            matches = HC.app.Read( 'file_system_predicates', s_i )
+            matches = HC.app.Read( 'file_system_predicates', search_service_key )
             
         else:
             
@@ -649,7 +653,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( search_text ) < num_first_letters:
                         
-                        results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                        results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                         
                         matches = results.GetMatches( half_complete_tag )
                         
@@ -659,7 +663,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._first_letters = half_complete_tag
                             
-                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                             
                         
                         matches = self._cached_results.GetMatches( half_complete_tag )
@@ -678,8 +682,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         else: tags_managers.append( m.GetTagsManager() )
                         
                     
-                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
-                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service_identifier ) ) for tags_manager in tags_managers ]
+                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service.GetKey() ) ) for tags_manager in tags_managers ]
+                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service.GetKey() ) ) for tags_manager in tags_managers ]
                     
                     current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                     pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
@@ -701,7 +705,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    results = CC.AutocompleteMatchesPredicates( self._tag_service_identifier, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
+                    results = CC.AutocompleteMatchesPredicates( self._tag_service.GetKey(), [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
                     
                     matches = results.GetMatches( half_complete_tag )
                     
@@ -755,15 +759,15 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
-    def __init__( self, parent, chosen_tag_callable, file_service_identifier, tag_service_identifier ):
+    def __init__( self, parent, chosen_tag_callable, file_service_key, tag_service_key ):
         
         self._chosen_tag_callable = chosen_tag_callable
         
         self._page_key = None # this makes the parent's eventmenu pubsubs with page_key simpler!
         
-        if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER
+        if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_key = HC.COMBINED_FILE_SERVICE_KEY
         
-        AutoCompleteDropdownTags.__init__( self, parent, file_service_identifier, tag_service_identifier )
+        AutoCompleteDropdownTags.__init__( self, parent, file_service_key, tag_service_key )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -787,15 +791,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
             
-            result = tag_censorship_manager.FilterTags( self._tag_service_identifier, ( tag, ) )
+            result = tag_censorship_manager.FilterTags( self._tag_service.GetKey(), ( tag, ) )
             
             if len( result ) > 0:
                 
                 tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                 
-                parents = tag_parents_manager.GetParents( self._tag_service_identifier, tag )
+                parents = tag_parents_manager.GetParents( self._tag_service.GetKey(), tag )
                 
-                parents = tag_censorship_manager.FilterTags( self._tag_service_identifier, parents )
+                parents = tag_censorship_manager.FilterTags( self._tag_service.GetKey(), parents )
                 
                 self._chosen_tag_callable( tag, parents )
                 
@@ -841,7 +845,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( search_text ) < num_first_letters:
                 
-                results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, tag = search_text, collapse = False )
+                results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), tag = search_text, collapse = False )
                 
                 matches = results.GetMatches( half_complete_tag )
                 
@@ -851,7 +855,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._first_letters = half_complete_tag
                     
-                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_identifier = self._file_service_identifier, tag_service_identifier = self._tag_service_identifier, half_complete_tag = search_text, collapse = False )
+                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), half_complete_tag = search_text, collapse = False )
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
@@ -901,7 +905,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         parents_manager = HC.app.GetManager( 'tag_parents' )
                         
-                        raw_parents = parents_manager.GetParents( self._tag_service_identifier, tag )
+                        raw_parents = parents_manager.GetParents( self._tag_service.GetKey(), tag )
                         
                         parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
                         
@@ -990,9 +994,9 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
         collect_types.sort()
         
-        ratings_service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
-        for service_identifier in ratings_service_identifiers: collect_types.append( ( service_identifier.GetName(), ( 'rating', service_identifier ) ) )
+        for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetKey() ) ) )
         
         popup = self._Popup( collect_types )
         
@@ -1127,20 +1131,30 @@ class ChoiceSort( BetterChoice ):
         
         sort_choices = CC.SORT_CHOICES + sort_by
         
-        ratings_service_identifiers = HC.app.Read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
-        for ratings_service_identifier in ratings_service_identifiers:
+        for ratings_service in ratings_services:
             
-            sort_choices.append( ( 'rating_descend', ratings_service_identifier ) )
-            sort_choices.append( ( 'rating_ascend', ratings_service_identifier ) )
+            sort_choices.append( ( 'rating_descend', ratings_service ) )
+            sort_choices.append( ( 'rating_ascend', ratings_service ) )
             
         
         for ( sort_by_type, sort_by_data ) in sort_choices:
             
             if sort_by_type == 'system': string = CC.sort_string_lookup[ sort_by_data ]
             elif sort_by_type == 'namespaces': string = '-'.join( sort_by_data )
-            elif sort_by_type == 'rating_descend': string = sort_by_data.GetName() + ' rating highest first'
-            elif sort_by_type == 'rating_ascend': string = sort_by_data.GetName() + ' rating lowest first'
+            elif sort_by_type == 'rating_descend':
+                
+                string = sort_by_data.GetName() + ' rating highest first'
+                
+                sort_by_data = sort_by_data.GetKey()
+                
+            elif sort_by_type == 'rating_ascend':
+                
+                string = sort_by_data.GetName() + ' rating lowest first'
+                
+                sort_by_data = sort_by_data.GetKey()
+                
             
             self.Append( 'sort by ' + string, ( sort_by_type, sort_by_data ) )
             
@@ -2596,9 +2610,9 @@ class PopupMessageFiles( PopupMessage ):
     
     def EventButton( self, event ):
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, self._message.GetInfo( 'hashes' ) )
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, self._message.GetInfo( 'hashes' ) )
         
-        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
         
     
 class PopupMessageGauge( PopupMessage ):
@@ -2697,9 +2711,9 @@ class PopupMessageGauge( PopupMessage ):
         
         hashes = self._message.GetInfo( 'hashes' )
         
-        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
         
-        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_IDENTIFIER, initial_media_results = media_results )
+        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
         
     
     def Update( self ):
@@ -2707,7 +2721,7 @@ class PopupMessageGauge( PopupMessage ):
         mode = self._message.GetInfo( 'mode' )
         text = self._message.GetInfo( 'text' )
     
-        if self._job_key.IsPausable(): self._pause_button.Show()
+        if self._job_key.IsPausable() and self._created - HC.GetNow() > 2: self._pause_button.Show()
         else: self._pause_button.Hide()
         
         if mode == 'files':
@@ -2973,6 +2987,13 @@ class PopupMessageManager( wx.Frame ):
     def MakeSureEverythingFits( self ): self._SizeAndPositionAndShow()
     
     def TIMEREvent( self, event ):
+        
+        if HC.shutdown:
+            
+            self.Destroy()
+            
+            return
+            
         
         sizer_items = self._message_vbox.GetChildren()
         
@@ -4275,7 +4296,7 @@ class TagsBoxCounts( TagsBox ):
         
         self._last_media = None
         
-        self._tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
         
         self._current_tags_to_count = collections.Counter()
         self._deleted_tags_to_count = collections.Counter()
@@ -4348,9 +4369,9 @@ class TagsBoxCounts( TagsBox ):
         self._TextsHaveChanged()
         
     
-    def ChangeTagRepository( self, service_identifier ):
+    def ChangeTagRepository( self, service_key ):
         
-        self._tag_service_identifier = service_identifier
+        self._tag_service_key = service_key
         
         if self._last_media is not None: self.SetTagsByMedia( self._last_media, force_reload = True )
         
@@ -4392,7 +4413,7 @@ class TagsBoxCounts( TagsBox ):
         
         if force_reload:
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_identifier )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_key )
             
             self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
             
@@ -4407,7 +4428,7 @@ class TagsBoxCounts( TagsBox ):
             
             siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_identifier )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_key )
             
             current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
             
@@ -4416,7 +4437,7 @@ class TagsBoxCounts( TagsBox ):
             self._pending_tags_to_count.subtract( pending_tags_to_count )
             self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_identifier )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_key )
             
             current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
             
@@ -4460,9 +4481,9 @@ class TagsBoxCPP( TagsBoxCounts ):
         HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
         
     
-    def ChangeTagRepositoryPubsub( self, page_key, service_identifier ):
+    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
         
-        if page_key == self._page_key: self.ChangeTagRepository( service_identifier )
+        if page_key == self._page_key: self.ChangeTagRepository( service_key )
         
     
     def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
@@ -4504,7 +4525,7 @@ class TagsBoxCountsSorter( StaticBox ):
         self.AddF( self._sorter, FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def ChangeTagRepository( self, service_identifier ): self._tags_box.ChangeTagRepository( service_identifier )
+    def ChangeTagRepository( self, service_key ): self._tags_box.ChangeTagRepository( service_key )
     
     def EventSort( self, event ):
         

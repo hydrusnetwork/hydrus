@@ -4,54 +4,63 @@
 # To Public License, Version 2, as published by Sam Hocevar. See
 # http://sam.zoy.org/wtfpl/COPYING for more details.
 
-import locale
-
-try: locale.setlocale( locale.LC_ALL, '' )
-except: pass
-
-from include import HydrusConstants as HC
-
-import os
-import sys
-import time
-
-from include import ClientController
-import threading
-from twisted.internet import reactor
-
-initial_sys_stdout = sys.stdout
-initial_sys_stderr = sys.stderr
-
-with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
+try:
     
-    sys.stdout = f
-    sys.stderr = f
+    import locale
     
-    try:
-        
-        print( 'hydrus client started at ' + time.ctime() )
-        
-        threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
-        
-        app = ClientController.Controller()
-        
-        app.MainLoop()
-        
-        print( 'hydrus client shut down at ' + time.ctime() )
-        
-    except:
-        
-        print( 'hydrus client failed at ' + time.ctime() )
-        
-        import traceback
-        print( traceback.format_exc() )
-        
+    try: locale.setlocale( locale.LC_ALL, '' )
+    except: pass
     
-sys.stdout = initial_sys_stdout
-sys.stderr = initial_sys_stderr
-
-HC.shutdown = True
-
-reactor.callFromThread( reactor.stop )
-
-HC.pubsub.WXpubimmediate( 'shutdown' )
+    from include import HydrusConstants as HC
+    
+    import os
+    import sys
+    import time
+    
+    from include import ClientController
+    import threading
+    from twisted.internet import reactor
+    
+    initial_sys_stdout = sys.stdout
+    initial_sys_stderr = sys.stderr
+    
+    with open( HC.LOGS_DIR + os.path.sep + 'client.log', 'a' ) as f:
+        
+        sys.stdout = f
+        sys.stderr = f
+        
+        try:
+            
+            print( 'hydrus client started at ' + time.ctime() )
+            
+            threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+            
+            app = ClientController.Controller()
+            
+            app.MainLoop()
+            
+            print( 'hydrus client shut down at ' + time.ctime() )
+            
+        except:
+            
+            print( 'hydrus client failed at ' + time.ctime() )
+            
+            import traceback
+            print( traceback.format_exc() )
+            
+        
+    sys.stdout = initial_sys_stdout
+    sys.stderr = initial_sys_stderr
+    
+    HC.shutdown = True
+    
+    reactor.callFromThread( reactor.stop )
+    
+    HC.pubsub.WXpubimmediate( 'shutdown' )
+    
+except:
+    
+    import traceback
+    
+    with open( 'crash.log', 'wb' ) as f: f.write( traceback.format_exc() )
+    

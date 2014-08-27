@@ -233,26 +233,6 @@ ROOT_MESSAGE_BEGIN = '''<html>
 ROOT_MESSAGE_END = '''</p>
     </body>
 </html>'''
-'''
-    def do_OPTIONS( self ):
-        
-        service_type = self._service_identifier.GetType()
-        
-        if service_type == HC.LOCAL_FILE and ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
-        
-        request = ParseHTTPRequest( self.path )
-        
-        allowed = [ 'OPTIONS' ]
-        
-        if ( service_type, HC.GET, request ) in HC.ALLOWED_REQUESTS: allowed.append( 'GET' )
-        if ( service_type, HC.POST, request ) in HC.ALLOWED_REQUESTS: allowed.append( 'POST' )
-        
-        self.send_response( 200 )
-        
-        self.send_header( 'Allow', ','.join( allowed ) )
-        self.end_headers()
-        
-    '''
 
 LOCAL_DOMAIN = HydrusServerResources.HydrusDomain( True )
 REMOTE_DOMAIN = HydrusServerResources.HydrusDomain( False )
@@ -280,9 +260,10 @@ class HydrusRequestRestricted( HydrusRequest ):
     
 class HydrusService( Site ):
     
-    def __init__( self, service_identifier, message ):
+    def __init__( self, service_key, service_type, message ):
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
+        self._service_type = service_type
         self._message = message
         
         root = self._InitRoot()
@@ -296,7 +277,7 @@ class HydrusService( Site ):
         
         root = Resource()
         
-        root.putChild( '', HydrusServerResources.HydrusResourceWelcome( self._service_identifier, self._message ) )
+        root.putChild( '', HydrusServerResources.HydrusResourceWelcome( self._service_key, self._service_type, self._message ) )
         root.putChild( 'favicon.ico', HydrusServerResources.hydrus_favicon )
         
         return root
@@ -308,10 +289,10 @@ class HydrusServiceBooru( HydrusService ):
         
         root = HydrusService._InitRoot( self )
         
-        root.putChild( 'gallery', HydrusServerResources.HydrusResourceCommandBooruGallery( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'page', HydrusServerResources.HydrusResourceCommandBooruPage( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandBooruFile( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandBooruThumbnail( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'gallery', HydrusServerResources.HydrusResourceCommandBooruGallery( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'page', HydrusServerResources.HydrusResourceCommandBooruPage( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandBooruFile( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandBooruThumbnail( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         root.putChild( 'style.css', HydrusServerResources.local_booru_css )
         
         return root
@@ -323,17 +304,17 @@ class HydrusServiceLocal( HydrusService ):
         
         root = HydrusService._InitRoot( self )
         
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandLocalFile( self._service_identifier, LOCAL_DOMAIN ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandLocalThumbnail( self._service_identifier, LOCAL_DOMAIN ) )
+        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandLocalFile( self._service_key, self._service_type, LOCAL_DOMAIN ) )
+        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandLocalThumbnail( self._service_key, self._service_type, LOCAL_DOMAIN ) )
         
         return root
         
     
 class HydrusServiceRestricted( HydrusService ):
     
-    def __init__( self, service_identifier, message ):
+    def __init__( self, service_key, service_type, message ):
         
-        HydrusService.__init__( self, service_identifier, message )
+        HydrusService.__init__( self, service_key, service_type, message )
         
         self.requestFactory = HydrusRequestRestricted
         
@@ -342,15 +323,15 @@ class HydrusServiceRestricted( HydrusService ):
         
         root = HydrusService._InitRoot( self )
         
-        root.putChild( 'access_key', HydrusServerResources.HydrusResourceCommandAccessKey( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'access_key_verification', HydrusServerResources.HydrusResourceCommandAccessKeyVerification( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'session_key', HydrusServerResources.HydrusResourceCommandSessionKey( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'access_key', HydrusServerResources.HydrusResourceCommandAccessKey( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'access_key_verification', HydrusServerResources.HydrusResourceCommandAccessKeyVerification( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'session_key', HydrusServerResources.HydrusResourceCommandSessionKey( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         
-        root.putChild( 'account', HydrusServerResources.HydrusResourceCommandRestrictedAccount( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'account_info', HydrusServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'account_types', HydrusServerResources.HydrusResourceCommandRestrictedAccountTypes( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'registration_keys', HydrusServerResources.HydrusResourceCommandRestrictedRegistrationKeys( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'stats', HydrusServerResources.HydrusResourceCommandRestrictedStats( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'account', HydrusServerResources.HydrusResourceCommandRestrictedAccount( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'account_info', HydrusServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'account_types', HydrusServerResources.HydrusResourceCommandRestrictedAccountTypes( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'registration_keys', HydrusServerResources.HydrusResourceCommandRestrictedRegistrationKeys( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'stats', HydrusServerResources.HydrusResourceCommandRestrictedStats( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         
         return root
         
@@ -361,9 +342,9 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         
         root = HydrusServiceRestricted._InitRoot( self )
         
-        root.putChild( 'backup', HydrusServerResources.HydrusResourceCommandRestrictedBackup( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedServices( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'backup', HydrusServerResources.HydrusResourceCommandRestrictedBackup( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'init', HydrusServerResources.HydrusResourceCommandInit( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'services', HydrusServerResources.HydrusResourceCommandRestrictedServices( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         
         return root
         
@@ -374,10 +355,10 @@ class HydrusServiceRepository( HydrusServiceRestricted ):
         
         root = HydrusServiceRestricted._InitRoot( self )
         
-        root.putChild( 'news', HydrusServerResources.HydrusResourceCommandRestrictedNews( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'num_petitions', HydrusServerResources.HydrusResourceCommandRestrictedNumPetitions( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'petition', HydrusServerResources.HydrusResourceCommandRestrictedPetition( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'update', HydrusServerResources.HydrusResourceCommandRestrictedUpdate( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'news', HydrusServerResources.HydrusResourceCommandRestrictedNews( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'num_petitions', HydrusServerResources.HydrusResourceCommandRestrictedNumPetitions( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'petition', HydrusServerResources.HydrusResourceCommandRestrictedPetition( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'update', HydrusServerResources.HydrusResourceCommandRestrictedUpdate( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         
         return root
         
@@ -388,9 +369,9 @@ class HydrusServiceRepositoryFile( HydrusServiceRepository ):
         
         root = HydrusServiceRepository._InitRoot( self )
         
-        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandRestrictedRepositoryFile( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'ip', HydrusServerResources.HydrusResourceCommandRestrictedIP( self._service_identifier, REMOTE_DOMAIN ) )
-        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandRestrictedRepositoryThumbnail( self._service_identifier, REMOTE_DOMAIN ) )
+        root.putChild( 'file', HydrusServerResources.HydrusResourceCommandRestrictedRepositoryFile( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'ip', HydrusServerResources.HydrusResourceCommandRestrictedIP( self._service_key, self._service_type, REMOTE_DOMAIN ) )
+        root.putChild( 'thumbnail', HydrusServerResources.HydrusResourceCommandRestrictedRepositoryThumbnail( self._service_key, self._service_type, REMOTE_DOMAIN ) )
         
         return root
         
@@ -401,9 +382,9 @@ class MessagingServiceFactory( ServerFactory ):
     
     protocol = HydrusServerAMP.MessagingServiceProtocol
     
-    def __init__( self, service_identifier ):
+    def __init__( self, service_key ):
         
-        self.service_identifier = service_identifier
+        self.service_key = service_key
         
         self._persistent_connections = collections.defaultdict( dict )
         self._temporary_connections = collections.defaultdict( dict )

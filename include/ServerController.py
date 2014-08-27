@@ -64,9 +64,9 @@ class Controller( wx.App ):
             
             services_info = self.Read( 'services' )
             
-            for ( service_identifier, options ) in services_info:
+            for ( service_key, service_type, options ) in services_info:
                 
-                if service_identifier.GetType() == HC.SERVER_ADMIN:
+                if service_type == HC.SERVER_ADMIN:
                     
                     port = options[ 'port' ]
                     
@@ -87,7 +87,7 @@ class Controller( wx.App ):
                     
                 
             
-            for ( service_identifier, options ) in services_info: self.RestartService( service_identifier, options )
+            for ( service_key, service_type, options ) in services_info: self.RestartService( service_key, service_type, options )
             
             self.StartDaemons()
             
@@ -113,7 +113,7 @@ class Controller( wx.App ):
         return self._Read( action, HC.LOW_PRIORITY, *args, **kwargs )
         
     
-    def RestartService( self, service_identifier, options ):
+    def RestartService( self, service_key, service_type, options ):
         
         def TWISTEDRestartService():
             
@@ -138,14 +138,12 @@ class Controller( wx.App ):
                         
                         message = options[ 'message' ]
                         
-                        service_type = service_identifier.GetType()
-                        
-                        if service_type == HC.SERVER_ADMIN: service_object = HydrusServer.HydrusServiceAdmin( service_identifier, message )
-                        elif service_type == HC.FILE_REPOSITORY: service_object = HydrusServer.HydrusServiceRepositoryFile( service_identifier, message )
-                        elif service_type == HC.TAG_REPOSITORY: service_object = HydrusServer.HydrusServiceRepositoryTag( service_identifier, message )
+                        if service_type == HC.SERVER_ADMIN: service_object = HydrusServer.HydrusServiceAdmin( service_key, service_type, message )
+                        elif service_type == HC.FILE_REPOSITORY: service_object = HydrusServer.HydrusServiceRepositoryFile( service_key, service_type, message )
+                        elif service_type == HC.TAG_REPOSITORY: service_object = HydrusServer.HydrusServiceRepositoryTag( service_key, service_type, message )
                         elif service_type == HC.MESSAGE_DEPOT: return
                         
-                        self._services[ service_identifier ] = reactor.listenTCP( port, service_object )
+                        self._services[ service_key ] = reactor.listenTCP( port, service_object )
                         
                         connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
                         
@@ -166,10 +164,10 @@ class Controller( wx.App ):
                     
                 
             
-            if service_identifier not in self._services: StartService()
+            if service_key not in self._services: StartService()
             else:
                 
-                deferred = defer.maybeDeferred( self._services[ service_identifier ].stopListening )
+                deferred = defer.maybeDeferred( self._services[ service_key ].stopListening )
                 
                 deferred.addCallback( StartService )
                 

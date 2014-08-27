@@ -71,7 +71,7 @@ class HydrusPubSub( object ):
     def WXProcessQueueItem( self ):
         
         # we don't want to map a topic to its callables until the previous topic's callables have been fully executed
-        # e.g. when we start a message with a pubsub, it'll take a while (in indepedant thread-time) for wx to create
+        # e.g. when we start a message with a pubsub, it'll take a while (in independant thread-time) for wx to create
         # the dialog and hence map the new callable to the topic. this was leading to messages not being updated
         # because the (short) processing thread finished and entirely pubsubbed before wx had a chance to boot the
         # message.

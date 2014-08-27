@@ -284,13 +284,11 @@ class HydrusDomain( object ):
     
 class HydrusResourceWelcome( Resource ):
     
-    def __init__( self, service_identifier, message ):
+    def __init__( self, service_key, service_type, message ):
         
         Resource.__init__( self )
         
-        service_type = service_identifier.GetType()
-        
-        if service_type == HC.LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
+        if service_key == HC.LOCAL_FILE_SERVICE_KEY: body = CLIENT_ROOT_MESSAGE
         else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
         
         self._body = body.encode( 'utf-8' )
@@ -307,15 +305,13 @@ class HydrusResourceWelcome( Resource ):
     
 class HydrusResourceCommand( Resource ):
     
-    def __init__( self, service_identifier, domain ):
+    def __init__( self, service_key, service_type, domain ):
         
         Resource.__init__( self )
         
-        self._service_identifier = service_identifier
-        
+        self._service_key = service_key
+        self._service_type = service_type
         self._domain = domain
-        
-        service_type = self._service_identifier.GetType()
         
         self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
@@ -709,7 +705,7 @@ class HydrusResourceCommandAccessKeyVerification( HydrusResourceCommand ):
         
         try:
             
-            account = HC.app.Read( 'account', self._service_identifier, account_identifier )
+            account = HC.app.Read( 'account', self._service_key, account_identifier )
             
             verified = True
             
@@ -736,9 +732,7 @@ class HydrusResourceCommandBooru( HydrusResourceCommand ):
             
             num_bytes = request.hydrus_request_data_usage
             
-            service_identifier = HC.LOCAL_BOORU_SERVICE_IDENTIFIER # this is important, as self._service_identifier is the server identifier
-            
-            HC.pubsub.pub( 'service_updates_delayed', { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
+            HC.pubsub.pub( 'service_updates_delayed', { HC.LOCAL_BOORU_SERVICE_KEY : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
             
         
     
@@ -1024,7 +1018,7 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        ( session_key, expiry ) = session_manager.AddSession( self._service_identifier, access_key )
+        ( session_key, expiry ) = session_manager.AddSession( self._service_key, access_key )
         
         now = HC.GetNow()
         
@@ -1090,7 +1084,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
         
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        account = session_manager.GetAccount( self._service_identifier, session_key )
+        account = session_manager.GetAccount( self._service_key, session_key )
         
         request.hydrus_account = account
         
@@ -1112,7 +1106,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
                 
                 account.RequestMade( num_bytes )
                 
-                HC.pubsub.pub( 'request_made', ( self._service_identifier, account, num_bytes ) )
+                HC.pubsub.pub( 'request_made', ( self._service_key, account, num_bytes ) )
                 
             
         
@@ -1143,11 +1137,11 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         kwargs = request.hydrus_args # for things like expiry, title, and so on
         
-        HC.app.Write( 'account', self._service_identifier, admin_account, action, subject_identifiers, kwargs )
+        HC.app.Write( 'account', self._service_key, admin_account, action, subject_identifiers, kwargs )
         
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        session_manager.RefreshAccounts( self._service_identifier, subject_identifiers )
+        session_manager.RefreshAccounts( self._service_key, subject_identifiers )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -1162,7 +1156,7 @@ class HydrusResourceCommandRestrictedAccountInfo( HydrusResourceCommandRestricte
         
         subject_identifier = request.hydrus_args[ 'subject_identifier' ]
         
-        account_info = HC.app.Read( 'account_info', self._service_identifier, subject_identifier )
+        account_info = HC.app.Read( 'account_info', self._service_key, subject_identifier )
         
         body = yaml.safe_dump( { 'account_info' : account_info } )
         
@@ -1178,7 +1172,7 @@ class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestrict
     
     def _threadDoGETJob( self, request ):
         
-        account_types = HC.app.Read( 'account_types', self._service_identifier )
+        account_types = HC.app.Read( 'account_types', self._service_key )
         
         body = yaml.safe_dump( { 'account_types' : account_types } )
         
@@ -1191,7 +1185,7 @@ class HydrusResourceCommandRestrictedAccountTypes( HydrusResourceCommandRestrict
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        HC.app.Write( 'account_types', self._service_identifier, edit_log )
+        HC.app.Write( 'account_types', self._service_key, edit_log )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -1221,7 +1215,7 @@ class HydrusResourceCommandRestrictedIP( HydrusResourceCommandRestricted ):
         
         hash = request.hydrus_args[ 'hash' ]
         
-        ( ip, timestamp ) = HC.app.Read( 'ip', self._service_identifier, hash )
+        ( ip, timestamp ) = HC.app.Read( 'ip', self._service_key, hash )
         
         body = yaml.safe_dump( { 'ip' : ip, 'timestamp' : timestamp } )
         
@@ -1238,7 +1232,7 @@ class HydrusResourceCommandRestrictedNews( HydrusResourceCommandRestricted ):
         
         news = request.hydrus_args[ 'news' ]
         
-        HC.app.Write( 'news', self._service_identifier, news )
+        HC.app.Write( 'news', self._service_key, news )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -1251,7 +1245,7 @@ class HydrusResourceCommandRestrictedNumPetitions( HydrusResourceCommandRestrict
     
     def _threadDoGETJob( self, request ):
         
-        num_petitions = HC.app.Read( 'num_petitions', self._service_identifier )
+        num_petitions = HC.app.Read( 'num_petitions', self._service_key )
         
         body = yaml.safe_dump( { 'num_petitions' : num_petitions } )
         
@@ -1266,7 +1260,7 @@ class HydrusResourceCommandRestrictedPetition( HydrusResourceCommandRestricted )
     
     def _threadDoGETJob( self, request ):
         
-        petition = HC.app.Read( 'petition', self._service_identifier )
+        petition = HC.app.Read( 'petition', self._service_key )
         
         body = yaml.safe_dump( { 'petition' : petition } )
         
@@ -1287,7 +1281,7 @@ class HydrusResourceCommandRestrictedRegistrationKeys( HydrusResourceCommandRest
         if 'lifetime' in request.hydrus_args: lifetime = request.hydrus_args[ 'lifetime' ]
         else: lifetime = None
         
-        registration_keys = HC.app.Read( 'registration_keys', self._service_identifier, num, title, lifetime )
+        registration_keys = HC.app.Read( 'registration_keys', self._service_key, num, title, lifetime )
         
         body = yaml.safe_dump( { 'registration_keys' : registration_keys } )
         
@@ -1324,7 +1318,7 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         file_dict[ 'ip' ] = request.getClientIP()
         
-        HC.app.Write( 'file', self._service_identifier, account, file_dict )
+        HC.app.Write( 'file', self._service_key, account, file_dict )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -1371,9 +1365,9 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        service_identifiers_to_access_keys = HC.app.Write( 'services', account, edit_log )
+        service_keys_to_access_keys = HC.app.Write( 'services', account, edit_log )
         
-        body = yaml.safe_dump( { 'service_identifiers_to_access_keys' : service_identifiers_to_access_keys } )
+        body = yaml.safe_dump( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
         
         response_context = HC.ResponseContext( 200, body = body )
         
@@ -1386,7 +1380,7 @@ class HydrusResourceCommandRestrictedStats( HydrusResourceCommandRestricted ):
     
     def _threadDoGETJob( self, request ):
         
-        stats = HC.app.Read( 'stats', self._service_identifier )
+        stats = HC.app.Read( 'stats', self._service_key )
         
         body = yaml.safe_dump( { 'stats' : stats } )
         
@@ -1406,7 +1400,7 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         begin = request.hydrus_args[ 'begin' ]
         
-        path = SC.GetUpdatePath( self._service_identifier, begin )
+        path = SC.GetUpdatePath( self._service_key, begin )
         
         response_context = HC.ResponseContext( 200, path = path, is_yaml = True )
         
@@ -1419,7 +1413,7 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         update = request.hydrus_args[ 'update' ]
         
-        HC.app.Write( 'update', self._service_identifier, account, update )
+        HC.app.Write( 'update', self._service_key, account, update )
         
         response_context = HC.ResponseContext( 200 )
         

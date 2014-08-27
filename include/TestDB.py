@@ -106,7 +106,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
         content_updates = []
 
@@ -114,9 +114,9 @@ class TestClientDB( unittest.TestCase ):
         content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
         content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_identifiers_to_content_updates[ HC.LOCAL_TAG_SERVICE_IDENTIFIER ] = content_updates
+        service_keys_to_content_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = content_updates
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         # cars
         
@@ -231,11 +231,11 @@ class TestClientDB( unittest.TestCase ):
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
-        service_identifiers_to_content_updates[ HC.LOCAL_FILE_SERVICE_IDENTIFIER ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, ( hash, ) ), )
+        service_keys_to_content_updates[ HC.LOCAL_FILE_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_PENDING, ( hash, ) ), )
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         #
         
@@ -247,11 +247,11 @@ class TestClientDB( unittest.TestCase ):
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
-        service_identifiers_to_content_updates[ HC.LOCAL_FILE_SERVICE_IDENTIFIER ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, ( hash, ) ), )
+        service_keys_to_content_updates[ HC.LOCAL_FILE_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PENDING, ( hash, ) ), )
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         #
         
@@ -293,7 +293,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ) ) ]
                 
-                search_context = CC.FileSearchContext( file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, predicates = predicates )
+                search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -307,7 +307,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( predicate_type, info ) ) ]
                 
-                search_context = CC.FileSearchContext( file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, predicates = predicates )
+                search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -321,7 +321,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ) ) ]
                 
-                search_context = CC.FileSearchContext( file_service_identifier = HC.LOCAL_FILE_SERVICE_IDENTIFIER, predicates = predicates )
+                search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -377,10 +377,10 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None, 1 ) )
         
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.CURRENT, HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 0 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 1 ) )
-        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.PENDING, HC.LOCAL_FILE_SERVICE_IDENTIFIER ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.CURRENT, HC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, HC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, HC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.PENDING, HC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HASH, hash, 1 ) )
         tests.append( ( HC.SYSTEM_PREDICATE_TYPE_HASH, ( '0123456789abcdef' * 4 ).decode( 'hex' ), 0 ) )
@@ -466,12 +466,12 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
-        service_identifiers_to_content_updates[ HC.LOCAL_FILE_SERVICE_IDENTIFIER ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
-        service_identifiers_to_content_updates[ HC.LOCAL_TAG_SERVICE_IDENTIFIER ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
+        service_keys_to_content_updates[ HC.LOCAL_FILE_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
+        service_keys_to_content_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         #
         
@@ -513,16 +513,16 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_identifiers_to_content_updates = {}
+        service_keys_to_content_updates = {}
         
         content_updates = []
         
         content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
         content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_identifiers_to_content_updates[ HC.LOCAL_TAG_SERVICE_IDENTIFIER ] = content_updates
+        service_keys_to_content_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = content_updates
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         #
         
@@ -546,9 +546,9 @@ class TestClientDB( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
         
-        service_identifiers_to_content_updates = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : ( content_update, ) }
+        service_keys_to_content_updates = { HC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         #
         
@@ -579,7 +579,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'file_system_predicates', HC.LOCAL_FILE_SERVICE_IDENTIFIER )
+        result = self._read( 'file_system_predicates', HC.LOCAL_FILE_SERVICE_KEY )
         
         predicates = []
         
@@ -597,9 +597,9 @@ class TestClientDB( unittest.TestCase ):
         
         info = []
         
-        info.append( ( 'blank', 'class_text', ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
-        info.append( ( 'system', 'class_text', ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.SYSTEM_PREDICATE_ARCHIVE ] } ) )
-        info.append( ( 'tags', 'class_text', ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'tag' ), counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
+        info.append( ( 'blank', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
+        info.append( ( 'system', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.SYSTEM_PREDICATE_ARCHIVE ] } ) )
+        info.append( ( 'tags', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'tag' ), counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
         
         self._write( 'gui_session', 'normal', info )
         
@@ -641,7 +641,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( written_result, 'redundant' )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_file_service_identifiers_cdpp, mr_local_ratings, mr_remote_ratings ) = written_media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = written_media_result.ToTuple()
         
         now = HC.GetNow()
         
@@ -756,9 +756,9 @@ class TestClientDB( unittest.TestCase ):
         
         content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
         
-        service_identifiers_to_content_updates = { HC.LOCAL_FILE_SERVICE_IDENTIFIER : ( content_update, ) }
+        service_keys_to_content_updates = { HC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
         
-        self._write( 'content_updates', service_identifiers_to_content_updates )
+        self._write( 'content_updates', service_keys_to_content_updates )
         
         #
         
@@ -789,9 +789,9 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( media_result, ) = self._read( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+        ( media_result, ) = self._read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_file_service_identifiers_cdpp, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
         now = HC.GetNow()
         
@@ -808,9 +808,9 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_num_frames, None )
         self.assertEqual( mr_num_words, None )
         
-        ( media_result, ) = self._read( 'media_results_from_ids', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( 1, ) )
+        ( media_result, ) = self._read( 'media_results_from_ids', HC.LOCAL_FILE_SERVICE_KEY, ( 1, ) )
         
-        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_file_service_identifiers_cdpp, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
+        ( mr_hash, mr_inbox, mr_size, mr_mime, mr_timestamp, mr_width, mr_height, mr_duration, mr_num_frames, mr_num_words, mr_tags_manager, mr_locations_manager, mr_local_ratings, mr_remote_ratings ) = media_result.ToTuple()
         
         now = HC.GetNow()
         
@@ -834,7 +834,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, ( True, [] ) )
         
@@ -842,8 +842,8 @@ class TestClientDB( unittest.TestCase ):
         
         info = []
         
-        info.append( ( HC.LOCAL_TAG_SERVICE_IDENTIFIER, False, [ ':', 'series:' ] ) )
-        info.append( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, True, [ ':' ] ) ) # bit dodgy, but whatever!
+        info.append( ( HC.LOCAL_TAG_SERVICE_KEY, False, [ ':', 'series:' ] ) )
+        info.append( ( HC.LOCAL_FILE_SERVICE_KEY, True, [ ':' ] ) ) # bit dodgy, but whatever!
         
         self._write( 'tag_censorship', info )
         
@@ -853,14 +853,14 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertItemsEqual( result, info )
         
-        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        result = self._read( 'tag_censorship', HC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, ( False, [ ':', 'series:' ] ) )
         
     
     def test_news( self ):
         
-        result = self._read( 'news', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        result = self._read( 'news', HC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertEqual( result, [] )
         
@@ -873,13 +873,13 @@ class TestClientDB( unittest.TestCase ):
         
         service_updates = dict()
         
-        service_updates[ HC.LOCAL_TAG_SERVICE_IDENTIFIER ] = [ HC.ServiceUpdate( HC.SERVICE_UPDATE_NEWS, news ) ]
+        service_updates[ HC.LOCAL_TAG_SERVICE_KEY ] = [ HC.ServiceUpdate( HC.SERVICE_UPDATE_NEWS, news ) ]
         
         self._write( 'service_updates', service_updates )
         
         #
         
-        result = self._read( 'news', HC.LOCAL_TAG_SERVICE_IDENTIFIER )
+        result = self._read( 'news', HC.LOCAL_TAG_SERVICE_KEY )
         
         self.assertItemsEqual( result, news )
         
@@ -897,7 +897,7 @@ class TestClientDB( unittest.TestCase ):
         
         pass
         
-        # result = self._read( 'pending', service_identifier )
+        # result = self._read( 'pending', service_key )
         # do more when I do remote repos
         
     
@@ -939,37 +939,15 @@ class TestClientDB( unittest.TestCase ):
     
     def test_services( self ):
         
-        result = self._read( 'service_identifiers', ( HC.LOCAL_FILE, ) )
-        
-        self.assertEqual( result, { HC.LOCAL_FILE_SERVICE_IDENTIFIER } )
-        
-        result = self._read( 'service_identifiers', ( HC.LOCAL_TAG, ) )
-        
-        self.assertEqual( result, { HC.LOCAL_TAG_SERVICE_IDENTIFIER } )
-        
-        result = self._read( 'service_identifiers', ( HC.COMBINED_FILE, ) )
-        
-        self.assertEqual( result, { HC.COMBINED_FILE_SERVICE_IDENTIFIER } )
-        
-        result = self._read( 'service_identifiers', ( HC.COMBINED_TAG, ) )
-        
-        self.assertEqual( result, { HC.COMBINED_TAG_SERVICE_IDENTIFIER } )
-        
-        result = self._read( 'service_identifiers', ( HC.LOCAL_FILE, HC.COMBINED_FILE ) )
-        
-        self.assertEqual( result, { HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.COMBINED_FILE_SERVICE_IDENTIFIER } )
-        
-        #
-        
         result = self._read( 'services', ( HC.LOCAL_FILE, HC.LOCAL_TAG ) )
         
-        result_s_is = { service.GetServiceIdentifier() for service in result }
+        result_service_keys = { service.GetKey() for service in result }
         
-        self.assertItemsEqual( { HC.LOCAL_FILE_SERVICE_IDENTIFIER, HC.LOCAL_TAG_SERVICE_IDENTIFIER }, result_s_is )
+        self.assertItemsEqual( { HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         
-        result = self._read( 'service_info', HC.LOCAL_FILE_SERVICE_IDENTIFIER.GetServiceKey() )
+        result = self._read( 'service_info', HC.LOCAL_FILE_SERVICE_KEY )
         
         self.assertEqual( type( result ), dict )
         
@@ -981,89 +959,109 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        new_tag_repo = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'new tag repo' )
+        def test_written_services( written_services, service_tuples ):
+            
+            self.assertEqual( len( written_services ), len( service_tuples ) )
+            
+            keys_to_service_tuples = { service_key : ( service_type, name, info ) for ( service_key, service_type, name, info ) in service_tuples }
+            
+            for service in written_services:
+                
+                service_key = service.GetKey()
+                
+                self.assertIn( service_key, keys_to_service_tuples )
+                
+                ( service_type, name, info ) = keys_to_service_tuples[ service_key ]
+                
+                self.assertEqual( service_type, service.GetType() )
+                self.assertEqual( name, service.GetName() )
+                
+                for ( k, v ) in service.GetInfo().items():
+                    
+                    if k != 'account': self.assertEqual( v, info[ k ] )
+                    
+                
+            
         
-        new_tag_repo_info = {}
+        info = {}
         
-        new_tag_repo_info[ 'host' ] = 'example_host'
-        new_tag_repo_info[ 'port' ] = 80
-        new_tag_repo_info[ 'access_key' ] = os.urandom( 32 ) 
+        info[ 'host' ] = 'example_host'
+        info[ 'port' ] = 80
+        info[ 'access_key' ] = os.urandom( 32 ) 
         
-        other_new_tag_repo = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'new tag repo2' )
+        new_tag_repo = ( os.urandom( 32 ), HC.TAG_REPOSITORY, 'new tag repo', info )
         
-        other_new_tag_repo_info = {}
+        info = {}
         
-        other_new_tag_repo_info[ 'host' ] = 'example_host2'
-        other_new_tag_repo_info[ 'port' ] = 80
-        other_new_tag_repo_info[ 'access_key' ] = os.urandom( 32 )
+        info[ 'host' ] = 'example_host2'
+        info[ 'port' ] = 80
+        info[ 'access_key' ] = os.urandom( 32 )
         
-        new_local_like = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.LOCAL_RATING_LIKE, 'new local rating' )
+        other_new_tag_repo = ( os.urandom( 32 ), HC.TAG_REPOSITORY, 'new tag repo2', info )
         
-        new_local_like_info = {}
+        info = {}
         
-        new_local_like_info[ 'like' ] = 'love'
-        new_local_like_info[ 'dislike' ] = 'hate'
+        info[ 'like' ] = 'love'
+        info[ 'dislike' ] = 'hate'
         
-        new_local_numerical = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.LOCAL_RATING_NUMERICAL, 'new local numerical' )
+        new_local_like = ( os.urandom( 32 ), HC.LOCAL_RATING_LIKE, 'new local rating', info )
         
-        new_local_numerical_info = {}
+        info = {}
         
-        new_local_numerical_info[ 'lower' ] = 1
-        new_local_numerical_info[ 'upper' ] = 5
+        info[ 'lower' ] = 1
+        info[ 'upper' ] = 5
         
-        edit_log = []
-        
-        edit_log.append( ( HC.ADD, ( new_tag_repo, new_tag_repo_info ) ) )
-        edit_log.append( ( HC.ADD, ( other_new_tag_repo, other_new_tag_repo_info ) ) )
-        edit_log.append( ( HC.ADD, ( new_local_like, new_local_like_info ) ) )
-        edit_log.append( ( HC.ADD, ( new_local_numerical, new_local_numerical_info ) ) )
-        
-        self._write( 'update_services', edit_log )
-        
-        result = self._read( 'service_identifiers', ( HC.TAG_REPOSITORY, ) )
-        self.assertEqual( result, { new_tag_repo, other_new_tag_repo } )
-        
-        result = self._read( 'service_identifiers', ( HC.LOCAL_RATING_LIKE, ) )
-        self.assertEqual( result, { new_local_like } )
-        
-        result = self._read( 'service_identifiers', ( HC.LOCAL_RATING_NUMERICAL, ) )
-        self.assertEqual( result, { new_local_numerical } )
-        
-        #
-        
-        # should the service key be different or the same?
-        other_new_tag_repo_updated = HC.ClientServiceIdentifier( os.urandom( 32 ), HC.TAG_REPOSITORY, 'a better name' )
-        
-        other_new_tag_repo_info_updated = dict( other_new_tag_repo_info )
-        
-        other_new_tag_repo_info_updated[ 'host' ] = 'corrected host'
-        other_new_tag_repo_info_updated[ 'port' ] = 85
-        other_new_tag_repo_info_updated[ 'access_key' ] = os.urandom( 32 )
+        new_local_numerical = ( os.urandom( 32 ), HC.LOCAL_RATING_NUMERICAL, 'new local numerical', info )
         
         edit_log = []
         
-        edit_log.append( ( HC.DELETE, new_local_like ) )
-        edit_log.append( ( HC.EDIT, ( other_new_tag_repo, ( other_new_tag_repo_updated, other_new_tag_repo_info_updated ) ) ) )
+        edit_log.append( ( HC.ADD, new_tag_repo ) )
+        edit_log.append( ( HC.ADD, other_new_tag_repo ) )
+        edit_log.append( ( HC.ADD, new_local_like ) )
+        edit_log.append( ( HC.ADD, new_local_numerical ) )
         
         self._write( 'update_services', edit_log )
         
-        # update this ~sometime~ to test the new services manager object, which should update with these changes!
+        written_services = set( self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ) )
+        
+        test_written_services( written_services, ( new_tag_repo, other_new_tag_repo, new_local_like, new_local_numerical ) )
+        
+        #
+        
+        ( service_key, service_type, name, info ) = other_new_tag_repo
+        
+        name = 'a better name'
+        
+        info = dict( info )
+        
+        info[ 'host' ] = 'corrected host'
+        info[ 'port' ] = 85
+        info[ 'access_key' ] = os.urandom( 32 )
+        
+        other_new_tag_repo_updated = ( service_key, service_type, name, info )
+        
+        edit_log = []
+        
+        edit_log.append( ( HC.DELETE, new_local_like[0] ) )
+        edit_log.append( ( HC.EDIT, other_new_tag_repo_updated ) )
+        
+        self._write( 'update_services', edit_log )
+        
+        written_services = set( self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ) )
+        
+        test_written_services( written_services, ( new_tag_repo, other_new_tag_repo_updated, new_local_numerical ) )
         
         #
         
         edit_log = []
         
-        edit_log.append( ( HC.DELETE, other_new_tag_repo ) )
+        edit_log.append( ( HC.DELETE, other_new_tag_repo_updated[0] ) )
         
         self._write( 'update_services', edit_log )
         
-        # update this ~sometime~ to test the new services manager object, which should update with these changes!
+        written_services = set( self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ) )
         
-        #
-        
-        result = self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-        
-        self.assertEqual( len( result ), 2 )
+        test_written_services( written_services, ( new_tag_repo, new_local_numerical ) )
         
     
     def test_sessions( self ):
@@ -1072,7 +1070,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( result, [] )
         
-        session = ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, os.urandom( 32 ), HC.GetNow() + 100000 )
+        session = ( HC.LOCAL_FILE_SERVICE_KEY, os.urandom( 32 ), HC.GetNow() + 100000 )
         
         self._write( 'hydrus_session', *session )
         

@@ -598,7 +598,7 @@ def GetFilePath( hash, mime = None ):
     
     return path
     
-def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+def GetMediasTagCount( pool, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY ):
     
     tags_managers = []
     
@@ -615,7 +615,7 @@ def GetMediasTagCount( pool, tag_service_identifier = HC.COMBINED_TAG_SERVICE_ID
     
     for tags_manager in tags_managers:
         
-        statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_identifier )
+        statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key )
         
         current_tags_to_count.update( statuses_to_tags[ HC.CURRENT ] )
         deleted_tags_to_count.update( statuses_to_tags[ HC.DELETED ] )
@@ -688,12 +688,12 @@ def IterateAllThumbnailPaths():
         for path in next_paths: yield dir + os.path.sep + path
         
     
-def IntersectTags( tags_managers, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+def IntersectTags( tags_managers, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
     
-    current = list( HC.IntelligentMassIntersect( ( tags_manager.GetCurrent( service_identifier ) for tags_manager in tags_managers ) ) )
-    deleted = list( HC.IntelligentMassIntersect( ( tags_manager.GetDeleted( service_identifier ) for tags_manager in tags_managers ) ) )
-    pending = list( HC.IntelligentMassIntersect( ( tags_manager.GetPending( service_identifier ) for tags_manager in tags_managers ) ) )
-    petitioned = list( HC.IntelligentMassIntersect( ( tags_manager.GetPetitioned( service_identifier ) for tags_manager in tags_managers ) ) )
+    current = list( HC.IntelligentMassIntersect( ( tags_manager.GetCurrent( service_key ) for tags_manager in tags_managers ) ) )
+    deleted = list( HC.IntelligentMassIntersect( ( tags_manager.GetDeleted( service_key ) for tags_manager in tags_managers ) ) )
+    pending = list( HC.IntelligentMassIntersect( ( tags_manager.GetPending( service_key ) for tags_manager in tags_managers ) ) )
+    petitioned = list( HC.IntelligentMassIntersect( ( tags_manager.GetPetitioned( service_key ) for tags_manager in tags_managers ) ) )
     
     return ( current, deleted, pending, petitioned )
     
@@ -834,9 +834,9 @@ class AutocompleteMatchesCounted( object ):
     
 class AutocompleteMatchesPredicates( object ):
     
-    def __init__( self, service_identifier, predicates, collapse = True ):
+    def __init__( self, service_key, predicates, collapse = True ):
         
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         self._predicates = predicates
         self._collapse = collapse
         
@@ -862,7 +862,7 @@ class AutocompleteMatchesPredicates( object ):
             
             parents_manager = HC.app.GetManager( 'tag_parents' )
             
-            matches = parents_manager.ExpandPredicates( self._service_identifier, matches )
+            matches = parents_manager.ExpandPredicates( self._service_key, matches )
             
         
         return matches
@@ -1017,78 +1017,6 @@ tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' :
 
 DEFAULT_BOORUS[ 'tbib' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
-class CDPPFileServiceIdentifiers():
-    
-    def __init__( self, current, deleted, pending, petitioned ):
-        
-        self._current = current
-        self._deleted = deleted
-        self._pending = pending
-        self._petitioned = petitioned
-        
-    
-    def DeletePending( self, service_identifier ):
-        
-        self._pending.discard( service_identifier )
-        self._petitioned.discard( service_identifier )
-        
-    
-    def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
-    
-    def GetCurrent( self ): return self._current
-    def GetCurrentRemote( self ): return self._current - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
-    
-    def GetDeleted( self ): return self._deleted
-    def GetDeletedRemote( self ): return self._deleted - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
-    
-    def GetPending( self ): return self._pending
-    def GetPendingRemote( self ): return self._pending - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
-    
-    def GetPetitioned( self ): return self._petitioned
-    def GetPetitionedRemote( self ): return self._petitioned - set( ( HC.LOCAL_FILE_SERVICE_IDENTIFIER, ) )
-    
-    def HasDownloading( self ): return HC.LOCAL_FILE_SERVICE_IDENTIFIER in self._pending
-    
-    def HasLocal( self ): return HC.LOCAL_FILE_SERVICE_IDENTIFIER in self._current
-    
-    def ProcessContentUpdate( self, service_identifier, content_update ):
-        
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        if action == HC.CONTENT_UPDATE_ADD:
-            
-            self._current.add( service_identifier )
-            
-            self._deleted.discard( service_identifier )
-            self._pending.discard( service_identifier )
-            
-        elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            self._deleted.add( service_identifier )
-            
-            self._current.discard( service_identifier )
-            self._petitioned.discard( service_identifier )
-            
-        elif action == HC.CONTENT_UPDATE_PENDING:
-            
-            if service_identifier not in self._current: self._pending.add( service_identifier )
-            
-        elif action == HC.CONTENT_UPDATE_PETITION:
-            
-            if service_identifier not in self._deleted: self._petitioned.add( service_identifier )
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: self._pending.discard( service_identifier )
-        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_identifier )
-        
-    
-    def ResetService( self, service_identifier ):
-        
-        self._current.discard( service_identifier )
-        self._pending.discard( service_identifier )
-        self._deleted.discard( service_identifier )
-        self._petitioned.discard( service_identifier )
-        
-    
 class LocalBooruCache( object ):
     
     def __init__( self ):
@@ -1144,7 +1072,7 @@ class LocalBooruCache( object ):
             
             info[ 'hashes_set' ] = set( hashes )
             
-            media_results = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, hashes )
+            media_results = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
             
             info[ 'media_results' ] = media_results
             
@@ -1160,7 +1088,7 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey() )
+        self._local_booru_service = HC.app.GetManager( 'services' ).GetService( HC.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         
@@ -1233,73 +1161,38 @@ class LocalBooruCache( object ):
             
         
     
-class LocalRatings( object ):
+class CPRemoteRatingsServiceKeys( object ):
     
-    def __init__( self, service_identifiers_to_ratings ):
+    def __init__( self, service_keys_to_cp ):
         
-        self._service_identifiers_to_ratings = service_identifiers_to_ratings
-        
-    
-    def GetRating( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_ratings: return self._service_identifiers_to_ratings[ service_identifier ]
-        else: return None
+        self._service_keys_to_cp = service_keys_to_cp
         
     
-    def GetRatingSlice( self, service_identifiers ): return frozenset( { self._service_identifiers_to_ratings[ service_identifier ] for service_identifier in service_identifiers if service_identifier in self._service_identifiers_to_ratings } )
-    
-    def GetServiceIdentifiersToRatings( self ): return self._service_identifiers_to_ratings
-    
-    def ProcessContentUpdate( self, service_identifier, content_update ):
+    def GetCP( self, service_key ):
         
-        ( data_type, action, row ) = content_update.ToTuple()
-        
-        if action == HC.CONTENT_UPDATE_ADD:
-            
-            ( rating, hashes ) = row
-            
-            if rating is None and service_identifier in self._service_identifiers_to_ratings: del self._service_identifiers_to_ratings[ service_identifier ]
-            else: self._service_identifiers_to_ratings[ service_identifier ] = rating
-            
-        
-    
-    def ResetService( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_ratings: del self._service_identifiers_to_ratings[ service_identifier ]
-        
-    
-class CPRemoteRatingsServiceIdentifiers( object ):
-    
-    def __init__( self, service_identifiers_to_cp ):
-        
-        self._service_identifiers_to_cp = service_identifiers_to_cp
-        
-    
-    def GetCP( self, service_identifier ):
-        
-        if service_identifier in self._service_identifiers_to_cp: return self._service_identifiers_to_cp[ service_identifier ]
+        if service_key in self._service_keys_to_cp: return self._service_keys_to_cp[ service_key ]
         else: return ( None, None )
         
     
-    def GetRatingSlice( self, service_identifiers ):
+    def GetRatingSlice( self, service_keys ):
         
-        # this doesn't work yet. it should probably use self.GetScore( s_i ) like I think Sort by remote rating does
+        # this doesn't work yet. it should probably use self.GetScore( service_key ) like I think Sort by remote rating does
         
-        return frozenset( { self._service_identifiers_to_ratings[ service_identifier ] for service_identifier in service_identifiers if service_identifier in self._service_identifiers_to_ratings } )
+        return frozenset( { self._service_keys_to_ratings[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_ratings } )
         
     
-    def GetServiceIdentifiersToCP( self ): return self._service_identifiers_to_cp
+    def GetServiceKeysToRatingsCP( self ): return self._service_keys_to_cp
     
-    def ProcessContentUpdate( self, service_identifier, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        if service_identifier in self._service_identifiers_to_cp: ( current, pending ) = self._service_identifiers_to_cp[ service_identifier ]
+        if service_key in self._service_keys_to_cp: ( current, pending ) = self._service_keys_to_cp[ service_key ]
         else:
             
             ( current, pending ) = ( None, None )
             
-            self._service_identifiers_to_cp[ service_identifier ] = ( current, pending )
+            self._service_keys_to_cp[ service_key ] = ( current, pending )
             
         
         # this may well need work; need to figure out how to set the pending back to None after an upload. rescind seems ugly
@@ -1326,13 +1219,13 @@ class CPRemoteRatingsServiceIdentifiers( object ):
             
         
     
-    def ResetService( self, service_identifier ):
+    def ResetService( self, service_key ):
         
-        if service_identifier in self._service_identifiers_to_cp:
+        if service_key in self._service_keys_to_cp:
             
-            ( current, pending ) = self._service_identifiers_to_cp[ service_identifier ]
+            ( current, pending ) = self._service_keys_to_cp[ service_key ]
             
-            self._service_identifiers_to_cp[ service_identifier ] = ( None, None )
+            self._service_keys_to_cp[ service_key ] = ( None, None )
             
         
     
@@ -1561,9 +1454,9 @@ class FileQueryResult( object ):
     
     def GetMediaResults( self ): return [ self._hashes_to_media_results[ hash ] for hash in self._hashes_ordered ]
     
-    def ProcessContentUpdates( self, service_identifiers_to_content_updates ):
+    def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
-        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             for content_update in content_updates:
                 
@@ -1575,16 +1468,16 @@ class FileQueryResult( object ):
                         
                         media_result = self._hashes_to_media_results[ hash ]
                         
-                        media_result.ProcessContentUpdate( service_identifier, content_update )
+                        media_result.ProcessContentUpdate( service_key, content_update )
                         
                     
                 
             
         
     
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
             for service_update in service_updates:
                 
@@ -1592,11 +1485,11 @@ class FileQueryResult( object ):
                 
                 if action == HC.SERVICE_UPDATE_DELETE_PENDING:
                     
-                    for media_result in self._hashes_to_media_results.values(): media_result.DeletePending( service_identifier )
+                    for media_result in self._hashes_to_media_results.values(): media_result.DeletePending( service_key )
                     
                 elif action == HC.SERVICE_UPDATE_RESET:
                     
-                    for media_result in self._hashes_to_media_results.values(): media_result.ResetService( service_identifier )
+                    for media_result in self._hashes_to_media_results.values(): media_result.ResetService( service_key )
                     
                 
             
@@ -1604,10 +1497,10 @@ class FileQueryResult( object ):
     
 class FileSearchContext( object ):
     
-    def __init__( self, file_service_identifier = HC.COMBINED_FILE_SERVICE_IDENTIFIER, tag_service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER, include_current_tags = True, include_pending_tags = True, predicates = [] ):
+    def __init__( self, file_service_key = HC.COMBINED_FILE_SERVICE_KEY, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = [] ):
         
-        self._file_service_identifier = file_service_identifier
-        self._tag_service_identifier = tag_service_identifier
+        self._file_service_key = file_service_key
+        self._tag_service_key = tag_service_key
         
         self._include_current_tags = include_current_tags
         self._include_pending_tags = include_pending_tags
@@ -1645,12 +1538,12 @@ class FileSearchContext( object ):
             
         
     
-    def GetFileServiceIdentifier( self ): return self._file_service_identifier
+    def GetFileServiceKey( self ): return self._file_service_key
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
     def GetNamespacesToInclude( self ): return self._namespaces_to_include
     def GetPredicates( self ): return self._predicates
     def GetSystemPredicates( self ): return self._system_predicates
-    def GetTagServiceIdentifier( self ): return self._tag_service_identifier
+    def GetTagServiceKey( self ): return self._tag_service_key
     def GetTagsToExclude( self ): return self._tags_to_exclude
     def GetTagsToInclude( self ): return self._tags_to_include
     def IncludeCurrentTags( self ): return self._include_current_tags
@@ -1774,9 +1667,9 @@ class FileSystemPredicates( object ):
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATING:
                 
-                ( service_identifier, operator, value ) = info
+                ( service_key, operator, value ) = info
                 
-                self._ratings_predicates.append( ( service_identifier, operator, value ) )
+                self._ratings_predicates.append( ( service_key, operator, value ) )
                 
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_RATIO:
@@ -1879,17 +1772,17 @@ class FileSystemPredicates( object ):
             
             if system_predicate_type == HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
                 
-                ( operator, current_or_pending, service_identifier ) = info
+                ( operator, current_or_pending, service_key ) = info
                 
                 if operator == True:
                     
-                    if current_or_pending == HC.CURRENT: self._file_services_to_include_current.append( service_identifier )
-                    else: self._file_services_to_include_pending.append( service_identifier )
+                    if current_or_pending == HC.CURRENT: self._file_services_to_include_current.append( service_key )
+                    else: self._file_services_to_include_pending.append( service_key )
                     
                 else:
                     
-                    if current_or_pending == HC.CURRENT: self._file_services_to_exclude_current.append( service_identifier )
-                    else: self._file_services_to_exclude_pending.append( service_identifier )
+                    if current_or_pending == HC.CURRENT: self._file_services_to_exclude_current.append( service_key )
+                    else: self._file_services_to_exclude_pending.append( service_key )
                     
                 
             
@@ -1976,7 +1869,7 @@ class Imageboard( HC.HydrusYAMLBase ):
     
     def IsOkToPost( self, media_result ):
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags, file_service_identifiers, local_ratings, remote_ratings ) = media_result.ToTuple()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = media_result.ToTuple()
         
         if RESTRICTION_MIN_RESOLUTION in self._restrictions:
             
@@ -2095,6 +1988,113 @@ fourchan_imageboards.append( Imageboard( '/vp/', 'https://sys.4chan.org/vp/post'
 
 DEFAULT_IMAGEBOARDS.append( ( '4chan', fourchan_imageboards ) )
 
+class LocalRatingsManager( object ):
+    
+    def __init__( self, service_keys_to_ratings ):
+        
+        self._service_keys_to_ratings = service_keys_to_ratings
+        
+    
+    def GetRating( self, service_key ):
+        
+        if service_key in self._service_keys_to_ratings: return self._service_keys_to_ratings[ service_key ]
+        else: return None
+        
+    
+    def GetRatingSlice( self, service_keys ): return frozenset( { self._service_keys_to_ratings[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_ratings } )
+    
+    def GetServiceKeysToRatings( self ): return self._service_keys_to_ratings
+    
+    def ProcessContentUpdate( self, service_key, content_update ):
+        
+        ( data_type, action, row ) = content_update.ToTuple()
+        
+        if action == HC.CONTENT_UPDATE_ADD:
+            
+            ( rating, hashes ) = row
+            
+            if rating is None and service_key in self._service_keys_to_ratings: del self._service_keys_to_ratings[ service_key ]
+            else: self._service_keys_to_ratings[ service_key ] = rating
+            
+        
+    
+    def ResetService( self, service_key ):
+        
+        if service_key in self._service_keys_to_ratings: del self._service_keys_to_ratings[ service_key ]
+        
+    
+class LocationsManager( object ):
+    
+    def __init__( self, current, deleted, pending, petitioned ):
+        
+        self._current = current
+        self._deleted = deleted
+        self._pending = pending
+        self._petitioned = petitioned
+        
+    
+    def DeletePending( self, service_key ):
+        
+        self._pending.discard( service_key )
+        self._petitioned.discard( service_key )
+        
+    
+    def GetCDPP( self ): return ( self._current, self._deleted, self._pending, self._petitioned )
+    
+    def GetCurrent( self ): return self._current
+    def GetCurrentRemote( self ): return self._current - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    
+    def GetDeleted( self ): return self._deleted
+    def GetDeletedRemote( self ): return self._deleted - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    
+    def GetPending( self ): return self._pending
+    def GetPendingRemote( self ): return self._pending - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    
+    def GetPetitioned( self ): return self._petitioned
+    def GetPetitionedRemote( self ): return self._petitioned - set( ( HC.LOCAL_FILE_SERVICE_KEY, ) )
+    
+    def HasDownloading( self ): return HC.LOCAL_FILE_SERVICE_KEY in self._pending
+    
+    def HasLocal( self ): return HC.LOCAL_FILE_SERVICE_KEY in self._current
+    
+    def ProcessContentUpdate( self, service_key, content_update ):
+        
+        ( data_type, action, row ) = content_update.ToTuple()
+        
+        if action == HC.CONTENT_UPDATE_ADD:
+            
+            self._current.add( service_key )
+            
+            self._deleted.discard( service_key )
+            self._pending.discard( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_DELETE:
+            
+            self._deleted.add( service_key )
+            
+            self._current.discard( service_key )
+            self._petitioned.discard( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_PENDING:
+            
+            if service_key not in self._current: self._pending.add( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_PETITION:
+            
+            if service_key not in self._deleted: self._petitioned.add( service_key )
+            
+        elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: self._pending.discard( service_key )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: self._petitioned.discard( service_key )
+        
+    
+    def ResetService( self, service_key ):
+        
+        self._current.discard( service_key )
+        self._pending.discard( service_key )
+        self._deleted.discard( service_key )
+        self._petitioned.discard( service_key )
+        
+    
 class Log( object ):
     
     def __init__( self ):
@@ -2112,19 +2112,21 @@ class MediaResult( object ):
     
     def __init__( self, tuple ):
         
-        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings
+        # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
         
         self._tuple = tuple
         
     
-    def DeletePending( self, service_identifier ):
+    def DeletePending( self, service_key ):
         
-        service_type = service_identifier.GetType()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        if service_type == HC.TAG_REPOSITORY: tags_manager.DeletePending( service_identifier )
-        elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ): file_service_identifiers_cdpp.DeletePending( service_identifier )
+        service_type = service.GetType()
+        
+        if service_type == HC.TAG_REPOSITORY: tags_manager.DeletePending( service_key )
+        elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ): locations_manager.DeletePending( service_key )
         
     
     def GetHash( self ): return self._tuple[0]
@@ -2133,7 +2135,7 @@ class MediaResult( object ):
     
     def GetInbox( self ): return self._tuple[1]
     
-    def GetFileServiceIdentifiersCDPP( self ): return self._tuple[11]
+    def GetLocationsManager( self ): return self._tuple[11]
     
     def GetMime( self ): return self._tuple[3]
     
@@ -2151,44 +2153,48 @@ class MediaResult( object ):
     
     def GetTimestamp( self ): return self._tuple[4]
     
-    def ProcessContentUpdate( self, service_identifier, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service_type = service_identifier.GetType()
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_identifier, content_update )
+        service_type = service.GetType()
+        
+        if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_key, content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
             
             if service_type == HC.LOCAL_FILE:
                 
-                if action == HC.CONTENT_UPDATE_ADD and not file_service_identifiers_cdpp.HasLocal(): inbox = True
+                if action == HC.CONTENT_UPDATE_ADD and not locations_manager.HasLocal(): inbox = True
                 elif action == HC.CONTENT_UPDATE_ARCHIVE: inbox = False
                 elif action == HC.CONTENT_UPDATE_INBOX: inbox = True
                 elif action == HC.CONTENT_UPDATE_DELETE: inbox = False
                 
-                self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings )
+                self._tuple = ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings )
                 
             
-            file_service_identifiers_cdpp.ProcessContentUpdate( service_identifier, content_update )
+            locations_manager.ProcessContentUpdate( service_key, content_update )
             
         elif service_type in HC.RATINGS_SERVICES:
             
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): local_ratings.ProcessContentUpdate( service_identifier, content_update )
-            else: remote_ratings.ProcessContentUpdate( service_identifier, content_update )
+            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ): local_ratings.ProcessContentUpdate( service_key, content_update )
+            else: remote_ratings.ProcessContentUpdate( service_key, content_update )
             
         
     
-    def ResetService( self, service_identifier ):
+    def ResetService( self, service_key ):
         
-        service_type = service_identifier.GetType()
+        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_identifiers_cdpp, local_ratings, remote_ratings ) = self._tuple
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        if service_type in ( HC.TAG_REPOSITORY, HC.COMBINED_TAG ): tags_manager.ResetService( service_identifier )
-        elif service_type == HC.FILE_REPOSITORY: file_service_identifiers_cdpp.ResetService( service_identifier )
+        service_type = service.GetType()
+        
+        if service_type in ( HC.TAG_REPOSITORY, HC.COMBINED_TAG ): tags_manager.ResetService( service_key )
+        elif service_type == HC.FILE_REPOSITORY: locations_manager.ResetService( service_key )
         
     
     def ToTuple( self ): return self._tuple
@@ -2345,8 +2351,6 @@ class Service( HC.HydrusYAMLBase ):
         else: return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
         
     
-    def GetServiceIdentifier( self ): return HC.ClientServiceIdentifier( self._key, self._type, self._name )
-    
     def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
     
     def GetType( self ): return self._type
@@ -2401,13 +2405,13 @@ class Service( HC.HydrusYAMLBase ):
     
     def IsPaused( self ): return self._info[ 'paused' ]
     
-    def ProcessServiceUpdates( self, service_identifiers_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
-        for ( service_identifier, service_updates ) in service_identifiers_to_service_updates.items():
+        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
             for service_update in service_updates:
                 
-                if service_identifier.GetServiceKey() == self._key:
+                if service_key == self._key:
                     
                     ( action, row ) = service_update.ToTuple()
                     
@@ -2469,7 +2473,7 @@ class Service( HC.HydrusYAMLBase ):
             
             if command in ( 'access_key', 'init' ): pass
             elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
-            else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self.GetServiceIdentifier(), request_headers )
+            else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._key, request_headers )
             
             if command == 'backup': long_timeout = True
             else: long_timeout = False
@@ -2513,12 +2517,12 @@ class Service( HC.HydrusYAMLBase ):
             
             ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True, long_timeout = long_timeout )
             
-            HydrusNetworking.CheckHydrusVersion( self.GetServiceIdentifier(), response_headers )
+            HydrusNetworking.CheckHydrusVersion( self._key, self._type, response_headers )
             
             if method == HC.GET: data_used = size_of_response
             elif method == HC.POST: data_used = len( body )
             
-            HydrusNetworking.DoHydrusBandwidth( self.GetServiceIdentifier(), method, command, data_used )
+            HydrusNetworking.DoHydrusBandwidth( self._key, method, command, data_used )
             
             if return_cookies: return ( response, cookies )
             else: return response
@@ -2531,15 +2535,15 @@ class Service( HC.HydrusYAMLBase ):
                     
                     session_manager = HC.app.GetManager( 'hydrus_sessions' )
                     
-                    session_manager.DeleteSessionKey( self.GetServiceIdentifier() )
+                    session_manager.DeleteSessionKey( self._key )
                     
                 
             
-            HC.app.Write( 'service_updates', { self.GetServiceIdentifier() : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
+            HC.app.Write( 'service_updates', { self._key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
             
             if isinstance( e, ( HydrusExceptions.PermissionException, HydrusExceptions.NetworkVersionException ) ):
                 
-                HC.app.Write( 'service_updates', { self.GetServiceIdentifier() : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
+                HC.app.Write( 'service_updates', { self._key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
                 
             
             raise
@@ -2556,7 +2560,9 @@ class Service( HC.HydrusYAMLBase ):
         if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
         
     
-class ServiceManager( object ):
+    def ToTuple( self ): return ( self._key, self._type, self._name, self._info )
+    
+class ServicesManager( object ):
     
     def __init__( self ):
         
@@ -2702,11 +2708,11 @@ class UndoManager( object ):
         HC.pubsub.sub( self, 'Redo', 'redo' )
         
     
-    def _FilterServiceIdentifiersToContentUpdates( self, service_identifiers_to_content_updates ):
+    def _FilterServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
         
-        filtered_service_identifiers_to_content_updates = {}
+        filtered_service_keys_to_content_updates = {}
         
-        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             filtered_content_updates = []
             
@@ -2729,18 +2735,18 @@ class UndoManager( object ):
             
             if len( filtered_content_updates ) > 0:
                 
-                filtered_service_identifiers_to_content_updates[ service_identifier ] = filtered_content_updates
+                filtered_service_keys_to_content_updates[ service_key ] = filtered_content_updates
                 
             
         
-        return filtered_service_identifiers_to_content_updates
+        return filtered_service_keys_to_content_updates
         
     
-    def _InvertServiceIdentifiersToContentUpdates( self, service_identifiers_to_content_updates ):
+    def _InvertServiceKeysToContentUpdates( self, service_keys_to_content_updates ):
         
-        inverted_service_identifiers_to_content_updates = {}
+        inverted_service_keys_to_content_updates = {}
         
-        for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             inverted_content_updates = []
             
@@ -2786,10 +2792,10 @@ class UndoManager( object ):
                 inverted_content_updates.append( inverted_content_update )
                 
             
-            inverted_service_identifiers_to_content_updates[ service_identifier ] = inverted_content_updates
+            inverted_service_keys_to_content_updates[ service_key ] = inverted_content_updates
             
         
-        return inverted_service_identifiers_to_content_updates
+        return inverted_service_keys_to_content_updates
         
     
     def AddCommand( self, action, *args, **kwargs ):
@@ -2800,17 +2806,17 @@ class UndoManager( object ):
         
         if action == 'content_updates':
             
-            ( service_identifiers_to_content_updates, ) = args
+            ( service_keys_to_content_updates, ) = args
             
-            service_identifiers_to_content_updates = self._FilterServiceIdentifiersToContentUpdates( service_identifiers_to_content_updates )
+            service_keys_to_content_updates = self._FilterServiceKeysToContentUpdates( service_keys_to_content_updates )
             
-            if len( service_identifiers_to_content_updates ) == 0: return
+            if len( service_keys_to_content_updates ) == 0: return
             
-            inverted_service_identifiers_to_content_updates = self._InvertServiceIdentifiersToContentUpdates( service_identifiers_to_content_updates )
+            inverted_service_keys_to_content_updates = self._InvertServiceKeysToContentUpdates( service_keys_to_content_updates )
             
-            if len( inverted_service_identifiers_to_content_updates ) == 0: return
+            if len( inverted_service_keys_to_content_updates ) == 0: return
             
-            inverted_args = ( inverted_service_identifiers_to_content_updates, )
+            inverted_args = ( inverted_service_keys_to_content_updates, )
             
         else: return
         
@@ -2838,9 +2844,9 @@ class UndoManager( object ):
             
             if action == 'content_updates':
                 
-                ( service_identifiers_to_content_updates, ) = args
+                ( service_keys_to_content_updates, ) = args
                 
-                undo_string = 'undo ' + HC.ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers_to_content_updates )
+                undo_string = 'undo ' + HC.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
                 
             
         
@@ -2852,9 +2858,9 @@ class UndoManager( object ):
             
             if action == 'content_updates':
                 
-                ( service_identifiers_to_content_updates, ) = args
+                ( service_keys_to_content_updates, ) = args
                 
-                redo_string = 'redo ' + HC.ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers_to_content_updates )
+                redo_string = 'redo ' + HC.ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates )
                 
             
         

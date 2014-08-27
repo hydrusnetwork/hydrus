@@ -17,11 +17,11 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
         
     else: raise Exception( 'No access key!' )
     
-def AddHydrusSessionKeyToHeaders( service_identifier, request_headers ):
+def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
 
     session_manager = HC.app.GetManager( 'hydrus_sessions' )
     
-    session_key = session_manager.GetSessionKey( service_identifier )
+    session_key = session_manager.GetSessionKey( service_key )
     
     request_headers[ 'Cookie' ] = 'session_key=' + session_key.encode( 'hex' )
     
@@ -29,15 +29,13 @@ def AddCookiesToHeaders( cookies, request_headers ):
     
     request_headers[ 'Cookie' ] = '; '.join( [ k + '=' + v for ( k, v ) in cookies.items() ] )
     
-def CheckHydrusVersion( service_identifier, response_headers ):
-    
-    service_type = service_identifier.GetType()
+def CheckHydrusVersion( service_key, service_type, response_headers ):
     
     service_string = HC.service_string_lookup[ service_type ]
     
     if 'server' not in response_headers or service_string not in response_headers[ 'server' ]:
         
-        HC.app.Write( 'service_updates', { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] })
+        HC.app.Write( 'service_updates', { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] })
         
         raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
         
@@ -87,11 +85,13 @@ def ConvertHydrusGETArgsToQuery( request_args ):
     
     return query
     
-def DoHydrusBandwidth( service_identifier, method, command, size ):
+def DoHydrusBandwidth( service_key, method, command, size ):
     
-    service_type = service_identifier.GetType()
+    service = HC.app.GetManager( 'services' ).GetService( service_key )
     
-    if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HC.pubsub.pub( 'service_updates_delayed', { service_identifier : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
+    service_type = service.GetType()
+    
+    if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HC.pubsub.pub( 'service_updates_delayed', { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
     
 def ParseURL( url ):
 

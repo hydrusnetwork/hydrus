@@ -17,23 +17,23 @@ import urlparse
 import wx
 import zipfile
 
-def ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags ):
+def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags ):
     
     hashes = set( ( hash, ) )
     
-    service_identifiers_to_content_updates = {}
+    service_keys_to_content_updates = {}
     
-    for ( service_identifier, tags ) in service_identifiers_to_tags.items():
+    for ( service_key, tags ) in service_keys_to_tags.items():
         
-        if service_identifier == HC.LOCAL_TAG_SERVICE_IDENTIFIER: action = HC.CONTENT_UPDATE_ADD
+        if service_key == HC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
         else: action = HC.CONTENT_UPDATE_PENDING
         
         content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
         
-        service_identifiers_to_content_updates[ service_identifier ] = content_updates
+        service_keys_to_content_updates[ service_key ] = content_updates
         
     
-    return service_identifiers_to_content_updates
+    return service_keys_to_content_updates
     
 def GetDownloader( site_type, *args ):
     
@@ -47,19 +47,16 @@ def GetDownloader( site_type, *args ):
     
     return c( *args )
     
-def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
+def ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ):
     
     tags = [ tag for tag in tags if tag is not None ]
     
-    service_identifiers_to_tags = {}
+    service_keys_to_tags = {}
     
     siblings_manager = HC.app.GetManager( 'tag_siblings' )
     parents_manager = HC.app.GetManager( 'tag_parents' )
     
     for ( service_key, namespaces ) in advanced_tag_options.items():
-        
-        try: service_identifier = HC.app.GetManager( 'services' ).GetService( service_key ).GetServiceIdentifier()
-        except: continue
         
         if len( namespaces ) > 0:
             
@@ -74,14 +71,14 @@ def ConvertTagsToServiceIdentifiersToTags( tags, advanced_tag_options ):
             if len( tags_to_add_here ) > 0:
                 
                 tags_to_add_here = siblings_manager.CollapseTags( tags_to_add_here )
-                tags_to_add_here = parents_manager.ExpandTags( service_identifier, tags_to_add_here )
+                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
                 
-                service_identifiers_to_tags[ service_identifier ] = tags_to_add_here
+                service_keys_to_tags[ service_key ] = tags_to_add_here
                 
             
         
     
-    return service_identifiers_to_tags
+    return service_keys_to_tags
     
 def GetYoutubeFormats( youtube_url ):
     
@@ -1031,11 +1028,11 @@ class ImportArgsGenerator( object ):
             
             if result == 'new':
                 
-                ( name, temp_path, service_identifiers_to_tags, url ) = self._GetArgs()
+                ( name, temp_path, service_keys_to_tags, url ) = self._GetArgs()
                 
                 self._job_key.SetVariable( 'status', 'importing' )
                 
-                ( result, media_result ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = self._advanced_import_options, service_identifiers_to_tags = service_identifiers_to_tags, generate_media_result = True, url = url )
+                ( result, media_result ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = self._advanced_import_options, service_keys_to_tags = service_keys_to_tags, generate_media_result = True, url = url )
                 
             
             self._job_key.SetVariable( 'result', result )
@@ -1115,9 +1112,9 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         downloader.ClearReportHooks()
         
-        service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
+        service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
-        return ( url, temp_path, service_identifiers_to_tags, url )
+        return ( url, temp_path, service_keys_to_tags, url )
         
     
     def _CheckCurrentStatus( self ):
@@ -1136,7 +1133,7 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             do_tags = len( self._advanced_tag_options ) > 0
             
@@ -1144,11 +1141,11 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
                 
                 tags = downloader.GetTags( *url_args )
                 
-                service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
+                service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
                 
-                service_identifiers_to_content_updates = ConvertServiceIdentifiersToTagsToServiceIdentifiersToContentUpdates( hash, service_identifiers_to_tags )
+                service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
                 
-                HC.app.Write( 'content_updates', service_identifiers_to_content_updates )
+                HC.app.Write( 'content_updates', service_keys_to_content_updates )
                 
             
             return ( status, media_result )
@@ -1190,13 +1187,13 @@ class ImportArgsGeneratorHDD( ImportArgsGenerator ):
         
         ( path_type, path_info ) = self._item
         
-        service_identifiers_to_tags = {}
+        service_keys_to_tags = {}
         
         if path_type == 'path':
             
             path = path_info
             
-            if path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ path ]
+            if path in self._paths_to_tags: service_keys_to_tags = self._paths_to_tags[ path ]
             
         elif path_type == 'zip':
             
@@ -1211,10 +1208,10 @@ class ImportArgsGeneratorHDD( ImportArgsGenerator ):
             
             pretty_path = zip_path + os.path.sep + name
             
-            if pretty_path in self._paths_to_tags: service_identifiers_to_tags = self._paths_to_tags[ pretty_path ]
+            if pretty_path in self._paths_to_tags: service_keys_to_tags = self._paths_to_tags[ pretty_path ]
             
         
-        return ( path, path, service_identifiers_to_tags, None )
+        return ( path, path, service_keys_to_tags, None )
         
     
 class ImportArgsGeneratorThread( ImportArgsGenerator ):
@@ -1247,9 +1244,9 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         tags = [ 'filename:' + filename + ext ]
         
-        service_identifiers_to_tags = ConvertTagsToServiceIdentifiersToTags( tags, self._advanced_tag_options )
+        service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
-        return ( url, temp_path, service_identifiers_to_tags, url )
+        return ( url, temp_path, service_keys_to_tags, url )
         
     
     def _CheckCurrentStatus( self ):
@@ -1264,7 +1261,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             return ( status, media_result )
             
@@ -1287,9 +1284,9 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         temp_path = HC.http.Request( HC.GET, url, report_hooks = [ hook ], response_to_path = True )
         
-        service_identifiers_to_tags = {}
+        service_keys_to_tags = {}
         
-        return ( url, temp_path, service_identifiers_to_tags, url )
+        return ( url, temp_path, service_keys_to_tags, url )
         
     
     def _CheckCurrentStatus( self ):
@@ -1304,7 +1301,7 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
         
         if status == 'redundant':
             
-            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_IDENTIFIER, ( hash, ) )
+            ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
             
             return ( status, media_result )
             

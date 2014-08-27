@@ -63,8 +63,8 @@ options = {}
 
 # Misc
 
-NETWORK_VERSION = 13
-SOFTWARE_VERSION = 126
+NETWORK_VERSION = 14
+SOFTWARE_VERSION = 127
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -191,7 +191,7 @@ RATINGS_SERVICES = [ LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPO
 REPOSITORIES = [ TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
 RESTRICTED_SERVICES = ( REPOSITORIES ) + [ SERVER_ADMIN, MESSAGE_DEPOT ]
 REMOTE_SERVICES = list( RESTRICTED_SERVICES )
-LOCAL_SERVICES = [ LOCAL_FILE, LOCAL_TAG, LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_BOORU ]
+LOCAL_SERVICES = [ LOCAL_FILE, LOCAL_TAG, LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_BOORU, COMBINED_FILE, COMBINED_TAG ]
 ALL_SERVICES = list( REMOTE_SERVICES ) + list( LOCAL_SERVICES )
 
 SERVICES_WITH_THUMBNAILS = [ FILE_REPOSITORY, LOCAL_FILE ]
@@ -766,7 +766,7 @@ def ConvertPortablePathToAbsPath( portable_path ):
     if os.path.exists( abs_path ): return abs_path
     else: return None
     
-def ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers_to_content_updates ):
+def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
     num_files = 0
     actions = set()
@@ -774,9 +774,14 @@ def ConvertServiceIdentifiersToContentUpdatesToPrettyString( service_identifiers
     
     extra_words = ''
     
-    for ( service_identifier, content_updates ) in service_identifiers_to_content_updates.items():
+    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
         
-        if len( content_updates ) > 0: locations.add( service_identifier.GetName() )
+        if len( content_updates ) > 0:
+            
+            name = app.GetManager( 'services' ).GetService( service_key ).GetName()
+            
+            locations.add( name )
+            
         
         for content_update in content_updates:
             
@@ -1528,12 +1533,6 @@ LOCAL_BOORU_SERVICE_KEY = 'local booru'
 COMBINED_FILE_SERVICE_KEY = 'all known files'
 COMBINED_TAG_SERVICE_KEY = 'all known tags'
 
-LOCAL_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( LOCAL_FILE_SERVICE_KEY, LOCAL_FILE, 'local files' )
-LOCAL_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( LOCAL_TAG_SERVICE_KEY, LOCAL_TAG, 'local tags' )
-LOCAL_BOORU_SERVICE_IDENTIFIER = ClientServiceIdentifier( LOCAL_BOORU_SERVICE_KEY, LOCAL_BOORU, 'local booru' )
-COMBINED_FILE_SERVICE_IDENTIFIER = ClientServiceIdentifier( COMBINED_FILE_SERVICE_KEY, COMBINED_FILE, 'all known files' )
-COMBINED_TAG_SERVICE_IDENTIFIER = ClientServiceIdentifier( COMBINED_TAG_SERVICE_KEY, COMBINED_TAG, 'all known tags' )
-
 class ClientToServerUpdate( HydrusYAMLBase ):
     
     yaml_tag = u'!ClientToServerUpdate'
@@ -1844,7 +1843,7 @@ class JobNetwork( object ):
     
     yaml_tag = u'!JobNetwork'
     
-    def __init__( self, request_type, request, headers = {}, body = None, response_to_path = False, redirects_permitted = 4, service_identifier = None ):
+    def __init__( self, request_type, request, headers = {}, body = None, response_to_path = False, redirects_permitted = 4, service_key = None ):
         
         self._request_type = request_type
         self._request = request
@@ -1852,13 +1851,13 @@ class JobNetwork( object ):
         self._body = body
         self._response_to_path = response_to_path
         self._redirects_permitted = redirects_permitted
-        self._service_identifier = service_identifier
+        self._service_key = service_key
         
         self._result = None
         self._result_ready = threading.Event()
         
     
-    def ToTuple( self ): return ( self._request_type, self._request, self._headers, self._body, self._response_to_path, self._redirects_permitted, self._service_identifier )
+    def ToTuple( self ): return ( self._request_type, self._request, self._headers, self._body, self._response_to_path, self._redirects_permitted, self._service_key )
     
     def GetResult( self ):
         
@@ -2089,9 +2088,11 @@ class Predicate( HydrusYAMLBase ):
                 
                 if info is not None:
                     
-                    ( service_identifier, operator, value ) = info
+                    ( service_key, operator, value ) = info
                     
-                    base += u' for ' + service_identifier.GetName() + u' ' + operator + u' ' + u( value )
+                    service = app.GetManager( 'services' ).GetService( service_key )
+                    
+                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + u( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
@@ -2111,7 +2112,7 @@ class Predicate( HydrusYAMLBase ):
                 
                 if info is not None:
                     
-                    ( operator, type, service_identifier ) = info
+                    ( operator, type, service_key ) = info
                     
                     base += u':'
                     
@@ -2121,7 +2122,9 @@ class Predicate( HydrusYAMLBase ):
                     if type == PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
-                    base += service_identifier.GetName()
+                    service = app.GetManager( 'services' ).GetService( service_key )
+                    
+                    base += service.GetName()
                     
                 
             
@@ -2248,7 +2251,6 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     def GetType( self ): return self._type
     
 SERVER_ADMIN_KEY = 'server admin'
-SERVER_ADMIN_IDENTIFIER = ServerServiceIdentifier( SERVER_ADMIN_KEY, SERVER_ADMIN )
 
 class ServiceUpdate( object ):
     

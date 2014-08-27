@@ -8,7 +8,7 @@ import traceback
 import wx
 
 # important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
-def BuildServiceIdentifiersToChildrenToParents( service_identifiers_to_simple_children_to_parents ):
+def BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents ):
     
     def AddParents( simple_children_to_parents, children_to_parents, child, parents ):
         
@@ -25,27 +25,27 @@ def BuildServiceIdentifiersToChildrenToParents( service_identifiers_to_simple_ch
             
         
     
-    service_identifiers_to_children_to_parents = collections.defaultdict( HC.default_dict_list )
+    service_keys_to_children_to_parents = collections.defaultdict( HC.default_dict_list )
     
-    for ( service_identifier, simple_children_to_parents ) in service_identifiers_to_simple_children_to_parents.items():
+    for ( service_key, simple_children_to_parents ) in service_keys_to_simple_children_to_parents.items():
         
-        children_to_parents = service_identifiers_to_children_to_parents[ service_identifier ]
+        children_to_parents = service_keys_to_children_to_parents[ service_key ]
         
         for ( child, parents ) in simple_children_to_parents.items(): AddParents( simple_children_to_parents, children_to_parents, child, parents )
         
     
-    return service_identifiers_to_children_to_parents
+    return service_keys_to_children_to_parents
     
-def BuildServiceIdentifiersToSimpleChildrenToParents( service_identifiers_to_pairs_flat ):
+def BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat ):
     
-    service_identifiers_to_simple_children_to_parents = collections.defaultdict( HC.default_dict_set )
+    service_keys_to_simple_children_to_parents = collections.defaultdict( HC.default_dict_set )
     
-    for ( service_identifier, pairs ) in service_identifiers_to_pairs_flat.items():
+    for ( service_key, pairs ) in service_keys_to_pairs_flat.items():
         
-        service_identifiers_to_simple_children_to_parents[ service_identifier ] = BuildSimpleChildrenToParents( pairs )
+        service_keys_to_simple_children_to_parents[ service_key ] = BuildSimpleChildrenToParents( pairs )
         
     
-    return service_identifiers_to_simple_children_to_parents
+    return service_keys_to_simple_children_to_parents
     
 def BuildSimpleChildrenToParents( pairs ):
     
@@ -111,21 +111,21 @@ def CollapseTagSiblingChains( processed_siblings ):
     
     return ( siblings, reverse_lookup )
     
-def CombineTagParentPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
+def CombineTagParentPairs( tag_service_precedence, service_keys_to_statuses_to_pairs ):
     
-    service_identifiers_to_pairs_flat = HC.default_dict_set()
+    service_keys_to_pairs_flat = HC.default_dict_set()
     
-    combined = service_identifiers_to_pairs_flat[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+    combined = service_keys_to_pairs_flat[ HC.COMBINED_TAG_SERVICE_KEY ]
     
     current_deleted_pairs = set()
     
-    for service_identifier in tag_service_precedence:
+    for service_key in tag_service_precedence:
         
-        statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+        statuses_to_pairs = service_keys_to_statuses_to_pairs[ service_key ]
         
         pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
         
-        service_identifiers_to_pairs_flat[ service_identifier ] = pairs
+        service_keys_to_pairs_flat[ service_key ] = pairs
         
         pairs.difference_update( current_deleted_pairs )
         
@@ -134,9 +134,9 @@ def CombineTagParentPairs( tag_service_precedence, service_identifiers_to_status
         current_deleted_pairs.update( statuses_to_pairs[ HC.DELETED ] )
         
     
-    return service_identifiers_to_pairs_flat
+    return service_keys_to_pairs_flat
     
-def CombineTagSiblingPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs ):
+def CombineTagSiblingPairs( tag_service_precedence, service_keys_to_statuses_to_pairs ):
     
     # first combine the services
     # go from high precedence to low, writing A -> B
@@ -146,9 +146,9 @@ def CombineTagSiblingPairs( tag_service_precedence, service_identifiers_to_statu
     processed_siblings = {}
     current_deleted_pairs = set()
     
-    for service_identifier in tag_service_precedence:
+    for service_key in tag_service_precedence:
         
-        statuses_to_pairs = service_identifiers_to_statuses_to_pairs[ service_identifier ]
+        statuses_to_pairs = service_keys_to_statuses_to_pairs[ service_key ]
         
         pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
         
@@ -205,32 +205,32 @@ def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     return False
     
-def MergeTagsManagers( tag_service_precedence, tags_managers ):
+def MergeTagsManagers( tags_managers ):
     
     def CurrentAndPendingFilter( items ):
         
-        for ( service_identifier, statuses_to_tags ) in items:
+        for ( service_key, statuses_to_tags ) in items:
             
             filtered = { status : tags for ( status, tags ) in statuses_to_tags.items() if status in ( HC.CURRENT, HC.PENDING ) }
             
-            yield ( service_identifier, filtered )
+            yield ( service_key, filtered )
             
         
     
-    # [[( service_identifier, statuses_to_tags )]]
-    s_i_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceIdentifiersToStatusesToTags().items() ) for tags_manager in tags_managers )
+    # [[( service_key, statuses_to_tags )]]
+    s_k_s_t_t_tupled = ( CurrentAndPendingFilter( tags_manager.GetServiceKeysToStatusesToTags().items() ) for tags_manager in tags_managers )
     
-    # [(service_identifier, statuses_to_tags)]
-    flattened_s_i_s_t_t = itertools.chain.from_iterable( s_i_s_t_t_tupled )
+    # [(service_key, statuses_to_tags)]
+    flattened_s_k_s_t_t = itertools.chain.from_iterable( s_k_s_t_t_tupled )
     
-    # service_identifier : [ statuses_to_tags ]
-    s_i_s_t_t_dict = HC.BuildKeyToListDict( flattened_s_i_s_t_t )
+    # service_key : [ statuses_to_tags ]
+    s_k_s_t_t_dict = HC.BuildKeyToListDict( flattened_s_k_s_t_t )
     
-    # now let's merge so we have service_identifier : statuses_to_tags
+    # now let's merge so we have service_key : statuses_to_tags
     
-    merged_service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+    merged_service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
     
-    for ( service_identifier, several_statuses_to_tags ) in s_i_s_t_t_dict.items():
+    for ( service_key, several_statuses_to_tags ) in s_k_s_t_t_dict.items():
         
         # [[( status, tags )]]
         s_t_t_tupled = ( s_t_t.items() for s_t_t in several_statuses_to_tags )
@@ -242,20 +242,20 @@ def MergeTagsManagers( tag_service_precedence, tags_managers ):
         
         for ( status, tags ) in flattened_s_t_t: statuses_to_tags[ status ].update( tags )
         
-        merged_service_identifiers_to_statuses_to_tags[ service_identifier ] = statuses_to_tags
+        merged_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
         
     
-    return TagsManagerSimple( merged_service_identifiers_to_statuses_to_tags )
+    return TagsManagerSimple( merged_service_keys_to_statuses_to_tags )
     
 class TagsManagerSimple( object ):
     
-    def __init__( self, service_identifiers_to_statuses_to_tags ):
+    def __init__( self, service_keys_to_statuses_to_tags ):
         
         tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
         
-        service_identifiers_to_statuses_to_tags = tag_censorship_manager.FilterServiceidentifiersToStatusesToTags( service_identifiers_to_statuses_to_tags )
+        service_keys_to_statuses_to_tags = tag_censorship_manager.FilterServiceKeysToStatusesToTags( service_keys_to_statuses_to_tags )
         
-        self._service_identifiers_to_statuses_to_tags = service_identifiers_to_statuses_to_tags
+        self._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
         
         self._combined_namespaces_cache = None
         
@@ -264,7 +264,7 @@ class TagsManagerSimple( object ):
         
         if self._combined_namespaces_cache is None:
     
-            combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+            combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
             
             combined_current = combined_statuses_to_tags[ HC.CURRENT ]
             combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -298,7 +298,7 @@ class TagsManagerSimple( object ):
     
     def GetComparableNamespaceSlice( self, namespaces, collapse = True ):
         
-        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
         
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -340,7 +340,7 @@ class TagsManagerSimple( object ):
     
     def GetNamespaceSlice( self, namespaces, collapse = True ):
         
-        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
         
         combined_current = combined_statuses_to_tags[ HC.CURRENT ]
         combined_pending = combined_statuses_to_tags[ HC.PENDING ]
@@ -361,9 +361,9 @@ class TagsManagerSimple( object ):
     
 class TagsManager( TagsManagerSimple ):
     
-    def __init__( self, tag_service_precedence, service_identifiers_to_statuses_to_tags ):
+    def __init__( self, tag_service_precedence, service_keys_to_statuses_to_tags ):
         
-        TagsManagerSimple.__init__( self, service_identifiers_to_statuses_to_tags )
+        TagsManagerSimple.__init__( self, service_keys_to_statuses_to_tags )
         
         self._tag_service_precedence = tag_service_precedence
         
@@ -379,9 +379,9 @@ class TagsManager( TagsManagerSimple ):
         combined_current = set()
         combined_pending = set()
         
-        for service_identifier in t_s_p:
+        for service_key in t_s_p:
             
-            statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
             
             combined_current.update( statuses_to_tags[ HC.CURRENT ] )
             combined_current.difference_update( statuses_to_tags[ HC.DELETED ] )
@@ -394,14 +394,14 @@ class TagsManager( TagsManagerSimple ):
         combined_statuses_to_tags[ HC.CURRENT ] = combined_current
         combined_statuses_to_tags[ HC.PENDING ] = combined_pending
         
-        self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ] = combined_statuses_to_tags
+        self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
         
         self._combined_namespaces_cache = None
         
     
-    def DeletePending( self, service_identifier ):
+    def DeletePending( self, service_key ):
         
-        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
             
@@ -412,25 +412,25 @@ class TagsManager( TagsManagerSimple ):
             
         
     
-    def GetCurrent( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+    def GetCurrent( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
         
-        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.CURRENT ] )
         
     
-    def GetDeleted( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+    def GetDeleted( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
         
-        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return statuses_to_tags[ HC.DELETED ]
+        return set( statuses_to_tags[ HC.DELETED ] )
         
     
-    def GetNumTags( self, tag_service_identifier, include_current_tags = True, include_pending_tags = False ):
+    def GetNumTags( self, service_key, include_current_tags = True, include_pending_tags = False ):
         
         num_tags = 0
         
-        statuses_to_tags = self.GetStatusesToTags( tag_service_identifier )
+        statuses_to_tags = self.GetStatusesToTags( service_key )
         
         if include_current_tags: num_tags += len( statuses_to_tags[ HC.CURRENT ] )
         if include_pending_tags: num_tags += len( statuses_to_tags[ HC.PENDING ] )
@@ -438,34 +438,34 @@ class TagsManager( TagsManagerSimple ):
         return num_tags
         
     
-    def GetPending( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+    def GetPending( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
         
-        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return statuses_to_tags[ HC.PENDING ]
+        return set( statuses_to_tags[ HC.PENDING ] )
         
     
-    def GetPetitioned( self, service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER ):
+    def GetPetitioned( self, service_key = HC.COMBINED_TAG_SERVICE_KEY ):
         
-        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         return set( statuses_to_tags[ HC.PETITIONED ] )
         
     
-    def GetServiceIdentifiersToStatusesToTags( self ): return self._service_identifiers_to_statuses_to_tags
+    def GetServiceKeysToStatusesToTags( self ): return self._service_keys_to_statuses_to_tags
     
-    def GetStatusesToTags( self, service_identifier ): return self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+    def GetStatusesToTags( self, service_key ): return self._service_keys_to_statuses_to_tags[ service_key ]
     
     def HasTag( self, tag ):
         
-        combined_statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_IDENTIFIER ]
+        combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
         
         return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
         
     
-    def ProcessContentUpdate( self, service_identifier, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update ):
         
-        statuses_to_tags = self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+        statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
         ( data_type, action, row ) = content_update.ToTuple()
         
@@ -494,11 +494,11 @@ class TagsManager( TagsManagerSimple ):
         self._RecalcCombined()
         
     
-    def ResetService( self, service_identifier ):
+    def ResetService( self, service_key ):
         
-        if service_identifier in self._service_identifiers_to_statuses_to_tags:
+        if service_key in self._service_keys_to_statuses_to_tags:
             
-            del self._service_identifiers_to_statuses_to_tags[ service_identifier ]
+            del self._service_keys_to_statuses_to_tags[ service_key ]
             
             self._RecalcCombined()
             
@@ -513,9 +513,9 @@ class TagCensorshipManager( object ):
         HC.pubsub.sub( self, 'RefreshData', 'notify_new_tag_censorship' )
         
     
-    def GetInfo( self, service_identifier ):
+    def GetInfo( self, service_key ):
         
-        if service_identifier in self._service_identifiers_to_predicates: return self._service_identifiers_to_predicates[ service_identifier ]
+        if service_key in self._service_keys_to_predicates: return self._service_keys_to_predicates[ service_key ]
         else: return ( True, set() )
         
     
@@ -523,30 +523,30 @@ class TagCensorshipManager( object ):
         
         info = HC.app.Read( 'tag_censorship' )
         
-        self._service_identifiers_to_predicates = {}
+        self._service_keys_to_predicates = {}
         
-        for ( service_identifier, blacklist, censorships ) in info:
+        for ( service_key, blacklist, censorships ) in info:
             
             tag_matches = lambda tag: True in ( CensorshipMatch( tag, censorship ) for censorship in censorships )
             
             if blacklist: predicate = lambda tag: not tag_matches( tag )
             else: predicate = tag_matches
             
-            self._service_identifiers_to_predicates[ service_identifier ] = predicate
+            self._service_keys_to_predicates[ service_key ] = predicate
             
         
     
-    def FilterServiceidentifiersToStatusesToTags( self, service_identifiers_to_statuses_to_tags ):
+    def FilterServiceKeysToStatusesToTags( self, service_keys_to_statuses_to_tags ):
         
-        filtered_service_identifiers_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
+        filtered_service_keys_to_statuses_to_tags = collections.defaultdict( HC.default_dict_set )
         
-        for ( service_identifier, statuses_to_tags ) in service_identifiers_to_statuses_to_tags.items():
+        for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
             
-            for s_i in ( HC.COMBINED_TAG_SERVICE_IDENTIFIER, service_identifier ):
+            for service_key_lookup in ( HC.COMBINED_TAG_SERVICE_KEY, service_key ):
                 
-                if s_i in self._service_identifiers_to_predicates:
+                if service_key_lookup in self._service_keys_to_predicates:
                     
-                    combined_predicate = self._service_identifiers_to_predicates[ s_i ]
+                    combined_predicate = self._service_keys_to_predicates[ service_key_lookup ]
                     
                     tuples = statuses_to_tags.items()
                     
@@ -559,19 +559,19 @@ class TagCensorshipManager( object ):
                     
                 
             
-            filtered_service_identifiers_to_statuses_to_tags[ service_identifier ] = statuses_to_tags
+            filtered_service_keys_to_statuses_to_tags[ service_key ] = statuses_to_tags
             
         
-        return filtered_service_identifiers_to_statuses_to_tags
+        return filtered_service_keys_to_statuses_to_tags
         
     
-    def FilterTags( self, service_identifier, tags ):
+    def FilterTags( self, service_key, tags ):
         
-        for s_i in ( HC.COMBINED_TAG_SERVICE_IDENTIFIER, service_identifier ):
+        for service_key in ( HC.COMBINED_TAG_SERVICE_KEY, service_key ):
             
-            if s_i in self._service_identifiers_to_predicates:
+            if service_key in self._service_keys_to_predicates:
                 
-                predicate = self._service_identifiers_to_predicates[ s_i ]
+                predicate = self._service_keys_to_predicates[ service_key ]
                 
                 tags = { tag for tag in tags if predicate( tag ) }
                 
@@ -595,41 +595,39 @@ class TagParentsManager( object ):
     
     def _RefreshParents( self ):
         
-        service_identifiers_to_statuses_to_pairs = HC.app.Read( 'tag_parents' )
+        service_keys_to_statuses_to_pairs = HC.app.Read( 'tag_parents' )
         
         #
         
         sibling_manager = HC.app.GetManager( 'tag_siblings' )
         
-        result = collections.defaultdict( HC.default_dict_set )
+        collapsed_service_keys_to_statuses_to_pairs = collections.defaultdict( HC.default_dict_set )
         
-        for ( service_identifier, statuses_to_pairs ) in service_identifiers_to_statuses_to_pairs.items():
+        for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
             
             for ( status, pairs ) in statuses_to_pairs.items():
                 
                 pairs = sibling_manager.CollapsePairs( pairs )
                 
-                result[ service_identifier ][ status ] = pairs
+                collapsed_service_keys_to_statuses_to_pairs[ service_key ][ status ] = pairs
                 
             
-        
-        service_identifiers_to_statuses_to_pairs = result
         
         #
         
         t_s_p = list( self._tag_service_precedence )
         
-        service_identifiers_to_pairs_flat = CombineTagParentPairs( t_s_p, service_identifiers_to_statuses_to_pairs )
+        service_keys_to_pairs_flat = CombineTagParentPairs( t_s_p, collapsed_service_keys_to_statuses_to_pairs )
         
-        service_identifiers_to_simple_children_to_parents = BuildServiceIdentifiersToSimpleChildrenToParents( service_identifiers_to_pairs_flat )
+        service_keys_to_simple_children_to_parents = BuildServiceKeysToSimpleChildrenToParents( service_keys_to_pairs_flat )
         
-        self._service_identifiers_to_children_to_parents = BuildServiceIdentifiersToChildrenToParents( service_identifiers_to_simple_children_to_parents )
+        self._service_keys_to_children_to_parents = BuildServiceKeysToChildrenToParents( service_keys_to_simple_children_to_parents )
         
     
-    def ExpandPredicates( self, service_identifier, predicates ):
+    def ExpandPredicates( self, service_key, predicates ):
         
         # for now -- we will make an option, later
-        service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+        service_key = HC.COMBINED_TAG_SERVICE_KEY
         
         results = []
         
@@ -643,7 +641,7 @@ class TagParentsManager( object ):
                     
                     tag = predicate.GetTag()
                     
-                    parents = self._service_identifiers_to_children_to_parents[ service_identifier ][ tag ]
+                    parents = self._service_keys_to_children_to_parents[ service_key ][ tag ]
                     
                     for parent in parents:
                         
@@ -658,29 +656,29 @@ class TagParentsManager( object ):
             
         
     
-    def ExpandTags( self, service_identifier, tags ):
+    def ExpandTags( self, service_key, tags ):
         
         with self._lock:
             
             # for now -- we will make an option, later
-            service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+            service_key = HC.COMBINED_TAG_SERVICE_KEY
             
             tags_results = set( tags )
             
-            for tag in tags: tags_results.update( self._service_identifiers_to_children_to_parents[ service_identifier ][ tag ] )
+            for tag in tags: tags_results.update( self._service_keys_to_children_to_parents[ service_key ][ tag ] )
             
             return tags_results
             
         
     
-    def GetParents( self, service_identifier, tag ):
+    def GetParents( self, service_key, tag ):
         
         with self._lock:
             
             # for now -- we will make an option, later
-            service_identifier = HC.COMBINED_TAG_SERVICE_IDENTIFIER
+            service_key = HC.COMBINED_TAG_SERVICE_KEY
             
-            return self._service_identifiers_to_children_to_parents[ service_identifier ][ tag ]
+            return self._service_keys_to_children_to_parents[ service_key ][ tag ]
             
         
     
@@ -707,11 +705,11 @@ class TagSiblingsManager( object ):
     
     def _RefreshSiblings( self ):
         
-        service_identifiers_to_statuses_to_pairs = HC.app.Read( 'tag_siblings' )
+        service_keys_to_statuses_to_pairs = HC.app.Read( 'tag_siblings' )
         
         tag_service_precedence = list( self._tag_service_precedence )
         
-        processed_siblings = CombineTagSiblingPairs( tag_service_precedence, service_identifiers_to_statuses_to_pairs )
+        processed_siblings = CombineTagSiblingPairs( tag_service_precedence, service_keys_to_statuses_to_pairs )
         
         ( self._siblings, self._reverse_lookup ) = CollapseTagSiblingChains( processed_siblings )
         

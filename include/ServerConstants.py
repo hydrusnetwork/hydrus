@@ -21,13 +21,9 @@ def GetExpectedPath( file_type, hash ):
     
     return path
     
-def GetExpectedUpdatePath( service_identifier, begin ):
+def GetExpectedUpdatePath( service_key, begin ):
     
-    service_key = service_identifier.GetServiceKey()
-    
-    begin = int( begin )
-    
-    path = HC.SERVER_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( begin )
+    path = HC.SERVER_UPDATES_DIR + os.path.sep + service_key.encode( 'hex' ) + '_' + str( int( begin ) )
     
     return path
     
@@ -39,9 +35,9 @@ def GetPath( file_type, hash ):
     
     return path
     
-def GetUpdatePath( service_identifier, begin ):
+def GetUpdatePath( service_key, begin ):
     
-    path = GetExpectedUpdatePath( service_identifier, begin )
+    path = GetExpectedUpdatePath( service_key, begin )
     
     if not os.path.exists( path ): raise HydrusExceptions.NotFoundException( 'Update not found!' )
     

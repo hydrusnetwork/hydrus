@@ -54,7 +54,9 @@ class App( wx.App ):
         self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
         
         services = []
-        services.append( CC.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru', {} ) )
+        services.append( CC.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, HC.LOCAL_BOORU_SERVICE_KEY, {} ) )
+        services.append( CC.Service( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, HC.LOCAL_FILE_SERVICE_KEY, {} ) )
+        services.append( CC.Service( HC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, HC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
         
         self._reads[ 'sessions' ] = []
@@ -70,7 +72,7 @@ class App( wx.App ):
         
         self._managers = {}
         
-        self._managers[ 'services' ] = CC.ServiceManager()
+        self._managers[ 'services' ] = CC.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
@@ -85,9 +87,9 @@ class App( wx.App ):
         info[ 'max_monthly_data' ] = None
         info[ 'used_monthly_data' ] = 0
         
-        service_key = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetServiceKey()
-        service_type = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetType()
-        name = HC.LOCAL_BOORU_SERVICE_IDENTIFIER.GetName()
+        service_key = HC.LOCAL_BOORU_SERVICE_KEY
+        service_type = HC.LOCAL_BOORU
+        name = HC.LOCAL_BOORU_SERVICE_KEY
         
         service = CC.Service( service_key, service_type, name, info )
         
