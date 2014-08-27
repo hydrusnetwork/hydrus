@@ -8,6 +8,16 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 127</h3></li>
+				<ul>
+					<li>finished service_identifier rewrite, phew</li>
+					<li>added an exception catch for full program crashes; big errors will now be written to crash.log</li>
+					<li>added a shutdown check to make sure popup message manager closes properly when certain weird errors occur</li>
+					<li>'files_service_identifiers_cdpp' is now renamed to the vastly less insane 'locations_manager'</li>
+					<li>removed db update code older than 50 versions</li>
+					<li>a new error message will display if trying to update more than 50 versions in one go</li>
+					<li>many other small fixes I didn't keep track of</li>
+				</ul>
 				<li><h3>version 126</h3></li>
 				<ul>
 					<li>restored a dll that I thought was no longer needed, but was actually doing some weirder gif rendering</li>
