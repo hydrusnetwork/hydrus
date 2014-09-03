@@ -523,7 +523,9 @@ class PageImportGallery( PageImport ):
             if self._gallery_type == 'artist': initial_search_value = 'artist username'
             elif self._gallery_type == 'tags': initial_search_value = 'search tags'
             
-            self._management_panel = ClientGUIManagement.ManagementPanelImportsGalleryHentaiFoundry( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, initial_search_value, starting_from_session = self._starting_from_session )
+            ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_HENTAI_FOUNDRY )
+            
+            self._management_panel = ClientGUIManagement.ManagementPanelImportsGalleryHentaiFoundry( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, ato, initial_search_value, starting_from_session = self._starting_from_session )
             
         else:
             
@@ -535,6 +537,8 @@ class PageImportGallery( PageImport ):
                 namespaces = booru.GetNamespaces()
                 initial_search_value = 'search tags'
                 
+                ato = HC.GetDefaultAdvancedTagOptions( ( HC.SITE_TYPE_BOORU, name ) )
+                
             elif self._gallery_name == 'deviant art':
                 
                 if self._gallery_type == 'artist':
@@ -544,6 +548,8 @@ class PageImportGallery( PageImport ):
                     initial_search_value = 'artist username'
                     
                 
+                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_DEVIANT_ART )
+                
             elif self._gallery_name == 'giphy':
                 
                 name = 'giphy'
@@ -551,11 +557,15 @@ class PageImportGallery( PageImport ):
         
                 initial_search_value = 'search tag'
                 
+                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_GIPHY )
+                
             elif self._gallery_name == 'newgrounds':
                 
                 name = 'newgrounds'
                 namespaces = [ 'creator', 'title', '' ]
                 initial_search_value = 'artist username'
+                
+                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_NEWGROUNDS )
                 
             elif self._gallery_name == 'pixiv':
                 
@@ -565,14 +575,18 @@ class PageImportGallery( PageImport ):
                 if self._gallery_type == 'artist': initial_search_value = 'artist username'
                 elif self._gallery_type == 'tag': initial_search_value = 'search tag'
                 
+                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_PIXIV )
+                
             elif self._gallery_name == 'tumblr':
                 
                 name = 'tumblr'
                 namespaces = [ '' ]
                 initial_search_value = 'username'
                 
+                ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_TUMBLR )
+                
             
-            self._management_panel = ClientGUIManagement.ManagementPanelImportsGallery( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, initial_search_value, starting_from_session = self._starting_from_session )
+            self._management_panel = ClientGUIManagement.ManagementPanelImportsGallery( self._search_preview_split, self, self._page_key, self._import_controller, name, namespaces, ato, initial_search_value, starting_from_session = self._starting_from_session )
             
         
     

@@ -14,7 +14,7 @@
    height="1052.3622047"
    id="svg2"
    sodipodi:version="0.32"
-   inkscape:version="0.48.1 "
+   inkscape:version="0.48.2 r9819"
    sodipodi:docname="Icons.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape"
    inkscape:export-filename="C:\projects\code\Hydrus\static\Hydrus Icon.png"
@@ -145,11 +145,11 @@
     <filter
        color-interpolation-filters="sRGB"
        inkscape:collect="always"
-       id="filter3839-40-1">
+       id="filter3839-17">
       <feGaussianBlur
          inkscape:collect="always"
          stdDeviation="2.5184367"
-         id="feGaussianBlur3841-9-7" />
+         id="feGaussianBlur3841-4" />
     </filter>
   </defs>
   <sodipodi:namedview
@@ -169,7 +169,7 @@
      inkscape:current-layer="layer1"
      inkscape:window-width="1200"
      inkscape:window-height="1904"
-     inkscape:window-x="1916"
+     inkscape:window-x="-4"
      inkscape:window-y="-4"
      showgrid="false"
      inkscape:window-maximized="1" />
@@ -322,5 +322,40 @@
          id="tspan2162-0-8"
          x="403.60165"
          y="555.62262">ψ</tspan></text>
+    <rect
+       style="color:#000000;fill:#efefef;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       id="rect2164-9-48"
+       width="199.00005"
+       height="199.00005"
+       x="43.941639"
+       y="617.49152"
+       inkscape:export-filename="C:\code\Hydrus\static\hydrus_non-transparent.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:219.01309204px;font-style:normal;font-weight:normal;fill:#000000;fill-opacity:1;stroke:none;filter:url(#filter3839-17);font-family:Cambria"
+       x="403.60165"
+       y="555.62262"
+       id="text2160-4-0"
+       transform="matrix(0.80588956,0,0,0.80588956,-245.03108,310.20053)"
+       inkscape:export-filename="C:\projects\code\Hydrus\static\Content Icon.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan2162-0-9"
+         x="403.60165"
+         y="555.62262">ψ</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:18px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="75.761436"
+       y="838.2099"
+       id="text3820"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3822"
+         x="75.761436"
+         y="838.2099">non-transparent</tspan></text>
   </g>
 </svg>

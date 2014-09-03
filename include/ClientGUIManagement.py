@@ -1583,10 +1583,11 @@ class ManagementPanelImports( ManagementPanelImport ):
     
 class ManagementPanelImportsGallery( ManagementPanelImports ):
     
-    def __init__( self, parent, page, page_key, import_controller, name, namespaces, initial_search_value, starting_from_session = False ):
+    def __init__( self, parent, page, page_key, import_controller, name, namespaces, ato, initial_search_value, starting_from_session = False ):
         
         self._name = name
         self._namespaces = namespaces
+        self._ato = ato
         self._initial_search_value = initial_search_value
         
         ManagementPanelImports.__init__( self, parent, page, page_key, import_controller, starting_from_session = starting_from_session )
@@ -1603,6 +1604,7 @@ class ManagementPanelImportsGallery( ManagementPanelImports ):
         #
         
         self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, self._namespaces )
+        self._advanced_tag_options.SetInfo( self._ato )
         
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         

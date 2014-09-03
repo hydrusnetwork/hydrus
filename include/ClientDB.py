@@ -2861,6 +2861,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service = self._GetService( c, service_id )
                 
+                service_key = service.GetKey()
+                
                 statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ) ) for ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) in statuses_and_pair_ids ) )
                 
                 service_keys_to_statuses_to_pairs[ service_key ] = statuses_to_pairs
@@ -4873,11 +4875,6 @@ class DB( ServiceDB ):
         
     
     def _UpdateDB( self, c, version ):
-        
-        if version == 76:
-            
-            c.execute( 'CREATE TABLE import_folders ( path TEXT, details TEXT_YAML );' )
-            
         
         if version == 78:
             

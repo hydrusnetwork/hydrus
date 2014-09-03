@@ -69,11 +69,11 @@ The database will be locked while the backup occurs, which may lock up your gui 
         self._preview_image_cache.Clear()
         
     
-    def Clipboard( self, type, data ):
+    def Clipboard( self, data_type, data ):
         
         # need this cause can't do it in a non-gui thread
         
-        if type == 'paths':
+        if data_type == 'paths':
             
             paths = data
             
@@ -96,7 +96,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                 
             else: wx.MessageBox( 'Could not get permission to access the clipboard!' )
             
-        elif type == 'text':
+        elif data_type == 'text':
             
             text = data
             
@@ -130,7 +130,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
     
     def GetLog( self ): return self._log
     
-    def GetManager( self, type ): return self._managers[ type ]
+    def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def GetPreviewImageCache( self ): return self._preview_image_cache
     

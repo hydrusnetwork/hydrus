@@ -1280,13 +1280,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
-    def _NewPageImportGallery( self, name, type ):
+    def _NewPageImportGallery( self, name, import_type ):
         
-        new_page = ClientGUIPages.PageImportGallery( self._notebook, name, type )
+        new_page = ClientGUIPages.PageImportGallery( self._notebook, name, import_type )
         
-        if name == 'booru': page_name = type.GetName()
-        elif type is None: page_name = name
-        else: page_name = name + ' by ' + type
+        if name == 'booru': page_name = import_type.GetName()
+        elif import_type is None: page_name = name
+        else: page_name = name + ' by ' + import_type
         
         self._notebook.AddPage( new_page, page_name, select = True )
         

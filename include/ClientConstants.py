@@ -230,6 +230,8 @@ CLIENT_DEFAULT_OPTIONS[ 'sort_by' ] = default_sort_by_choices
 CLIENT_DEFAULT_OPTIONS[ 'show_all_tags_in_autocomplete' ] = True
 CLIENT_DEFAULT_OPTIONS[ 'fullscreen_borderless' ] = True
 
+CLIENT_DEFAULT_OPTIONS[ 'default_advanced_tag_options' ] = {}
+
 shortcuts = {}
 
 shortcuts[ wx.ACCEL_NORMAL ] = {}
@@ -411,10 +413,10 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     m = multipart.Multipart()
     
-    for ( name, type, value ) in fields:
+    for ( name, field_type, value ) in fields:
         
-        if type in ( FIELD_TEXT, FIELD_COMMENT, FIELD_PASSWORD, FIELD_VERIFICATION_RECAPTCHA, FIELD_THREAD_ID ): m.field( name, HC.b( value ) )
-        elif type == FIELD_CHECKBOX:
+        if field_type in ( FIELD_TEXT, FIELD_COMMENT, FIELD_PASSWORD, FIELD_VERIFICATION_RECAPTCHA, FIELD_THREAD_ID ): m.field( name, HC.b( value ) )
+        elif field_type == FIELD_CHECKBOX:
             
             if value: 
                 
@@ -426,7 +428,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
                 m.field( name, value )
                 
             
-        elif type == FIELD_FILE:
+        elif field_type == FIELD_FILE:
             
             ( hash, mime, file ) = value
             
@@ -2232,9 +2234,9 @@ MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
 
 class RenderedImageCache( object ):
     
-    def __init__( self, type ):
+    def __init__( self, cache_type ):
         
-        self._type = type
+        self._type = cache_type
         
         if self._type == 'fullscreen': self._data_cache = DataCache( 'fullscreen_cache_size' )
         elif self._type == 'preview': self._data_cache = DataCache( 'preview_cache_size' )
@@ -2541,7 +2543,7 @@ class Service( HC.HydrusYAMLBase ):
             
             HC.app.Write( 'service_updates', { self._key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
             
-            if isinstance( e, ( HydrusExceptions.PermissionException, HydrusExceptions.NetworkVersionException ) ):
+            if isinstance( e, HydrusExceptions.PermissionException ):
                 
                 HC.app.Write( 'service_updates', { self._key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
                 

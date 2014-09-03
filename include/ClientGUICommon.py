@@ -3384,16 +3384,7 @@ class CollapsiblePanel( wx.Panel ):
         self.SetSizer( self._vbox )
         
     
-    def SetPanel( self, panel ):
-        
-        self._panel = panel
-        
-        self._vbox.AddF( self._panel, FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._panel.Hide()
-        
-    
-    def EventChange( self, event ):
+    def _Change( self ):
         
         if self._expanded:
             
@@ -3427,7 +3418,20 @@ class CollapsiblePanel( wx.Panel ):
         if issubclass( type( tlp ), wx.Dialog ): tlp.Fit()
         
     
+    def ExpandCollapse( self ): self._Change()
+    
+    def EventChange( self, event ): self._Change()
+    
     def IsExpanded( self ): return self._expanded
+    
+    def SetPanel( self, panel ):
+        
+        self._panel = panel
+        
+        self._vbox.AddF( self._panel, FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._panel.Hide()
+        
     
 class AdvancedOptions( StaticBox ):
     
@@ -3445,6 +3449,8 @@ class AdvancedOptions( StaticBox ):
         
         self.AddF( self._collapsible_panel, FLAGS_EXPAND_PERPENDICULAR )
         
+    
+    def ExpandCollapse( self ): self._collapsible_panel.ExpandCollapse()
     
 class AdvancedHentaiFoundryOptions( AdvancedOptions ):
     
@@ -3816,16 +3822,29 @@ class AdvancedTagOptions( AdvancedOptions ):
         if self._collapsible_panel.IsExpanded(): self._collapsible_panel.EventChange( None )
         
     
-    def SetInfo( self, info ):
+    def SetInfo( self, new_service_keys_to_namespaces_info ):
         
         for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
             
-            if service_key in info:
+            if service_key in new_service_keys_to_namespaces_info:
+                
+                new_namespaces_info = new_service_keys_to_namespaces_info[ service_key ]
                 
                 for ( namespace, checkbox ) in checkbox_info:
                     
-                    if namespace in info[ service_key ]: checkbox.SetValue( True )
-                    else: checkbox.SetValue( False )
+                    if type( new_namespaces_info ) == bool:
+                        
+                        value = new_namespaces_info
+                        
+                        checkbox.SetValue( value )
+                        
+                    else:
+                        
+                        new_namespaces = new_namespaces_info
+                        
+                        if namespace in new_namespaces: checkbox.SetValue( True )
+                        else: checkbox.SetValue( False )
+                        
                     
                 
             else:
@@ -4397,12 +4416,12 @@ class TagsBoxCounts( TagsBox ):
         self._RecalcStrings()
         
     
-    def SetShow( self, type, value ):
+    def SetShow( self, show_type, value ):
         
-        if type == 'current': self._show_current = value
-        elif type == 'deleted': self._show_deleted = value
-        elif type == 'pending': self._show_pending = value
-        elif type == 'petitioned': self._show_petitioned = value
+        if show_type == 'current': self._show_current = value
+        elif show_type == 'deleted': self._show_deleted = value
+        elif show_type == 'pending': self._show_pending = value
+        elif show_type == 'petitioned': self._show_petitioned = value
         
         self._RecalcStrings()
         

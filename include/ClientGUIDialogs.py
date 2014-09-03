@@ -689,6 +689,109 @@ class DialogGenerateNewAccounts( Dialog ):
         finally: self.EndModal( wx.ID_OK )
         
     
+class DialogInputAdvancedTagOptions( Dialog ):
+    
+    def __init__( self, parent, pretty_name, name, ato ):
+        
+        def InitialiseControls():
+            
+            if name in ( 'default', HC.SITE_TYPE_BOORU ): namespaces = [ 'all namespaces' ]
+            elif name == HC.SITE_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
+            elif name == HC.SITE_TYPE_GIPHY: namespaces = [ '' ]
+            elif name == HC.SITE_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
+            elif name == HC.SITE_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
+            elif name == HC.SITE_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
+            elif name == HC.SITE_TYPE_TUMBLR: namespaces = [ '' ]
+            else:
+                
+                ( booru_id, booru_name ) = name
+                
+                booru = HC.app.Read( 'remote_booru', booru_name )
+                
+                namespaces = booru.GetNamespaces()
+                
+            
+            self._name = name
+            
+            self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, namespaces = namespaces )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._ok.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+        def PopulateControls():
+            
+            if name in ( 'default', HC.SITE_TYPE_BOORU ):
+                
+                namespaces = [ 'all namespaces' ]
+                
+                new_ato = {}
+                
+                for ( service_key, boolean ) in self._initial_ato.items():
+                    
+                    if boolean: new_ato[ service_key ] = [ 'all namespaces' ]
+                    
+                
+                self._initial_ato = new_ato
+                
+            
+            self._advanced_tag_options.SetInfo( self._initial_ato )
+            
+        
+        def ArrangeControls():
+            
+            b_box = wx.BoxSizer( wx.HORIZONTAL )
+            b_box.AddF( self._ok, FLAGS_MIXED )
+            b_box.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        self._name = name
+        self._initial_ato = ato
+        
+        Dialog.__init__( self, parent, 'configure default advanced tag options for ' + pretty_name )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+        wx.CallAfter( self._advanced_tag_options.ExpandCollapse )
+        
+    
+    def GetATO( self ):
+        
+        ato = self._advanced_tag_options.GetInfo()
+        
+        if self._name in ( 'default', HC.SITE_TYPE_BOORU ):
+            
+            new_ato = {}
+            
+            for ( service_key, namespaces ) in ato.items():
+                
+                if namespaces == [ 'all namespaces' ]: new_ato[ service_key ] = True
+                
+            
+            ato = new_ato
+            
+        
+        return ato
+        
+    
 class DialogInputCustomFilterAction( Dialog ):
     
     def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_key = None, action = 'archive' ):
@@ -1375,13 +1478,13 @@ class DialogInputFileSystemPredicate( Dialog ):
             
             def PopulateControls():
                 
-                ( media, type ) = system_predicates[ 'mime' ]
+                ( media, media_type ) = system_predicates[ 'mime' ]
                 
                 self._mime_media.SetSelection( media )
                 
                 self.EventMime( None )
                 
-                self._mime_type.SetSelection( type )
+                self._mime_type.SetSelection( media_type )
                 
             
             def ArrangeControls():
@@ -3985,7 +4088,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 account = service.GetInfo( 'account' )
                 
-                if account.HasPermission( HC.POST_DATA ):
+                if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
                     
                     service_key = service.GetKey()
                     

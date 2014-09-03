@@ -2922,6 +2922,25 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._listbook.AddPage( self._file_system_predicates_page, 'default file system predicates' )
             
+            # default advanced tag options
+            
+            self._advanced_tag_options_page = wx.Panel( self._listbook )
+            self._advanced_tag_options_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._advanced_tag_options = wx.ListBox( self._advanced_tag_options_page )
+            self._advanced_tag_options.Bind( wx.EVT_LEFT_DCLICK, self.EventATODelete )
+            
+            self._advanced_tag_options_add = wx.Button( self._advanced_tag_options_page, label = 'add' )
+            self._advanced_tag_options_add.Bind( wx.EVT_BUTTON, self.EventATOAdd )
+            
+            self._advanced_tag_options_edit = wx.Button( self._advanced_tag_options_page, label = 'edit' )
+            self._advanced_tag_options_edit.Bind( wx.EVT_BUTTON, self.EventATOEdit )
+            
+            self._advanced_tag_options_delete = wx.Button( self._advanced_tag_options_page, label = 'delete' )
+            self._advanced_tag_options_delete.Bind( wx.EVT_BUTTON, self.EventATODelete )
+            
+            self._listbook.AddPage( self._advanced_tag_options_page, 'default advanced tag options' )
+            
             # colours
             
             self._colour_page = wx.Panel( self._listbook )
@@ -3090,13 +3109,13 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._file_system_predicate_limit.SetValue( limit )
             
-            ( media, type ) = system_predicates[ 'mime' ]
+            ( media, media_type ) = system_predicates[ 'mime' ]
             
             self._file_system_predicate_mime_media.SetSelection( media )
             
             self.EventFileSystemPredicateMime( None )
             
-            self._file_system_predicate_mime_type.SetSelection( type )
+            self._file_system_predicate_mime_type.SetSelection( media_type )
             
             ( sign, num_tags ) = system_predicates[ 'num_tags' ]
             
@@ -3133,6 +3152,22 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._file_system_predicate_num_words_sign.SetSelection( sign )
             self._file_system_predicate_num_words.SetValue( num_words )
+            
+            #
+            
+            for ( name, ato ) in HC.options[ 'default_advanced_tag_options' ].items():
+                
+                if name == 'default': pretty_name = 'default'
+                elif type( name ) == int: pretty_name = HC.site_type_string_lookup[ name ]
+                else:
+                    
+                    ( booru_id, booru_name ) = name
+                    
+                    pretty_name = 'booru: ' + booru_name
+                    
+                
+                self._advanced_tag_options.Append( pretty_name, ( name, ato ) )
+                
             
             #
             
@@ -3358,6 +3393,22 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_BOTH_WAYS )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._advanced_tag_options_add, FLAGS_BUTTON_SIZERS )
+            hbox.AddF( self._advanced_tag_options_edit, FLAGS_BUTTON_SIZERS )
+            hbox.AddF( self._advanced_tag_options_delete, FLAGS_BUTTON_SIZERS )
+            
+            vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._advanced_tag_options_page.SetSizer( vbox )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             hbox.AddF( wx.StaticText( self._server_page, label = 'local server port: ' ), FLAGS_MIXED )
@@ -3461,6 +3512,84 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
     
     def _SortListCtrl( self ): self._shortcuts.SortListItems( 2 )
+    
+    def EventATOAdd( self, event ):
+        
+        pretty_names_to_names = {}
+        
+        for ( k, v ) in HC.site_type_string_lookup.items(): pretty_names_to_names[ v ] = k
+        
+        boorus = HC.app.Read( 'remote_boorus' )
+        
+        for ( booru_name, booru ) in boorus.items(): pretty_names_to_names[ 'booru: ' + booru_name ] = ( HC.SITE_TYPE_BOORU, booru_name )
+        
+        names = pretty_names_to_names.keys()
+        
+        names.sort()
+        
+        pretty_names_to_names[ 'default' ] = 'default'
+        
+        names.insert( 0, 'default' )
+        
+        with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select tag domain', names ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                pretty_name = dlg.GetString()
+                
+                for i in range( self._advanced_tag_options.GetCount() ):
+                    
+                    if pretty_name == self._advanced_tag_options.GetString( i ):
+                        
+                        wx.MessageBox( 'You already have default advanced tag options set up for that domain!' )
+                        
+                        return
+                        
+                    
+                
+                name = pretty_names_to_names[ pretty_name ]
+                
+                with ClientGUIDialogs.DialogInputAdvancedTagOptions( self, pretty_name, name, {} ) as ato_dlg:
+                    
+                    if ato_dlg.ShowModal() == wx.ID_OK:
+                        
+                        ato = ato_dlg.GetATO()
+                        
+                        self._advanced_tag_options.Append( pretty_name, ( name, ato ) )
+                        
+                    
+                
+            
+        
+    
+    def EventATODelete( self, event ):
+        
+        selection = self._advanced_tag_options.GetSelection()
+        
+        if selection != wx.NOT_FOUND: self._advanced_tag_options.Delete( selection )
+        
+    
+    def EventATOEdit( self, event ):
+        
+        selection = self._advanced_tag_options.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            pretty_name = self._advanced_tag_options.GetString( selection )
+            
+            ( name, ato ) = self._advanced_tag_options.GetClientData( selection )
+            
+            with ClientGUIDialogs.DialogInputAdvancedTagOptions( self, pretty_name, name, ato ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ato = dlg.GetATO()
+                    
+                    self._advanced_tag_options.SetClientData( selection, ( name, ato ) )
+                    
+                
+            
+        
     
     def EventEditNamespaceColour( self, event ):
         
@@ -3634,6 +3763,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         system_predicates[ 'num_words' ] = ( self._file_system_predicate_num_words_sign.GetSelection(), self._file_system_predicate_num_words.GetValue() )
         
         HC.options[ 'file_system_predicates' ] = system_predicates
+        
+        default_advanced_tag_options = {}
+        
+        for ( name, ato ) in [ self._advanced_tag_options.GetClientData( i ) for i in range( self._advanced_tag_options.GetCount() ) ]:
+            
+            default_advanced_tag_options[ name ] = ato
+            
+        
+        HC.options[ 'default_advanced_tag_options' ] = default_advanced_tag_options
         
         shortcuts = {}
         
@@ -4288,9 +4426,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( 680, y ) )
             
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        self._service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + service.GetName() + ' services' )
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + self._service.GetName() + ' services' )
         
         InitialiseControls()
         
@@ -5620,6 +5758,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 self._query = wx.TextCtrl( self._query_panel )
                 
                 self._booru_selector = wx.ListBox( self._query_panel )
+                self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
                 
                 self._query_type = ClientGUICommon.BetterChoice( self._query_panel )
                 self._query_type.Append( 'artist', 'artist' )
@@ -5708,7 +5847,14 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 info[ 'url_cache' ] = set()
                 info[ 'paused' ] = False
                 
-            else: info = HC.app.Read( 'subscription', name )
+                self._new_subscription = True
+                
+            else:
+                
+                info = HC.app.Read( 'subscription', name )
+                
+                self._new_subscription = False
+                
             
             self._original_name = name
             self._original_info = info
@@ -5724,6 +5870,47 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self.SetScrollRate( 0, 20 )
             
             self.SetMinSize( ( 540, 620 ) )
+            
+        
+        def _ConfigureAdvancedTagOptions( self ):
+            
+            site_type = self._site_type.GetChoice()
+            
+            lookup = site_type
+            
+            if site_type == HC.SITE_TYPE_BOORU:
+                
+                selection = self._booru_selector.GetSelection()
+                
+                booru_name = self._booru_selector.GetString( selection )
+                
+                booru = HC.app.Read( 'remote_booru', booru_name )
+                
+                namespaces = booru.GetNamespaces()
+                
+                lookup = ( HC.SITE_TYPE_BOORU, booru.GetName() )
+                
+            elif site_type == HC.SITE_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
+            elif site_type == HC.SITE_TYPE_GIPHY: namespaces = [ '' ]
+            elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
+            elif site_type == HC.SITE_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
+            elif site_type == HC.SITE_TYPE_TUMBLR: namespaces = [ '' ]
+            elif site_type == HC.SITE_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
+            
+            ato = HC.GetDefaultAdvancedTagOptions( lookup )
+            
+            if not self._new_subscription:
+                
+                ( name, info ) = self.GetSubscription()
+                
+                same_site = info[ 'site_type' ] == self._original_info[ 'site_type' ]
+                same_type_of_query = info[ 'query_type' ] == self._original_info[ 'query_type' ]
+                
+                if same_site and same_type_of_query: ato = self._original_info[ 'advanced_tag_options' ]
+                
+            
+            self._advanced_tag_options.SetNamespaces( namespaces )
+            self._advanced_tag_options.SetInfo( ato )
             
         
         def _PresentForSiteType( self ):
@@ -5748,15 +5935,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             else: self._booru_selector.Hide()
             
-            if site_type == HC.SITE_TYPE_BOORU: namespaces = [ 'creator', 'series', 'character', '' ]
-            elif site_type == HC.SITE_TYPE_DEVIANT_ART: namespaces = [ 'creator', 'title', '' ]
-            elif site_type == HC.SITE_TYPE_GIPHY: namespaces = [ '' ]
-            elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY: namespaces = [ 'creator', 'title', '' ]
-            elif site_type == HC.SITE_TYPE_PIXIV: namespaces = [ 'creator', 'title', '' ]
-            elif site_type == HC.SITE_TYPE_TUMBLR: namespaces = [ '' ]
-            elif site_type == HC.SITE_TYPE_NEWGROUNDS: namespaces = [ 'creator', 'title', '' ]
-            
-            self._advanced_tag_options.SetNamespaces( namespaces )
+            wx.CallAfter( self._ConfigureAdvancedTagOptions )
             
             self.Layout()
             
@@ -5825,6 +6004,8 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             self._advanced_import_options.SetInfo( advanced_import_options )
             
         
+        def EventBooruSelected( self, event ): self._ConfigureAdvancedTagOptions()
+        
         def EventResetCache( self, event ):
             
             
@@ -5842,10 +6023,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
             
         
-        def EventSiteChanged( self, event ):
-            
-            self._PresentForSiteType()
-            
+        def EventSiteChanged( self, event ): self._PresentForSiteType()
         
         def GetSubscription( self ):
             
@@ -6108,7 +6286,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 account = service.GetInfo( 'account' )
                 
-                if account.HasPermission( HC.POST_DATA ):
+                if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
                     
                     name = service.GetName()
                     service_key = service.GetKey()
@@ -6577,7 +6755,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 account = service.GetInfo( 'account' )
                 
-                if account.HasPermission( HC.POST_DATA ):
+                if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
                     
                     name = service.GetName()
                     service_key = service.GetKey()
@@ -7395,7 +7573,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 if self._i_am_local_tag_service: self._modify_mappers.Hide()
                 else:
                     
-                    if not self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.Hide()
+                    if not ( self._account.HasPermission( HC.POST_DATA ) or self._account.HasNoPermissions() ): self._add_tag_box.Hide()
                     if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
                     
                 
@@ -7599,7 +7777,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def SetTagBoxFocus( self ):
             
-            if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ): self._add_tag_box.SetFocus()
+            if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ) or self._account.HasNoPermissions(): self._add_tag_box.SetFocus()
             
         
     

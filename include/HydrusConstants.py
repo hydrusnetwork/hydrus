@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 14
-SOFTWARE_VERSION = 127
+SOFTWARE_VERSION = 128
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -412,6 +412,16 @@ SITE_TYPE_BOORU = 3
 SITE_TYPE_TUMBLR = 4
 SITE_TYPE_HENTAI_FOUNDRY = 5
 SITE_TYPE_NEWGROUNDS = 6
+
+site_type_string_lookup = {}
+
+site_type_string_lookup[ SITE_TYPE_BOORU ] = 'booru'
+site_type_string_lookup[ SITE_TYPE_DEVIANT_ART ] = 'deviant art'
+site_type_string_lookup[ SITE_TYPE_GIPHY ] = 'giphy'
+site_type_string_lookup[ SITE_TYPE_HENTAI_FOUNDRY ] = 'hentai foundry'
+site_type_string_lookup[ SITE_TYPE_NEWGROUNDS ] = 'newgrounds'
+site_type_string_lookup[ SITE_TYPE_PIXIV ] = 'pixiv'
+site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
 
 SYSTEM_PREDICATE_TYPE_EVERYTHING = 0
 SYSTEM_PREDICATE_TYPE_INBOX = 1
@@ -1082,6 +1092,26 @@ def ConvertZoomToPercentage( zoom ):
     
     return pretty_zoom
     
+def GetDefaultAdvancedTagOptions( lookup ):
+    
+    backup_lookup = None
+    
+    if type( lookup ) == tuple:
+        
+        ( site_type, site_name ) = lookup
+        
+        if site_type == SITE_TYPE_BOORU: backup_lookup = SITE_TYPE_BOORU
+        
+    
+    ato_options = options[ 'default_advanced_tag_options' ]
+    
+    if lookup in ato_options: ato = ato_options[ lookup ]
+    elif backup_lookup is not None and backup_lookup in ato_options: ato = ato_options[ backup_lookup ]
+    elif 'default' in ato_options: ato = ato_options[ 'default' ]
+    else: ato = {}
+    
+    return ato
+    
 def GetEmptyDataDict():
     
     data = collections.defaultdict( default_dict_list )
@@ -1354,6 +1384,8 @@ class Account( HydrusYAMLBase ):
     
     def GetUsedData( self ): return self._used_data
     
+    def HasNoPermissions( self ): return self._account_type.HasNoPermissions()
+    
     def HasPermission( self, permission ):
         
         if self._IsBanned(): return False
@@ -1491,6 +1523,8 @@ class AccountType( HydrusYAMLBase ):
         
         return result_string
         
+    
+    def HasNoPermissions( self ): return len( self._permissions ) == 0
     
     def HasPermission( self, permission ): return permission in self._permissions
     

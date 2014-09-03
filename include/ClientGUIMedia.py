@@ -1705,10 +1705,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 
-                downloadable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) }
-                uploadable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) }
+                downloadable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).HasNoPermissions() }
+                uploadable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).HasNoPermissions() }
                 petition_resolvable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
-                petitionable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_services
+                petitionable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_keys
                 user_manageable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
                 admin_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
                 
@@ -1801,25 +1801,19 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 selection_uploadable_file_service_keys = set()
                 
+                selection_downloadable_file_service_keys = set()
+                
+                selection_petitionable_file_service_keys = set()
+                
                 for locations_manager in all_locations_managers:
                     
                     # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or admin )
                     
                     if locations_manager.HasLocal(): selection_uploadable_file_service_keys.update( uploadable_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_file_service_keys ) )
                     
-                
-                selection_downloadable_file_service_keys = set()
-                
-                for locations_manager in all_service_keys:
-                    
                     # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                     
                     if not locations_manager.HasLocal() and not locations_manager.HasDownloading(): selection_downloadable_file_service_keys.update( downloadable_file_service_keys & locations_manager.GetCurrentRemote() )
-                    
-                
-                selection_petitionable_file_service_keys = set()
-                
-                for locations_manager in all_locations_managers:
                     
                     # we can petition when we have permission and a file is current
                     # we can re-petition an already petitioned file
