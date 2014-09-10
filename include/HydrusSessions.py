@@ -24,11 +24,11 @@ class HydrusMessagingSessionManagerServer( object ):
         
         existing_sessions = HC.app.Read( 'messaging_sessions' )
         
-        self._sessions = collections.defaultdict( dict )
+        self._service_keys_to_sessions = collections.defaultdict( dict )
         
         for ( service_key, session_tuples ) in existing_sessions:
             
-            self._sessions[ service_key ] = { session_key : ( account, identifier, name, expiry ) for ( session_Key, account, identifier, name, expiry ) in session_tuples }
+            self._service_keys_to_sessions[ service_key ] = { session_key : ( account, identifier, name, expiry ) for ( session_Key, account, identifier, name, expiry ) in session_tuples }
             
         
         self._lock = threading.Lock()
@@ -38,16 +38,16 @@ class HydrusMessagingSessionManagerServer( object ):
         
         with self._lock:
             
-            if session_key not in self._sessions[ service_key ]: raise HydrusExceptions.SessionException( 'Did not find that session!' )
+            if session_key not in self._service_keys_to_sessions[ service_key ]: raise HydrusExceptions.SessionException( 'Did not find that session!' )
             else:
                 
-                ( account, identity, name, expiry ) = self._sessions[ service_key ][ session_key ]
+                ( account, identity, name, expiry ) = self._service_keys_to_sessions[ service_key ][ session_key ]
                 
                 now = HC.GetNow()
                 
                 if now > expiry:
                     
-                    del self._sessions[ service_key ][ session_key ]
+                    del self._service_keys_to_sessions[ service_key ][ session_key ]
                     
                     raise HydrusExceptions.SessionException( 'Session expired!' )
                     
@@ -63,9 +63,9 @@ class HydrusMessagingSessionManagerServer( object ):
         
         account_identifier = HC.AccountIdentifier( access_key = access_key )
         
-        account = HC.app.Read( 'account', service_key, account_identifier )
+        account_key = HC.app.Read( 'account_key', service_key, account_identifier )
         
-        account_identifier = account.GetAccountIdentifier() # for better account_id-based identifier
+        account = HC.app.Read( 'account', service_key, account_key )
         
         identity = hashlib.sha256( access_key ).digest()
         
@@ -75,7 +75,7 @@ class HydrusMessagingSessionManagerServer( object ):
         
         with self._lock:
             
-            self._sessions[ service_key ][ session_key ] = ( account, identity, name, expiry )
+            self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, identity, name, expiry )
             
         
         HC.app.Write( 'messaging_session', service_key, session_key, account, identity, name, expiry )
@@ -89,7 +89,7 @@ class HydrusSessionManagerClient( object ):
         
         existing_sessions = HC.app.Read( 'hydrus_sessions' )
         
-        self._sessions = { service_key : ( session_key, expiry ) for ( service_key, session_key, expiry ) in existing_sessions }
+        self._service_keys_to_sessions = { service_key : ( session_key, expiry ) for ( service_key, session_key, expiry ) in existing_sessions }
         
         self._lock = threading.Lock()
         
@@ -100,7 +100,7 @@ class HydrusSessionManagerClient( object ):
             
             HC.app.Write( 'delete_hydrus_session_key', service_key )
             
-            if service_key in self._sessions: del self._sessions[ service_key ]
+            if service_key in self._service_keys_to_sessions: del self._service_keys_to_sessions[ service_key ]
             
         
     
@@ -110,11 +110,11 @@ class HydrusSessionManagerClient( object ):
         
         with self._lock:
             
-            if service_key in self._sessions:
+            if service_key in self._service_keys_to_sessions:
                 
-                ( session_key, expiry ) = self._sessions[ service_key ]
+                ( session_key, expiry ) = self._service_keys_to_sessions[ service_key ]
                 
-                if now + 600 > expiry: del self._sessions[ service_key ]
+                if now + 600 > expiry: del self._service_keys_to_sessions[ service_key ]
                 else: return session_key
                 
             
@@ -129,7 +129,7 @@ class HydrusSessionManagerClient( object ):
             
             expiry = now + HYDRUS_SESSION_LIFETIME
             
-            self._sessions[ service_key ] = ( session_key, expiry )
+            self._service_keys_to_sessions[ service_key ] = ( session_key, expiry )
             
             HC.app.Write( 'hydrus_session', service_key, session_key, expiry )
             
@@ -154,20 +154,20 @@ class HydrusSessionManagerServer( object ):
             
             account_identifier = HC.AccountIdentifier( access_key = access_key )
             
-            account = HC.app.Read( 'account', service_key, account_identifier )
+            account_key = HC.app.Read( 'account_key', service_key, account_identifier )
             
-            account_id = account.GetAccountId()
-            
-            if account_id not in self._account_ids_to_accounts[ service_key ]:
+            if account_key not in self._account_keys_to_accounts[ service_key ]:
                 
-                self._account_ids_to_accounts[ service_key ][ account_id ] = account
+                account = HC.app.Read( 'account', service_key, account_key )
+                
+                self._account_keys_to_accounts[ service_key ][ account_key ] = account
                 
             
-            account = self._account_ids_to_accounts[ service_key ][ account_id ]
+            account = self._account_keys_to_accounts[ service_key ][ account_key ]
             
             session_key = os.urandom( 32 )
             
-            self._account_ids_to_session_keys[ service_key ][ account_id ].add( session_key )
+            self._account_keys_to_session_keys[ service_key ][ account_key ].add( session_key )
             
             now = HC.GetNow()
             
@@ -175,7 +175,7 @@ class HydrusSessionManagerServer( object ):
             
             HC.app.Write( 'session', session_key, service_key, account, expiry )
         
-            self._sessions[ service_key ][ session_key ] = ( account, expiry )
+            self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, expiry )
             
         
         return ( session_key, expiry )
@@ -187,13 +187,13 @@ class HydrusSessionManagerServer( object ):
         
         with self._lock:
             
-            services_sessions = self._sessions[ service_key ]
+            service_sessions = self._service_keys_to_sessions[ service_key ]
             
-            if session_key in services_sessions:
+            if session_key in service_sessions:
                 
-                ( account, expiry ) = services_sessions[ session_key ]
+                ( account, expiry ) = service_sessions[ session_key ]
                 
-                if expiry is not None and now > expiry: del services_sessions[ session_key ]
+                if now > expiry: del service_sessions[ session_key ]
                 else: return account
                 
             
@@ -207,21 +207,21 @@ class HydrusSessionManagerServer( object ):
             
             for account_identifier in account_identifiers:
                 
-                account = HC.app.Read( 'account', service_key, account_identifier )
+                account_key = HC.app.Read( 'account_key', service_key, account_identifier )
                 
-                account_id = account.GetAccountId()
+                account = HC.app.Read( 'account', service_key, account_key )
                 
-                self._account_ids_to_accounts[ service_key ][ account_id ] = account
+                self._account_keys_to_accounts[ service_key ][ account_key ] = account
                 
-                if account_id in self._account_ids_to_session_keys[ service_key ]:
+                if account_key in self._account_keys_to_session_keys[ service_key ]:
                     
-                    session_keys = self._account_ids_to_session_keys[ service_key ][ account_id ]
+                    session_keys = self._account_keys_to_session_keys[ service_key ][ account_key ]
                     
                     for session_key in session_keys:
                         
-                        ( old_account, expiry ) = self._sessions[ service_key ][ session_key ]
+                        ( old_account, expiry ) = self._service_keys_to_sessions[ service_key ][ session_key ]
                         
-                        self._sessions[ service_key ][ session_key ] = ( account, expiry )
+                        self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, expiry )
                         
                     
                 
@@ -232,23 +232,23 @@ class HydrusSessionManagerServer( object ):
         
         with self._lock:
             
+            self._service_keys_to_sessions = collections.defaultdict( dict )
+            
+            self._account_keys_to_session_keys = collections.defaultdict( HC.default_dict_set )
+            
+            self._account_keys_to_accounts = collections.defaultdict( dict )
+            
+            #
+            
             existing_sessions = HC.app.Read( 'sessions' )
             
-            self._account_ids_to_session_keys = collections.defaultdict( HC.default_dict_set )
-            
-            self._account_ids_to_accounts = collections.defaultdict( dict )
-            
-            self._sessions = collections.defaultdict( dict )
-            
-            for ( session_key, service_key, account, expiry ) in existing_sessions:
+            for ( session_key, service_key, account_key, account, expiry ) in existing_sessions:
                 
-                self._sessions[ service_key ][ session_key ] = ( account, expiry )
+                self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, expiry )
                 
-                account_id = account.GetAccountId()
+                self._account_keys_to_session_keys[ service_key ][ account_key ].add( session_key )
                 
-                self._account_ids_to_session_keys[ service_key ][ account_id ].add( session_key )
-                
-                self._account_ids_to_accounts[ service_key ][ account_id ] = account
+                self._account_keys_to_accounts[ service_key ][ account_key ] = account
                 
             
         
@@ -259,7 +259,7 @@ class WebSessionManagerClient( object ):
         
         existing_sessions = HC.app.Read( 'web_sessions' )
         
-        self._sessions = { name : ( cookies, expiry ) for ( name, cookies, expiry ) in existing_sessions }
+        self._names_to_sessions = { name : ( cookies, expiry ) for ( name, cookies, expiry ) in existing_sessions }
         
         self._lock = threading.Lock()
         
@@ -270,11 +270,11 @@ class WebSessionManagerClient( object ):
         
         with self._lock:
             
-            if name in self._sessions:
+            if name in self._names_to_sessions:
                 
-                ( cookies, expiry ) = self._sessions[ name ]
+                ( cookies, expiry ) = self._names_to_sessions[ name ]
                 
-                if now + 300 > expiry: del self._sessions[ name ]
+                if now + 300 > expiry: del self._names_to_sessions[ name ]
                 else: return cookies
                 
             
@@ -315,7 +315,7 @@ class WebSessionManagerClient( object ):
                 expiry = now + 30 * 86400
                 
             
-            self._sessions[ name ] = ( cookies, expiry )
+            self._names_to_sessions[ name ] = ( cookies, expiry )
             
             HC.app.Write( 'web_session', name, cookies, expiry )
             

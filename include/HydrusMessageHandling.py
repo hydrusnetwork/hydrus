@@ -386,9 +386,9 @@ class IMMessageText( IMMessage ):
     
     yaml_tag = u'!IMMessageText'
     
-    def __init__( self, type, text ):
+    def __init__( self, message_type, text ):
         
-        self._type = type
+        self._type = message_type
         self._text = text
         
     

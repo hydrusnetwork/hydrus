@@ -48,10 +48,10 @@ class TestManagers( unittest.TestCase ):
     
     def test_services( self ):
         
-        def test_service( service, key, type, name, info ):
+        def test_service( service, key, service_type, name, info ):
             
             self.assertEqual( service.GetKey(), key )
-            self.assertEqual( service.GetType(), type )
+            self.assertEqual( service.GetType(), service_type )
             self.assertEqual( service.GetName(), name )
             self.assertEqual( service.GetInfo(), info )
             

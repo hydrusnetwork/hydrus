@@ -196,6 +196,8 @@ class TestServer( unittest.TestCase ):
     
     def _test_local_booru( self, host, port ):
         
+        #
+        
         connection = httplib.HTTPConnection( host, port, timeout = 10 )
         
         #
@@ -289,15 +291,9 @@ class TestServer( unittest.TestCase ):
             
         
     
-    def _test_repo( self, host, port, service_type ):
+    def _test_repo( self, service, host, port ):
         
-        info = {}
-        
-        info[ 'host' ] = host
-        info[ 'port' ] = port
-        info[ 'access_key' ] = self._access_key
-        
-        service = CC.Service( os.urandom( 32 ), service_type, 'service', info )
+        service_key = service.GetKey()
         
         # news
         
@@ -338,8 +334,7 @@ class TestServer( unittest.TestCase ):
         update = 'update'
         begin = 100
         
-        if service_type == HC.FILE_REPOSITORY: path = SC.GetExpectedUpdatePath( self._file_service_key, begin )
-        elif service_type == HC.TAG_REPOSITORY: path = SC.GetExpectedUpdatePath( self._tag_service_key, begin )
+        path = SC.GetExpectedUpdatePath( service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( update )
         
@@ -389,6 +384,7 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'service', service )
         
+        HC.app.SetRead( 'account_key', os.urandom( 32 ) )
         HC.app.SetRead( 'account', self._account )
         
         # account
@@ -514,7 +510,7 @@ class TestServer( unittest.TestCase ):
         self.assertEqual( edit_log, written_edit_log )
         
     
-    def _test_tag_repo( self, host, port ):
+    def _test_tag_repo( self, service, host, port ):
         
         pass
         
@@ -655,6 +651,7 @@ class TestAMP( unittest.TestCase ):
         
         account = HC.Account( account_id, account_type, created, expiry, used_data )
         
+        HC.app.SetRead( 'account_key', os.urandom( 32 ) )
         HC.app.SetRead( 'account', account )
         
         deferred = protocol.callRemote( HydrusServerAMP.IMSessionKey, access_key = access_key, name = name )

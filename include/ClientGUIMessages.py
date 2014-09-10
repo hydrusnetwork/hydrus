@@ -1346,7 +1346,7 @@ class MessageHTML( wx.html.HtmlWindow ):
     
     def OnLinkClicked( self, link ): webbrowser.open( link.GetHref() )
     
-    def OnOpeningURL( self, type, url, redirect ): return wx.html.HTML_BLOCK
+    def OnOpeningURL( self, url_type, url, redirect ): return wx.html.HTML_BLOCK
     
 class MessagePanel( wx.Panel ):
     

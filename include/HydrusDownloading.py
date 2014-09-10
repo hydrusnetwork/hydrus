@@ -1326,11 +1326,11 @@ class ImportController( object ):
         self._lock = threading.Lock()
         
     
-    def _GetNewJobKey( self, type ):
+    def _GetNewJobKey( self, job_type ):
         
         job_key = HC.JobKey()
         
-        if type == 'controller':
+        if job_type == 'controller':
             
             job_key.SetVariable( 'num_successful', 0 )
             job_key.SetVariable( 'num_failed', 0 )
@@ -1341,17 +1341,17 @@ class ImportController( object ):
             
             job_key.SetVariable( 'status', '' )
             
-            if type == 'import':
+            if job_type == 'import':
                 
                 job_key.SetVariable( 'page_key', self._page_key )
                 job_key.SetVariable( 'range', 1 )
                 job_key.SetVariable( 'value', 0 )
                 
-            elif type == 'import_queue_position':
+            elif job_type == 'import_queue_position':
                 
                 job_key.SetVariable( 'queue_position', 0 )
                 
-            elif type == 'import_queue':
+            elif job_type == 'import_queue':
                 
                 job_key.SetVariable( 'queue', [] )
                 
@@ -1362,14 +1362,14 @@ class ImportController( object ):
     
     def CleanBeforeDestroy( self ): self._controller_job_key.Cancel()
     
-    def GetJobKey( self, type ):
+    def GetJobKey( self, job_type ):
         
         with self._lock:
             
-            if type == 'controller': return self._controller_job_key
-            elif type == 'import': return self._import_job_key
-            elif type == 'import_queue_position': return self._import_queue_position_job_key
-            elif type == 'import_queue': return self._import_queue_job_key
+            if job_type == 'controller': return self._controller_job_key
+            elif job_type == 'import': return self._import_job_key
+            elif job_type == 'import_queue_position': return self._import_queue_position_job_key
+            elif job_type == 'import_queue': return self._import_queue_job_key
             
         
     

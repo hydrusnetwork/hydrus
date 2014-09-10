@@ -2198,9 +2198,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     #
                     
-                    for ( name, type, default, editable ) in form_fields:
+                    for ( name, field_type, default, editable ) in form_fields:
                         
-                        self._form_fields.Append( ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                        self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HC.u( default ), HC.u( editable ) ), ( name, field_type, default, editable ) )
                         
                     
                     #
@@ -2326,7 +2326,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        ( name, type, default, editable ) = dlg.GetFormField()
+                        ( name, field_type, default, editable ) = dlg.GetFormField()
                         
                         if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]:
                             
@@ -2337,7 +2337,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                             return
                             
                         
-                        self._form_fields.Append( ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                        self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HC.u( default ), HC.u( editable ) ), ( name, field_type, default, editable ) )
                         
                     
                 
@@ -2371,9 +2371,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 for index in indices:
                     
-                    ( name, type, default, editable ) = self._form_fields.GetClientData( index )
+                    ( name, field_type, default, editable ) = self._form_fields.GetClientData( index )
                     
-                    form_field = ( name, type, default, editable )
+                    form_field = ( name, field_type, default, editable )
                     
                     with ClientGUIDialogs.DialogInputNewFormField( self, form_field ) as dlg:
                         
@@ -2381,14 +2381,14 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                             
                             old_name = name
                             
-                            ( name, type, default, editable ) = dlg.GetFormField()
+                            ( name, field_type, default, editable ) = dlg.GetFormField()
                             
                             if old_name != name:
                                 
                                 if name in [ form_field[0] for form_field in self._form_fields.GetClientData() ]: raise Exception( 'You already have a form field called ' + name + '; delete or edit that one first' )
                                 
                             
-                            self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                            self._form_fields.UpdateRow( index, ( name, CC.field_string_lookup[ field_type ], HC.u( default ), HC.u( editable ) ), ( name, field_type, default, editable ) )
                             
                         
                     
@@ -2434,9 +2434,9 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 self._form_fields.setResizeColumn( 3 ) # default
                 
-                for ( name, type, default, editable ) in form_fields:
+                for ( name, field_type, default, editable ) in form_fields:
                     
-                    self._form_fields.Append( ( name, CC.field_string_lookup[ type ], HC.u( default ), HC.u( editable ) ), ( name, type, default, editable ) )
+                    self._form_fields.Append( ( name, CC.field_string_lookup[ field_type ], HC.u( default ), HC.u( editable ) ), ( name, field_type, default, editable ) )
                     
                 
                 if CC.RESTRICTION_MIN_RESOLUTION in restrictions: value = restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
@@ -2497,13 +2497,13 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
             for ( path, details ) in self._original_paths_to_details.items():
                 
-                type = details[ 'type' ]
+                import_type = details[ 'type' ]
                 check_period = details[ 'check_period' ]
                 local_tag = details[ 'local_tag' ]
                 
-                ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( type, check_period, local_tag )
+                ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( import_type, check_period, local_tag )
                 
-                self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, type, check_period, local_tag ) )
+                self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, import_type, check_period, local_tag ) )
                 
             
         
@@ -2553,21 +2553,21 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         all_existing_client_data = self._import_folders.GetClientData()
         
-        if path not in ( existing_path for ( existing_path, type, check_period, local_tag ) in all_existing_client_data ):
+        if path not in ( existing_path for ( existing_path, import_type, check_period, local_tag ) in all_existing_client_data ):
             
-            type = HC.IMPORT_FOLDER_TYPE_SYNCHRONISE
+            import_type = HC.IMPORT_FOLDER_TYPE_SYNCHRONISE
             check_period = 15 * 60
             local_tag = None
             
-            with DialogManageImportFoldersEdit( self, path, type, check_period, local_tag ) as dlg:
+            with DialogManageImportFoldersEdit( self, path, import_type, check_period, local_tag ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, type, check_period, local_tag ) = dlg.GetInfo()
+                    ( path, import_type, check_period, local_tag ) = dlg.GetInfo()
                     
-                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( type, check_period, local_tag )
+                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( import_type, check_period, local_tag )
                     
-                    self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, type, check_period, local_tag ) )
+                    self._import_folders.Append( ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, import_type, check_period, local_tag ) )
                     
                 
             
@@ -2581,10 +2581,10 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
         
     
-    def _GetPrettyVariables( self, type, check_period, local_tag ):
+    def _GetPrettyVariables( self, import_type, check_period, local_tag ):
         
-        if type == HC.IMPORT_FOLDER_TYPE_DELETE: pretty_type = 'delete'
-        elif type == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: pretty_type = 'synchronise'
+        if import_type == HC.IMPORT_FOLDER_TYPE_DELETE: pretty_type = 'delete'
+        elif import_type == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: pretty_type = 'synchronise'
         
         pretty_check_period = HC.u( check_period / 60 ) + ' minutes'
         
@@ -2615,17 +2615,17 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         for index in indices:
             
-            ( path, type, check_period, local_tag ) = self._import_folders.GetClientData( index )
+            ( path, import_type, check_period, local_tag ) = self._import_folders.GetClientData( index )
             
-            with DialogManageImportFoldersEdit( self, path, type, check_period, local_tag ) as dlg:
+            with DialogManageImportFoldersEdit( self, path, import_type, check_period, local_tag ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( path, type, check_period, local_tag ) = dlg.GetInfo()
+                    ( path, import_type, check_period, local_tag ) = dlg.GetInfo()
                     
-                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( type, check_period, local_tag )
+                    ( pretty_type, pretty_check_period, pretty_local_tag ) = self._GetPrettyVariables( import_type, check_period, local_tag )
                     
-                    self._import_folders.UpdateRow( index, ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, type, check_period, local_tag ) )
+                    self._import_folders.UpdateRow( index, ( path, pretty_type, pretty_check_period, pretty_local_tag ), ( path, import_type, check_period, local_tag ) )
                     
                 
             
@@ -2639,12 +2639,12 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         paths = set()
         
-        for ( path, type, check_period, local_tag ) in client_data:
+        for ( path, import_type, check_period, local_tag ) in client_data:
             
             if path in self._original_paths_to_details: details = self._original_paths_to_details[ path ]
             else: details = { 'last_checked' : 0, 'cached_imported_paths' : set(), 'failed_imported_paths' : set() }
             
-            details[ 'type' ] = type
+            details[ 'type' ] = import_type
             details[ 'check_period' ] = check_period
             details[ 'local_tag' ] = local_tag
             
@@ -2664,7 +2664,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
 class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, path, type, check_period, local_tag ):
+    def __init__( self, parent, path, import_type, check_period, local_tag ):
         
         def InitialiseControls():
             
@@ -2710,7 +2710,7 @@ synchronise - try to import all new files in folder'''
             
             self._path.SetPath( path )
             
-            self._type.Select( type )
+            self._type.Select( import_type )
             
             self._check_period.SetRange( 3, 180 )
             
@@ -2764,13 +2764,13 @@ synchronise - try to import all new files in folder'''
         
         path = self._path.GetPath()
         
-        type = self._type.GetChoice()
+        import_type = self._type.GetChoice()
         
         check_period = self._check_period.GetValue() * 60
         
         local_tag = self._local_tag.GetValue()
         
-        return ( path, type, check_period, local_tag )
+        return ( path, import_type, check_period, local_tag )
         
     
 class DialogManageOptions( ClientGUIDialogs.Dialog ):
@@ -4092,7 +4092,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             self._media = media
             
-            service_type = service.GetType()
+            service_type = self._service.GetType()
             
             def InitialiseControls():
                 

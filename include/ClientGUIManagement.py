@@ -49,7 +49,7 @@ FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERT
 
 class CaptchaControl( wx.Panel ):
     
-    def __init__( self, parent, type, default ):
+    def __init__( self, parent, captcha_type, default ):
         
         wx.Panel.__init__( self, parent )
         
@@ -461,13 +461,13 @@ class ManagementPanelDumper( ManagementPanel ):
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        for ( name, type, default, editable ) in self._form_fields:
+        for ( name, field_type, default, editable ) in self._form_fields:
             
-            if type in ( CC.FIELD_TEXT, CC.FIELD_THREAD_ID ): field = wx.TextCtrl( self._thread_panel, value = default )
-            elif type == CC.FIELD_PASSWORD: field = wx.TextCtrl( self._thread_panel, value = default, style = wx.TE_PASSWORD )
+            if field_type in ( CC.FIELD_TEXT, CC.FIELD_THREAD_ID ): field = wx.TextCtrl( self._thread_panel, value = default )
+            elif field_type == CC.FIELD_PASSWORD: field = wx.TextCtrl( self._thread_panel, value = default, style = wx.TE_PASSWORD )
             else: continue
             
-            self._thread_fields[ name ] = ( type, field )
+            self._thread_fields[ name ] = ( field_type, field )
             
             if editable:
                 
@@ -489,19 +489,19 @@ class ManagementPanelDumper( ManagementPanel ):
         
         self._post_info = wx.StaticText( self._post_panel, label = 'no file selected', style = wx.ALIGN_CENTER | wx.ST_NO_AUTORESIZE )
         
-        for ( name, type, default, editable ) in self._form_fields:
+        for ( name, field_type, default, editable ) in self._form_fields:
             
-            if type == CC.FIELD_VERIFICATION_RECAPTCHA:
+            if field_type == CC.FIELD_VERIFICATION_RECAPTCHA:
                 
                 if self._have_4chan_pass: continue
                 
-                field = CaptchaControl( self._post_panel, type, default )
+                field = CaptchaControl( self._post_panel, field_type, default )
                 field.Bind( CAPTCHA_FETCH_EVENT, self.EventCaptchaRefresh )
                 
-            elif type == CC.FIELD_COMMENT: field = Comment( self._post_panel )
+            elif field_type == CC.FIELD_COMMENT: field = Comment( self._post_panel )
             else: continue
             
-            self._post_fields[ name ] = ( type, field, default )
+            self._post_fields[ name ] = ( field_type, field, default )
             
             postbox.AddF( field, FLAGS_EXPAND_PERPENDICULAR )
             
@@ -510,9 +510,9 @@ class ManagementPanelDumper( ManagementPanel ):
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        for ( name, type, default, editable ) in self._form_fields:
+        for ( name, field_type, default, editable ) in self._form_fields:
             
-            if type == CC.FIELD_CHECKBOX:
+            if field_type == CC.FIELD_CHECKBOX:
                 
                 field = wx.CheckBox( self._post_panel )
                 
@@ -520,15 +520,15 @@ class ManagementPanelDumper( ManagementPanel ):
                 
             else: continue
             
-            self._post_fields[ name ] = ( type, field, default )
+            self._post_fields[ name ] = ( field_type, field, default )
             
             gridbox.AddF( wx.StaticText( self._post_panel, label = name + ':' ), FLAGS_MIXED )
             gridbox.AddF( field, FLAGS_EXPAND_BOTH_WAYS )
             
         
-        for ( name, type, default, editable ) in self._form_fields:
+        for ( name, field_type, default, editable ) in self._form_fields:
             
-            if type == CC.FIELD_FILE: self._file_post_name = name
+            if field_type == CC.FIELD_FILE: self._file_post_name = name
             
         
         self._post_panel.AddF( self._post_info, FLAGS_EXPAND_PERPENDICULAR )
@@ -571,14 +571,14 @@ class ManagementPanelDumper( ManagementPanel ):
             
             post_field_info = []
             
-            for ( name, ( type, field, default ) ) in self._post_fields.items():
+            for ( name, ( field_type, field, default ) ) in self._post_fields.items():
                 
-                if type == CC.FIELD_COMMENT:
+                if field_type == CC.FIELD_COMMENT:
                     
-                    post_field_info.append( ( name, type, ( self._GetInitialComment( media ), '' ) ) )
+                    post_field_info.append( ( name, field_type, ( self._GetInitialComment( media ), '' ) ) )
                     
-                elif type == CC.FIELD_CHECKBOX: post_field_info.append( ( name, type, default == 'True' ) )
-                elif type == CC.FIELD_VERIFICATION_RECAPTCHA: post_field_info.append( ( name, type, None ) )
+                elif field_type == CC.FIELD_CHECKBOX: post_field_info.append( ( name, field_type, default == 'True' ) )
+                elif field_type == CC.FIELD_VERIFICATION_RECAPTCHA: post_field_info.append( ( name, field_type, None ) )
                 
             
             self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, post_field_info )
@@ -608,11 +608,11 @@ class ManagementPanelDumper( ManagementPanel ):
         
         post_field_info = []
         
-        for ( name, ( type, field, default ) ) in self._post_fields.items():
+        for ( name, ( field_type, field, default ) ) in self._post_fields.items():
             
-            if type == CC.FIELD_COMMENT: post_field_info.append( ( name, type, field.GetValues() ) )
-            elif type == CC.FIELD_CHECKBOX: post_field_info.append( ( name, type, field.GetValue() ) )
-            elif type == CC.FIELD_VERIFICATION_RECAPTCHA: post_field_info.append( ( name, type, field.GetValues() ) )
+            if field_type == CC.FIELD_COMMENT: post_field_info.append( ( name, field_type, field.GetValues() ) )
+            elif field_type == CC.FIELD_CHECKBOX: post_field_info.append( ( name, field_type, field.GetValue() ) )
+            elif field_type == CC.FIELD_VERIFICATION_RECAPTCHA: post_field_info.append( ( name, field_type, field.GetValues() ) )
             
         
         self._hashes_to_dump_info[ self._current_hash ] = ( dump_status_enum, dump_status_string, post_field_info )
@@ -673,9 +673,9 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._post_info.SetLabel( 'no file selected' )
             
-            for ( name, ( type, field, default ) ) in self._post_fields.items():
+            for ( name, ( field_type, field, default ) ) in self._post_fields.items():
                 
-                if type == CC.FIELD_CHECKBOX: field.SetValue( False )
+                if field_type == CC.FIELD_CHECKBOX: field.SetValue( False )
                 
                 field.Disable()
                 
@@ -690,22 +690,22 @@ class ManagementPanelDumper( ManagementPanel ):
             
             self._post_info.SetLabel( HC.u( index + 1 ) + '/' + HC.u( num_files ) + ': ' + dump_status_string )
             
-            for ( name, type, value ) in post_field_info:
+            for ( name, field_type, value ) in post_field_info:
                 
-                ( type, field, default ) = self._post_fields[ name ]
+                ( field_type, field, default ) = self._post_fields[ name ]
                 
-                if type == CC.FIELD_COMMENT:
+                if field_type == CC.FIELD_COMMENT:
                     
                     ( initial, append ) = value
                     
                     field.EnableWithValues( initial, append )
                     
-                elif type == CC.FIELD_CHECKBOX:
+                elif field_type == CC.FIELD_CHECKBOX:
                     
                     field.SetValue( value )
                     field.Enable()
                     
-                elif type == CC.FIELD_VERIFICATION_RECAPTCHA:
+                elif field_type == CC.FIELD_VERIFICATION_RECAPTCHA:
                     
                     if value is None: field.Enable()
                     else:
@@ -719,9 +719,9 @@ class ManagementPanelDumper( ManagementPanel ):
             
             if dump_status_enum in ( CC.DUMPER_DUMPED_OK, CC.DUMPER_UNRECOVERABLE_ERROR ):
                 
-                for ( name, ( type, field, default ) ) in self._post_fields.items():
+                for ( name, ( field_type, field, default ) ) in self._post_fields.items():
                     
-                    if type == CC.FIELD_CHECKBOX: field.SetValue( False )
+                    if field_type == CC.FIELD_CHECKBOX: field.SetValue( False )
                     
                     field.Disable()
                     
@@ -741,9 +741,9 @@ class ManagementPanelDumper( ManagementPanel ):
             
             new_post_field_info = []
             
-            for ( name, type, value ) in post_field_info:
+            for ( name, field_type, value ) in post_field_info:
                 
-                if type == CC.FIELD_COMMENT:
+                if field_type == CC.FIELD_COMMENT:
                     
                     ( initial, append ) = value
                     
@@ -751,9 +751,9 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                     initial = self._GetInitialComment( media )
                     
-                    new_post_field_info.append( ( name, type, ( initial, append ) ) )
+                    new_post_field_info.append( ( name, field_type, ( initial, append ) ) )
                     
-                else: new_post_field_info.append( ( name, type, value ) )
+                else: new_post_field_info.append( ( name, field_type, value ) )
                 
             
             self._hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, new_post_field_info )
@@ -796,14 +796,14 @@ class ManagementPanelDumper( ManagementPanel ):
             
             new_post_field_info = []
             
-            for ( name, type, value ) in post_field_info:
+            for ( name, field_type, value ) in post_field_info:
                 
-                if type == CC.FIELD_VERIFICATION_RECAPTCHA: new_post_field_info.append( ( name, type, None ) )
-                else: new_post_field_info.append( ( name, type, value ) )
+                if field_type == CC.FIELD_VERIFICATION_RECAPTCHA: new_post_field_info.append( ( name, field_type, None ) )
+                else: new_post_field_info.append( ( name, field_type, value ) )
                 
                 if hash == self._current_hash:
                     
-                    ( type, field, default ) = self._post_fields[ name ]
+                    ( field_type, field, default ) = self._post_fields[ name ]
                     
                     field.Enable()
                     
@@ -900,9 +900,9 @@ class ManagementPanelDumper( ManagementPanel ):
         
         if self._start_button.GetLabel() in ( 'start', 'continue' ):
             
-            for ( name, ( type, field ) ) in self._thread_fields.items():
+            for ( name, ( field_type, field ) ) in self._thread_fields.items():
                 
-                if type == CC.FIELD_THREAD_ID:
+                if field_type == CC.FIELD_THREAD_ID:
                     
                     try: int( field.GetValue() )
                     except:
@@ -926,7 +926,7 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                 
             
-            for ( type, field ) in self._thread_fields.values(): field.Disable()
+            for ( field_type, field ) in self._thread_fields.values(): field.Disable()
             
             self._dumping = True
             self._start_button.SetLabel( 'pause' )
@@ -937,7 +937,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
         else:
             
-            for ( type, field ) in self._thread_fields.values(): field.Enable()
+            for ( field_type, field ) in self._thread_fields.values(): field.Enable()
             
             self._dumping = False
             
@@ -982,9 +982,9 @@ class ManagementPanelDumper( ManagementPanel ):
                 
                 new_post_field_info = []
                 
-                for ( name, type, value ) in post_field_info:
+                for ( name, field_type, value ) in post_field_info:
                     
-                    if type == CC.FIELD_COMMENT:
+                    if field_type == CC.FIELD_COMMENT:
                         
                         ( initial, append ) = value
                         
@@ -995,7 +995,7 @@ class ManagementPanelDumper( ManagementPanel ):
                         value = ( initial, append )
                         
                     
-                    new_post_field_info.append( ( name, type, value ) )
+                    new_post_field_info.append( ( name, field_type, value ) )
                     
                 
                 new_hashes_to_dump_info[ hash ] = ( dump_status_enum, dump_status_string, new_post_field_info )
@@ -1049,9 +1049,9 @@ class ManagementPanelDumper( ManagementPanel ):
                     
                     ( dump_status_enum, dump_status_string, post_field_info ) = self._hashes_to_dump_info[ hash ]
                     
-                    for ( name, type, value ) in post_field_info:
+                    for ( name, field_type, value ) in post_field_info:
                         
-                        if type == CC.FIELD_VERIFICATION_RECAPTCHA:
+                        if field_type == CC.FIELD_VERIFICATION_RECAPTCHA:
                             
                             if value is None:
                                 
@@ -1080,21 +1080,21 @@ class ManagementPanelDumper( ManagementPanel ):
                         
                         post_fields = []
                         
-                        for ( name, ( type, field ) ) in self._thread_fields.items():
+                        for ( name, ( field_type, field ) ) in self._thread_fields.items():
                             
-                            post_fields.append( ( name, type, field.GetValue() ) )
+                            post_fields.append( ( name, field_type, field.GetValue() ) )
                             
                         
-                        for ( name, type, value ) in post_field_info:
+                        for ( name, field_type, value ) in post_field_info:
                             
-                            if type == CC.FIELD_VERIFICATION_RECAPTCHA:
+                            if field_type == CC.FIELD_VERIFICATION_RECAPTCHA:
                                 
                                 ( challenge, bitmap, captcha_runs_out, entry, ready ) = value
                                 
-                                post_fields.append( ( 'recaptcha_challenge_field', type, challenge ) )
-                                post_fields.append( ( 'recaptcha_response_field', type, entry ) )
+                                post_fields.append( ( 'recaptcha_challenge_field', field_type, challenge ) )
+                                post_fields.append( ( 'recaptcha_response_field', field_type, entry ) )
                                 
-                            elif type == CC.FIELD_COMMENT:
+                            elif field_type == CC.FIELD_COMMENT:
                                 
                                 ( initial, append ) = value
                                 
@@ -1102,9 +1102,9 @@ class ManagementPanelDumper( ManagementPanel ):
                                 
                                 if len( append ) > 0: comment += os.linesep + os.linesep + append
                                 
-                                post_fields.append( ( name, type, comment ) )
+                                post_fields.append( ( name, field_type, comment ) )
                                 
-                            else: post_fields.append( ( name, type, value ) )
+                            else: post_fields.append( ( name, field_type, value ) )
                             
                         
                         media = self._hashes_to_media[ hash ]

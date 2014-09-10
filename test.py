@@ -54,7 +54,7 @@ class App( wx.App ):
         self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
         
         services = []
-        services.append( CC.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, HC.LOCAL_BOORU_SERVICE_KEY, {} ) )
+        services.append( CC.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, HC.LOCAL_BOORU_SERVICE_KEY, { 'max_monthly_data' : None, 'used_monthly_data' : 0 } ) )
         services.append( CC.Service( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, HC.LOCAL_FILE_SERVICE_KEY, {} ) )
         services.append( CC.Service( HC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, HC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
@@ -82,19 +82,6 @@ class App( wx.App ):
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
-        
-        info = {}
-        info[ 'max_monthly_data' ] = None
-        info[ 'used_monthly_data' ] = 0
-        
-        service_key = HC.LOCAL_BOORU_SERVICE_KEY
-        service_type = HC.LOCAL_BOORU
-        name = HC.LOCAL_BOORU_SERVICE_KEY
-        
-        service = CC.Service( service_key, service_type, name, info )
-        
-        HC.app.SetRead( 'service', service )
-        
         self._managers[ 'local_booru' ] = CC.LocalBooruCache()
         
         self._cookies = {}
@@ -130,7 +117,7 @@ class App( wx.App ):
         return True
         
     
-    def GetManager( self, type ): return self._managers[ type ]
+    def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def GetWrite( self, name ):
         

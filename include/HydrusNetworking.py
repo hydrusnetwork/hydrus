@@ -18,7 +18,7 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     else: raise Exception( 'No access key!' )
     
 def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
-
+    
     session_manager = HC.app.GetManager( 'hydrus_sessions' )
     
     session_key = session_manager.GetSessionKey( service_key )

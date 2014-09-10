@@ -39,7 +39,7 @@ class Controller( wx.App ):
     
     def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
     
-    def GetManager( self, type ): return self._managers[ type ]
+    def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def OnInit( self ):
         

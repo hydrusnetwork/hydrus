@@ -21,14 +21,16 @@ class TestSessions( unittest.TestCase ):
         account_id = 1
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
-        expiry = None
+        expiry = HC.GetNow() + 300
         used_data = ( 0, 0 )
+        
+        account_key = os.urandom( 32 )
         
         account = HC.Account( account_id, account_type, created, expiry, used_data )
         
         expiry = HC.GetNow() - 10
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account, expiry ) ] )
+        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account_key, account, expiry ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -37,11 +39,11 @@ class TestSessions( unittest.TestCase ):
             session_manager.GetAccount( service_key, session_key_1 )
             
         
-        #
+        # test fetching a session already in db, after bootup
         
-        expiry = HC.GetNow() + 10000
+        expiry = HC.GetNow() + 300
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account, expiry ) ] )
+        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account_key, account, expiry ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -49,12 +51,15 @@ class TestSessions( unittest.TestCase ):
         
         self.assertIs( read_account, account )
         
-        #
+        # test adding a session
         
-        expiry = None
+        expiry = HC.GetNow() + 300
+        
+        account_key_2 = os.urandom( 32 )
         
         account_2 = HC.Account( 2, account_type, created, expiry, used_data )
         
+        HC.app.SetRead( 'account_key', account_key_2 )
         HC.app.SetRead( 'account', account_2 )
         
         account_identifier = HC.AccountIdentifier( access_key = os.urandom( 32 ) )
@@ -71,8 +76,9 @@ class TestSessions( unittest.TestCase ):
         
         self.assertIs( read_account, account_2 )
         
-        #
+        # test adding a new session for an account already in the manager
         
+        HC.app.SetRead( 'account_key', account_key )
         HC.app.SetRead( 'account', account )
         
         account_identifier = HC.AccountIdentifier( access_key = os.urandom( 32 ) )
@@ -89,12 +95,17 @@ class TestSessions( unittest.TestCase ):
         
         self.assertIs( read_account, account )
         
-        #
+        read_account_original = session_manager.GetAccount( service_key, session_key_1 )
         
-        expiry = None
+        self.assertIs( read_account, read_account_original )
         
-        updated_account = HC.Account( 1, account_type, created, expiry, ( 1, 1 ) )
+        # test individual account refresh
         
+        expiry = HC.GetNow() + 300
+        
+        updated_account = HC.Account( account_id, account_type, created, expiry, ( 1, 1 ) )
+        
+        HC.app.SetRead( 'account_key', account_key )
         HC.app.SetRead( 'account', updated_account )
         
         account_identifier = HC.AccountIdentifier( access_key = os.urandom( 32 ) )
@@ -109,13 +120,15 @@ class TestSessions( unittest.TestCase ):
         
         self.assertIs( read_account, updated_account )
         
-        #
+        # test all account refresh
         
-        expiry = None
+        expiry = HC.GetNow() + 300
+        
+        updated_account_key = os.urandom( 32 )
         
         updated_account_2 = HC.Account( 1, account_type, created, expiry, ( 2, 2 ) )
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expiry ), ( session_key_2, service_key, account_2, expiry ), ( session_key_3, service_key, updated_account_2, expiry ) ] )
+        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_key, updated_account_2, expiry ), ( session_key_2, service_key, account_key_2, account_2, expiry ), ( session_key_3, service_key, account_key_2, updated_account_2, expiry ) ] )
         
         session_manager.RefreshAllAccounts()
         

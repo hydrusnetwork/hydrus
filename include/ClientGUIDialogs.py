@@ -1144,7 +1144,7 @@ class DialogInputCustomFilterAction( Dialog ):
     
 class DialogInputFileSystemPredicate( Dialog ):
     
-    def __init__( self, parent, type ):
+    def __init__( self, parent, predicate_type ):
         
         def Age():
             
@@ -1919,7 +1919,7 @@ class DialogInputFileSystemPredicate( Dialog ):
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        self._type = type
+        self._type = predicate_type
         
         if self._type == HC.SYSTEM_PREDICATE_TYPE_AGE: Age()
         elif self._type == HC.SYSTEM_PREDICATE_TYPE_DURATION: Duration()
@@ -2791,7 +2791,7 @@ class DialogInputLocalFiles( Dialog ):
     
 class DialogInputMessageSystemPredicate( Dialog ):
     
-    def __init__( self, parent, type ):
+    def __init__( self, parent, predicate_type ):
         
         def Age():
             
@@ -3020,7 +3020,7 @@ class DialogInputMessageSystemPredicate( Dialog ):
             wx.CallAfter( self._ok.SetFocus )
             
         
-        self._type = type
+        self._type = predicate_type
         
         if self._type == 'system:age': Age()
         elif self._type == 'system:started_by': StartedBy()
@@ -3288,7 +3288,7 @@ class DialogInputNewFormField( Dialog ):
             self._name.SetValue( name )
             
             for temp_type in CC.FIELDS: self._type.Append( CC.field_string_lookup[ temp_type ], temp_type )
-            self._type.Select( type )
+            self._type.Select( field_type )
             
             self._default.SetValue( default )
             
@@ -3332,8 +3332,8 @@ class DialogInputNewFormField( Dialog ):
         
         Dialog.__init__( self, parent, 'configure form field' )
         
-        if form_field is None: ( name, type, default, editable ) = ( '', CC.FIELD_TEXT, '', True )
-        else: ( name, type, default, editable ) = form_field
+        if form_field is None: ( name, field_type, default, editable ) = ( '', CC.FIELD_TEXT, '', True )
+        else: ( name, field_type, default, editable ) = form_field
         
         InitialiseControls()
         
@@ -3348,13 +3348,13 @@ class DialogInputNewFormField( Dialog ):
         
         name = self._name.GetValue()
         
-        type = self._type.GetClientData( self._type.GetSelection() )
+        field_type = self._type.GetClientData( self._type.GetSelection() )
         
         default = self._default.GetValue()
         
         editable = self._editable.GetValue()
         
-        return ( name, type, default, editable )
+        return ( name, field_type, default, editable )
         
     
 class DialogInputShortcut( Dialog ):
@@ -3929,10 +3929,10 @@ class DialogPageChooser( Dialog ):
         elif entry_type == 'page_import_booru': button.SetLabel( 'booru' )
         elif entry_type == 'page_import_gallery':
             
-            ( name, type ) = obj
+            ( name, gallery_type ) = obj
             
-            if type is None: button.SetLabel( name )
-            else: button.SetLabel( name + ' by ' + type )
+            if gallery_type is None: button.SetLabel( name )
+            else: button.SetLabel( name + ' by ' + gallery_type )
             
         elif entry_type == 'page_import_thread_watcher': button.SetLabel( 'thread watcher' )
         elif entry_type == 'page_import_url': button.SetLabel( 'url' )

@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 14
-SOFTWARE_VERSION = 128
+SOFTWARE_VERSION = 129
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1536,12 +1536,12 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     yaml_tag = u'!ClientServiceIdentifier'
     
-    def __init__( self, service_key, type, name ):
+    def __init__( self, service_key, service_type, name ):
         
         HydrusYAMLBase.__init__( self )
         
         self._service_key = service_key
-        self._type = type
+        self._type = service_type
         self._name = name
         
     
@@ -1724,10 +1724,10 @@ class JobDatabase( object ):
     
     yaml_tag = u'!JobDatabase'
     
-    def __init__( self, action, type, synchronous, *args, **kwargs ):
+    def __init__( self, action, job_type, synchronous, *args, **kwargs ):
         
         self._action = action
-        self._type = type
+        self._type = job_type
         self._synchronous = synchronous
         self._args = args
         self._kwargs = kwargs
@@ -1986,7 +1986,7 @@ class Predicate( HydrusYAMLBase ):
         self._counts[ CURRENT ] = 0
         self._counts[ PENDING ] = 0
         
-        for ( type, count ) in counts.items(): self.AddToCount( type, count )
+        for ( current_or_pending, count ) in counts.items(): self.AddToCount( current_or_pending, count )
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
@@ -1997,16 +1997,16 @@ class Predicate( HydrusYAMLBase ):
     
     def __repr__( self ): return 'Predicate: ' + u( ( self._predicate_type, self._value, self._counts ) )
     
-    def AddToCount( self, type, count ): self._counts[ type ] += count
+    def AddToCount( self, current_or_pending, count ): self._counts[ current_or_pending ] += count
     
     def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._counts )
     
     def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value )
     
-    def GetCount( self, type = None ):
+    def GetCount( self, current_or_pending = None ):
         
-        if type is None: return sum( self._counts.values() )
-        else: return self._counts[ type ]
+        if current_or_pending is None: return sum( self._counts.values() )
+        else: return self._counts[ current_or_pending ]
         
     
     def GetInfo( self ): return ( self._predicate_type, self._value )
@@ -2146,14 +2146,14 @@ class Predicate( HydrusYAMLBase ):
                 
                 if info is not None:
                     
-                    ( operator, type, service_key ) = info
+                    ( operator, current_or_pending, service_key ) = info
                     
                     base += u':'
                     
                     if operator == True: base += u' is'
                     else: base += u' is not'
                     
-                    if type == PENDING: base += u' pending to '
+                    if current_or_pending == PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
                     service = app.GetManager( 'services' ).GetService( service_key )
@@ -2264,12 +2264,12 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     
     yaml_tag = u'!ServerServiceIdentifier'
     
-    def __init__( self, service_key, type ):
+    def __init__( self, service_key, service_type ):
         
         HydrusYAMLBase.__init__( self )
         
         self._service_key = service_key
-        self._type = type
+        self._type = service_type
         
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
