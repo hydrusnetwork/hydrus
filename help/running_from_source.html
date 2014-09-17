@@ -10,11 +10,13 @@
 			<p>I write the client and server entirely in <a href="http://python.org">python</a>, which can run straight from source. I don't recommended this for someone who just wants to get the program working, but rather for those who have a general interest or wish to modify the program.</p>
 			<h3>what you will need</h3>
 			<p>You will need to install python 2.7 and several python modules. To see what your system needs, just keep running client.pyw and see what it complains about missing.</p>
-			<p>I recently got the client working on Ubuntu 13.10, which required:</p>
+			<p>I recently got the client working on Ubuntu 14.04, which required:</p>
 			<p><ul>
+				<li>sudo apt-get install python2.7-dev</li>
 				<li>sudo pip install beautifulsoup4 pyyaml python-potr hsaudiotag PyPDF2 flvlib pafy lz4</li>
 				<li>sudo apt-get install python-numpy</li>
 				<li>sudo apt-get install python-opencv</li>
+				<li>sudo apt-get install python-wxversion</li>
 				<li>and installing a recent version of wxPython, which is difficult and best done <a href="http://wiki.wxpython.org/CheckInstall">like so</a></li>
 				<li>If you install wxPython as above and you get missing .so errors, try running 'sudo ldconfig'</li>
 			</ul></p>
