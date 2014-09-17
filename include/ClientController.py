@@ -268,7 +268,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
             services = self.GetManager( 'services' ).GetServices()
             
-            for service in services: self.Read( 'service_info', service.GetKey() )
+            for service in services: self.Read( 'service_info', service.GetServiceKey() )
             
             self._timestamps[ 'service_info_cache_fatten' ] = HC.GetNow()
             

@@ -1505,6 +1505,8 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return service_type
         
     
+    def _GetServiceInfo( self, c, service_key ): return c.execute( 'SELECT type, options FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
+    
     def _GetServicesInfo( self, c, limited_types = HC.ALL_SERVICES ): return c.execute( 'SELECT service_key, type, options FROM services WHERE type IN '+ HC.SplayListForDB( limited_types ) + ';' ).fetchall()
     
     def _GetSessions( self, c ):
@@ -1691,8 +1693,6 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_keys_to_access_keys = {}
         
-        modified_services = {}
-        
         now = HC.GetNow()
         
         for ( action, data ) in edit_log:
@@ -1727,7 +1727,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                     self._CreateUpdate( c, service_key, begin, end )
                     
                 
-                modified_services[ service_key ] = ( service_type, options )
+                self.pub_after_commit( 'action_service', service_key, 'start' )
                 
             elif action == HC.DELETE:
                 
@@ -1737,8 +1737,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
-                # this needs to be a 'shutdown service' call or whatever
-                #modified_services[ service_key ] = {}
+                self.pub_after_commit( 'action_service', service_key, 'stop' )
                 
             elif action == HC.EDIT:
                 
@@ -1748,11 +1747,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
                 
-                modified_services[ service_key ] = ( service_type, options )
+                self.pub_after_commit( 'action_service', service_key, 'restart' )
                 
             
-        
-        for ( service_key, ( service_type, options ) ) in modified_services.items(): self.pub_after_commit( 'restart_service', service_key, options )
         
         return service_keys_to_access_keys
         
@@ -1960,18 +1957,6 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
     
     def _SetExpiry( self, c, service_id, account_ids, expiry ): c.execute( 'UPDATE account_map SET expires = ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expiry, service_id ) )
-    
-    def _SetOptions( self, c, service_key, options ):
-        
-        service_id = self._GetServiceKey( c, service_key )
-        
-        c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
-        
-        service_type = self._GetServiceType( c, service_id )
-        
-        self.pub_after_commit( 'restart_service', service_key, service_type, options )
-        self.pub_after_commit( 'notify_new_options' )
-        
     
     def _UnbanKey( self, c, service_id, account_id ): c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
     
@@ -2369,7 +2354,8 @@ class DB( ServiceDB ):
                 elif action == 'petition': result = self._GetPetition( c, *args, **kwargs )
                 elif action == 'registration_keys': result = self._GenerateRegistrationKeys( c, *args, **kwargs )
                 elif action == 'service_keys': result = self._GetServiceKeys( c, *args, **kwargs )
-                elif action == 'services': result = self._GetServicesInfo( c, *args, **kwargs )
+                elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
+                elif action == 'services_info': result = self._GetServicesInfo( c, *args, **kwargs )
                 elif action == 'sessions': result = self._GetSessions( c, *args, **kwargs )
                 elif action == 'stats': result = self._GetStats( c, *args, **kwargs )
                 elif action == 'update_ends': result = self._GetUpdateEnds( c, *args, **kwargs )
@@ -2394,7 +2380,6 @@ class DB( ServiceDB ):
                 elif action == 'flush_requests_made': result = self._FlushRequestsMade( c, *args, **kwargs )
                 elif action == 'messaging_session': result = self._AddMessagingSession( c, *args, **kwargs )
                 elif action == 'news': result = self._AddNews( c, *args, **kwargs )
-                elif action == 'options': result = self._SetOptions( c, *args, **kwargs )
                 elif action == 'services': result = self._ModifyServices( c, *args, **kwargs )
                 elif action == 'session': result = self._AddSession( c, *args, **kwargs )
                 elif action == 'update': result = self._ProcessUpdate( c, *args, **kwargs )
@@ -2564,9 +2549,9 @@ def DAEMONUPnP():
     
     our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
     
-    all_infos = HC.app.ReadDaemon( 'services' )
+    services_info = HC.app.ReadDaemon( 'services_info' )
     
-    for ( service_key, service_type, options ) in all_infos:
+    for ( service_key, service_type, options ) in services_info:
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]
@@ -2579,7 +2564,7 @@ def DAEMONUPnP():
             
         
     
-    for ( service_key, service_type, options ) in all_infos:
+    for ( service_key, service_type, options ) in services_info:
         
         internal_port = options[ 'port' ]
         upnp = options[ 'upnp' ]

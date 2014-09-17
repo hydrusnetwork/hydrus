@@ -308,7 +308,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         self._render_to_index = -1
         self._rendered_first_frame = False
         
-        self.SetPosition( init_position )
+        self.SetFramePosition( init_position )
         
     
     def _MaintainBuffer( self ):
@@ -343,7 +343,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
             
         
     
-    def _RENDERERSetPosition( self, index ):
+    def _RENDERERSetFramePosition( self, index ):
         
         with self._render_lock:
             
@@ -433,7 +433,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
     
     def IsScaled( self ): return self._zoom != 1.0
     
-    def SetPosition( self, index ):
+    def SetFramePosition( self, index ):
         
         num_frames = self.GetNumFrames()
         
@@ -450,7 +450,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
                     
                     self._buffer_start_index = new_buffer_start_index
                     
-                    self._RENDERERSetPosition( self._buffer_start_index )
+                    self._RENDERERSetFramePosition( self._buffer_start_index )
                     
                     self._buffer_end_index = new_buffer_end_index
                     
@@ -467,7 +467,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
                     
                     if index > self._buffer_end_index:
                         
-                        self._RENDERERSetPosition( self._buffer_start_index )
+                        self._RENDERERSetFramePosition( self._buffer_start_index )
                         
                     
                 
@@ -482,7 +482,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
                 
                 self._buffer_start_index = 0
                 
-                self._RENDERERSetPosition( 0 )
+                self._RENDERERSetFramePosition( 0 )
                 
                 self._buffer_end_index = num_frames - 1
                 

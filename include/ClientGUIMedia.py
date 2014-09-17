@@ -526,8 +526,8 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                 
                 service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
-                if service.GetType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
-                elif service.GetType() == HC.LOCAL_RATING_NUMERICAL: ClientGUICanvas.RatingsFilterFrameNumerical( self.GetTopLevelParent(), self._page_key, service_key, media_results )
+                if service.GetServiceType() == HC.LOCAL_RATING_LIKE: ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
+                elif service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL: ClientGUICanvas.RatingsFilterFrameNumerical( self.GetTopLevelParent(), self._page_key, service_key, media_results )
                 
             except: wx.MessageBox( traceback.format_exc() )
             
@@ -1179,7 +1179,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
                 
-                service_keys = [ service.GetKey() for service in services ]
+                service_keys = [ service.GetServiceKey() for service in services ]
                 
                 service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
                 
@@ -1697,20 +1697,20 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 services = HC.app.GetManager( 'services' ).GetServices()
                 
-                tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
+                tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
                 
-                file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
+                file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
                 
-                local_ratings_services = [ service for service in services if service.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+                local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
                 
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 
-                downloadable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).HasNoPermissions() }
-                uploadable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).HasNoPermissions() }
-                petition_resolvable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
-                petitionable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_keys
-                user_manageable_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
-                admin_file_service_keys = { repository.GetKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
+                downloadable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).HasNoPermissions() }
+                uploadable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).HasNoPermissions() }
+                petition_resolvable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
+                petitionable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolvable_file_service_keys
+                user_manageable_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
+                admin_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
                 
                 if multiple_selected:
                     
@@ -1923,7 +1923,7 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                             ratings_filter_menu = wx.Menu()
                             
-                            for service in local_ratings_services: ratings_filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetKey() ), service.GetName() )
+                            for service in local_ratings_services: ratings_filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceKey() ), service.GetName() )
                             
                             filter_menu.AppendMenu( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
                             

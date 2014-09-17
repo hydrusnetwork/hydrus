@@ -3071,7 +3071,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
             
-            for service in services: self._default_tag_repository.Append( service.GetName(), service.GetKey() )
+            for service in services: self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
             
             default_tag_repository_key = HC.options[ 'default_tag_repository' ]
             
@@ -3984,7 +3984,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             self._panels = []
             
-            for service in services: self._panels.append( self._Panel( self, service.GetKey(), media ) )
+            for service in services: self._panels.append( self._Panel( self, service.GetServiceKey(), media ) )
             
             self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
             self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -4092,7 +4092,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             self._media = media
             
-            service_type = self._service.GetType()
+            service_type = self._service.GetServiceType()
             
             def InitialiseControls():
                 
@@ -4316,7 +4316,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         def GetContentUpdates( self ):
             
-            service_type = self._service.GetType()
+            service_type = self._service.GetServiceType()
             
             choice_text = self._choices.GetSelectedClientData()
             
@@ -4387,11 +4387,11 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             
             self._service_types.SetSelection( 0 )
             
-            response = self._service.Request( HC.GET, 'services' )
+            response = self._service.Request( HC.GET, 'services_info' )
             
-            services_info = response[ 'services_info' ]
+            self._services_info = response[ 'services_info' ]
             
-            for ( service_key, service_type, options ) in services_info:
+            for ( service_key, service_type, options ) in self._services_info:
                 
                 page = self._Panel( self._services_listbook, service_key, service_type, options )
                 
@@ -4519,9 +4519,9 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
                 
                 service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
                 
-                admin_service_key = self._service_key
+                admin_service_key = self._service.GetServiceKey()
                 
-                HC.app.Write( 'update_server_services', admin_service_key, self._edit_log, service_keys_to_access_keys )
+                HC.app.Write( 'update_server_services', admin_service_key, self._services_info, self._edit_log, service_keys_to_access_keys )
                 
             
         finally: self.EndModal( wx.ID_OK )
@@ -4744,22 +4744,22 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 parent_listbook.AddPage( listbook, name )
                 
+                services = HC.app.GetManager( 'services' ).GetServices( ( service_type, ) )
+                
+                for service in services:
+                    
+                    service_key = service.GetServiceKey()
+                    name = service.GetName()
+                    info = service.GetInfo()
+                    
+                    page_info = ( self._Panel, ( listbook, service_key, service_type, name, info ), {} )
+                    
+                    listbook.AddPage( page_info, name )
+                    
+                
             
-            services = HC.app.GetManager( 'services' ).GetServices( manageable_service_types )
-            
-            for service in services:
-                
-                service_key = service.GetKey()
-                service_type = service.GetType()
-                name = service.GetName()
-                info = service.GetInfo()
-                
-                listbook = self._service_types_to_listbooks[ service_type ]
-                
-                page_info = ( self._Panel, ( listbook, service_key, service_type, name, info ), {} )
-                
-                listbook.AddPage( page_info, name )
-                
+            wx.CallAfter( self._local_listbook.Layout )
+            wx.CallAfter( self._remote_listbook.Layout )
             
         
         def ArrangeControls():
@@ -5060,6 +5060,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 self._export.Enable()
                 
             
+        
+        event.Skip()
         
     
     def EventServiceChanging( self, event ):
@@ -6102,7 +6104,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             for service in services:
                 
-                service_key = service.GetKey()
+                service_key = service.GetServiceKey()
                 name = service.GetName()
                 
                 if service_key == default_tag_repository_key: default_name = name
@@ -6289,7 +6291,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
                     
                     name = service.GetName()
-                    service_key = service.GetKey()
+                    service_key = service.GetServiceKey()
                     
                     page_info = ( self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
@@ -6758,7 +6760,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
                     
                     name = service.GetName()
-                    service_key = service.GetKey()
+                    service_key = service.GetServiceKey()
                     
                     page_info = ( self._Panel, ( self._tag_repositories, service_key, tag ), {} )
                     
@@ -7420,11 +7422,11 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             for service in services:
                 
-                service_key = service.GetKey()
-                service_type = service.GetType()
+                service_key = service.GetServiceKey()
+                service_type = service.GetServiceType()
                 name = service.GetName()
                 
-                page_info = ( self._Panel, ( self._tag_repositories, self._file_service_key, service.GetKey(), media ), {} )
+                page_info = ( self._Panel, ( self._tag_repositories, self._file_service_key, service.GetServiceKey(), media ), {} )
                 
                 self._tag_repositories.AddPage( page_info, name )
                 

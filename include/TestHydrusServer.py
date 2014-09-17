@@ -31,9 +31,9 @@ class TestServer( unittest.TestCase ):
         
         services_manager = HC.app.GetManager( 'services' )
         
-        services_manager._keys_to_services[ self._file_service.GetKey() ] = self._file_service
-        services_manager._keys_to_services[ self._tag_service.GetKey() ] = self._tag_service
-        services_manager._keys_to_services[ self._admin_service.GetKey() ] = self._admin_service
+        services_manager._keys_to_services[ self._file_service.GetServiceKey() ] = self._file_service
+        services_manager._keys_to_services[ self._tag_service.GetServiceKey() ] = self._tag_service
+        services_manager._keys_to_services[ self._admin_service.GetServiceKey() ] = self._admin_service
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
@@ -50,11 +50,11 @@ class TestServer( unittest.TestCase ):
         
         def TWISTEDSetup():
             
-            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( self._admin_service.GetKey(), HC.SERVER_ADMIN, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, HydrusServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, HydrusServer.HydrusServiceLocal( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, HydrusServer.HydrusServiceBooru( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service.GetKey(), HC.FILE_REPOSITORY, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service.GetKey(), HC.TAG_REPOSITORY, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, HydrusServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, HydrusServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -293,7 +293,7 @@ class TestServer( unittest.TestCase ):
     
     def _test_repo( self, service, host, port ):
         
-        service_key = service.GetKey()
+        service_key = service.GetServiceKey()
         
         # news
         
@@ -489,13 +489,13 @@ class TestServer( unittest.TestCase ):
         
         # services
         
-        services = { 'message' : 'hello' }
+        services_info = { 'message' : 'hello' }
         
-        HC.app.SetRead( 'services', services )
+        HC.app.SetRead( 'services_info', services_info )
         
-        response = service.Request( HC.GET, 'services' )
+        response = service.Request( HC.GET, 'services_info' )
         
-        self.assertEqual( response[ 'services_info' ], services )
+        self.assertEqual( response[ 'services_info' ], services_info )
         
         edit_log = 'blah'
         

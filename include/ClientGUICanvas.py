@@ -206,7 +206,7 @@ class Animation( wx.Window ):
                         
                         self._video_container = HydrusVideoHandling.VideoContainer( self._media, full_resolution )
                         
-                        self._video_container.SetPosition( self._current_frame_index )
+                        self._video_container.SetFramePosition( self._current_frame_index )
                         
                         self._current_frame_drawn = False
                         
@@ -230,7 +230,7 @@ class Animation( wx.Window ):
             
             self._current_frame_drawn = False
             
-            self._video_container.SetPosition( self._current_frame_index )
+            self._video_container.SetFramePosition( self._current_frame_index )
             
         
         self._paused = True
@@ -260,7 +260,7 @@ class Animation( wx.Window ):
                     
                     self._current_frame_drawn = False
                     
-                    self._video_container.SetPosition( self._current_frame_index )
+                    self._video_container.SetFramePosition( self._current_frame_index )
                     
                 
             
@@ -514,7 +514,7 @@ class Canvas( object ):
             
             locations_manager = self._current_media.GetLocationsManager()
             
-            if self._file_service.GetType() == HC.LOCAL_FILE:
+            if self._file_service.GetServiceType() == HC.LOCAL_FILE:
                 
                 if len( locations_manager.GetPendingRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_pending_bmp )
                 elif len( locations_manager.GetCurrentRemote() ) > 0: icons_to_show.append( CC.GlobalBMPs.file_repository_bmp )
@@ -558,7 +558,7 @@ class Canvas( object ):
                 
                 service = self._service_keys_to_services[ service_key ]
                 
-                service_type = service.GetType()
+                service_type = service.GetServiceType()
                 
                 if service_type == HC.LOCAL_RATING_LIKE:
                     
@@ -1557,7 +1557,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         
         services = HC.app.GetManager( 'services' ).GetServices()
         
-        local_ratings_services = [ service for service in services if service.GetType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+        local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
         
         i_can_post_ratings = len( local_ratings_services ) > 0
         
@@ -1765,7 +1765,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                     
                     service = HC.app.GetManager( 'services' ).GetService( service_key )
                     
-                    service_type = service.GetType()
+                    service_type = service.GetServiceType()
                     
                     if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                         
@@ -2722,7 +2722,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         self._file_query_result = CC.FileQueryResult( media_results )
         
-        if self._service.GetType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
+        if self._service.GetServiceType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
             
             ( self._lower, self._upper ) = self._service.GetLowerUpper()
@@ -2829,7 +2829,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         certain_ratings = [ ( media, ( min, max ) ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min < self._score_gap ]
         uncertain_ratings = [ ( media, ( min, max ) ) for ( media, ( min, max ) ) in self._media_to_current_scores_dict.items() if max - min >= self._score_gap and self._media_to_current_scores_dict[ media ] != self._media_to_initial_scores_dict[ media ] ]
         
-        service_type = self._service.GetType()
+        service_type = self._service.GetServiceType()
         
         if service_type == HC.LOCAL_RATING_LIKE:
             

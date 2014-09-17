@@ -941,7 +941,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'services', ( HC.LOCAL_FILE, HC.LOCAL_TAG ) )
         
-        result_service_keys = { service.GetKey() for service in result }
+        result_service_keys = { service.GetServiceKey() for service in result }
         
         self.assertItemsEqual( { HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
@@ -967,13 +967,13 @@ class TestClientDB( unittest.TestCase ):
             
             for service in written_services:
                 
-                service_key = service.GetKey()
+                service_key = service.GetServiceKey()
                 
                 self.assertIn( service_key, keys_to_service_tuples )
                 
                 ( service_type, name, info ) = keys_to_service_tuples[ service_key ]
                 
-                self.assertEqual( service_type, service.GetType() )
+                self.assertEqual( service_type, service.GetServiceType() )
                 self.assertEqual( name, service.GetName() )
                 
                 for ( k, v ) in service.GetInfo().items():

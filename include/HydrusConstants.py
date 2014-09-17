@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 14
-SOFTWARE_VERSION = 129
+SOFTWARE_VERSION = 130
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -537,11 +537,10 @@ restricted_requests.append( ( GET, 'session_key', None ) )
 restricted_requests.append( ( GET, 'stats', GENERAL_ADMIN ) )
 restricted_requests.append( ( POST, 'account', ( MANAGE_USERS, GENERAL_ADMIN ) ) )
 restricted_requests.append( ( POST, 'account_types', GENERAL_ADMIN ) )
-restricted_requests.append( ( POST, 'options', GENERAL_ADMIN ) )
 
 admin_requests = list( restricted_requests )
 admin_requests.append( ( GET, 'init', None ) )
-admin_requests.append( ( GET, 'services', EDIT_SERVICES ) )
+admin_requests.append( ( GET, 'services_info', EDIT_SERVICES ) )
 admin_requests.append( ( POST, 'backup', EDIT_SERVICES ) )
 admin_requests.append( ( POST, 'services', EDIT_SERVICES ) )
 
@@ -1559,7 +1558,7 @@ class ClientServiceIdentifier( HydrusYAMLBase ):
     
     def GetServiceKey( self ): return self._service_key
     
-    def GetType( self ): return self._type
+    def GetServiceType( self ): return self._type
     
 LOCAL_FILE_SERVICE_KEY = 'local files'
 LOCAL_TAG_SERVICE_KEY = 'local tags'
@@ -2282,7 +2281,7 @@ class ServerServiceIdentifier( HydrusYAMLBase ):
     
     def GetServiceKey( self ): return self._service_key
     
-    def GetType( self ): return self._type
+    def GetServiceType( self ): return self._type
     
 SERVER_ADMIN_KEY = 'server admin'
 

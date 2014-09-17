@@ -701,7 +701,7 @@ class PagePetitions( PageWithMedia ):
         
         petition_service = HC.app.GetManager( 'services' ).GetService( petition_service_key )
         
-        petition_service_type = petition_service.GetType()
+        petition_service_type = petition_service.GetServiceType()
         
         if petition_service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ): self._file_service_key = self._petition_service_key
         else: self._file_service_key = HC.COMBINED_FILE_SERVICE_KEY

@@ -1157,17 +1157,6 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
     GET_PERMISSION = HC.GENERAL_ADMIN
     POST_PERMISSION = HC.GENERAL_ADMIN
     
-    def _threadDoGETJob( self, request ):
-        
-        services_info = HC.app.Read( 'services' )
-        
-        body = yaml.safe_dump( { 'services_info' : services_info } )
-        
-        response_context = HC.ResponseContext( 200, body = body )
-        
-        return response_context
-        
-    
     def _threadDoPOSTJob( self, request ):
         
         account = request.hydrus_account
@@ -1177,6 +1166,22 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         service_keys_to_access_keys = HC.app.Write( 'services', account, edit_log )
         
         body = yaml.safe_dump( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
+        
+        response_context = HC.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+class HydrusResourceCommandRestrictedServicesInfo( HydrusResourceCommandRestricted ):
+    
+    GET_PERMISSION = HC.GENERAL_ADMIN
+    POST_PERMISSION = HC.GENERAL_ADMIN
+    
+    def _threadDoGETJob( self, request ):
+        
+        services_info = HC.app.Read( 'services_info' )
+        
+        body = yaml.safe_dump( { 'services_info' : services_info } )
         
         response_context = HC.ResponseContext( 200, body = body )
         

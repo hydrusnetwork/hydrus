@@ -67,7 +67,7 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
         
         if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
         
-        service_keys = [ service.GetKey() for service in services ]
+        service_keys = [ service.GetServiceKey() for service in services ]
         
     
     if unallowed is not None: service_keys.difference_update( unallowed )
@@ -168,11 +168,11 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             #
             
-            services = [ service for service in HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetKey() != self._service_key ]
+            services = [ service for service in HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service.GetServiceKey() != self._service_key ]
             
             for service in services:
                 
-                self._service_key_dropdown.Append( service.GetName(), service.GetKey() )
+                self._service_key_dropdown.Append( service.GetName(), service.GetServiceKey() )
                 
             
             self._service_key_dropdown.Select( 0 )
@@ -849,13 +849,13 @@ class DialogInputCustomFilterAction( Dialog ):
             
             for service in services:
                 
-                service_type = service.GetType()
+                service_type = service.GetServiceType()
                 
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): choice = self._tag_service_keys
                 elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
                 
-                choice.Append( service.GetName(), service.GetKey() )
+                choice.Append( service.GetName(), service.GetServiceKey() )
                 
             
             self._SetActions()
@@ -869,7 +869,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 service_name = self._service.GetName()
-                service_type = self._service.GetType()
+                service_type = self._service.GetServiceType()
                 
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
@@ -1291,7 +1291,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 services = HC.app.GetManager( 'services' ).GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ) )
                 
-                for service in services: self._file_service_key.Append( service.GetName(), service.GetKey() )
+                for service in services: self._file_service_key.Append( service.GetName(), service.GetServiceKey() )
                 self._file_service_key.SetSelection( 0 )
                 
             
@@ -1645,7 +1645,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 self._local_numericals = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
                 self._local_likes = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, ) )
                 
-                for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetKey() )
+                for service in self._local_numericals: self._service_numerical.Append( service.GetName(), service.GetServiceKey() )
                 
                 ( sign, value ) = system_predicates[ 'local_rating_numerical' ]
                 
@@ -1653,7 +1653,7 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 self._value_numerical.SetValue( value )
                 
-                for service in self._local_likes: self._service_like.Append( service.GetName(), service.GetKey() )
+                for service in self._local_likes: self._service_like.Append( service.GetName(), service.GetServiceKey() )
                 
                 value = system_predicates[ 'local_rating_like' ]
                 
@@ -3875,7 +3875,7 @@ class DialogPageChooser( Dialog ):
         
         self._services = HC.app.GetManager( 'services' ).GetServices()
         
-        self._petition_service_keys = [ service.GetKey() for service in self._services if service.GetType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+        self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
         
         self._InitButtons( 'home' )
         
@@ -3952,7 +3952,7 @@ class DialogPageChooser( Dialog ):
             
         elif menu_keyword == 'files':
             
-            file_repos = [ ( 'page_query', service_key ) for service_key in [ service.GetKey() for service in self._services if service.GetType() == HC.FILE_REPOSITORY ] ]
+            file_repos = [ ( 'page_query', service_key ) for service_key in [ service.GetServiceKey() for service in self._services if service.GetServiceType() == HC.FILE_REPOSITORY ] ]
             
             entries = [ ( 'page_query', HC.LOCAL_FILE_SERVICE_KEY ) ] + file_repos
             
@@ -4090,7 +4090,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
                     
-                    service_key = service.GetKey()
+                    service_key = service.GetServiceKey()
                     
                     page_info = ( self._Panel, ( self._tag_repositories, service_key, paths ), {} )
                     
@@ -5002,7 +5002,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 job_key = HC.JobKey( pausable = False, cancellable = False )
                 
-                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string )
+                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string, job_key )
                 
                 HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, message, url, url_string )
                 

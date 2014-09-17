@@ -646,7 +646,7 @@ class ManagementPanelDumper( ManagementPanel ):
             try: service = HC.app.GetManager( 'services' ).GetService( service_key )
             except: continue
             
-            service_key = service.GetKey()
+            service_key = service.GetServiceKey()
             
             current = tags_manager.GetCurrent( service_key )
             pending = tags_manager.GetPending( service_key )

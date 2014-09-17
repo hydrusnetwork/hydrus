@@ -35,87 +35,11 @@ class Controller( wx.App ):
     
     def _Write( self, action, priority, *args, **kwargs ): return self._db.Write( action, priority, *args, **kwargs )
     
-    def EventExit( self, event ): wx.CallAfter( self._tbicon.Destroy )
-    
-    def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
-    
-    def GetManager( self, manager_type ): return self._managers[ manager_type ]
-    
-    def OnInit( self ):
+    def ActionService( self, service_key, action ):
         
-        HC.app = self
+        ( service_type, options ) = self.Read( 'service_info', service_key )
         
-        try:
-            
-            self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
-            
-            self._db = ServerDB.DB()
-            
-            self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
-            
-            self._managers = {}
-            
-            self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
-            self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
-            
-            HC.pubsub.sub( self, 'RestartService', 'restart_service' )
-            
-            self._services = {}
-            
-            services_info = self.Read( 'services' )
-            
-            for ( service_key, service_type, options ) in services_info:
-                
-                if service_type == HC.SERVER_ADMIN:
-                    
-                    port = options[ 'port' ]
-                    
-                    connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
-                    
-                    try:
-                        
-                        connection.connect()
-                        connection.close()
-                        
-                        message = 'Something was already bound to port ' + HC.u( port )
-                        
-                        wx.MessageBox( message )
-                        
-                        return False
-                        
-                    except: pass
-                    
-                
-            
-            for ( service_key, service_type, options ) in services_info: self.RestartService( service_key, service_type, options )
-            
-            self.StartDaemons()
-            
-            self._tbicon = TaskBarIcon()
-            
-            return True
-            
-        except Exception as e:
-            
-            print( traceback.format_exc() )
-            
-            return False
-            
-        
-    
-    def Read( self, action, *args, **kwargs ):
-        
-        return self._Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-        
-    
-    def ReadDaemon( self, action, *args, **kwargs ):
-        
-        return self._Read( action, HC.LOW_PRIORITY, *args, **kwargs )
-        
-    
-    def RestartService( self, service_key, service_type, options ):
-        
-        def TWISTEDRestartService():
+        def TWISTEDDoIt():
             
             def StartService( *args, **kwargs ):
                 
@@ -164,17 +88,95 @@ class Controller( wx.App ):
                     
                 
             
-            if service_key not in self._services: StartService()
+            if action == 'start': StartService()
             else:
                 
                 deferred = defer.maybeDeferred( self._services[ service_key ].stopListening )
                 
-                deferred.addCallback( StartService )
+                if action == 'restart': deferred.addCallback( StartService )
                 
             
             
         
-        reactor.callFromThread( TWISTEDRestartService )
+        reactor.callFromThread( TWISTEDDoIt )
+        
+    
+    def EventExit( self, event ): wx.CallAfter( self._tbicon.Destroy )
+    
+    def EventPubSub( self, event ): HC.pubsub.WXProcessQueueItem()
+    
+    def GetManager( self, manager_type ): return self._managers[ manager_type ]
+    
+    def OnInit( self ):
+        
+        HC.app = self
+        
+        try:
+            
+            self.Bind( HC.EVT_PUBSUB, self.EventPubSub )
+            
+            self._db = ServerDB.DB()
+            
+            self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
+            
+            self._managers = {}
+            
+            self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
+            self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
+            
+            HC.pubsub.sub( self, 'ActionService', 'action_service' )
+            
+            self._services = {}
+            
+            #
+            
+            ( service_type, options ) = self.Read( 'service_info', HC.SERVER_ADMIN_KEY )
+            
+            port = options[ 'port' ]
+            
+            connection = httplib.HTTPConnection( '127.0.0.1', port, timeout = 10 )
+            
+            try:
+                
+                connection.connect()
+                connection.close()
+                
+                message = 'Something was already bound to port ' + HC.u( port )
+                
+                wx.MessageBox( message )
+                
+                return False
+                
+            except: pass
+            
+            #
+            
+            service_keys = self.Read( 'service_keys' )
+            
+            for service_key in service_keys: self.ActionService( service_key, 'start' )
+            
+            self.StartDaemons()
+            
+            self._tbicon = TaskBarIcon()
+            
+            return True
+            
+        except Exception as e:
+            
+            print( traceback.format_exc() )
+            
+            return False
+            
+        
+    
+    def Read( self, action, *args, **kwargs ):
+        
+        return self._Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        
+    
+    def ReadDaemon( self, action, *args, **kwargs ):
+        
+        return self._Read( action, HC.LOW_PRIORITY, *args, **kwargs )
         
     
     def StartDaemons( self ):

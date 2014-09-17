@@ -87,9 +87,10 @@ def ConvertHydrusGETArgsToQuery( request_args ):
     
 def DoHydrusBandwidth( service_key, method, command, size ):
     
-    service = HC.app.GetManager( 'services' ).GetService( service_key )
+    try: service = HC.app.GetManager( 'services' ).GetService( service_key )
+    except: return
     
-    service_type = service.GetType()
+    service_type = service.GetServiceType()
     
     if ( service_type, method, command ) in HC.BANDWIDTH_CONSUMING_REQUESTS: HC.pubsub.pub( 'service_updates_delayed', { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, size ) ] } )
     

@@ -1358,11 +1358,6 @@ class DataCache( object ):
             
         
     
-    def GetKeys( self ):
-
-        with self._lock: return list( self._keys_to_data.keys() )
-        
-    
     def HasData( self, key ):
         
         with self._lock: return key in self._keys_to_data
@@ -1409,7 +1404,6 @@ class FileQueryResult( object ):
         
         HC.pubsub.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
         HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
-        HC.pubsub.sub( self, 'RecalcCombinedTags', 'new_tag_service_precedence' )
         
     
     def __iter__( self ):
@@ -2125,7 +2119,7 @@ class MediaResult( object ):
         
         service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         if service_type == HC.TAG_REPOSITORY: tags_manager.DeletePending( service_key )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ): locations_manager.DeletePending( service_key )
@@ -2163,7 +2157,7 @@ class MediaResult( object ):
         
         service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ): tags_manager.ProcessContentUpdate( service_key, content_update )
         elif service_type in ( HC.FILE_REPOSITORY, HC.LOCAL_FILE ):
@@ -2193,7 +2187,7 @@ class MediaResult( object ):
         
         service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         if service_type in ( HC.TAG_REPOSITORY, HC.COMBINED_TAG ): tags_manager.ResetService( service_key )
         elif service_type == HC.FILE_REPOSITORY: locations_manager.ResetService( service_key )
@@ -2296,8 +2290,8 @@ class Service( HC.HydrusYAMLBase ):
         
         HC.HydrusYAMLBase.__init__( self )
         
-        self._key = service_key
-        self._type = service_type
+        self._service_key = service_key
+        self._service_type = service_type
         self._name = name
         self._info = info
         
@@ -2306,7 +2300,7 @@ class Service( HC.HydrusYAMLBase ):
         HC.pubsub.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
-    def __hash__( self ): return self._key.__hash__()
+    def __hash__( self ): return self._service_key.__hash__()
     
     def CanDownload( self ): return self._info[ 'account' ].HasPermission( HC.GET_DATA ) and not self.HasRecentError()
     
@@ -2339,7 +2333,7 @@ class Service( HC.HydrusYAMLBase ):
         else: return self._info[ key ]
         
     
-    def GetKey( self ): return self._key
+    def GetServiceKey( self ): return self._service_key
     
     def GetLikeDislike( self ): return ( self._info[ 'like' ], self._info[ 'dislike' ] )
     
@@ -2353,9 +2347,9 @@ class Service( HC.HydrusYAMLBase ):
         else: return HC.ConvertTimestampToPrettyPending( self._info[ 'last_error' ] + 3600 * 4 )
         
     
-    def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
+    def GetServiceType( self ): return self._service_type
     
-    def GetType( self ): return self._type
+    def GetTimestamps( self ): return ( self._info[ 'first_timestamp' ], self._info[ 'next_download_timestamp' ], self._info[ 'next_processing_timestamp' ] )
     
     def GetUpdateStatus( self ):
         
@@ -2401,7 +2395,7 @@ class Service( HC.HydrusYAMLBase ):
     
     def IsInitialised( self ):
         
-        if self._type == HC.SERVER_ADMIN: return 'access_key' in self._info
+        if self._service_type == HC.SERVER_ADMIN: return 'access_key' in self._info
         else: return True
         
     
@@ -2413,7 +2407,7 @@ class Service( HC.HydrusYAMLBase ):
             
             for service_update in service_updates:
                 
-                if service_key == self._key:
+                if service_key == self._service_key:
                     
                     ( action, row ) = service_update.ToTuple()
                     
@@ -2435,7 +2429,7 @@ class Service( HC.HydrusYAMLBase ):
                         
                         num_bytes = row
                         
-                        if self._type == HC.LOCAL_BOORU:
+                        if self._service_type == HC.LOCAL_BOORU:
                             
                             self._info[ 'used_monthly_data' ] += num_bytes
                             self._info[ 'used_monthly_requests' ] += 1
@@ -2473,9 +2467,9 @@ class Service( HC.HydrusYAMLBase ):
             
             credentials = self.GetCredentials()
             
-            if command in ( 'access_key', 'init' ): pass
+            if command in ( 'access_key', 'init', '' ): pass
             elif command in ( 'session_key', 'access_key_verification' ): HydrusNetworking.AddHydrusCredentialsToHeaders( credentials, request_headers )
-            else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._key, request_headers )
+            else: HydrusNetworking.AddHydrusSessionKeyToHeaders( self._service_key, request_headers )
             
             if command == 'backup': long_timeout = True
             else: long_timeout = False
@@ -2519,12 +2513,12 @@ class Service( HC.HydrusYAMLBase ):
             
             ( response, size_of_response, response_headers, cookies ) = HC.http.Request( method, url, request_headers, body, report_hooks = report_hooks, response_to_path = response_to_path, return_everything = True, long_timeout = long_timeout )
             
-            HydrusNetworking.CheckHydrusVersion( self._key, self._type, response_headers )
+            HydrusNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
             if method == HC.GET: data_used = size_of_response
             elif method == HC.POST: data_used = len( body )
             
-            HydrusNetworking.DoHydrusBandwidth( self._key, method, command, data_used )
+            HydrusNetworking.DoHydrusBandwidth( self._service_key, method, command, data_used )
             
             if return_cookies: return ( response, cookies )
             else: return response
@@ -2537,15 +2531,15 @@ class Service( HC.HydrusYAMLBase ):
                     
                     session_manager = HC.app.GetManager( 'hydrus_sessions' )
                     
-                    session_manager.DeleteSessionKey( self._key )
+                    session_manager.DeleteSessionKey( self._service_key )
                     
                 
             
-            HC.app.Write( 'service_updates', { self._key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
+            HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ERROR, HC.u( e ) ) ] } )
             
             if isinstance( e, HydrusExceptions.PermissionException ):
                 
-                HC.app.Write( 'service_updates', { self._key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
+                HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
                 
             
             raise
@@ -2562,7 +2556,7 @@ class Service( HC.HydrusYAMLBase ):
         if credentials.HasAccessKey(): self._info[ 'access_key' ] = credentials.GetAccessKey()
         
     
-    def ToTuple( self ): return ( self._key, self._type, self._name, self._info )
+    def ToTuple( self ): return ( self._service_key, self._service_type, self._name, self._info )
     
 class ServicesManager( object ):
     
@@ -2582,7 +2576,7 @@ class ServicesManager( object ):
     
     def GetServices( self, types = HC.ALL_SERVICES ):
         
-        with self._lock: return [ service for service in self._keys_to_services.values() if service.GetType() in types ]
+        with self._lock: return [ service for service in self._keys_to_services.values() if service.GetServiceType() in types ]
         
     
     def RefreshServices( self ):
@@ -2591,7 +2585,7 @@ class ServicesManager( object ):
             
             services = HC.app.Read( 'services' )
             
-            self._keys_to_services = { service.GetKey() : service for service in services }
+            self._keys_to_services = { service.GetServiceKey() : service for service in services }
             
         
     

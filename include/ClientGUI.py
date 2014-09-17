@@ -154,8 +154,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             service = HC.app.GetManager( 'services' ).GetService( service_key )
             
-            service_key = service.GetKey()
-            service_type = service.GetType()
+            service_key = service.GetServiceKey()
+            service_type = service.GetServiceType()
             
             if service_type == HC.FILE_REPOSITORY:
                 
@@ -513,7 +513,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
             
-            HC.app.Write( 'update_server_services', admin_service_key, edit_log, service_keys_to_access_keys )
+            HC.app.Write( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
             
             HC.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
@@ -763,11 +763,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             services = HC.app.GetManager( 'services' ).GetServices()
             
-            tag_repositories = [ service for service in services if service.GetType() == HC.TAG_REPOSITORY ]
+            tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
             
             petition_resolve_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
-            file_repositories = [ service for service in services if service.GetType() == HC.FILE_REPOSITORY ]
+            file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
             
             petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
@@ -778,7 +778,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page' ), p( 'Pick a New &Page' ), p( 'Pick a new page.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY ), p( '&New Local Search' ), p( 'Open a new search tab for your files' ) )
-            for service in file_repositories: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
+            for service in file_repositories: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_page_query', service.GetServiceKey() ), p( 'New ' + service.GetName() + ' Search' ), p( 'Open a new search tab for ' + service.GetName() + '.' ) )
             if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
                 
                 menu.AppendSeparator()
@@ -829,7 +829,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
-                service_type = service.GetType()
+                service_type = service.GetServiceType()
                 name = service.GetName()
                 
                 if service_type == HC.TAG_REPOSITORY:
@@ -903,8 +903,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_KEY ), p( 'Manage Local UPnP' ) )
             menu.AppendSeparator()
             submenu = wx.Menu()
-            for service in tag_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
-            for service in file_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+            for service in tag_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+            for service in file_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
             menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
             
             return ( menu, p( '&Services' ), True )
@@ -929,7 +929,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    service_key = service.GetKey()
+                    service_key = service.GetServiceKey()
                     
                     submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
                     submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
@@ -947,7 +947,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    service_key = service.GetKey()
+                    service_key = service.GetServiceKey()
                     
                     submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
                     submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
@@ -966,7 +966,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    service_key = service.GetKey()
+                    service_key = service.GetServiceKey()
                     
                     submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
                     submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
@@ -2213,7 +2213,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         for service in services:
             
-            service_type = service.GetType()
+            service_type = service.GetServiceType()
             
             if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
             else: parent_listbook = self._remote_listbook
@@ -2240,11 +2240,11 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             listbook = listbook_dict[ service_type ]
             
-            page = ( self._Panel, [ listbook, service.GetKey() ], {} )
+            page_info = ( self._Panel, [ listbook, service.GetServiceKey() ], {} )
             
             name = service.GetName()
             
-            listbook.AddPage( page, name )
+            listbook.AddPage( page_info, name )
             
         
         wx.CallAfter( self._local_listbook.Layout )
@@ -2505,7 +2505,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             self._service = HC.app.GetManager( 'services' ).GetService( service_key )
             
-            service_type = self._service.GetType()
+            service_type = self._service.GetServiceType()
             
             InitialiseControls()
             
@@ -2529,7 +2529,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def _DisplayAccountInfo( self ):
             
-            service_type = self._service.GetType()
+            service_type = self._service.GetServiceType()
             
             now = HC.GetNow()
             
@@ -2652,7 +2652,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def _DisplayService( self ):
             
-            service_type = self._service.GetType()
+            service_type = self._service.GetServiceType()
             
             self._DisplayAccountInfo()
             
@@ -2851,8 +2851,8 @@ class FrameReviewServices( ClientGUICommon.Frame ):
         
         def EventServerInitialise( self, event ):
             
-            service_key = self._service.GetKey()
-            service_type = self._service.GetType()
+            service_key = self._service.GetServiceKey()
+            service_type = self._service.GetServiceType()
             name = self._service.GetName()
             
             response = self._service.Request( HC.GET, 'init' )

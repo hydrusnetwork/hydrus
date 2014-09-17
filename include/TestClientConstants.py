@@ -50,8 +50,8 @@ class TestManagers( unittest.TestCase ):
         
         def test_service( service, key, service_type, name, info ):
             
-            self.assertEqual( service.GetKey(), key )
-            self.assertEqual( service.GetType(), service_type )
+            self.assertEqual( service.GetServiceKey(), key )
+            self.assertEqual( service.GetServiceType(), service_type )
             self.assertEqual( service.GetName(), name )
             self.assertEqual( service.GetInfo(), info )
             
@@ -90,7 +90,7 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( len( services ), 1 )
         
-        self.assertEqual( services[0].GetKey(), repo_key )
+        self.assertEqual( services[0].GetServiceKey(), repo_key )
         
         #
         

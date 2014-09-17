@@ -490,7 +490,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                 
                 self._file_repo_button.SetLabel( name )
                 
-                HC.pubsub.pub( 'change_file_repository', self._page_key, service.GetKey() )
+                HC.pubsub.pub( 'change_file_repository', self._page_key, service.GetServiceKey() )
                 
             elif command == 'change_tag_repository':
                 
@@ -609,8 +609,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._first_letters = ''
             self._current_namespace = ''
             
-            if self._file_service.GetKey() == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service.GetKey()
-            else: search_service_key = self._file_service.GetKey()
+            if self._file_service.GetServiceKey() == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service.GetServiceKey()
+            else: search_service_key = self._file_service.GetServiceKey()
             
             matches = HC.app.Read( 'file_system_predicates', search_service_key )
             
@@ -653,7 +653,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( search_text ) < num_first_letters:
                         
-                        results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                        results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                         
                         matches = results.GetMatches( half_complete_tag )
                         
@@ -663,7 +663,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._first_letters = half_complete_tag
                             
-                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                             
                         
                         matches = self._cached_results.GetMatches( half_complete_tag )
@@ -682,8 +682,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         else: tags_managers.append( m.GetTagsManager() )
                         
                     
-                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service.GetKey() ) ) for tags_manager in tags_managers ]
-                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service.GetKey() ) ) for tags_manager in tags_managers ]
+                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service.GetServiceKey() ) ) for tags_manager in tags_managers ]
+                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service.GetServiceKey() ) ) for tags_manager in tags_managers ]
                     
                     current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                     pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
@@ -705,7 +705,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    results = CC.AutocompleteMatchesPredicates( self._tag_service.GetKey(), [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
+                    results = CC.AutocompleteMatchesPredicates( self._tag_service.GetServiceKey(), [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
                     
                     matches = results.GetMatches( half_complete_tag )
                     
@@ -791,15 +791,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
             
-            result = tag_censorship_manager.FilterTags( self._tag_service.GetKey(), ( tag, ) )
+            result = tag_censorship_manager.FilterTags( self._tag_service.GetServiceKey(), ( tag, ) )
             
             if len( result ) > 0:
                 
                 tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                 
-                parents = tag_parents_manager.GetParents( self._tag_service.GetKey(), tag )
+                parents = tag_parents_manager.GetParents( self._tag_service.GetServiceKey(), tag )
                 
-                parents = tag_censorship_manager.FilterTags( self._tag_service.GetKey(), parents )
+                parents = tag_censorship_manager.FilterTags( self._tag_service.GetServiceKey(), parents )
                 
                 self._chosen_tag_callable( tag, parents )
                 
@@ -845,7 +845,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( search_text ) < num_first_letters:
                 
-                results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), tag = search_text, collapse = False )
+                results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), tag = search_text, collapse = False )
                 
                 matches = results.GetMatches( half_complete_tag )
                 
@@ -855,7 +855,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._first_letters = half_complete_tag
                     
-                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetKey(), tag_service_key = self._tag_service.GetKey(), half_complete_tag = search_text, collapse = False )
+                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), half_complete_tag = search_text, collapse = False )
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
@@ -905,7 +905,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         parents_manager = HC.app.GetManager( 'tag_parents' )
                         
-                        raw_parents = parents_manager.GetParents( self._tag_service.GetKey(), tag )
+                        raw_parents = parents_manager.GetParents( self._tag_service.GetServiceKey(), tag )
                         
                         parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
                         
@@ -996,7 +996,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         ratings_services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
-        for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetKey() ) ) )
+        for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
         
         popup = self._Popup( collect_types )
         
@@ -1147,13 +1147,13 @@ class ChoiceSort( BetterChoice ):
                 
                 string = sort_by_data.GetName() + ' rating highest first'
                 
-                sort_by_data = sort_by_data.GetKey()
+                sort_by_data = sort_by_data.GetServiceKey()
                 
             elif sort_by_type == 'rating_ascend':
                 
                 string = sort_by_data.GetName() + ' rating lowest first'
                 
-                sort_by_data = sort_by_data.GetKey()
+                sort_by_data = sort_by_data.GetServiceKey()
                 
             
             self.Append( 'sort by ' + string, ( sort_by_type, sort_by_data ) )
@@ -3745,7 +3745,7 @@ class AdvancedTagOptions( AdvancedOptions ):
             
             for service in services:
                 
-                service_key = service.GetKey()
+                service_key = service.GetServiceKey()
                 
                 self._service_keys_to_checkbox_info[ service_key ] = []
                 

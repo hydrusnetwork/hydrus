@@ -1399,7 +1399,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service = self._GetService( c, service_id )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         if service_type == HC.FILE_REPOSITORY: self._AddFileRepositoryUpdate( c, service_id, update )
         elif service_type == HC.TAG_REPOSITORY: self._AddTagRepositoryUpdate( c, service_id, update )
@@ -1570,7 +1570,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service = self._GetService( c, service_id )
         
-        if service.GetType() == HC.TAG_REPOSITORY:
+        if service.GetServiceType() == HC.TAG_REPOSITORY:
             
             pending_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
@@ -1585,7 +1585,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
             c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
             
-        elif service.GetType() == HC.FILE_REPOSITORY:
+        elif service.GetServiceType() == HC.FILE_REPOSITORY:
             
             c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
             c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
@@ -1623,7 +1623,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tag_services = self._GetServices( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
         file_services = self._GetServices( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
         
-        for ( tag_service, file_service ) in itertools.product( tag_services, file_services ): self._GetAutocompleteTags( c, tag_service_key = tag_service.GetKey(), file_service_key = file_service.GetKey(), collapse = False )
+        for ( tag_service, file_service ) in itertools.product( tag_services, file_services ): self._GetAutocompleteTags( c, tag_service_key = tag_service.GetServiceKey(), file_service_key = file_service.GetServiceKey(), collapse = False )
         
         c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, HC.GetNow() ) )
         
@@ -1816,8 +1816,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         file_service = self._GetService( c, file_service_id )
         tag_service = self._GetService( c, tag_service_id )
         
-        file_service_type = file_service.GetType()
-        tag_service_type = tag_service.GetType()
+        file_service_type = file_service.GetServiceType()
+        tag_service_type = tag_service.GetServiceType()
         
         tags_to_include = search_context.GetTagsToInclude()
         tags_to_exclude = search_context.GetTagsToExclude()
@@ -2116,7 +2116,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service = self._GetService( c, service_id )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         predicates = []
         
@@ -2260,7 +2260,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service = self._GetService( c, service_id )
             
-            service_key = service.GetKey()
+            service_key = service.GetServiceKey()
             
             sessions.append( ( service_key, session_key, expiry ) )
             
@@ -2485,8 +2485,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for service in services:
             
-            service_key = service.GetKey()
-            service_type = service.GetType()
+            service_key = service.GetServiceKey()
+            service_type = service.GetServiceType()
             
             service_id = self._GetServiceId( c, service_key )
             
@@ -2505,7 +2505,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service = self._GetService( c, service_id )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         if service_type == HC.TAG_REPOSITORY:
             
@@ -2701,7 +2701,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service = self._GetService( c, service_id )
         
-        service_type = service.GetType()
+        service_type = service.GetServiceType()
         
         if service_type == HC.LOCAL_FILE: info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
         elif service_type == HC.FILE_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES, HC.SERVICE_INFO_NUM_THUMBNAILS, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL }
@@ -2832,7 +2832,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service = self._GetService( c, service_id )
                 
-                service_key = service.GetKey()
+                service_key = service.GetServiceKey()
                 
                 result.append( ( service_key, blacklist, tags ) )
                 
@@ -2861,7 +2861,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service = self._GetService( c, service_id )
                 
-                service_key = service.GetKey()
+                service_key = service.GetServiceKey()
                 
                 statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ) ) for ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) in statuses_and_pair_ids ) )
                 
@@ -2886,7 +2886,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence ASC;' ) ]
         
-        service_keys = [ self._GetService( c, service_id ).GetKey() for service_id in service_ids ]
+        service_keys = [ self._GetService( c, service_id ).GetServiceKey() for service_id in service_ids ]
         
         return service_keys
         
@@ -2903,7 +2903,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service = self._GetService( c, service_id )
                 
-                service_key = service.GetKey()
+                service_key = service.GetServiceKey()
                 
                 statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) ) for ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in statuses_and_pair_ids ) )
                 
@@ -3182,7 +3182,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service = self._GetService( c, service_id )
             
-            service_type = service.GetType()
+            service_type = service.GetServiceType()
             
             ultimate_mappings_ids = []
             ultimate_deleted_mappings_ids = []
@@ -3349,7 +3349,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                     
                                     service_target = self._GetService( c, service_id_target )
                                     
-                                    if service_target.GetType() == HC.LOCAL_TAG: kwarg = 'mappings_ids'
+                                    if service_target.GetServiceType() == HC.LOCAL_TAG: kwarg = 'mappings_ids'
                                     else: kwarg = 'pending_mappings_ids'
                                     
                                     kwargs = { kwarg : advanced_mappings_ids }
@@ -3752,32 +3752,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _RecalcCombinedMappings( self, c ):
         
+        t = time.clock()
+        
         service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM tag_service_precedence ORDER BY precedence DESC;' ) ]
         
         c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
         
-        first_round = True
-        
         for service_id in service_ids:
             
-            c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, ? FROM mappings WHERE service_id = ? AND status = ?;', ( self._combined_tag_service_id, HC.CURRENT, service_id, HC.CURRENT ) )
-            c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, ? FROM mappings WHERE service_id = ? AND status = ?;', ( self._combined_tag_service_id, HC.PENDING, service_id, HC.PENDING ) )
-            
-            if not first_round:
-                
-                deleted_ids_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.DELETED ) ) ] )
-                
-                for ( ( namespace_id, tag_id ), hash_ids ) in deleted_ids_dict.items(): c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, HC.CURRENT  ) )
-                
-            
-            first_round = False
+            c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, status FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( self._combined_tag_service_id, service_id, HC.CURRENT, HC.PENDING ) )
             
         
         c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
-        
-        file_services = self._GetServices( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
-        
-        for file_service in file_services: self._GetAutocompleteTags( c, file_service_key = file_service.GetKey(), collapse = False )
         
     
     def _ResetService( self, c, service_key ):
@@ -3837,14 +3823,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         c.executemany( 'INSERT INTO tag_service_precedence ( service_id, precedence ) VALUES ( ?, ? );', [ ( service_id, precedence ) for ( precedence, service_id ) in enumerate( service_ids ) ] )
         
         self._RebuildTagServicePrecedenceCache( c )
-        
-        self._RecalcCombinedMappings( c )
-        
-        service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
-        
-        service_keys_to_service_updates = { HC.COMBINED_TAG_SERVICE_KEY : [ service_update ] }
-        
-        self.pub_service_updates_after_commit( service_keys_to_service_updates )
         
     
     def _SetYAMLDump( self, c, dump_type, dump_name, data ):
@@ -4236,7 +4214,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if len( service_info_updates ) > 0: c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         
     
-    def _UpdateServerServices( self, c, admin_service_key, edit_log, service_keys_to_access_keys ):
+    def _UpdateServerServices( self, c, admin_service_key, original_services_info, edit_log, service_keys_to_access_keys ):
         
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
@@ -4248,6 +4226,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         admin_info = admin_service.GetInfo()
         
         host = admin_info[ 'host' ]
+        
+        #
+        
+        server_service_keys_to_client_service_info = {}
+        
+        current_client_services_info = c.execute( 'SELECT service_key, service_type, info FROM services;' ).fetchall()
+        
+        for ( server_service_key, service_type, server_options ) in original_services_info:
+            
+            server_port = server_options[ 'port' ]
+            
+            for ( client_service_key, service_type, client_info ) in current_client_services_info:
+                
+                if 'host' in client_info and 'port' in client_info:
+                    
+                    if client_info[ 'host' ] == host and client_info[ 'port' ] == server_port:
+                        
+                        server_service_keys_to_client_service_info[ server_service_key ] = ( client_service_key, service_type, client_info )
+                        
+                    
+                
+            
+        
+        #
         
         recalc_combined_mappings = False
         
@@ -4269,58 +4271,51 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             elif action == HC.DELETE:
                 
-                service_key = data
+                server_service_key = data
                 
-                try: service_id = self._GetServiceId( service_key )
-                except:
+                if server_service_key in server_service_keys_to_client_service_info:
                     
-                    if result is not None:
+                    ( client_service_key, service_type, client_info ) = server_service_keys_to_client_service_info[ server_service_key ]
+                    
+                    service_id = self._GetServiceId( c, client_service_key )
+                    
+                    c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                    
+                    service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
+                    
+                    service_keys_to_service_updates = { client_service_key : [ service_update ] }
+                    
+                    self.pub_service_updates_after_commit( service_keys_to_service_updates )
+                    
+                    service_key_hex = server_service_key.encode( 'hex' )
+                    
+                    all_update_filenames = dircache.listdir( HC.CLIENT_UPDATES_DIR )
+                    
+                    for filename in all_update_filenames:
                         
-                        ( service_id, ) = result
-                        
-                        c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
-                        
-                        service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
-                        
-                        service_keys_to_service_updates = { service_key : [ service_update ] }
-                        
-                        self.pub_service_updates_after_commit( service_keys_to_service_updates )
-                        
-                        service_key_hex = service_key.encode( 'hex' )
-                        
-                        all_update_filenames = dircache.listdir( HC.CLIENT_UPDATES_DIR )
-                        
-                        for filename in all_update_filenames:
+                        if filename.startswith( service_key_hex ):
                             
-                            if filename.startswith( service_key_hex ):
-                                
-                                os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
-                                
+                            os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
                             
                         
-                        recalc_combined_mappings = True
-                        
+                    
+                    if service_type == HC.TAG_REPOSITORY: recalc_combined_mappings = True
                     
                 
             elif action == HC.EDIT:
                 
-                ( service_key, service_type, server_options ) = data
+                ( server_service_key, service_type, server_options ) = data
                 
-                port = server_options[ 'port' ]
-                
-                try:
+                if server_service_key in server_service_keys_to_client_service_info:
                     
-                    service_id = self._GetServiceId( c, service_key )
+                    ( client_service_key, service_type, client_info ) = server_service_keys_to_client_service_info[ server_service_key ]
                     
-                    service = self._GetService( c, service_id )
-                
-                    info = service.GetInfo()
+                    service_id = self._GetServiceId( c, client_service_key )
                     
-                    info[ 'port' ] = port
+                    client_info[ 'port' ] = server_options[ 'port' ]
                     
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( client_info, service_id ) )
                     
-                except: pass
                 
             
         
@@ -4379,7 +4374,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                     
                 
-                if service.GetType() == HC.TAG_REPOSITORY: recalc_combined_mappings = True
+                if service.GetServiceType() == HC.TAG_REPOSITORY: recalc_combined_mappings = True
                 
             elif action == HC.EDIT:
                 
@@ -4875,36 +4870,6 @@ class DB( ServiceDB ):
         
     
     def _UpdateDB( self, c, version ):
-        
-        if version == 78:
-            
-            c.execute( 'DELETE FROM import_folders;' )
-            
-        
-        if version == 79:
-            
-            boorus = []
-            
-            name = 'e621'
-            search_url = 'http://e621.net/post/index?page=%index%&tags=%tags%'
-            search_separator = '%20'
-            advance_by_page_num = True
-            thumb_classname = 'thumb'
-            image_id = None
-            image_data = 'Download'
-            tag_classnames_to_namespaces = { 'tag-type-general categorized-tag' : '', 'tag-type-character categorized-tag' : 'character', 'tag-type-copyright categorized-tag' : 'series', 'tag-type-artist categorized-tag' : 'creator', 'tag-type-species categorized-tag' : 'species' }
-            
-            boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
-            
-            for booru in boorus:
-                
-                name = booru.GetName()
-                
-                c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
-                
-                c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
-                
-            
         
         if version == 84:
             
@@ -6048,7 +6013,7 @@ def DAEMONDownloadThumbnails():
     
     for service in services:
         
-        service_key = service.GetKey()
+        service_key = service.GetServiceKey()
         
         thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_key )
         
@@ -6162,8 +6127,8 @@ def DAEMONSynchroniseAccounts():
     
     for service in services:
         
-        service_key = service.GetKey()
-        service_type = service.GetType()
+        service_key = service.GetServiceKey()
+        service_type = service.GetServiceType()
         
         account = service.GetInfo( 'account' )
         credentials = service.GetCredentials()
@@ -6214,8 +6179,8 @@ def DAEMONSynchroniseMessages():
         
         try:
             
-            service_key = service.GetKey()
-            service_type = service.GetType()
+            service_key = service.GetServiceKey()
+            service_type = service.GetServiceType()
             name = service.GetName()
             
             if service.CanCheck():
@@ -7024,7 +6989,7 @@ def DAEMONUPnP():
             
             if ( local_ip, internal_port ) not in our_mappings:
                 
-                service_type = service.GetType()
+                service_type = service.GetServiceType()
                 
                 external_port = upnp
                 
