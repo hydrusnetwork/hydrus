@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 131</h3></li>
+				<ul>
+					<li>removed tag service precedence and its various expensive and overly complicated effects</li>
+					<li>recalculated combined tag mappings using new simple union based merge</li>
+					<li>cleaned updatemappings code, and I think fixed some tiny count logic bugs</li>
+					<li>refactored eight overly complicated sub-functions of updatemappings down to two simpler ones</li>
+					<li>fixed up a mention of tag service precedence in help</li>
+					<li>deleted a bunch of old client update code</li>
+					<li>added adaptive throttling to tag updates, so they'll speed up and slow down based on current CPU load</li>
+					<li>refined a bunch of the parent and sibling code, given the new changes</li>
+					<li>updated and cobbled back together a host of finicky parent and sibling and regular tag test code, given the new changes</li>
+					<li>fixed a bit of logic in the censorship code that was causing overly broad namespaced matches</li>
+					<li>fixed error when selecting a specific tag service in a normal search</li>
+					<li>deleting a service no longer throws an extraneous error after it is complete</li>
+					<li>fixed danbooru large pngs, which were being resized in a way that broke some of the downloader's url prediction code and caused 404s</li>
+					<li>fixed a bug in the input custom filter action dialog</li>
+					<li>fixed a misc clientserviceidentfier bug in custom filter initialisation</li>
+					<li>fixed setting numerical ratings from a custom filter (I think) and I think fixed many other custom filter operations</li>
+					<li>fixed several text-entry-dialog-launched-from-dialog bugs</li>
+					<li>fixed, I really think for real this time, the serverside account desync bug. it was in session init, where I had not previously looked</li>
+					<li>improved some popup messages' text</li>
+					<li>improved the way some exceptions are reported</li>
+					<li>cleaned some error reporting code</li>
+					<li>silenced the more-annoying-than-useful account sync failure popups</li>
+					<li>fixed and cleaned server start/stop/restart code a bit more</li>
+					<li>reduced regular CPU hit from resize thumbnail daemon and made it more polite in starting</li>
+				</ul>
 				<li><h3>version 130</h3></li>
 				<ul>
 					<li>fixed youtube downloads</li>
