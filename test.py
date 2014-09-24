@@ -61,7 +61,6 @@ class App( wx.App ):
         
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
-        self._reads[ 'tag_service_precedence' ] = []
         self._reads[ 'tag_siblings' ] = {}
         self._reads[ 'web_sessions' ] = {}
         

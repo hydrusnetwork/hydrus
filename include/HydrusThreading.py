@@ -97,6 +97,7 @@ class DAEMONWorker( DAEMON ):
             except Exception as e:
                 
                 HC.ShowText( 'Daemon ' + self._name + ' encountered an exception:' )
+                
                 HC.ShowException( e )
                 
             

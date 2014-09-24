@@ -4888,12 +4888,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                                     else: ( host, port ) = ( 'hostname', 45871 )
                                     
                                 
-                                account = HC.GetUnknownAccount()
-                                
-                                account.MakeStale()
-                                
-                                info[ 'account' ] = account
-                                
                             else: ( host, port ) = ( 'hostname', 45871 )
                             
                             info[ 'host' ] = host
@@ -5421,7 +5415,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            message = 'This will remove all the information for ' + name + ' from the database so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep + os.linesep + 'Once the service is reset, the client will have to reprocess all the information that was deleted, which will take another long time.' + os.linesep + os.linesep + 'If you do not understand what this button does, you probably want to click no!'
+            message = 'This will remove all the information for ' + name + ' from the database so it can be reprocessed. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will have to reprocess all the information that was deleted, which will take another long time.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
@@ -7247,153 +7241,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if len( self._old_siblings.GetTags() ) == 0: self._old_input.SetFocus()
             else: self._new_input.SetFocus()
-            
-        
-    
-class DialogManageTagServicePrecedence( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent ):
-        
-        def InitialiseControls():
-            
-            intro = 'Unless otherwise specified, the lists of tags you see are a merge of all your different repositories\' data. If two services dispute over whether a file should have a tag, the higher here will overrule those below. Changing the precedence may lock up your client for several minutes while the combined tags cache is recalculated.'
-            
-            self._explain = wx.StaticText( self, label = intro )
-            self._explain.Wrap( 300 )
-            
-            self._tag_services = wx.ListBox( self )
-            
-            self._up = wx.Button( self, label = u'\u2191' )
-            self._up.Bind( wx.EVT_BUTTON, self.EventUp )
-            
-            self._down = wx.Button( self, label = u'\u2193' )
-            self._down.Bind( wx.EVT_BUTTON, self.EventDown )
-            
-            self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-            self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
-            self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-            
-            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-            self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-            
-        
-        def PopulateControls():
-            
-            tag_service_precedence = HC.app.Read( 'tag_service_precedence' )
-            
-            service_manager = HC.app.GetManager( 'services' )
-            
-            for service_key in tag_service_precedence:
-                
-                service = service_manager.GetService( service_key )
-                
-                name = service.GetName()
-                
-                self._tag_services.Append( name, service_key )
-                
-            
-        
-        def ArrangeControls():
-            
-            updown_vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            updown_vbox.AddF( self._up, FLAGS_MIXED )
-            updown_vbox.AddF( self._down, FLAGS_MIXED )
-            
-            main_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            main_hbox.AddF( self._tag_services, FLAGS_EXPAND_BOTH_WAYS )
-            main_hbox.AddF( updown_vbox, FLAGS_MIXED )
-            
-            buttons = wx.BoxSizer( wx.HORIZONTAL )
-            
-            buttons.AddF( self._apply, FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, FLAGS_SMALL_INDENT )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._explain, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( main_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if y < 300: y = 300
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage tag service precedence' )
-        
-        InitialiseControls()
-        
-        PopulateControls()
-        
-        ArrangeControls()
-        
-        wx.CallAfter( self._apply.SetFocus )
-        
-    
-    def EventOK( self, event ):
-        
-        message = 'This operation may take several minutes to complete. Are you sure?'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                try:
-                    
-                    service_keys = [ self._tag_services.GetClientData( i ) for i in range( self._tag_services.GetCount() ) ]
-                    
-                    HC.app.Write( 'set_tag_service_precedence', service_keys )
-                    
-                except Exception as e: wx.MessageBox( 'Something went wrong when trying to save tag service precedence to the database: ' + HC.u( e ) )
-                
-            
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-    def EventUp( self, event ):
-        
-        selection = self._tag_services.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            if selection > 0:
-                
-                name = self._tag_services.GetString( selection )
-                service_key = self._tag_services.GetClientData( selection )
-                
-                self._tag_services.Delete( selection )
-                
-                self._tag_services.Insert( name, selection - 1, service_key )
-                
-                self._tag_services.Select( selection - 1 )
-                
-            
-        
-    
-    def EventDown( self, event ):
-        
-        selection = self._tag_services.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            if selection + 1 < self._tag_services.GetCount():
-                
-                name = self._tag_services.GetString( selection )
-                service_key = self._tag_services.GetClientData( selection )
-                
-                self._tag_services.Delete( selection )
-                
-                self._tag_services.Insert( name, selection + 1, service_key )
-                
-                self._tag_services.Select( selection + 1 )
-                
             
         
     

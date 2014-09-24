@@ -33,7 +33,7 @@ def GetExternalIP():
         
         ( output, error ) = p.communicate()
         
-        if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch External IP:' + os.linesep + os.linesep + HC.u( error ) )
+        if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + HC.u( error ) )
         else:
             
             try:
@@ -130,7 +130,7 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep + os.linesep + HC.u( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + HC.u( error ) )
     
 def GetUPnPMappings():
     
@@ -142,7 +142,7 @@ def GetUPnPMappings():
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep + os.linesep + HC.u( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch UPnP mappings:' + os.linesep * 2 + HC.u( error ) )
     else:
         
         try:
@@ -200,7 +200,7 @@ def GetUPnPMappings():
             
             print( traceback.format_exc() )
             
-            raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep + os.linesep + HC.u( e ) )
+            raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + HC.u( e ) )
             
         
     
@@ -214,5 +214,5 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     ( output, error ) = p.communicate()
     
-    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep + os.linesep + HC.u( error ) )
+    if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + HC.u( error ) )
     

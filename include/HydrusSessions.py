@@ -78,7 +78,7 @@ class HydrusMessagingSessionManagerServer( object ):
             self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, identity, name, expiry )
             
         
-        HC.app.Write( 'messaging_session', service_key, session_key, account, identity, name, expiry )
+        HC.app.Write( 'messaging_session', service_key, session_key, account_key, identity, name, expiry )
         
         return session_key
         
@@ -173,7 +173,7 @@ class HydrusSessionManagerServer( object ):
             
             expiry = now + HYDRUS_SESSION_LIFETIME
             
-            HC.app.Write( 'session', session_key, service_key, account, expiry )
+            HC.app.Write( 'session', session_key, service_key, account_key, expiry )
         
             self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, expiry )
             
@@ -183,8 +183,6 @@ class HydrusSessionManagerServer( object ):
     
     def GetAccount( self, service_key, session_key ):
         
-        now = HC.GetNow()
-        
         with self._lock:
             
             service_sessions = self._service_keys_to_sessions[ service_key ]
@@ -192,6 +190,8 @@ class HydrusSessionManagerServer( object ):
             if session_key in service_sessions:
                 
                 ( account, expiry ) = service_sessions[ session_key ]
+                
+                now = HC.GetNow()
                 
                 if now > expiry: del service_sessions[ session_key ]
                 else: return account

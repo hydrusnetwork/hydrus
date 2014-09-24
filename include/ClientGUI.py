@@ -407,7 +407,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 try:
                     
-                    HC.ShowText( 'starting server' )
+                    HC.ShowText( u'Starting server\u2026' )
                     
                     my_scriptname = sys.argv[0]
                     
@@ -423,14 +423,13 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                 except:
                     
-                    HC.ShowText( 'I tried to start the server, but something failed!' )
-                    HC.ShowText( traceback.format_exc() )
+                    HC.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
                     
                     return
                     
                 
             
-            HC.ShowText( 'creating admin service' )
+            HC.ShowText( u'Creating admin service\u2026' )
             
             edit_log = []
             
@@ -486,7 +485,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             HC.app.Write( 'update_services', edit_log )
             
-            HC.ShowText( 'admin service initialised' )
+            HC.ShowText( 'Admin service initialised.' )
             
             wx.CallAfter( ClientGUICommon.ShowKeys, 'access', ( access_key, ) )
             
@@ -496,7 +495,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             #
             
-            HC.ShowText( 'creating tag and file services' )
+            HC.ShowText( u'Creating tag and file services\u2026' )
             
             tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
             tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
@@ -528,7 +527,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _BackupService( self, service_key ):
         
-        message = 'This will tell the service to lock and copy its database files. It will probably take a few minutes to complete, and will not be able to serve any requests during that time. The GUI will lock up as well.'
+        message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests. The client\'s GUI will lock up as well.'
         
         with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
             
@@ -538,7 +537,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 with wx.BusyCursor(): service.Request( HC.POST, 'backup' )
                 
-                HC.ShowText( 'Backup done!' )
+                HC.ShowText( 'Server backup done!' )
                 
             
         
@@ -892,7 +891,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tag_service_precedence' ), p( '&Manage Tag Service Precedence' ), p( 'Change the order in which tag repositories\' taxonomies will be added to the database.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_imageboards' ), p( 'Manage &Imageboards' ), p( 'Change the html POST form information for imageboards to dump to.' ) )
@@ -1133,10 +1131,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     new_page.SetSearchFocus()
                     
-                except Exception as e:
-                    
-                    HC.ShowException( e )
-                    
+                except Exception as e: HC.ShowException( e )
                 
             
             if HC.PLATFORM_OSX: self._ClosePage( 0 )
@@ -1227,11 +1222,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     def _ManageTagParents( self ):
         
         with ClientGUIDialogsManage.DialogManageTagParents( self ) as dlg: dlg.ShowModal()
-        
-    
-    def _ManageTagServicePrecedence( self ):
-        
-        with ClientGUIDialogsManage.DialogManageTagServicePrecedence( self ) as dlg: dlg.ShowModal()
         
     
     def _ManageTagSiblings( self ):
@@ -1827,7 +1817,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_subscriptions': self._ManageSubscriptions()
             elif command == 'manage_tag_censorship': self._ManageTagCensorship()
             elif command == 'manage_tag_parents': self._ManageTagParents()
-            elif command == 'manage_tag_service_precedence': self._ManageTagServicePrecedence()
             elif command == 'manage_tag_siblings': self._ManageTagSiblings()
             elif command == 'manage_upnp': self._ManageUPnP( data )
             elif command == 'modify_account': self._ModifyAccount( data )
@@ -2975,7 +2964,7 @@ class FrameSplash( ClientGUICommon.Frame ):
             
         except sqlite3.OperationalError as e:
             
-            text = 'Database error!' + os.linesep + os.linesep + traceback.format_exc()
+            text = 'Database error!' + os.linesep * 2 + traceback.format_exc()
             
             print( text )
             
@@ -3060,7 +3049,7 @@ class FrameSplash( ClientGUICommon.Frame ):
             
         except sqlite3.OperationalError as e:
             
-            text = 'Database error!' + os.linesep + os.linesep + traceback.format_exc()
+            text = 'Database error!' + os.linesep * 2 + traceback.format_exc()
             
             print( text )
             

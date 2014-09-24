@@ -308,7 +308,7 @@ class Comment( wx.Panel ):
         
         append = self._comment_append.GetValue()
         
-        if self._initial_comment != '' and append != '': comment = self._initial_comment + os.linesep + os.linesep + append
+        if self._initial_comment != '' and append != '': comment = self._initial_comment + os.linesep * 2 + append
         else: comment = self._initial_comment + append
         
         self._comment.SetValue( comment )
@@ -631,7 +631,7 @@ class ManagementPanelDumper( ManagementPanel ):
             
             total_size = sum( [ m.GetSize() for m in self._hashes_to_media.values() ] )
             
-            initial = 'Hydrus Network Client is starting a dump of ' + HC.u( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) + ':' + os.linesep + os.linesep
+            initial = 'Hydrus Network Client is starting a dump of ' + HC.u( num_files ) + ' files, totalling ' + HC.ConvertIntToBytes( total_size ) + ':' + os.linesep * 2
             
         else: initial = ''
         
@@ -661,7 +661,7 @@ class ManagementPanelDumper( ManagementPanel ):
                 else: tags_to_include.extend( [ tag for tag in tags if tag.startswith( namespace + ':' ) ] )
                 
             
-            initial += os.linesep + os.linesep + ', '.join( tags_to_include )
+            initial += os.linesep * 2 + ', '.join( tags_to_include )
             
         
         return initial
@@ -1100,7 +1100,7 @@ class ManagementPanelDumper( ManagementPanel ):
                                 
                                 comment = initial
                                 
-                                if len( append ) > 0: comment += os.linesep + os.linesep + append
+                                if len( append ) > 0: comment += os.linesep * 2 + append
                                 
                                 post_fields.append( ( name, field_type, comment ) )
                                 

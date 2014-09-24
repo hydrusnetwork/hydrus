@@ -190,7 +190,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                 except: print( repr( HC.u( e ) ) )
                 
                 message = 'This instance of the client had a problem connecting to the database, which probably means an old instance is still closing.'
-                message += os.linesep + os.linesep
+                message += os.linesep * 2
                 message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
                 
                 with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
@@ -376,10 +376,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                             
                         
                     
-                except Exception as e:
-                    
-                    wx.CallAfter( HC.ShowException, e )
-                    
+                except Exception as e: wx.CallAfter( HC.ShowException, e )
                 
             
             if self._booru_service is None: StartServer()
@@ -438,10 +435,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                             
                         
                     
-                except Exception as e:
-                    
-                    wx.CallAfter( HC.ShowException, e )
-                    
+                except Exception as e: wx.CallAfter( HC.ShowException, e )
                 
             
             if self._local_service is None: StartServer()

@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 14
-SOFTWARE_VERSION = 130
+SOFTWARE_VERSION = 131
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1757,7 +1757,7 @@ class JobDatabase( object ):
                 
                 trace_list = traceback.format_stack()
                 
-                caller_traceback = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
+                caller_traceback = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
                 
                 raise HydrusExceptions.DBException( text, caller_traceback, db_traceback )
                 
@@ -1908,7 +1908,7 @@ class JobNetwork( object ):
             
             trace_list = traceback.format_stack()
             
-            my_trace = 'Stack Trace (most recent call last):' + os.linesep + os.linesep + os.linesep.join( trace_list )
+            my_trace = 'Stack Trace (most recent call last):' + os.linesep * 2 + os.linesep.join( trace_list )
             
             full_message = os.linesep.join( ( 'Calling Thread:', my_trace, 'Network Thread:', network_traceback ) )
             
@@ -2403,7 +2403,7 @@ class ServerToClientPetition( HydrusYAMLBase ):
             content_phrase = ' parent ' + old_tag + '->' + new_tag
             
         
-        return action_word + content_phrase + os.linesep + os.linesep + self._reason
+        return action_word + content_phrase + os.linesep * 2 + self._reason
         
     
 class ServerToClientUpdate( HydrusYAMLBase ):

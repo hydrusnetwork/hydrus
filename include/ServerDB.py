@@ -903,20 +903,20 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, now ) )
         
     
-    def _AddMessagingSession( self, c, service_key, session_key, account, identifier, name, expiry ):
+    def _AddMessagingSession( self, c, service_key, session_key, account_key, identifier, name, expiry ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        account_id = account.GetAccountId()
+        account_id = self._GetAccountId( c, account_key )
         
         c.execute( 'INSERT INTO sessions ( service_id, session_key, account_id, identifier, name, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), account_id, sqlite3.Binary( identifier ), name, expiry ) )
         
     
-    def _AddSession( self, c, session_key, service_key, account, expiry ):
+    def _AddSession( self, c, session_key, service_key, account_key, expiry ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        account_id = account.GetAccountId()
+        account_id = self._GetAccountId( c, account_key )
         
         c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expiry ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expiry ) )
         
@@ -1268,6 +1268,17 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_id
         
     
+    def _GetAccountId( self, c, account_key ):
+        
+        result = c.execute( 'SELECT account_id FROM accounts WHERE account_key = ?;', ( sqlite3.Binary( account_key ), ) ).fetchone()
+        
+        if result is None: raise HydrusExceptions.ForbiddenException( 'That account key was not found!' )
+        
+        ( account_id, ) = result
+        
+        return account_id
+        
+    
     def _GetAccountIds( self, c, access_keys ):
         
         account_ids = []
@@ -1521,17 +1532,26 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_ids_to_service_keys = {}
         
+        service_id_and_account_ids_to_account_info = {}
+        
         for ( session_key, service_id, account_id, expiry ) in results:
             
             if service_id not in service_ids_to_service_keys: service_ids_to_service_keys[ service_id ] = self._GetServiceKey( c, service_id )
             
             service_key = service_ids_to_service_keys[ service_id ]
             
-            account_identifier = HC.AccountIdentifier( account_id = account_id )
+            if ( service_id, account_id ) not in service_id_and_account_ids_to_account_info:
+                
+                account_identifier = HC.AccountIdentifier( account_id = account_id )
+                
+                account_key = self._GetAccountKey( c, service_key, account_identifier )
+                
+                account = self._GetAccount( c, service_key, account_key )
+                
+                service_id_and_account_ids_to_account_info[ ( service_id, account_id ) ] = ( account_key, account )
+                
             
-            account_key = self._GetAccountKey( c, service_key, account_identifier )
-            
-            account = self._GetAccount( c, service_key, account_key )
+            ( account_key, account ) = service_id_and_account_ids_to_account_info[ ( service_id, account_id ) ]
             
             sessions.append( ( session_key, service_key, account_key, account, expiry ) )
             

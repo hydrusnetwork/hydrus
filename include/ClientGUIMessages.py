@@ -1283,9 +1283,7 @@ class DraftPanel( wx.Panel ):
                 
             except:
                 
-                text = 'The hydrus client could not connect to your message depot, so the message could not be sent!'
-                
-                HC.ShowText( text )
+                HC.ShowText( 'The hydrus client could not connect to your message depot, so the message could not be sent!' )
                 
                 return
                 

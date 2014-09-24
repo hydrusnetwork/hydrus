@@ -68,9 +68,9 @@ class TestSessions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HC.app.GetWrite( 'session' )
         
-        ( written_session_key, written_service_key, written_account, written_expiry ) = args
+        ( written_session_key, written_service_key, written_account_key, written_expiry ) = args
         
-        self.assertEqual( ( session_key_2, service_key, account_2, expiry_2 ), ( written_session_key, written_service_key, written_account, written_expiry ) )
+        self.assertEqual( ( session_key_2, service_key, account_key_2, expiry_2 ), ( written_session_key, written_service_key, written_account_key, written_expiry ) )
         
         read_account = session_manager.GetAccount( service_key, session_key_2 )
         
@@ -87,9 +87,9 @@ class TestSessions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = HC.app.GetWrite( 'session' )
         
-        ( written_session_key, written_service_key, written_account, written_expiry ) = args
+        ( written_session_key, written_service_key, written_account_key, written_expiry ) = args
         
-        self.assertEqual( ( session_key_3, service_key, account, expiry_3 ), ( written_session_key, written_service_key, written_account, written_expiry ) )
+        self.assertEqual( ( session_key_3, service_key, account_key, expiry_3 ), ( written_session_key, written_service_key, written_account_key, written_expiry ) )
         
         read_account = session_manager.GetAccount( service_key, session_key_3 )
         

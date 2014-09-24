@@ -37,7 +37,7 @@ class Controller( wx.App ):
     
     def ActionService( self, service_key, action ):
         
-        ( service_type, options ) = self.Read( 'service_info', service_key )
+        if action != 'stop': ( service_type, options ) = self.Read( 'service_info', service_key )
         
         def TWISTEDDoIt():
             
@@ -94,6 +94,7 @@ class Controller( wx.App ):
                 deferred = defer.maybeDeferred( self._services[ service_key ].stopListening )
                 
                 if action == 'restart': deferred.addCallback( StartService )
+                elif action == 'stop': del self._services[ service_key ]
                 
             
             

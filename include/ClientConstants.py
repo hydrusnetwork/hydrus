@@ -2185,12 +2185,8 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings ) = self._tuple
         
-        service = HC.app.GetManager( 'services' ).GetService( service_key )
-        
-        service_type = service.GetServiceType()
-        
-        if service_type in ( HC.TAG_REPOSITORY, HC.COMBINED_TAG ): tags_manager.ResetService( service_key )
-        elif service_type == HC.FILE_REPOSITORY: locations_manager.ResetService( service_key )
+        tags_manager.ResetService( service_key )
+        locations_manager.ResetService( service_key )
         
     
     def ToTuple( self ): return self._tuple
@@ -2645,8 +2641,11 @@ class ThumbnailCache( object ):
                     hydrus_bitmap = HydrusImageHandling.GenerateHydrusBitmap( path )
                     
                 except Exception as e:
+                    
                     HC.ShowException( e )
+                    
                     return self._not_found
+                    
                 
                 self._data_cache.AddData( hash, hydrus_bitmap )
                 

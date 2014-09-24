@@ -502,7 +502,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                 
                 self._tag_repo_button.SetLabel( name )
                 
-                HC.pubsub.pub( 'change_tag_repository', self._page_key, service )
+                HC.pubsub.pub( 'change_tag_repository', self._page_key, service.GetServiceKey() )
                 
             else:
                 
@@ -2440,7 +2440,7 @@ class PopupMessageDBError( PopupMessage ):
         caller_traceback = message.GetInfo( 'caller_traceback' )
         db_traceback = message.GetInfo( 'db_traceback' )
         
-        self._copy_text = 'DBException: ' + text + os.linesep + os.linesep + caller_traceback + os.linesep + os.linesep + db_traceback
+        self._copy_text = 'DBException: ' + text + os.linesep * 2 + caller_traceback + os.linesep * 2 + db_traceback
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2533,7 +2533,7 @@ class PopupMessageError( PopupMessage ):
         
         ( etype, value, trace ) = message.GetInfo( 'error' )
         
-        self._copy_text = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + os.linesep + trace
+        self._copy_text = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep * 2 + trace
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2889,7 +2889,7 @@ class PopupMessageManager( wx.Frame ):
             
             ( etype, value, trace ) = message.GetInfo( 'error' )
             
-            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep + os.linesep + trace
+            message_string = HC.u( etype.__name__ ) + ': ' + HC.u( value ) + os.linesep * 2 + trace
             
         elif message_type == HC.MESSAGE_TYPE_DB_ERROR:
             
@@ -2897,7 +2897,7 @@ class PopupMessageManager( wx.Frame ):
             caller_traceback = message.GetInfo( 'caller_traceback' )
             db_traceback = message.GetInfo( 'db_traceback' )
             
-            message_string = 'DBException: ' + text + os.linesep + os.linesep + caller_traceback + os.linesep + os.linesep + db_traceback
+            message_string = 'DBException: ' + text + os.linesep * 2 + caller_traceback + os.linesep * 2 + db_traceback
             
         elif message_type == HC.MESSAGE_TYPE_FILES: message_string = HC.u( message.GetInfo( 'text' ) )
         elif message_type == HC.MESSAGE_TYPE_GAUGE: return

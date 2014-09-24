@@ -866,7 +866,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
             else:
                 
-                service = HC.app.GetManager( 'services' ).GetService( service_key )
+                self._service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
                 service_name = self._service.GetName()
                 service_type = self._service.GetServiceType()
@@ -2653,12 +2653,7 @@ class DialogInputLocalFiles( Dialog ):
                                 ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
                                 
                             
-                        except:
-                            
-                            text = 'Tried to read a key, but did not understand it.'
-                            
-                            HC.ShowText( text )
-                            
+                        except: HC.ShowText( 'Tried to read a key, but did not understand it.' )
                         
                     
                     job_key = HC.JobKey()
@@ -2667,7 +2662,7 @@ class DialogInputLocalFiles( Dialog ):
                         
                         while aes_key is None:
                             
-                            with ClientGUIDialogs.DialogTextEntry( HC.app.GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
+                            with DialogTextEntry( HC.app.GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
                                 
                                 result = dlg.ShowModal()
                                 
@@ -3696,7 +3691,7 @@ class DialogModifyAccounts( Dialog ):
     
     def EventBan( self, event ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter reason for the ban.' ) as dlg:
+        with DialogTextEntry( self, 'Enter reason for the ban.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.BAN, reason = dlg.GetValue() )
             
@@ -3715,7 +3710,7 @@ class DialogModifyAccounts( Dialog ):
     
     def EventSuperban( self, event ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter reason for the superban.' ) as dlg:
+        with DialogTextEntry( self, 'Enter reason for the superban.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.SUPERBAN, reason = dlg.GetValue() )
             
@@ -3797,7 +3792,7 @@ class DialogNews( Dialog ):
             
             ( news, timestamp ) = self._newslist[ self._current_news_position - 1 ]
             
-            self._news.SetValue( time.ctime( timestamp ) + ' (' + HC.ConvertTimestampToPrettyAgo( timestamp ) + '):' + os.linesep + os.linesep + news )
+            self._news.SetValue( time.ctime( timestamp ) + ' (' + HC.ConvertTimestampToPrettyAgo( timestamp ) + '):' + os.linesep * 2 + news )
             
             self._news_position.SetValue( HC.ConvertIntToPrettyString( self._current_news_position ) + ' / ' + HC.ConvertIntToPrettyString( len( self._newslist ) ) )
             
@@ -5261,7 +5256,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         existing_names = { self._favourites.GetString( i ) for i in range( self._favourites.GetCount() ) }
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter name for these favourite actions.' ) as dlg:
+        with DialogTextEntry( self, 'Enter name for these favourite actions.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -5309,6 +5304,8 @@ class DialogSetupCustomFilterActions( Dialog ):
                     
                     if service_key is None: pretty_service_key = ''
                     else:
+                        
+                        if type( service_key ) == HC.ClientServiceIdentifier: service_key = service_key.GetServiceKey()
                         
                         service = HC.app.GetManager( 'services' ).GetService( service_key )
                         
@@ -5545,7 +5542,7 @@ class DialogSetupExport( Dialog ):
                         
                     except:
                         
-                        wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HC.u( ordering_index + 1 ) + '.' + os.linesep + os.linesep + traceback.format_exc() )
+                        wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HC.u( ordering_index + 1 ) + '.' + os.linesep * 2 + traceback.format_exc() )
                         
                         break
                         
@@ -5570,7 +5567,7 @@ class DialogSetupExport( Dialog ):
                     
                 except:
                     
-                    wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HC.u( ordering_index + 1 ) + '.' + os.linesep + os.linesep + traceback.format_exc() )
+                    wx.MessageBox( 'Encountered a problem while attempting to export file with index ' + HC.u( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
                     
                     break
                     

@@ -242,6 +242,15 @@ class DownloaderBooru( Downloader ):
             
             image_url = image[ 'src' ]
             
+            if 'sample/sample-' in image_url:
+                
+                # danbooru resized image
+                
+                image = soup.find( id = 'image-resize-link' )
+                
+                image_url = image[ 'href' ]
+                
+            
         
         if image_data is not None:
             
@@ -254,8 +263,6 @@ class DownloaderBooru( Downloader ):
             
         
         image_url = urlparse.urljoin( url_base, image_url )
-        
-        image_url = image_url.replace( 'sample/sample-', '' ) # fix for danbooru resizing
         
         tags = []
         
@@ -1058,7 +1065,7 @@ class ImportArgsGenerator( object ):
             
             self._job_key.SetVariable( 'result', 'failed' )
             
-            if 'name' in locals(): HC.ShowText( 'Problem importing ' + name + '!' )
+            if 'name' in locals(): HC.ShowText( 'There was a problem importing ' + name + '!' )
             
             HC.ShowException( e )
             
