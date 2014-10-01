@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 132</h3></li>
+				<ul>
+					<li>merged two complicated serverside account tables into two simpler tables</li>
+					<li>with this action, was able to clean out a lot of rubbish old server account code</li>
+					<li>made it so accounts can only be on one service. existing (admin) accounts that straddled sevices will have new access keys printed in a text file in the base installation directory on server update</li>
+					<li>rewrote the account object to be simpler and easier to maintain</li>
+					<li>swapped the old rubbish 'account_id' identifier in the account object for the much better 'account_key' identifier</li>
+					<li>harmonised some conflicting account-related variable names</li>
+					<li>refined the way the unknown account is stored and identified</li>
+					<li>split serverside account verification and identification into two separate paths, to reduce chance of security problems</li>
+					<li>reworked account identifiers (a general purpose account identifying object that is used in admin-server interactions) and their associated db functions to be more secure and reliable</li>
+					<li>simplified account data use checking</li>
+					<li>simplified and harmonised the way used bytes and used requests are stored and retrieved in the account and account type</li>
+					<li>with guarantee of account_key uniqueness across entire server, I have simplified session code in several places</li>
+					<li>updated help to reflect the new relationship between access keys and account keys</li>
+					<li>added 'copy account key' button to review services, which will now be the thing for users to use if they need an admin to modify their account</li>
+					<li>fixed serverside credential verification for non-instantiated (still have a registration key) access keys</li>
+					<li>added a bit of explaining text to the 'waiting' autocomplete state</li>
+					<li>fixed a typo when deleting files from a file repo</li>
+				</ul>
 				<li><h3>version 131</h3></li>
 				<ul>
 					<li>removed tag service precedence and its various expensive and overly complicated effects</li>
