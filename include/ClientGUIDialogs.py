@@ -3203,7 +3203,8 @@ class DialogInputNewAccountType( Dialog ):
             
             title = account_type.GetTitle()
             permissions = account_type.GetPermissions()
-            ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+            max_num_bytes = account_type.GetMaxBytes()
+            max_num_requests = account_type.GetMaxRequests()
             
         
         Dialog.__init__( self, parent, 'edit account type' )
@@ -3534,15 +3535,15 @@ class DialogModifyAccounts( Dialog ):
             
             self._expiration_panel = ClientGUICommon.StaticBox( self, 'change expiration' )
             
-            self._add_to_expiry = wx.Choice( self._expiration_panel )
+            self._add_to_expires = wx.Choice( self._expiration_panel )
             
-            self._add_to_expiry_ok = wx.Button( self._expiration_panel, label = 'Ok' )
-            self._add_to_expiry_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpiry )
+            self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+            self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
             
-            self._set_expiry = wx.Choice( self._expiration_panel )
+            self._set_expires = wx.Choice( self._expiration_panel )
             
-            self._set_expiry_ok = wx.Button( self._expiration_panel, label = 'Ok' )
-            self._set_expiry_ok.Bind( wx.EVT_BUTTON, self.EventSetExpiry )
+            self._set_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+            self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
             
             #
             
@@ -3589,21 +3590,21 @@ class DialogModifyAccounts( Dialog ):
             
             for ( string, value ) in HC.lifetimes:
                 
-                if value is not None: self._add_to_expiry.Append( string, value ) # don't want 'add no limit'
+                if value is not None: self._add_to_expires.Append( string, value ) # don't want 'add no limit'
                 
             
-            self._add_to_expiry.SetSelection( 1 ) # three months
+            self._add_to_expires.SetSelection( 1 ) # three months
             
-            for ( string, value ) in HC.lifetimes: self._set_expiry.Append( string, value )
-            self._set_expiry.SetSelection( 1 ) # three months
+            for ( string, value ) in HC.lifetimes: self._set_expires.Append( string, value )
+            self._set_expires.SetSelection( 1 ) # three months
             
             #
             
             if not self._service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ):
                 
                 self._account_types_ok.Disable()
-                self._add_to_expiry_ok.Disable()
-                self._set_expiry_ok.Disable()
+                self._add_to_expires_ok.Disable()
+                self._set_expires_ok.Disable()
                 
             
         
@@ -3618,20 +3619,20 @@ class DialogModifyAccounts( Dialog ):
             
             self._account_types_panel.AddF( account_types_hbox, FLAGS_EXPAND_PERPENDICULAR )
             
-            add_to_expiry_box = wx.BoxSizer( wx.HORIZONTAL )
+            add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            add_to_expiry_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), FLAGS_MIXED )
-            add_to_expiry_box.AddF( self._add_to_expiry, FLAGS_EXPAND_BOTH_WAYS )
-            add_to_expiry_box.AddF( self._add_to_expiry_ok, FLAGS_MIXED )
+            add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), FLAGS_MIXED )
+            add_to_expires_box.AddF( self._add_to_expires, FLAGS_EXPAND_BOTH_WAYS )
+            add_to_expires_box.AddF( self._add_to_expires_ok, FLAGS_MIXED )
             
-            set_expiry_box = wx.BoxSizer( wx.HORIZONTAL )
+            set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            set_expiry_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), FLAGS_MIXED )
-            set_expiry_box.AddF( self._set_expiry, FLAGS_EXPAND_BOTH_WAYS )
-            set_expiry_box.AddF( self._set_expiry_ok, FLAGS_MIXED )
+            set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), FLAGS_MIXED )
+            set_expires_box.AddF( self._set_expires, FLAGS_EXPAND_BOTH_WAYS )
+            set_expires_box.AddF( self._set_expires_ok, FLAGS_MIXED )
             
-            self._expiration_panel.AddF( add_to_expiry_box, FLAGS_EXPAND_PERPENDICULAR )
-            self._expiration_panel.AddF( set_expiry_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( add_to_expires_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( set_expires_box, FLAGS_EXPAND_PERPENDICULAR )
             
             self._ban_panel.AddF( self._ban, FLAGS_EXPAND_PERPENDICULAR )
             self._ban_panel.AddF( self._superban, FLAGS_EXPAND_PERPENDICULAR )
@@ -3687,7 +3688,7 @@ class DialogModifyAccounts( Dialog ):
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
         
     
-    def EventAddToExpiry( self, event ): self._DoModification( HC.ADD_TO_EXPIRY, timespan = self._add_to_expiry.GetClientData( self._add_to_expiry.GetSelection() ) )
+    def EventAddToExpires( self, event ): self._DoModification( HC.ADD_TO_EXPIRES, timespan = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
     
     def EventBan( self, event ):
         
@@ -3699,13 +3700,13 @@ class DialogModifyAccounts( Dialog ):
     
     def EventChangeAccountType( self, event ): self._DoModification( HC.CHANGE_ACCOUNT_TYPE, title = self._account_types.GetClientData( self._account_types.GetSelection() ).GetTitle() )
     
-    def EventSetExpiry( self, event ):
+    def EventSetExpires( self, event ):
         
-        expiry = self._set_expiry.GetClientData( self._set_expiry.GetSelection() )
+        expires = self._set_expires.GetClientData( self._set_expires.GetSelection() )
         
-        if expiry is not None: expiry += HC.GetNow()
+        if expires is not None: expires += HC.GetNow()
         
-        self._DoModification( HC.SET_EXPIRY, expiry = expiry )
+        self._DoModification( HC.SET_EXPIRES, expires = expires )
         
     
     def EventSuperban( self, event ):
@@ -4083,7 +4084,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 account = service.GetInfo( 'account' )
                 
-                if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
+                if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
                     
                     service_key = service.GetServiceKey()
                     

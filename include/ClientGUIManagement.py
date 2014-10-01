@@ -164,7 +164,7 @@ class CaptchaControl( wx.Panel ):
             self._refresh_button.SetLabel( 'get new captcha' )
             self._refresh_button.Enable()
             
-            self._captcha_time_left.SetLabel( HC.ConvertTimestampToPrettyExpiry( self._captcha_runs_out ) )
+            self._captcha_time_left.SetLabel( HC.ConvertTimestampToPrettyExpires( self._captcha_runs_out ) )
             
         
         del dc
@@ -2271,7 +2271,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         
         self._current_predicates_box = ClientGUICommon.ListBoxMessagesPredicates( self._search_panel, self._page_key, [ 'system:inbox' ] )
         
-        self._synchronised = ClientGUICommon.OnOffButton( self._search_panel, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting' )
+        self._synchronised = ClientGUICommon.OnOffButton( self._search_panel, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- counts may be inaccurate' )
         self._synchronised.SetToolTipString( 'select whether to renew the search as soon as a new predicate is entered' )
         
         self._searchbox = ClientGUICommon.AutoCompleteDropdownMessageTerms( self._search_panel, self._page_key, self._identity )

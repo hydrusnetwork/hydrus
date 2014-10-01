@@ -1309,11 +1309,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _AddHydrusSession( self, c, service_key, session_key, expiry ):
+    def _AddHydrusSession( self, c, service_key, session_key, expires ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expiry ) )
+        c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expires ) )
         
     
     def _AddService( self, c, service_key, service_type, name, info ):
@@ -1389,9 +1389,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _AddWebSession( self, c, name, cookies, expiry ):
+    def _AddWebSession( self, c, name, cookies, expires ):
         
-        c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expiry ) )
+        c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
         
     
     def _ArchiveFiles( self, c, hash_ids ):
@@ -2240,13 +2240,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         results = c.execute( 'SELECT service_id, session_key, expiry FROM hydrus_sessions;' ).fetchall()
         
-        for ( service_id, session_key, expiry ) in results:
+        for ( service_id, session_key, expires ) in results:
             
             service = self._GetService( c, service_id )
             
             service_key = service.GetServiceKey()
             
-            sessions.append( ( service_key, session_key, expiry ) )
+            sessions.append( ( service_key, session_key, expires ) )
             
         
         return sessions
@@ -5294,6 +5294,21 @@ class DB( ServiceDB ):
             self._RecalcCombinedMappings( c )
             
         
+        if version == 131:
+            
+            service_info = c.execute( 'SELECT service_id, info FROM services;' ).fetchall()
+            
+            for ( service_id, info ) in service_info:
+                
+                if 'account' in info:
+                    
+                    info[ 'account' ] = HC.GetUnknownAccount()
+                    
+                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    
+                
+            
+        
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True
@@ -5988,7 +6003,7 @@ def DAEMONSynchroniseAccounts():
             if info[ 'paused' ]: continue
             
         
-        if not account.IsBanned() and account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
+        if account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
             
             try:
                 

@@ -18,19 +18,19 @@ class TestSessions( unittest.TestCase ):
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
-        account_id = 1
+        access_key = os.urandom( 32 )
+        account_key = os.urandom( 32 )
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
-        expiry = HC.GetNow() + 300
-        used_data = ( 0, 0 )
+        expires = HC.GetNow() + 300
+        used_bytes = 0
+        used_requests = 0
         
-        account_key = os.urandom( 32 )
+        account = HC.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
-        account = HC.Account( account_id, account_type, created, expiry, used_data )
+        expires = HC.GetNow() - 10
         
-        expiry = HC.GetNow() - 10
-        
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account_key, account, expiry ) ] )
+        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -41,9 +41,9 @@ class TestSessions( unittest.TestCase ):
         
         # test fetching a session already in db, after bootup
         
-        expiry = HC.GetNow() + 300
+        expires = HC.GetNow() + 300
         
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account_key, account, expiry ) ] )
+        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -53,24 +53,22 @@ class TestSessions( unittest.TestCase ):
         
         # test adding a session
         
-        expiry = HC.GetNow() + 300
+        expires = HC.GetNow() + 300
         
         account_key_2 = os.urandom( 32 )
         
-        account_2 = HC.Account( 2, account_type, created, expiry, used_data )
+        account_2 = HC.Account( account_key_2, account_type, created, expires, used_bytes, used_requests )
         
-        HC.app.SetRead( 'account_key', account_key_2 )
+        HC.app.SetRead( 'account_key_from_access_key', account_key_2 )
         HC.app.SetRead( 'account', account_2 )
         
-        account_identifier = HC.AccountIdentifier( access_key = os.urandom( 32 ) )
-        
-        ( session_key_2, expiry_2 ) = session_manager.AddSession( service_key, account_identifier )
+        ( session_key_2, expires_2 ) = session_manager.AddSession( service_key, access_key )
         
         [ ( args, kwargs ) ] = HC.app.GetWrite( 'session' )
         
-        ( written_session_key, written_service_key, written_account_key, written_expiry ) = args
+        ( written_session_key, written_service_key, written_account_key, written_expires ) = args
         
-        self.assertEqual( ( session_key_2, service_key, account_key_2, expiry_2 ), ( written_session_key, written_service_key, written_account_key, written_expiry ) )
+        self.assertEqual( ( session_key_2, service_key, account_key_2, expires_2 ), ( written_session_key, written_service_key, written_account_key, written_expires ) )
         
         read_account = session_manager.GetAccount( service_key, session_key_2 )
         
@@ -78,18 +76,16 @@ class TestSessions( unittest.TestCase ):
         
         # test adding a new session for an account already in the manager
         
-        HC.app.SetRead( 'account_key', account_key )
+        HC.app.SetRead( 'account_key_from_access_key', account_key )
         HC.app.SetRead( 'account', account )
         
-        account_identifier = HC.AccountIdentifier( access_key = os.urandom( 32 ) )
-        
-        ( session_key_3, expiry_3 ) = session_manager.AddSession( service_key, account_identifier )
+        ( session_key_3, expires_3 ) = session_manager.AddSession( service_key, access_key )
         
         [ ( args, kwargs ) ] = HC.app.GetWrite( 'session' )
         
-        ( written_session_key, written_service_key, written_account_key, written_expiry ) = args
+        ( written_session_key, written_service_key, written_account_key, written_expires ) = args
         
-        self.assertEqual( ( session_key_3, service_key, account_key, expiry_3 ), ( written_session_key, written_service_key, written_account_key, written_expiry ) )
+        self.assertEqual( ( session_key_3, service_key, account_key, expires_3 ), ( written_session_key, written_service_key, written_account_key, written_expires ) )
         
         read_account = session_manager.GetAccount( service_key, session_key_3 )
         
@@ -101,16 +97,13 @@ class TestSessions( unittest.TestCase ):
         
         # test individual account refresh
         
-        expiry = HC.GetNow() + 300
+        expires = HC.GetNow() + 300
         
-        updated_account = HC.Account( account_id, account_type, created, expiry, ( 1, 1 ) )
+        updated_account = HC.Account( account_key, account_type, created, expires, 1, 1 )
         
-        HC.app.SetRead( 'account_key', account_key )
         HC.app.SetRead( 'account', updated_account )
         
-        account_identifier = HC.AccountIdentifier( access_key = os.urandom( 32 ) )
-        
-        session_manager.RefreshAccounts( service_key, [ account_identifier ] )
+        session_manager.RefreshAccounts( service_key, [ account_key ] )
         
         read_account = session_manager.GetAccount( service_key, session_key_1 )
         
@@ -122,13 +115,11 @@ class TestSessions( unittest.TestCase ):
         
         # test all account refresh
         
-        expiry = HC.GetNow() + 300
+        expires = HC.GetNow() + 300
         
-        updated_account_key = os.urandom( 32 )
+        updated_account_2 = HC.Account( account_key, account_type, created, expires, 2, 2 )
         
-        updated_account_2 = HC.Account( 1, account_type, created, expiry, ( 2, 2 ) )
-        
-        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_key, updated_account_2, expiry ), ( session_key_2, service_key, account_key_2, account_2, expiry ), ( session_key_3, service_key, account_key_2, updated_account_2, expiry ) ] )
+        HC.app.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expires ), ( session_key_2, service_key, account_2, expires ), ( session_key_3, service_key, updated_account_2, expires ) ] )
         
         session_manager.RefreshAllAccounts()
         

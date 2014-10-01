@@ -553,7 +553,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._include_pending_tags = OnOffButton( self._dropdown_window, self._page_key, 'notify_include_pending', on_label = 'include pending tags', off_label = 'exclude pending tags' )
         self._include_pending_tags.SetToolTipString( 'select whether to include pending tags in the search' )
         
-        self._synchronised = OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting' )
+        self._synchronised = OnOffButton( self._dropdown_window, self._page_key, 'notify_search_immediately', on_label = 'searching immediately', off_label = 'waiting -- tag counts may be inaccurate' )
         self._synchronised.SetToolTipString( 'select whether to renew the search as soon as a new predicate is entered' )
         
         button_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )

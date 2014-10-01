@@ -63,8 +63,8 @@ options = {}
 
 # Misc
 
-NETWORK_VERSION = 14
-SOFTWARE_VERSION = 131
+NETWORK_VERSION = 15
+SOFTWARE_VERSION = 132
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -141,6 +141,7 @@ RESOLVE_PETITIONS = 3
 MANAGE_USERS = 4
 GENERAL_ADMIN = 5
 EDIT_SERVICES = 6
+UNKNOWN_PERMISSION = 7
 
 CREATABLE_PERMISSIONS = [ GET_DATA, POST_DATA, POST_PETITIONS, RESOLVE_PETITIONS, MANAGE_USERS, GENERAL_ADMIN ]
 ADMIN_PERMISSIONS = [ RESOLVE_PETITIONS, MANAGE_USERS, GENERAL_ADMIN, EDIT_SERVICES ]
@@ -154,6 +155,7 @@ permissions_string_lookup[ RESOLVE_PETITIONS ] = 'resolve petitions'
 permissions_string_lookup[ MANAGE_USERS ] = 'manage users'
 permissions_string_lookup[ GENERAL_ADMIN ] = 'general administration'
 permissions_string_lookup[ EDIT_SERVICES ] = 'edit services'
+permissions_string_lookup[ UNKNOWN_PERMISSION ] = 'unknown'
 
 TAG_REPOSITORY = 0
 FILE_REPOSITORY = 1
@@ -202,8 +204,8 @@ DELETE_TAG_PETITION = 1
 BAN = 0
 SUPERBAN = 1
 CHANGE_ACCOUNT_TYPE = 2
-ADD_TO_EXPIRY = 3
-SET_EXPIRY = 4
+ADD_TO_EXPIRES = 3
+SET_EXPIRES = 4
 
 CURRENT = 0
 PENDING = 1
@@ -909,46 +911,46 @@ def ConvertTimestampToPrettyAgo( timestamp ):
     elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
     else: return ' '.join( ( m, s ) ) + ' ago'
     
-def ConvertTimestampToPrettyExpiry( timestamp ):
+def ConvertTimestampToPrettyExpires( timestamp ):
     
     if timestamp is None: return 'does not expire'
     if timestamp == 0: return 'unknown expiration'
     
-    expiry = GetNow() - timestamp
+    expires = GetNow() - timestamp
     
-    if expiry >= 0: already_happend = True
+    if expires >= 0: already_happend = True
     else:
         
-        expiry *= -1
+        expires *= -1
         
         already_happend = False
         
     
-    seconds = expiry % 60
+    seconds = expires % 60
     if seconds == 1: s = '1 second'
     else: s = u( seconds ) + ' seconds'
     
-    expiry = expiry / 60
-    minutes = expiry % 60
+    expires = expires / 60
+    minutes = expires % 60
     if minutes == 1: m = '1 minute'
     else: m = u( minutes ) + ' minutes'
     
-    expiry = expiry / 60
-    hours = expiry % 24
+    expires = expires / 60
+    hours = expires % 24
     if hours == 1: h = '1 hour'
     else: h = u( hours ) + ' hours'
     
-    expiry = expiry / 24
-    days = expiry % 30
+    expires = expires / 24
+    days = expires % 30
     if days == 1: d = '1 day'
     else: d = u( days ) + ' days'
     
-    expiry = expiry / 30
-    months = expiry % 12
+    expires = expires / 30
+    months = expires % 12
     if months == 1: mo = '1 month'
     else: mo = u( months ) + ' months'
     
-    years = expiry / 12
+    years = expires / 12
     if years == 1: y = '1 year'
     else: y = u( years ) + ' years'
     
@@ -1285,18 +1287,21 @@ class Account( HydrusYAMLBase ):
     
     yaml_tag = u'!Account'
     
-    def __init__( self, account_id, account_type, created, expiry, used_data, banned_info = None ):
+    def __init__( self, account_key, account_type, created, expires, used_bytes, used_requests, banned_info = None ):
         
         HydrusYAMLBase.__init__( self )
         
-        self._account_id = account_id
-        self._account_type = account_type
-        self._created = created
-        self._expiry = expiry
-        self._used_data = used_data
-        self._banned_info = banned_info
+        self._info = {}
         
-        self._object_instantiation_timestamp = GetNow()
+        self._info[ 'account_key' ] = account_key
+        self._info[ 'account_type' ] = account_type
+        self._info[ 'created' ] = created
+        self._info[ 'expires' ] = expires
+        self._info[ 'used_bytes' ] = used_bytes
+        self._info[ 'used_requests' ] = used_requests
+        if banned_info is not None: self._info[ 'banned_info' ] = banned_info
+        
+        self._info[ 'fresh_timestamp' ] = GetNow()
         
     
     def __repr__( self ): return self.ConvertToString()
@@ -1305,20 +1310,42 @@ class Account( HydrusYAMLBase ):
     
     def _IsBanned( self ):
         
-        if self._banned_info is None: return False
+        if 'banned_info' not in self._info: return False
         else:
             
-            ( reason, created, expiry ) = self._banned_info
+            ( reason, created, expires ) = self._info[ 'banned_info' ]
             
-            if expiry is None: return True
-            else: return GetNow() > expiry
+            if expires is None: return True
+            else: return GetNow() > expires
             
+        
+    
+    def _IsBytesExceeded( self ):
+        
+        account_type = self._info[ 'account_type' ]
+        
+        max_num_bytes = account_type.GetMaxBytes()
+        
+        used_bytes = self._info[ 'used_bytes' ]
+        
+        return max_num_bytes is not None and used_bytes > max_num_bytes
         
     
     def _IsExpired( self ):
         
-        if self._expiry is None: return False
-        else: return GetNow() > self._expiry
+        if self._info[ 'expires' ] is None: return False
+        else: return GetNow() > self._info[ 'expires' ]
+        
+    
+    def _IsRequestsExceeded( self ):
+        
+        account_type = self._info[ 'account_type' ]
+        
+        max_num_requests = account_type.GetMaxRequests()
+        
+        used_requests = self._info[ 'used_requests' ]
+        
+        return max_num_requests is not None and used_requests > max_num_requests
         
     
     def CheckPermission( self, permission ):
@@ -1327,46 +1354,39 @@ class Account( HydrusYAMLBase ):
         
         if self._IsExpired(): raise HydrusExceptions.PermissionException( 'This account is expired.' )
         
-        ( max_num_bytes, max_num_requests ) = self._account_type.GetMaxMonthlyData()
+        if self._IsBytesExceeded(): raise HydrusExceptions.PermissionException( 'You have hit your data transfer limit, and cannot make any more requests for the month.' )
         
-        ( used_bytes, used_requests ) = self._used_data
+        if self._IsRequestsExceeded(): raise HydrusExceptions.PermissionException( 'You have hit your requests limit, and cannot make any more requests for the month.' )
         
-        if max_num_bytes is not None and used_bytes > max_num_bytes: raise HydrusExceptions.PermissionException( 'You have hit your data transfer limit (' + ConvertIntToBytes( max_num_bytes ) + '), and cannot make any more requests for the month.' )
-        
-        if max_num_requests is not None and used_requests > max_num_requests: raise HydrusExceptions.PermissionException( 'You have hit your requests limit (' + ConvertIntToPrettyString( max_num_requests ) + '), and cannot make any more requests for the month.' )
-        
-        if not self._account_type.HasPermission( permission ): raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
+        if not self._info[ 'account_type' ].HasPermission( permission ): raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
         
     
-    def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._created ) + os.linesep + self._account_type.ConvertToString( self._used_data ) + os.linesep + 'which '+ ConvertTimestampToPrettyExpiry( self._expiry )
+    def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._info[ 'created' ] ) + os.linesep + self._info[ 'account_type' ].ConvertToString() + os.linesep + 'which '+ ConvertTimestampToPrettyExpires( self._info[ 'expires' ] )
     
-    def GetAccountIdentifier( self ): return AccountIdentifier( account_id = self._account_id )
+    def GetAccountKey( self ): return self._info[ 'account_key' ]
     
-    def GetAccountType( self ): return self._account_type
+    def GetAccountType( self ): return self._info[ 'account_type' ]
     
-    def GetBannedInfo( self ): return self._banned_info
+    def GetCreated( self ): return self._info[ 'created' ]
     
-    def GetCreated( self ): return self._created
+    def GetExpires( self ): return self._info[ 'expires' ]
     
-    def GetExpiry( self ): return self._expiry
-    
-    def GetExpiryString( self ):
+    def GetExpiresString( self ):
         
         if self._IsBanned():
             
-            ( reason, created, expiry ) = self._banned_info
+            ( reason, created, expires ) = self._info[ 'banned_info' ]
             
-            return 'banned ' + ConvertTimestampToPrettyAge( created ) + ', ' + ConvertTimestampToPrettyExpiry( expiry ) + ' because: ' + reason
+            return 'banned ' + ConvertTimestampToPrettyAge( created ) + ', ' + ConvertTimestampToPrettyExpires( expires ) + ' because: ' + reason
             
-        else: return ConvertTimestampToPrettyAge( self._created ) + ' and ' + ConvertTimestampToPrettyExpiry( self._expiry )
+        else: return ConvertTimestampToPrettyAge( self._info[ 'created' ] ) + ' and ' + ConvertTimestampToPrettyExpires( self._info[ 'expires' ] )
         
-    
-    def GetAccountId( self ): return self._account_id
     
     def GetUsedBytesString( self ):
         
-        ( max_num_bytes, max_num_requests ) = self._account_type.GetMaxMonthlyData()
-        ( used_bytes, used_requests ) = self._used_data
+        max_num_bytes = self._info[ 'account_type' ].GetMaxBytes()
+        
+        used_bytes = self._info[ 'used_bytes' ]
         
         if max_num_bytes is None: return ConvertIntToBytes( used_bytes ) + ' used this month'
         else: return ConvertIntToBytes( used_bytes ) + '/' + ConvertIntToBytes( max_num_bytes ) + ' used this month'
@@ -1374,16 +1394,24 @@ class Account( HydrusYAMLBase ):
     
     def GetUsedRequestsString( self ):
         
-        ( max_num_bytes, max_num_requests ) = self._account_type.GetMaxMonthlyData()
-        ( used_bytes, used_requests ) = self._used_data
+        max_num_requests = self._info[ 'account_type' ].GetMaxRequests()
+        
+        used_requests = self._info[ 'used_requests' ]
         
         if max_num_requests is None: return ConvertIntToPrettyString( used_requests ) + ' requests used this month'
         else: return ConvertIntToPrettyString( used_requests ) + '/' + ConvertIntToPrettyString( max_num_requests ) + ' requests used this month'
         
     
-    def GetUsedData( self ): return self._used_data
+    def GetUsedBytes( self ): return self._info[ 'used_bytes' ]
     
-    def HasNoPermissions( self ): return self._account_type.HasNoPermissions()
+    def GetUsedRequests( self ): return self._info[ 'used_bytes' ]
+    
+    def HasAccountKey( self ):
+        
+        if 'account_key' in self._info and self._info[ 'account_key' ] is not None: return True
+        
+        return False
+        
     
     def HasPermission( self, permission ):
         
@@ -1391,40 +1419,34 @@ class Account( HydrusYAMLBase ):
         
         if self._IsExpired(): return False
         
-        ( max_num_bytes, max_num_requests ) = self._account_type.GetMaxMonthlyData()
+        if self._IsBytesExceeded(): return False
         
-        ( used_bytes, used_requests ) = self._used_data
+        if self._IsRequestsExceeded(): return False
         
-        if max_num_bytes is not None and used_bytes >= max_num_bytes: return False
-        if max_num_requests is not None and used_requests >= max_num_requests: return False
-        
-        return self._account_type.HasPermission( permission )
+        return self._info[ 'account_type' ].HasPermission( permission )
         
     
     def IsAdmin( self ): return True in [ self.HasPermissions( permission ) for permission in ADMIN_PERMISSIONS ]
     
     def IsBanned( self ): return self._IsBanned()
     
-    def IsStale( self ): return self._object_instantiation_timestamp + UPDATE_DURATION * 5 < GetNow()
+    def IsStale( self ): return self._info[ 'fresh_timestamp' ] + UPDATE_DURATION * 5 < GetNow()
     
-    def MakeFresh( self ): self._object_instantiation_timestamp = GetNow()
+    def IsUnknownAccount( self ): return self._info[ 'account_type' ].IsUnknownAccountType()
     
-    def MakeStale( self ): self._object_instantiation_timestamp = 0
+    def MakeFresh( self ): self._info[ 'fresh_timestamp' ] = GetNow()
+    
+    def MakeStale( self ): self._info[ 'fresh_timestamp' ] = 0
     
     def RequestMade( self, num_bytes ):
         
-        ( used_bytes, used_requests ) = self._used_data
-        
-        used_bytes += num_bytes
-        used_requests += 1
-        
-        self._used_data = ( used_bytes, used_requests )
+        self._info[ 'used_bytes' ] += num_bytes
+        self._info[ 'used_requests' ] += 1
         
     
 class AccountIdentifier( HydrusYAMLBase ):
     
-    TYPE_ACCOUNT_ID = 0
-    TYPE_ACCESS_KEY = 1
+    TYPE_ACCOUNT_KEY = 1
     TYPE_HASH = 2
     TYPE_MAPPING = 3
     TYPE_SIBLING = 4
@@ -1432,19 +1454,14 @@ class AccountIdentifier( HydrusYAMLBase ):
     
     yaml_tag = u'!AccountIdentifier'
     
-    def __init__( self, access_key = None, hash = None, tag = None, account_id = None ):
+    def __init__( self, account_key = None, hash = None, tag = None ):
         
         HydrusYAMLBase.__init__( self )
         
-        if account_id is not None:
+        if account_key is not None:
             
-            self._type = self.TYPE_ACCOUNT_ID
-            self._data = account_id
-            
-        elif access_key is not None:
-            
-            self._type = self.TYPE_ACCESS_KEY
-            self._data = access_key
+            self._type = self.TYPE_ACCOUNT_KEY
+            self._data = account_key
             
         elif hash is not None:
             
@@ -1471,9 +1488,7 @@ class AccountIdentifier( HydrusYAMLBase ):
     
     def GetData( self ): return self._data
     
-    def HasAccessKey( self ): return self._type == self.TYPE_ACCESS_KEY
-    
-    def HasAccountId( self ): return self._type == self.TYPE_ACCOUNT_ID
+    def HasAccountKey( self ): return self._type == self.TYPE_ACCOUNT_KEY
     
     def HasHash( self ): return self._type == self.TYPE_HASH
     
@@ -1498,38 +1513,57 @@ class AccountType( HydrusYAMLBase ):
     
     def GetTitle( self ): return self._title
     
-    def GetMaxMonthlyData( self ): return self._max_monthly_data
+    def GetMaxBytes( self ):
+        
+        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
+        
+        return max_num_bytes
+        
     
-    def GetMaxMonthlyDataString( self ):
+    def GetMaxRequests( self ):
+        
+        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
+        
+        return max_num_requests
+        
+    
+    def GetMaxBytesString( self ):
         
         ( max_num_bytes, max_num_requests ) = self._max_monthly_data
         
         if max_num_bytes is None: max_num_bytes_string = 'No limit'
         else: max_num_bytes_string = ConvertIntToBytes( max_num_bytes )
         
+        return max_num_bytes_string
+        
+    
+    def GetMaxRequestsString( self ):
+        
+        ( max_num_bytes, max_num_requests ) = self._max_monthly_data
+        
         if max_num_requests is None: max_num_requests_string = 'No limit'
         else: max_num_requests_string = ConvertIntToPrettyString( max_num_requests )
         
-        return ( max_num_bytes_string, max_num_requests_string )
+        return max_num_requests_string
         
     
-    def ConvertToString( self, data_usage = None ):
+    def ConvertToString( self ):
         
         result_string = self._title + ' with '
         
-        if len( self._permissions ) == 0: result_string += 'no permissions'
+        if self._permissions == [ UNKNOWN_PERMISSION ]: result_string += 'no permissions'
         else: result_string += ', '.join( [ permissions_string_lookup[ permission ] for permission in self._permissions ] ) + ' permissions'
         
         return result_string
         
     
-    def HasNoPermissions( self ): return len( self._permissions ) == 0
+    def IsUnknownAccountType( self ): return self._permissions == [ UNKNOWN_PERMISSION ]
     
     def HasPermission( self, permission ): return permission in self._permissions
     
-UNKNOWN_ACCOUNT_TYPE = AccountType( 'unknown account', [], ( None, None ) )
+UNKNOWN_ACCOUNT_TYPE = AccountType( 'unknown account', [ UNKNOWN_PERMISSION ], ( None, None ) )
 
-def GetUnknownAccount(): return Account( 0, UNKNOWN_ACCOUNT_TYPE, 0, None, ( 0, 0 ) )
+def GetUnknownAccount( account_key = None ): return Account( account_key, UNKNOWN_ACCOUNT_TYPE, 0, None, 0, 0 )
 
 class ClientServiceIdentifier( HydrusYAMLBase ):
     

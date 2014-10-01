@@ -64,8 +64,7 @@ def ConvertHydrusGETArgsToQuery( request_args ):
         
         data = subject_identifier.GetData()
         
-        if subject_identifier.HasAccessKey(): request_args[ 'subject_access_key' ] = data.encode( 'hex' )
-        elif subject_identifier.HasAccountId(): request_args[ 'subject_account_id' ] = data
+        if subject_identifier.HasAccountKey(): request_args[ 'subject_account_key' ] = data.encode( 'hex' )
         elif subject_identifier.HasHash(): request_args[ 'subject_hash' ] = data.encode( 'hex' )
         if subject_identifier.HasMapping():
             

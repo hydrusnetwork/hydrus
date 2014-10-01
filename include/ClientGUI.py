@@ -315,15 +315,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _AccountInfo( self, service_key ):
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account\'s access key.' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account\'s account key.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                subject_access_key = dlg.GetValue().decode( 'hex' )
+                subject_account_key = dlg.GetValue().decode( 'hex' )
                 
                 service = HC.app.GetManager( 'services' ).GetService( service_key )
                 
-                response = service.Request( HC.GET, 'account_info', { 'subject_access_key' : subject_access_key.encode( 'hex' ) } )
+                response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key.encode( 'hex' ) } )
                 
                 account_info = response[ 'account_info' ]
                 
@@ -1238,19 +1238,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         
         service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the access key for the account to be modified.' ) as dlg:
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                try: access_key = dlg.GetValue().decode( 'hex' )
+                try: account_key = dlg.GetValue().decode( 'hex' )
                 except:
                     
-                    wx.MessageBox( 'Could not parse that access key' )
+                    wx.MessageBox( 'Could not parse that account key' )
                     
                     return
                     
                 
-                subject_identifiers = ( HC.AccountIdentifier( access_key = access_key ), )
+                subject_identifiers = ( HC.AccountIdentifier( account_key = account_key ), )
                 
                 with ClientGUIDialogs.DialogModifyAccounts( self, service_key, subject_identifiers ) as dlg2: dlg2.ShowModal()
                 
@@ -2375,6 +2375,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     self._refresh = wx.Button( self, label = 'refresh account' )
                     self._refresh.Bind( wx.EVT_BUTTON, self.EventServiceRefreshAccount )
                     
+                    self._copy_account_key = wx.Button( self, label = 'copy account key' )
+                    self._copy_account_key.Bind( wx.EVT_BUTTON, self.EventCopyAccountKey )
+                    
                 
             
             def PopulateControls():
@@ -2478,6 +2481,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     if service_type in HC.RESTRICTED_SERVICES:
                         
                         repo_buttons_hbox.AddF( self._refresh, FLAGS_MIXED )
+                        repo_buttons_hbox.AddF( self._copy_account_key, FLAGS_MIXED )
                         
                     
                     vbox.AddF( repo_buttons_hbox, FLAGS_BUTTON_SIZERS )
@@ -2566,21 +2570,24 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
                 created = account.GetCreated()
-                expiry = account.GetExpiry()
+                expires = account.GetExpires()
                 
-                if expiry is None: self._age.Hide()
+                if expires is None: self._age.Hide()
                 else:
                     
                     self._age.Show()
                     
-                    self._age.SetRange( expiry - created )
-                    self._age.SetValue( min( now - created, expiry - created ) )
+                    self._age.SetRange( expires - created )
+                    self._age.SetValue( min( now - created, expires - created ) )
                     
                 
-                self._age_text.SetLabel( account.GetExpiryString() )
+                self._age_text.SetLabel( account.GetExpiresString() )
                 
-                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
-                ( used_bytes, used_requests ) = account.GetUsedData()
+                max_num_bytes = account_type.GetMaxBytes()
+                max_num_requests = account_type.GetMaxRequests()
+                
+                used_bytes = account.GetUsedBytes()
+                used_requests = account.GetUsedRequests()
                 
                 if max_num_bytes is None: self._bytes.Hide()
                 else:
@@ -2628,6 +2635,9 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                 
                 self._refresh.Enable()
+                
+                if account.HasAccountKey(): self._copy_account_key.Enable()
+                else: self._copy_account_key.Disable()
                 
             
         
@@ -2710,7 +2720,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     timeout = info[ 'timeout' ]
                     hashes = info[ 'hashes' ]
                     
-                    self._booru_shares.Append( ( name, text, HC.ConvertTimestampToPrettyExpiry( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
+                    self._booru_shares.Append( ( name, text, HC.ConvertTimestampToPrettyExpires( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
                     
                 
             
@@ -2782,6 +2792,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
                 
+            
+        
+        def EventCopyAccountKey( self, event ):
+            
+            account_key = self._service.GetInfo( 'account' ).GetAccountKey()
+            
+            account_key_hex = account_key.encode( 'hex' )
+            
+            HC.pubsub.pub( 'clipboard', 'text', account_key_hex )
             
         
         def EventCopyExternalShareURL( self, event ):

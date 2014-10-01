@@ -23,11 +23,11 @@ import wx
 
 class FileDB( object ):
     
-    def _AddFile( self, c, service_key, account, file_dict ):
+    def _AddFile( self, c, service_key, account_key, file_dict ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        account_id = account.GetAccountId()
+        account_id = self._GetAccountId( c, account_key )
         
         hash = file_dict[ 'hash' ]
         
@@ -226,7 +226,9 @@ class FileDB( object ):
         
         ( account_id, reason_id ) = result
         
-        petitioner_account_identifier = HC.AccountIdentifier( account_id = account_id )
+        account_key = self._GetAccountKeyFromAccountId( c, account_id )
+        
+        petitioner_account_identifier = HC.AccountIdentifier( account_key = account_key )
         
         reason = self._GetReason( c, reason_id )
         
@@ -778,7 +780,9 @@ class TagDB( object ):
             if status == HC.PENDING: action = HC.CONTENT_UPDATE_PENDING
             elif status == HC.PETITIONED: action = HC.CONTENT_UPDATE_PETITION
             
-            petitioner_account_identifier = HC.AccountIdentifier( account_id = account_id )
+            account_key = self._GetAccountKeyFromAccountId( c, account_id )
+            
+            petitioner_account_identifier = HC.AccountIdentifier( account_key = account_key )
             
             reason = self._GetReason( c, reason_id )
             
@@ -892,7 +896,7 @@ class RatingDB( object ):
     
 class ServiceDB( FileDB, MessageDB, TagDB ):
     
-    def _AccountTypeExists( self, c, service_id, title ): return c.execute( 'SELECT 1 FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
+    def _AccountTypeExists( self, c, service_id, title ): return c.execute( 'SELECT 1 FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone() is not None
     
     def _AddNews( self, c, service_key, news ):
         
@@ -903,37 +907,37 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.execute( 'INSERT INTO news ( service_id, news, timestamp ) VALUES ( ?, ?, ? );', ( service_id, news, now ) )
         
     
-    def _AddMessagingSession( self, c, service_key, session_key, account_key, identifier, name, expiry ):
+    def _AddMessagingSession( self, c, service_key, session_key, account_key, name, expires ):
         
         service_id = self._GetServiceId( c, service_key )
         
         account_id = self._GetAccountId( c, account_key )
         
-        c.execute( 'INSERT INTO sessions ( service_id, session_key, account_id, identifier, name, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), account_id, sqlite3.Binary( identifier ), name, expiry ) )
+        c.execute( 'INSERT INTO sessions ( service_id, session_key, account_id, identifier, name, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), account_id, sqlite3.Binary( account_key ), name, expires ) )
         
     
-    def _AddSession( self, c, session_key, service_key, account_key, expiry ):
+    def _AddSession( self, c, session_key, service_key, account_key, expires ):
         
         service_id = self._GetServiceId( c, service_key )
         
         account_id = self._GetAccountId( c, account_key )
         
-        c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expiry ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expiry ) )
+        c.execute( 'INSERT INTO sessions ( session_key, service_id, account_id, expiry ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( session_key ), service_id, account_id, expires ) )
         
     
-    def _AddToExpiry( self, c, service_id, account_ids, timespan ): c.execute( 'UPDATE account_map SET expires = expires + ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( timespan, service_id ) )
+    def _AddToExpires( self, c, account_ids, timespan ): c.execute( 'UPDATE accounts SET expires = expires + ? WHERE account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( timespan, ) )
     
-    def _Ban( self, c, service_id, action, admin_account_id, subject_account_ids, reason_id, expiry = None, lifetime = None ):
+    def _Ban( self, c, service_id, action, admin_account_id, subject_account_ids, reason_id, expires = None, lifetime = None ):
         
         splayed_subject_account_ids = HC.SplayListForDB( subject_account_ids )
         
         now = HC.GetNow()
         
-        if expiry is not None: pass
-        elif lifetime is not None: expiry = now + lifetime
-        else: expiry = None
+        if expires is not None: pass
+        elif lifetime is not None: expires = now + lifetime
+        else: expires = None
         
-        c.executemany( 'INSERT OR IGNORE INTO bans ( service_id, account_id, admin_account_id, reason_id, created, expires ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, subject_account_id, admin_account_id, reason_id, now, expiry ) for subject_account_id in subject_account_ids ] )
+        c.executemany( 'INSERT OR IGNORE INTO bans ( service_id, account_id, admin_account_id, reason_id, created, expires ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, subject_account_id, admin_account_id, reason_id, now, expires ) for subject_account_id in subject_account_ids ] )
         
         c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND account_id IN ' + splayed_subject_account_ids + ' AND status = ?;', ( service_id, HC.PETITIONED ) )
         
@@ -958,12 +962,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _ChangeAccountType( self, c, service_id, account_ids, account_type_id ):
-        
-        splayed_account_ids = HC.SplayListForDB( account_ids )
-        
-        c.execute( 'UPDATE account_map SET account_type_id = ? WHERE service_id = ? AND account_id IN ' + splayed_account_ids + ';', ( account_type_id, service_id ) )
-        
+    def _ChangeAccountType( self, c, account_ids, account_type_id ): c.execute( 'UPDATE accounts SET account_type_id = ? WHERE account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( account_type_id, ) )
     
     def _CheckDataUsage( self, c ):
         
@@ -977,7 +976,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             c.execute( 'UPDATE version SET year = ?, month = ?;', ( current_year, current_month ) )
             
-            c.execute( 'UPDATE account_map SET used_bytes = ?, used_requests = ?;', ( 0, 0 ) )
+            c.execute( 'UPDATE accounts SET used_bytes = ?, used_requests = ?;', ( 0, 0 ) )
             
             self.pub_after_commit( 'update_all_session_accounts' )
             
@@ -997,7 +996,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             if service_type != HC.SERVER_ADMIN:
                 
-                ( total_used_bytes, ) = c.execute( 'SELECT SUM( used_bytes ) FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                ( total_used_bytes, ) = c.execute( 'SELECT SUM( used_bytes ) FROM accounts WHERE service_id = ?;', ( service_id, ) ).fetchone()
                 
                 if total_used_bytes is None: total_used_bytes = 0
                 
@@ -1095,18 +1094,11 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         for message_key in deletees: os.remove( SC.GetPath( 'message', message_key ) )
         
     
-    def _FlushRequestsMade( self, c, all_services_requests ):
+    def _FlushRequestsMade( self, c, all_requests ):
         
-        all_services_request_dict = HC.BuildKeyToListDict( [ ( service_key, ( account, num_bytes ) ) for ( service_key, account, num_bytes ) in all_services_requests ] )
+        requests_dict = HC.BuildKeyToListDict( all_requests )
         
-        for ( service_key, requests ) in all_services_request_dict.items():
-            
-            service_id = self._GetServiceId( c, service_key )
-            
-            requests_dict = HC.BuildKeyToListDict( requests )
-            
-            c.executemany( 'UPDATE account_map SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE service_id = ? AND account_id = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), service_id, account.GetAccountId() ) for ( account, num_bytes_list ) in requests_dict.items() ] )
-            
+        c.executemany( 'UPDATE account SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE account_key = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), sqlite3.Binary( account_key ) ) for ( account_key, num_bytes_list ) in requests_dict.items() ] )
         
     
     def _GenerateRegistrationKeys( self, c, service_key, num, title, lifetime = None ):
@@ -1117,12 +1109,12 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         now = HC.GetNow()
         
-        if lifetime is not None: expiry = now + lifetime
-        else: expiry = None
+        if lifetime is not None: expires = now + lifetime
+        else: expires = None
         
         keys = [ ( os.urandom( HC.HYDRUS_KEY_LENGTH ), os.urandom( HC.HYDRUS_KEY_LENGTH ), os.urandom( HC.HYDRUS_KEY_LENGTH ) ) for i in range( num ) ]
         
-        c.executemany( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, account_key, access_key, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), service_id, account_type_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ), expiry ) for ( registration_key, account_key, access_key ) in keys ] )
+        c.executemany( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, account_key, access_key, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), service_id, account_type_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ), expires ) for ( registration_key, account_key, access_key ) in keys ] )
         
         return [ registration_key for ( registration_key, account_key, access_key ) in keys ]
         
@@ -1135,17 +1127,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return access_key
         
     
-    def _GetAccount( self, c, service_key, account_key ):
+    def _GetAccount( self, c, account_key ):
         
-        service_id = self._GetServiceId( c, service_key )
-        
-        ( account_id, account_type, created, expiry, used_bytes, used_requests ) = c.execute( 'SELECT account_id, account_type, created, expires, used_bytes, used_requests FROM account_types, ( accounts, account_map USING ( account_id ) ) USING ( account_type_id ) WHERE service_id = ? AND account_key = ?;', ( service_id, sqlite3.Binary( account_key ) ) ).fetchone()
-        
-        used_data = ( used_bytes, used_requests )
+        ( account_id, service_id, account_key, account_type, created, expires, used_bytes, used_requests ) = c.execute( 'SELECT account_id, service_id, account_key, account_type, created, expires, used_bytes, used_requests FROM accounts, account_types USING ( service_id, account_type_id ) WHERE account_key = ?;', ( sqlite3.Binary( account_key ), ) ).fetchone()
         
         banned_info = c.execute( 'SELECT reason, created, expires FROM bans, reasons USING ( reason_id ) WHERE service_id = ? AND account_id = ?;', ( service_id, account_id ) ).fetchone()
         
-        return HC.Account( account_id, account_type, created, expiry, used_data, banned_info = banned_info )
+        return HC.Account( account_key, account_type, created, expires, used_bytes, used_requests, banned_info = banned_info )
         
     
     def _GetAccountFileInfo( self, c, service_id, account_id ):
@@ -1174,43 +1162,55 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_info
         
     
-    def _GetAccountKey( self, c, service_key, account_identifier ):
+    def _GetAccountKeyFromAccessKey( self, c, service_key, access_key ):
         
-        if account_identifier.HasAccessKey():
+        try: ( account_key, ) = c.execute( 'SELECT account_key FROM accounts WHERE hashed_access_key = ?;', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
+        except:
             
-            access_key = account_identifier.GetData()
+            # we do not delete the registration_key (and hence the raw unhashed access_key)
+            # until the first attempt to create a session to make sure the user
+            # has the access_key saved
             
-            try: ( account_key, ) = c.execute( 'SELECT account_key FROM accounts WHERE access_key = ?;', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
-            except:
-                
-                # we do not delete the registration_key (and hence the raw unhashed access_key)
-                # until the first attempt to create a session to make sure the user
-                # has the access_key saved
-                
-                try: ( account_type_id, account_key, expiry ) = c.execute( 'SELECT account_type_id, account_key, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
-                except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
-                
-                c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
-                
-                #
-                
-                c.execute( 'INSERT INTO accounts ( account_key, access_key ) VALUES ( ?, ? );', ( sqlite3.Binary( account_key ), sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) )
-                
-                account_id = c.lastrowid
-                
-                now = HC.GetNow()
-                
-                service_id = self._GetServiceId( c, service_key )
-                
-                c.execute( 'INSERT INTO account_map ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, account_id, account_type_id, now, expiry, 0, 0 ) )
-                
+            try: ( account_type_id, account_key, expires ) = c.execute( 'SELECT account_type_id, account_key, expiry FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) ).fetchone()
+            except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
+            
+            c.execute( 'DELETE FROM registration_keys WHERE access_key = ?;', ( sqlite3.Binary( access_key ), ) )
+            
+            #
+            
+            now = HC.GetNow()
+            
+            service_id = self._GetServiceId( c, service_key )
+            
+            c.execute( 'INSERT INTO accounts ( service_id, account_key, hashed_access_key, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ? );', ( service_id, sqlite3.Binary( account_key ), sqlite3.Binary( hashlib.sha256( access_key ).digest() ), account_type_id, now, expires, 0, 0 ) )
+            
+        
+        return account_key
+        
+    
+    def _GetAccountKeyFromAccountId( self, c, account_id ):
+        
+        try: ( account_key, ) = c.execute( 'SELECT account_key FROM accounts WHERE account_id = ?;', ( account_id, ) ).fetchone()
+        except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account_id in its database.' )
+        
+        return account_key
+        
+    
+    def _GetAccountKeyFromIdentifier( self, c, service_key, account_identifier ):
+        
+        service_id = self._GetServiceId( c, service_key )
+        
+        if account_identifier.HasAccountKey():
+            
+            account_key = account_identifier.GetData()
+            
+            result = c.execute( 'SELECT 1 FROM accounts WHERE service_id = ? AND account_key = ?;', ( service_id, sqlite3.Binary( account_key ) ) ).fetchone()
+            
+            if result is None: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.')
             
         else:
             
-            if account_identifier.HasAccountId(): account_id = account_identifier.GetData()
-            elif account_identifier.HasHash():
-                
-                service_id = self._GetServiceId( c, service_key )
+            if account_identifier.HasHash():
                 
                 try:
                     
@@ -1227,8 +1227,6 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 except: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.' )
                 
             elif account_identifier.HasMapping():
-                
-                service_id = self._GetServiceId( c, service_key )
                 
                 try:
                     
@@ -1249,14 +1247,6 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return account_key
         
     
-    def _GetAccountIdentifier( self, c, access_key ):
-        
-        try: ( account_id, ) = c.execute( 'SELECT account_id FROM accounts WHERE access_key = ?;', ( sqlite3.Binary( hashlib.sha256( access_key ).digest() ), ) ).fetchone()
-        except: raise HydrusExceptions.ForbiddenException( 'The service could not find that account in its database.' )
-        
-        return HC.AccountIdentifier( account_id = account_id )
-        
-    
     def _GetAccountIdFromContactKey( self, c, service_id, contact_key ):
         
         try:
@@ -1272,38 +1262,20 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         result = c.execute( 'SELECT account_id FROM accounts WHERE account_key = ?;', ( sqlite3.Binary( account_key ), ) ).fetchone()
         
-        if result is None: raise HydrusExceptions.ForbiddenException( 'That account key was not found!' )
+        if result is None: raise HydrusExceptions.ForbiddenException( 'The service could not find that account key in its database.' )
         
         ( account_id, ) = result
         
         return account_id
         
     
-    def _GetAccountIds( self, c, access_keys ):
-        
-        account_ids = []
-        
-        if type( access_keys ) == set: access_keys = list( access_keys )
-        
-        for i in range( 0, len( access_keys ), 250 ): # there is a limit on the number of parameterised variables in sqlite, so only do a few at a time
-            
-            access_keys_subset = access_keys[ i : i + 250 ]
-            
-            account_ids.extend( [ account_id for ( account_id , ) in c.execute( 'SELECT account_id FROM accounts WHERE access_key IN (' + ','.join( '?' * len( access_keys_subset ) ) + ');', [ sqlite3.Binary( hashlib.sha256( access_key ).digest() ) for access_key in access_keys_subset ] ) ] )
-            
-        
-        return account_ids
-        
-    
-    def _GetAccountInfo( self, c, service_key, account_identifier ):
+    def _GetAccountInfo( self, c, service_key, account_key ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        account_key = self._GetAccountKey( c, service_key, account_identifier )
+        account = self._GetAccount( c, account_key )
         
-        account = self._GetAccount( c, service_key, account_key )
-        
-        account_id = account.GetAccountId()
+        account_id = self._GetAccountId( c, account_key )
         
         service_type = self._GetServiceType( c, service_id )
         
@@ -1342,7 +1314,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetAccountTypeId( self, c, service_id, title ):
         
-        result = c.execute( 'SELECT account_type_id FROM account_types, account_type_map USING ( account_type_id ) WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
+        result = c.execute( 'SELECT account_type_id FROM account_types WHERE service_id = ? AND title = ?;', ( service_id, title ) ).fetchone()
         
         if result is None: raise HydrusExceptions.NotFoundException( 'Could not find account title ' + HC.u( title ) + ' in db for this service.' )
         
@@ -1355,7 +1327,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        return [ account_type for ( account_type, ) in c.execute( 'SELECT account_type FROM account_type_map, account_types USING ( account_type_id ) WHERE service_id = ?;', ( service_id, ) ) ]
+        return [ account_type for ( account_type, ) in c.execute( 'SELECT account_type FROM account_types WHERE service_id = ?;', ( service_id, ) ) ]
         
     
     def _GetDirtyUpdates( self, c ):
@@ -1380,7 +1352,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         c.execute( 'DELETE FROM messaging_sessions WHERE ? > expiry;', ( now, ) )
         
-        existing_session_ids = HC.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expiry ) ) for ( service_id, identifier, name, expiry ) in c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
+        existing_session_ids = HC.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expires ) ) for ( service_id, identifier, name, expires ) in c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
         
         existing_sessions = {}
         
@@ -1390,15 +1362,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             processed_tuples = []
             
-            for ( account_id, identifier, name, expiry ) in tuples:
+            for ( account_id, identifier, name, expires ) in tuples:
                 
-                account_identifier = HC.AccountIdentifier( account_id = account_id )
+                account_key = self._GetAccountKeyFromAccountId( c, account_id )
                 
-                account_key = self._GetAccountKey( c, service_key, account_identifier )
+                account = self._GetAccount( c, account_key )
                 
-                account = self._GetAccount( c, service_key, account_key )
-                
-                processed_tuples.append( ( account, identifier, name, expiry ) )
+                processed_tuples.append( ( account, name, expires ) )
                 
             
             existing_sessions[ service_key ] = processed_tuples
@@ -1532,28 +1502,26 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         service_ids_to_service_keys = {}
         
-        service_id_and_account_ids_to_account_info = {}
+        account_ids_to_accounts = {}
         
-        for ( session_key, service_id, account_id, expiry ) in results:
+        for ( session_key, service_id, account_id, expires ) in results:
             
             if service_id not in service_ids_to_service_keys: service_ids_to_service_keys[ service_id ] = self._GetServiceKey( c, service_id )
             
             service_key = service_ids_to_service_keys[ service_id ]
             
-            if ( service_id, account_id ) not in service_id_and_account_ids_to_account_info:
+            if account_id not in account_ids_to_accounts:
                 
-                account_identifier = HC.AccountIdentifier( account_id = account_id )
+                account_key = self._GetAccountKeyFromAccountId( c, account_id )
                 
-                account_key = self._GetAccountKey( c, service_key, account_identifier )
+                account = self._GetAccount( c, account_key )
                 
-                account = self._GetAccount( c, service_key, account_key )
-                
-                service_id_and_account_ids_to_account_info[ ( service_id, account_id ) ] = ( account_key, account )
+                account_ids_to_accounts[ account_id ] = account
                 
             
-            ( account_key, account ) = service_id_and_account_ids_to_account_info[ ( service_id, account_id ) ]
+            account = account_ids_to_accounts[ account_id ]
             
-            sessions.append( ( session_key, service_key, account_key, account, expiry ) )
+            sessions.append( ( session_key, service_key, account, expires ) )
             
         
         return sessions
@@ -1565,7 +1533,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         stats = {}
         
-        ( stats[ 'num_accounts' ], ) = c.execute( 'SELECT COUNT( * ) FROM account_map WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        ( stats[ 'num_accounts' ], ) = c.execute( 'SELECT COUNT( * ) FROM accounts WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
         ( stats[ 'num_banned' ], ) = c.execute( 'SELECT COUNT( * ) FROM bans WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
@@ -1592,9 +1560,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _InitAdmin( self, c ):
         
-        if c.execute( 'SELECT 1 FROM account_map;' ).fetchone() is not None: raise HydrusExceptions.ForbiddenException( 'This server is already initialised!' )
-        
-        # this is a little odd, but better to keep it all the same workflow
+        if c.execute( 'SELECT 1 FROM accounts;' ).fetchone() is not None: raise HydrusExceptions.ForbiddenException( 'This server is already initialised!' )
         
         num = 1
         
@@ -1607,17 +1573,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return access_key
         
     
-    def _ModifyAccount( self, c, service_key, admin_account, action, subject_identifiers, kwargs ):
+    def _ModifyAccount( self, c, service_key, admin_account_key, action, subject_account_keys, kwargs ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        admin_account_id = admin_account.GetAccountId()
+        admin_account_id = self._GetAccountId( c, admin_account_key )
         
-        subject_account_keys = [ self._GetAccountKey( c, service_key, subject_identifier ) for subject_identifier in subject_identifiers ]
-        
-        subjects = [ self._GetAccount( c, service_key, subject_account_key ) for subject_account_key in subject_account_keys ]
-        
-        subject_account_ids = [ subject.GetAccountId() for subject in subjects ]
+        subject_account_ids = [ self._GetAccountId( c, subject_account_key ) for subject_account_key in subject_account_keys ]
         
         if action in ( HC.BAN, HC.SUPERBAN ):
             
@@ -1640,19 +1602,19 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 account_type_id = self._GetAccountTypeId( c, service_id, title )
                 
-                self._ChangeAccountType( c, service_id, subject_account_ids, account_type_id )
+                self._ChangeAccountType( c, subject_account_ids, account_type_id )
                 
-            elif action == HC.ADD_TO_EXPIRY:
+            elif action == HC.ADD_TO_EXPIRES:
                 
                 timespan = kwargs[ 'timespan' ]
                 
-                self._AddToExpiry( c, service_id, subject_account_ids, timespan )
+                self._AddToExpires( c, subject_account_ids, timespan )
                 
-            elif action == HC.SET_EXPIRY:
+            elif action == HC.SET_EXPIRES:
                 
-                expiry = kwargs[ 'expiry' ]
+                expires = kwargs[ 'expires' ]
                 
-                self._SetExpiry( c, service_id, subject_account_ids, expiry )
+                self._SetExpires( c, subject_account_ids, expires )
                 
             
         
@@ -1671,11 +1633,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 if self._AccountTypeExists( c, service_id, title ): raise HydrusExceptions.ForbiddenException( 'Already found account type ' + HC.u( title ) + ' in the db for this service, so could not add!' )
                 
-                c.execute( 'INSERT OR IGNORE INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( title, account_type ) )
-                
-                account_type_id = c.lastrowid
-                
-                c.execute( 'INSERT OR IGNORE INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, account_type_id ) )
+                c.execute( 'INSERT OR IGNORE INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( service_id, title, account_type ) )
                 
             elif action == HC.DELETE:
                 
@@ -1685,12 +1643,10 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 new_account_type_id = self._GetAccountTypeId( c, service_id, new_title )
                 
-                c.execute( 'UPDATE account_map SET account_type_id = ? WHERE service_id = ? AND account_type_id = ?;', ( new_account_type_id, service_id, account_type_id ) )
-                c.execute( 'UPDATE registration_keys SET account_type_id = ? WHERE service_id = ? AND account_type_id = ?;', ( new_account_type_id, service_id, account_type_id ) )
+                c.execute( 'UPDATE accounts SET account_type_id = ? WHERE account_type_id = ?;', ( new_account_type_id, account_type_id ) )
+                c.execute( 'UPDATE registration_keys SET account_type_id = ? WHERE account_type_id = ?;', ( new_account_type_id, account_type_id ) )
                 
                 c.execute( 'DELETE FROM account_types WHERE account_type_id = ?;', ( account_type_id, ) )
-                
-                c.execute( 'DELETE FROM account_type_map WHERE service_id = ? AND account_type_id = ?;', ( service_id, account_type_id ) )
                 
             elif action == HC.EDIT:
                 
@@ -1707,9 +1663,9 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
         
     
-    def _ModifyServices( self, c, account, edit_log ):
+    def _ModifyServices( self, c, account_key, edit_log ):
         
-        account_id = account.GetAccountId()
+        account_id = self._GetAccountId( c, account_key )
         
         service_keys_to_access_keys = {}
         
@@ -1727,11 +1683,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
                 
                 service_admin_account_type = HC.AccountType( 'service admin', [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ], ( None, None ) )
                 
-                c.execute( 'INSERT INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( 'service admin', service_admin_account_type ) )
-                
-                service_admin_account_type_id = c.lastrowid
-                
-                c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( service_id, service_admin_account_type_id ) )
+                c.execute( 'INSERT INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( service_id, 'service admin', service_admin_account_type ) )
                 
                 [ registration_key ] = self._GenerateRegistrationKeys( c, service_key, 1, 'service admin', None )
                 
@@ -1774,11 +1726,13 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         return service_keys_to_access_keys
         
     
-    def _ProcessUpdate( self, c, service_key, account, update ):
+    def _ProcessUpdate( self, c, service_key, account_key, update ):
         
         service_id = self._GetServiceId( c, service_key )
         
-        account_id = account.GetAccountId()
+        account_id = self._GetAccountId( c, account_key )
+        
+        account = self._GetAccount( c, account_key )
         
         service_type = self._GetServiceType( c, service_id )
         
@@ -1976,26 +1930,32 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         c.executemany( 'UPDATE account_scores SET score = score + ? WHERE service_id = ? AND account_id = ? and score_type = ?;', [ ( score, service_id, account_id, score_type ) for ( account_id, score ) in scores ] )
         
     
-    def _SetExpiry( self, c, service_id, account_ids, expiry ): c.execute( 'UPDATE account_map SET expires = ? WHERE service_id = ? AND account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expiry, service_id ) )
+    def _SetExpires( self, c, account_ids, expires ): c.execute( 'UPDATE accounts SET expires = ? WHERE account_id IN ' + HC.SplayListForDB( account_ids ) + ';', ( expires, ) )
     
     def _UnbanKey( self, c, service_id, account_id ): c.execute( 'DELETE FROM bans WHERE service_id = ? AND account_id = ?;', ( account_id, ) )
     
     def _VerifyAccessKey( self, c, service_key, access_key ):
         
-        try:
+        service_id = self._GetServiceId( c, service_key )
+        
+        result = c.execute( 'SELECT 1 FROM accounts WHERE service_id = ? AND hashed_access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
+        
+        if result is None:
             
-            service_id = self._GetServiceId( c, service_key )
+            result = c.execute( 'SELECT 1 FROM registration_keys WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( access_key ) ) ).fetchone()
             
-            ( account_key, ) = c.execute( 'SELECT account_key FROM accounts, account_map USING ( account_id ) WHERE service_id = ? AND access_key = ?;', ( service_id, sqlite3.Binary( hashlib.sha256( access_key ).digest() ) ) ).fetchone()
+            if result is None: return False
             
-            return True
-            
-        except: return False
+        
+        return True
         
     
 class DB( ServiceDB ):
     
     def __init__( self ):
+        
+        self._local_shutdown = False
+        self._loop_finished = False
         
         self._db_path = HC.DB_DIR + os.path.sep + 'server.db'
         
@@ -2087,18 +2047,16 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' )
             
-            c.execute( 'CREATE TABLE accounts ( account_id INTEGER PRIMARY KEY, account_key BLOB_BYTES, access_key BLOB_BYTES );' )
+            c.execute( 'CREATE TABLE accounts( account_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_key BLOB_BYTES, hashed_access_key BLOB_BYTES, account_type_id INTEGER, created INTEGER, expires INTEGER, used_bytes INTEGER, used_requests INTEGER );' )
             c.execute( 'CREATE UNIQUE INDEX accounts_account_key_index ON accounts ( account_key );' )
-            c.execute( 'CREATE UNIQUE INDEX accounts_access_key_index ON accounts ( access_key );' )
-            
-            c.execute( 'CREATE TABLE account_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, account_type_id INTEGER, created INTEGER, expires INTEGER, used_bytes INTEGER, used_requests INTEGER, PRIMARY KEY( service_id, account_id ) );' )
-            c.execute( 'CREATE INDEX account_map_service_id_account_type_id_index ON account_map ( service_id, account_type_id );' )
+            c.execute( 'CREATE UNIQUE INDEX accounts_hashed_access_key_index ON accounts ( hashed_access_key );' )
+            c.execute( 'CREATE UNIQUE INDEX accounts_service_id_account_id_index ON accounts ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX accounts_service_id_account_type_id_index ON accounts ( service_id, account_type_id );' )
             
             c.execute( 'CREATE TABLE account_scores ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, score_type INTEGER, score INTEGER, PRIMARY KEY( service_id, account_id, score_type ) );' )
             
-            c.execute( 'CREATE TABLE account_type_map ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, PRIMARY KEY ( service_id, account_type_id ) );' )
-            
-            c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, title TEXT, account_type TEXT_YAML );' )
+            c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, title TEXT, account_type TEXT_YAML );' )
+            c.execute( 'CREATE UNIQUE INDEX account_types_service_id_account_type_id_index ON account_types ( service_id, account_type_id );' )
             
             c.execute( 'CREATE TABLE bans ( service_id INTEGER REFERENCES services ON DELETE CASCADE, account_id INTEGER, admin_account_id INTEGER, reason_id INTEGER, created INTEGER, expires INTEGER, PRIMARY KEY( service_id, account_id ) );' )
             c.execute( 'CREATE INDEX bans_expires ON bans ( expires );' )
@@ -2195,11 +2153,7 @@ class DB( ServiceDB ):
             
             server_admin_account_type = HC.AccountType( 'server admin', [ HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ], ( None, None ) )
             
-            c.execute( 'INSERT INTO account_types ( title, account_type ) VALUES ( ?, ? );', ( 'server admin', server_admin_account_type ) )
-            
-            server_admin_account_type_id = c.lastrowid
-            
-            c.execute( 'INSERT INTO account_type_map ( service_id, account_type_id ) VALUES ( ?, ? );', ( server_admin_service_id, server_admin_account_type_id ) )
+            c.execute( 'INSERT INTO account_types ( service_id, title, account_type ) VALUES ( ?, ?, ? );', ( server_admin_service_id, 'server admin', server_admin_account_type ) )
             
             c.execute( 'COMMIT' )
             
@@ -2334,11 +2288,11 @@ class DB( ServiceDB ):
             c.execute( 'CREATE TABLE registration_keys ( registration_key BLOB_BYTES PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_type_id INTEGER, account_key BLOB_BYTES, access_key BLOB_BYTES, expiry INTEGER );' )
             c.execute( 'CREATE UNIQUE INDEX registration_keys_access_key_index ON registration_keys ( access_key );' )
             
-            for ( registration_key, service_id, account_type_id, access_key, expiry ) in old_r_k_info:
+            for ( registration_key, service_id, account_type_id, access_key, expires ) in old_r_k_info:
                 
                 account_key = os.urandom( 32 )
                 
-                c.execute( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, account_key, access_key, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( sqlite3.Binary( registration_key ), service_id, account_type_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ), expiry ) )
+                c.execute( 'INSERT INTO registration_keys ( registration_key, service_id, account_type_id, account_key, access_key, expiry ) VALUES ( ?, ?, ?, ?, ?, ? );', ( sqlite3.Binary( registration_key ), service_id, account_type_id, sqlite3.Binary( account_key ), sqlite3.Binary( access_key ), expires ) )
                 
             
             #
@@ -2350,10 +2304,116 @@ class DB( ServiceDB ):
             c.execute( 'BEGIN IMMEDIATE' )
             
         
+        if version == 131:
+            
+            accounts_info = c.execute( 'SELECT * FROM accounts;' ).fetchall()
+            account_map_info = c.execute( 'SELECT * FROM account_map;' ).fetchall()
+            account_types_info = c.execute( 'SELECT * FROM account_types;' ).fetchall()
+            account_type_map_info = c.execute( 'SELECT * FROM account_type_map;' ).fetchall()
+            
+            accounts_dict = { account_id : ( account_key, hashed_access_key ) for ( account_id, account_key, hashed_access_key ) in accounts_info }
+            account_types_dict = { account_type_id : ( title, account_type ) for ( account_type_id, title, account_type ) in account_types_info }
+            
+            #
+            
+            c.execute( 'DROP TABLE accounts;' )
+            c.execute( 'DROP TABLE account_map;' )
+            c.execute( 'DROP TABLE account_types;' )
+            c.execute( 'DROP TABLE account_type_map;' )
+            
+            c.execute( 'CREATE TABLE accounts( account_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, account_key BLOB_BYTES, hashed_access_key BLOB_BYTES, account_type_id INTEGER, created INTEGER, expires INTEGER, used_bytes INTEGER, used_requests INTEGER );' )
+            c.execute( 'CREATE UNIQUE INDEX accounts_account_key_index ON accounts ( account_key );' )
+            c.execute( 'CREATE UNIQUE INDEX accounts_hashed_access_key_index ON accounts ( hashed_access_key );' )
+            c.execute( 'CREATE UNIQUE INDEX accounts_service_id_account_id_index ON accounts ( service_id, account_id );' )
+            c.execute( 'CREATE INDEX accounts_service_id_account_type_id_index ON accounts ( service_id, account_type_id );' )
+            
+            c.execute( 'CREATE TABLE account_types ( account_type_id INTEGER PRIMARY KEY, service_id INTEGER REFERENCES services ON DELETE CASCADE, title TEXT, account_type TEXT_YAML );' )
+            c.execute( 'CREATE UNIQUE INDEX account_types_service_id_account_type_id_index ON account_types ( service_id, account_type_id );' )
+            
+            #
+            
+            account_log_text = ''
+            
+            existing_account_ids = set()
+            existing_account_type_ids = set()
+            
+            next_account_id = max( accounts_dict.keys() ) + 1
+            next_account_type_id = max( account_types_dict.keys() ) + 1
+            
+            account_tables = [ 'bans', 'contacts', 'file_petitions', 'mapping_petitions', 'mappings', 'messages', 'message_statuses', 'messaging_sessions', 'sessions', 'tag_parents', 'tag_siblings' ]
+            account_type_tables = [ 'accounts', 'registration_keys' ]
+            
+            service_dict = { service_id : options[ 'port' ] for ( service_id, options ) in c.execute( 'SELECT service_id, options FROM services;' ) }
+            
+            # have to do accounts first because account_types may update it!
+            
+            for ( service_id, account_id, account_type_id, created, expires, used_bytes, used_requests ) in account_map_info:
+                
+                ( account_key, hashed_access_key ) = accounts_dict[ account_id ]
+                
+                if account_id in existing_account_ids:
+                    
+                    account_key = os.urandom( 32 )
+                    access_key = os.urandom( 32 )
+                    
+                    account_log_text += 'The account at port ' + str( service_dict[ service_id ] ) + ' now uses access key: ' + access_key.encode( 'hex' ) + os.linesep
+                    
+                    hashed_access_key = hashlib.sha256( access_key ).digest()
+                    
+                    new_account_id = next_account_id
+                    
+                    next_account_id += 1
+                    
+                    for table_name in account_tables:
+                        
+                        c.execute( 'UPDATE ' + table_name + ' SET account_id = ? WHERE service_id = ? AND account_id = ?;', ( new_account_id, service_id, account_id ) )
+                        
+                    
+                    c.execute( 'UPDATE bans SET admin_account_id = ? WHERE service_id = ? AND admin_account_id = ?;', ( new_account_id, service_id, account_id ) )
+                    
+                    account_id = new_account_id
+                    
+                
+                existing_account_ids.add( account_id )
+                
+                c.execute( 'INSERT INTO accounts ( account_id, service_id, account_key, hashed_access_key, account_type_id, created, expires, used_bytes, used_requests ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', ( account_id, service_id, sqlite3.Binary( account_key ), sqlite3.Binary( hashed_access_key ), account_type_id, created, expires, used_bytes, used_requests ) )
+                
+            
+            if len( account_log_text ) > 0:
+                
+                with open( HC.BASE_DIR + os.path.sep + 'update to v132 new access keys.txt', 'wb' ) as f: f.write( account_log_text )
+                
+            
+            for ( service_id, account_type_id ) in account_type_map_info:
+                
+                ( title, account_type ) = account_types_dict[ account_type_id ]
+                
+                if account_type_id in existing_account_type_ids:
+                    
+                    new_account_type_id = next_account_type_id
+                    
+                    next_account_type_id += 1
+                    
+                    for table_name in account_type_tables:
+                        
+                        c.execute( 'UPDATE ' + table_name + ' SET account_type_id = ? WHERE service_id = ? AND account_type_id = ?;', ( new_account_type_id, service_id, account_type_id ) )
+                        
+                    
+                    account_type_id = new_account_type_id
+                    
+                
+                existing_account_type_ids.add( account_type_id )
+                
+                c.execute( 'INSERT INTO account_types ( account_type_id, service_id, title, account_type ) VALUES ( ?, ?, ?, ? );', ( account_type_id, service_id, title, account_type ) )
+                
+            
+        
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
     
     def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
+    
+    def LoopIsFinished( self ): return self._loop_finished
     
     def MainLoop( self ):
         
@@ -2364,7 +2424,8 @@ class DB( ServiceDB ):
                 if action == 'access_key': result = self._GetAccessKey( c, *args, **kwargs )
                 elif action == 'account': result = self._GetAccount( c, *args, **kwargs )
                 elif action == 'account_info': result = self._GetAccountInfo( c, *args, **kwargs )
-                elif action == 'account_key': result = self._GetAccountKey( c, *args, **kwargs )
+                elif action == 'account_key_from_access_key': result = self._GetAccountKeyFromAccessKey( c, *args, **kwargs )
+                elif action == 'account_key_from_identifier': result = self._GetAccountKeyFromIdentifier( c, *args, **kwargs )
                 elif action == 'account_types': result = self._GetAccountTypes( c, *args, **kwargs )
                 elif action == 'dirty_updates': result = self._GetDirtyUpdates( c, *args, **kwargs  )
                 elif action == 'init': result = self._InitAdmin( c, *args, **kwargs  )
@@ -2471,7 +2532,7 @@ class DB( ServiceDB ):
         
         ( db, c ) = self._GetDBCursor()
         
-        while not HC.shutdown or not self._jobs.empty():
+        while not ( ( self._local_shutdown or HC.shutdown ) and self._jobs.empty() ):
             
             try:
                 
@@ -2493,6 +2554,11 @@ class DB( ServiceDB ):
             except: pass # no jobs this second; let's see if we should shutdown
             
         
+        c.close()
+        db.close()
+        
+        self._loop_finished = True
+        
     
     def Read( self, action, priority, *args, **kwargs ):
         
@@ -2506,6 +2572,8 @@ class DB( ServiceDB ):
         
         return job.GetResult()
         
+    
+    def Shutdown( self ): self._local_shutdown = True
     
     def Write( self, action, priority, *args, **kwargs ):
         
@@ -2528,7 +2596,7 @@ def DAEMONClearBans(): HC.app.WriteDaemon( 'clear_bans' )
 
 def DAEMONDeleteOrphans(): HC.app.WriteDaemon( 'delete_orphans' )
 
-def DAEMONFlushRequestsMade( all_services_requests ): HC.app.WriteDaemon( 'flush_requests_made', all_services_requests )
+def DAEMONFlushRequestsMade( all_requests ): HC.app.WriteDaemon( 'flush_requests_made', all_requests )
 
 def DAEMONGenerateUpdates():
     

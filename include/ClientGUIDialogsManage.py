@@ -132,7 +132,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         if self._timeout == 0: label = 'not authenticated'
         elif self._timeout < HC.GetNow(): label = 'timed out'
-        else: label = 'authenticated - ' + HC.ConvertTimestampToPrettyExpiry( self._timeout )
+        else: label = 'authenticated - ' + HC.ConvertTimestampToPrettyExpires( self._timeout )
         
         self._status.SetLabel( label )
         
@@ -227,9 +227,11 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                 
                 permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
                 
-                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                max_num_bytes = account_type.GetMaxBytes()
+                max_num_requests = account_type.GetMaxRequests()
                 
-                ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
+                max_num_bytes_string = account_type.GetMaxBytesString()
+                max_num_requests_string = account_type.GetMaxRequestsString()
                 
                 self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
                 
@@ -290,9 +292,11 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                 
                 permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
                 
-                ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                max_num_bytes = account_type.GetMaxBytes()
+                max_num_requests = account_type.GetMaxRequests()
                 
-                ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
+                max_num_bytes_string = account_type.GetMaxBytesString()
+                max_num_requests_string = account_type.GetMaxRequestsString()
                 
                 if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
                 
@@ -360,9 +364,11 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
                     
                     permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
                     
-                    ( max_num_bytes, max_num_requests ) = account_type.GetMaxMonthlyData()
+                    max_num_bytes = account_type.GetMaxBytes()
+                    max_num_requests = account_type.GetMaxRequests()
                     
-                    ( max_num_bytes_string, max_num_requests_string ) = account_type.GetMaxMonthlyDataString()
+                    max_num_bytes_string = account_type.GetMaxBytesString()
+                    max_num_requests_string = account_type.GetMaxRequestsString()
                     
                     if old_title != title:
                         
@@ -6282,7 +6288,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 account = service.GetInfo( 'account' )
                 
-                if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
+                if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
                     
                     name = service.GetName()
                     service_key = service.GetServiceKey()
@@ -6751,7 +6757,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 account = service.GetInfo( 'account' )
                 
-                if account.HasPermission( HC.POST_DATA ) or account.HasNoPermissions():
+                if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
                     
                     name = service.GetName()
                     service_key = service.GetServiceKey()
@@ -7422,7 +7428,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 if self._i_am_local_tag_service: self._modify_mappers.Hide()
                 else:
                     
-                    if not ( self._account.HasPermission( HC.POST_DATA ) or self._account.HasNoPermissions() ): self._add_tag_box.Hide()
+                    if not ( self._account.HasPermission( HC.POST_DATA ) or self._account.IsUnknownAccount() ): self._add_tag_box.Hide()
                     if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
                     
                 
@@ -7626,7 +7632,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def SetTagBoxFocus( self ):
             
-            if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ) or self._account.HasNoPermissions(): self._add_tag_box.SetFocus()
+            if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ) or self._account.IsUnknownAccount(): self._add_tag_box.SetFocus()
             
         
     

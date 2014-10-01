@@ -152,20 +152,19 @@ class HydrusResourceCommand( Resource ):
             
             value = values[0]
             
-            if name in ( 'begin', 'expiry', 'lifetime', 'num', 'subject_account_id', 'service_type', 'service_port', 'since', 'timespan' ):
+            if name in ( 'begin', 'expires', 'lifetime', 'num', 'service_type', 'service_port', 'since', 'timespan' ):
                 
                 try: hydrus_args[ name ] = int( value )
                 except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
                 
-            elif name in ( 'access_key', 'title', 'subject_access_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key', 'share_key' ):
+            elif name in ( 'access_key', 'title', 'subject_account_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key', 'share_key' ):
                 
                 try: hydrus_args[ name ] = value.decode( 'hex' )
                 except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
                 
             
         
-        if 'subject_account_id' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( account_id = hydrus_args[ 'subject_account_id' ] )
-        elif 'subject_access_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( access_key = hydrus_args[ 'subject_access_key' ] )
+        if 'subject_account_key' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( account_key = hydrus_args[ 'subject_account_key' ] )
         elif 'subject_hash' in hydrus_args:
             
             if 'subject_tag' in hydrus_args: hydrus_args[ 'subject_identifier' ] = HC.AccountIdentifier( tag = hydrus_args[ 'subject_tag' ], hash = hydrus_args[ 'subject_hash' ] )
@@ -596,7 +595,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
     <body>'''
         
         body += '''
-        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</div>'''
+        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
         
         if name != '': body += '''
         <h3>''' + name + '''</h3>'''
@@ -693,7 +692,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
     <body>'''
         
         body += '''
-        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpiry( timeout ) + '''.</div>'''
+        <div class="timeout">This share ''' + HC.ConvertTimestampToPrettyExpires( timeout ) + '''.</div>'''
         
         if name != '': body += '''
         <h3>''' + name + '''</h3>'''
@@ -827,11 +826,11 @@ class HydrusResourceCommandSessionKey( HydrusResourceCommand ):
         
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        ( session_key, expiry ) = session_manager.AddSession( self._service_key, access_key )
+        ( session_key, expires ) = session_manager.AddSession( self._service_key, access_key )
         
         now = HC.GetNow()
         
-        max_age = now - expiry
+        max_age = now - expires
         
         cookies = [ ( 'session_key', session_key.encode( 'hex' ), { 'max_age' : max_age, 'path' : '/' } ) ]
         
@@ -915,7 +914,7 @@ class HydrusResourceCommandRestricted( HydrusResourceCommand ):
                 
                 account.RequestMade( num_bytes )
                 
-                HC.pubsub.pub( 'request_made', ( self._service_key, account, num_bytes ) )
+                HC.pubsub.pub( 'request_made', ( account.GetAccountKey(), num_bytes ) )
                 
             
         
@@ -940,17 +939,21 @@ class HydrusResourceCommandRestrictedAccount( HydrusResourceCommandRestricted ):
         
         admin_account = request.hydrus_account
         
+        admin_account_key = admin_account.GetAccountKey()
+        
         action = request.hydrus_args[ 'action' ]
         
         subject_identifiers = request.hydrus_args[ 'subject_identifiers' ]
         
-        kwargs = request.hydrus_args # for things like expiry, title, and so on
+        subject_account_keys = { HC.app.Read( 'account_key_from_identifier', self._service_key, subject_identifier ) for subject_identifier in subject_identifiers }
         
-        HC.app.Write( 'account', self._service_key, admin_account, action, subject_identifiers, kwargs )
+        kwargs = request.hydrus_args # for things like expires, title, and so on
+        
+        HC.app.Write( 'account', self._service_key, admin_account_key, action, subject_account_keys, kwargs )
         
         session_manager = HC.app.GetManager( 'restricted_services_sessions' )
         
-        session_manager.RefreshAccounts( self._service_key, subject_identifiers )
+        session_manager.RefreshAccounts( self._service_key, subject_account_keys )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -965,7 +968,9 @@ class HydrusResourceCommandRestrictedAccountInfo( HydrusResourceCommandRestricte
         
         subject_identifier = request.hydrus_args[ 'subject_identifier' ]
         
-        account_info = HC.app.Read( 'account_info', self._service_key, subject_identifier )
+        subject_account_key = HC.app.Read( 'account_key_from_identifier', self._service_key, subject_identifier )
+        
+        account_info = HC.app.Read( 'account_info', self._service_key, subject_account_key )
         
         body = yaml.safe_dump( { 'account_info' : account_info } )
         
@@ -1123,11 +1128,13 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         account = request.hydrus_account
         
+        account_key = account.GetAccountKey()
+        
         file_dict = request.hydrus_args
         
         file_dict[ 'ip' ] = request.getClientIP()
         
-        HC.app.Write( 'file', self._service_key, account, file_dict )
+        HC.app.Write( 'file', self._service_key, account_key, file_dict )
         
         response_context = HC.ResponseContext( 200 )
         
@@ -1161,9 +1168,11 @@ class HydrusResourceCommandRestrictedServices( HydrusResourceCommandRestricted )
         
         account = request.hydrus_account
         
+        account_key = account.GetAccountKey()
+        
         edit_log = request.hydrus_args[ 'edit_log' ]
         
-        service_keys_to_access_keys = HC.app.Write( 'services', account, edit_log )
+        service_keys_to_access_keys = HC.app.Write( 'services', account_key, edit_log )
         
         body = yaml.safe_dump( { 'service_keys_to_access_keys' : service_keys_to_access_keys } )
         
@@ -1225,9 +1234,11 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         account = request.hydrus_account
         
+        account_key = account.GetAccountKey()
+        
         update = request.hydrus_args[ 'update' ]
         
-        HC.app.Write( 'update', self._service_key, account, update )
+        HC.app.Write( 'update', self._service_key, account_key, update )
         
         response_context = HC.ResponseContext( 200 )
         

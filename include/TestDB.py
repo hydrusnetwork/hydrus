@@ -5,6 +5,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import itertools
 import os
+import ServerDB
 import shutil
 import stat
 import TestConstants
@@ -1105,3 +1106,50 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( type( v ), int )
             
         
+
+class TestServerDB( unittest.TestCase ):
+    
+    def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
+    
+    @classmethod
+    def setUpClass( self ):
+        
+        self._old_db_dir = HC.DB_DIR
+        self._old_server_files_dir = HC.SERVER_FILES_DIR
+        self._old_server_thumbnails_dir = HC.SERVER_THUMBNAILS_DIR
+        
+        HC.DB_DIR = HC.TEMP_DIR + os.path.sep + os.urandom( 32 ).encode( 'hex' )
+        
+        HC.SERVER_FILES_DIR = HC.DB_DIR + os.path.sep + 'server_files'
+        HC.SERVER_THUMBNAILS_DIR = HC.DB_DIR + os.path.sep + 'server_thumbnails'
+        
+        if not os.path.exists( HC.TEMP_DIR ): os.mkdir( HC.TEMP_DIR )
+        if not os.path.exists( HC.DB_DIR ): os.mkdir( HC.DB_DIR )
+        
+        self._db = ServerDB.DB()
+        
+        threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
+        
+    
+    @classmethod
+    def tearDownClass( self ):
+        
+        self._db.Shutdown()
+        
+        while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+        
+        def make_temp_files_deletable( function_called, path, traceback_gumpf ):
+            
+            os.chmod( path, stat.S_IWRITE )
+            
+            function_called( path ) # try again
+            
+        
+        if os.path.exists( HC.DB_DIR ): shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
+        
+        HC.DB_DIR = self._old_db_dir
+        HC.SERVER_FILES_DIR = self._old_server_files_dir
+        HC.SERVER_THUMBNAILS_DIR = self._old_server_thumbnails_dir
+        
+    

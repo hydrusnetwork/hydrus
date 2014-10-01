@@ -37,13 +37,14 @@ class TestServer( unittest.TestCase ):
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
-        account_id = 1
+        account_key = os.urandom( 32 )
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
-        expiry = None
-        used_data = ( 0, 0 )
+        expires = None
+        used_bytes = 0
+        used_requests = 0
         
-        self._account = HC.Account( account_id, account_type, created, expiry, used_data )
+        self._account = HC.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
         self._access_key = os.urandom( 32 )
         self._file_hash = os.urandom( 32 )
@@ -384,7 +385,7 @@ class TestServer( unittest.TestCase ):
         
         HC.app.SetRead( 'service', service )
         
-        HC.app.SetRead( 'account_key', os.urandom( 32 ) )
+        HC.app.SetRead( 'account_key_from_access_key', os.urandom( 32 ) )
         HC.app.SetRead( 'account', self._account )
         
         # account
@@ -398,12 +399,9 @@ class TestServer( unittest.TestCase ):
         account_info = { 'message' : 'hello' }
         
         HC.app.SetRead( 'account_info', account_info )
+        HC.app.SetRead( 'account_key_from_identifier', os.urandom( 32 ) )
         
-        response = service.Request( HC.GET, 'account_info', { 'subject_account_id' : 1 } )
-        
-        self.assertEqual( response[ 'account_info' ], account_info )
-        
-        response = service.Request( HC.GET, 'account_info', { 'subject_access_key' : os.urandom( 32 ).encode( 'hex' ) } )
+        response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : os.urandom( 32 ).encode( 'hex' ) } )
         
         self.assertEqual( response[ 'account_info' ], account_info )
         
@@ -643,15 +641,16 @@ class TestAMP( unittest.TestCase ):
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
-        account_id = 1
+        account_key = os.urandom( 32 )
         account_type = HC.AccountType( 'account', permissions, ( None, None ) )
         created = HC.GetNow() - 100000
-        expiry = None
-        used_data = ( 0, 0 )
+        expires = None
+        used_bytes = 0
+        used_requests = 0
         
-        account = HC.Account( account_id, account_type, created, expiry, used_data )
+        account = HC.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
-        HC.app.SetRead( 'account_key', os.urandom( 32 ) )
+        HC.app.SetRead( 'account_key_from_access_key', os.urandom( 32 ) )
         HC.app.SetRead( 'account', account )
         
         deferred = protocol.callRemote( HydrusServerAMP.IMSessionKey, access_key = access_key, name = name )

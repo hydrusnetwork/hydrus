@@ -2535,7 +2535,15 @@ class Service( HC.HydrusYAMLBase ):
             
             if isinstance( e, HydrusExceptions.PermissionException ):
                 
-                HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HC.GetUnknownAccount() ) ] } )
+                if 'account' in self._info:
+                    
+                    account_key = self._info[ 'account' ].GetAccountKey()
+                    
+                    unknown_account = HC.GetUnknownAccount( account_key )
+                    
+                else: unknown_account = HC.GetUnknownAccount()
+                
+                HC.app.Write( 'service_updates', { self._service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, unknown_account ) ] } )
                 
             
             raise
