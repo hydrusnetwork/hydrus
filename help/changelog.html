@@ -8,6 +8,20 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 133</h3></li>
+				<ul>
+					<li>reworked the add file process to correct file repository file counts</li>
+					<li>made add file process to calculate inbox and local thumbnail count more efficiently</li>
+					<li>fixed a critical bug in server db creation that was stopping file repository service from working</li>
+					<li>added go/exit fullscreen options to fullscreen right click menu as alternative for default shortcut 'f'</li>
+					<li>improved fullscreen position, size, maximised, and borderless state memory</li>
+					<li>removed old 'fullscreen_borderless' option in local options</li>
+					<li>thread checker now supports 8chan urls</li>
+					<li>thread checker now has 'number of checks still to do' spin control so you have more options to fire and forget</li>
+					<li>improved how the thread checker constructs and passes url information around</li>
+					<li>improved some thread checker timing logic which _might_ have been causing problems</li>
+					<li>improved some thread checker error reporting</li>
+				</ul>
 				<li><h3>version 132</h3></li>
 				<ul>
 					<li>merged two complicated serverside account tables into two simpler tables</li>
@@ -26,7 +40,7 @@
 					<li>added 'copy account key' button to review services, which will now be the thing for users to use if they need an admin to modify their account</li>
 					<li>fixed serverside credential verification for non-instantiated (still have a registration key) access keys</li>
 					<li>added a bit of explaining text to the 'waiting' autocomplete state</li>
-					<li>fixed a typo when deleting files from a file repo</li>
+					<li>fixed a typo that caused errors when deleting files from a file repo</li>
 				</ul>
 				<li><h3>version 131</h3></li>
 				<ul>
