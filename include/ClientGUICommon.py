@@ -1332,29 +1332,25 @@ class FrameThatResizes( Frame ):
         
         Frame.__init__( self, *args, **kwargs )
         
+        self._InitialiseSizeAndPosition()
+        
+        self.Bind( wx.EVT_SIZE, self.EventSpecialResize )
+        self.Bind( wx.EVT_MOVE, self.EventSpecialMove )
+        
+    
+    def _InitialiseSizeAndPosition( self ):
+        
         client_size = HC.options[ 'client_size' ]
         
         self.SetInitialSize( client_size[ self._resize_option_prefix + 'restored_size' ] )
         
         self.SetMinSize( ( 480, 360 ) )
         
-        self._TryToSetPosition()
-        
-        if client_size[ self._resize_option_prefix + 'maximised' ]: self.Maximize()
-        
-        self.Bind( wx.EVT_SIZE, self.EventSpecialResize )
-        self.Bind( wx.EVT_MOVE_END, self.EventSpecialMoveEnd )
-        
-    
-    def _TryToSetPosition( self ):
-        
-        client_size = HC.options[ 'client_size' ]
-        
         position = client_size[ self._resize_option_prefix + 'restored_position' ]
         
         display_index = wx.Display.GetFromPoint( position )
         
-        if display_index == wx.NOT_FOUND: client_size[ self._resize_option_prefix + 'restored_position' ] = [ 20, 20 ]
+        if display_index == wx.NOT_FOUND: client_size[ self._resize_option_prefix + 'restored_position' ] = ( 20, 20 )
         else:
             
             display = wx.Display( display_index )
@@ -1366,46 +1362,48 @@ class FrameThatResizes( Frame ):
             x_bad = p_x < geometry.x or p_x > geometry.x + geometry.width
             y_bad = p_y < geometry.y or p_y > geometry.y + geometry.height
             
-            if x_bad or y_bad: client_size[ self._resize_option_prefix + 'restored_position' ] = [ 20, 20 ]
+            if x_bad or y_bad: client_size[ self._resize_option_prefix + 'restored_position' ] = ( 20, 20 )
             
         
         self.SetPosition( client_size[ self._resize_option_prefix + 'restored_position' ] )
         
+        if client_size[ self._resize_option_prefix + 'maximised' ]: self.Maximize()
+        
+        if client_size[ self._resize_option_prefix + 'fullscreen' ]: wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
+        
     
-    def EventSpecialMoveEnd( self, event ):
+    def _RecordSizeAndPosition( self ):
         
         client_size = HC.options[ 'client_size' ]
         
-        client_size[ self._resize_option_prefix + 'restored_position' ] = list( self.GetPosition() )
+        client_size[ self._resize_option_prefix + 'maximised' ] = self.IsMaximized()
+        client_size[ self._resize_option_prefix + 'fullscreen' ] = self.IsFullScreen()
+        
+        if not ( self.IsMaximized() or self.IsFullScreen() ):
+            
+            # when dragging window up to be maximised, reported position is sometimes a bit dodgy
+            
+            display_index = wx.Display.GetFromPoint( self.GetPosition() )
+            
+            if display_index != wx.NOT_FOUND:
+                
+                client_size[ self._resize_option_prefix + 'restored_size' ] = tuple( self.GetSize() )
+                
+                client_size[ self._resize_option_prefix + 'restored_position' ] = tuple( self.GetPosition() )
+                
+            
+        
+    
+    def EventSpecialMove( self, event ):
+        
+        self._RecordSizeAndPosition()
         
         event.Skip()
         
     
     def EventSpecialResize( self, event ):
         
-        client_size = HC.options[ 'client_size' ]
-        
-        if self.IsMaximized() or self.IsFullScreen():
-            
-            client_size[ self._resize_option_prefix + 'maximised' ] = True
-            
-        else:
-            
-            if client_size[ self._resize_option_prefix + 'maximised' ]: # we have just restored, so set size
-                
-                self.SetSize( client_size[ self._resize_option_prefix + 'restored_size' ] )
-                
-                self._TryToSetPosition()
-                
-            else: # we have resized manually, so set new size
-                
-                client_size[ self._resize_option_prefix + 'restored_size' ] = list( self.GetSize() )
-                
-                client_size[ self._resize_option_prefix + 'restored_position' ] = list( self.GetPosition() )
-                
-            
-            client_size[ self._resize_option_prefix + 'maximised' ] = False
-            
+        self._RecordSizeAndPosition()
         
         event.Skip()
         

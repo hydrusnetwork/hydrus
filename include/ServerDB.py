@@ -2029,11 +2029,14 @@ class DB( ServiceDB ):
             
             hex_chars = '0123456789abcdef'
             
-            for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+            for dir in dirs:
                 
-                new_dir = dir + os.path.sep + one + two
-                
-                if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                    
+                    new_dir = dir + os.path.sep + one + two
+                    
+                    if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                    
                 
             
             ( db, c ) = self._GetDBCursor()
@@ -2405,6 +2408,23 @@ class DB( ServiceDB ):
                 existing_account_type_ids.add( account_type_id )
                 
                 c.execute( 'INSERT INTO account_types ( account_type_id, service_id, title, account_type ) VALUES ( ?, ?, ?, ? );', ( account_type_id, service_id, title, account_type ) )
+                
+            
+        
+        if version == 132:
+            
+            dirs = ( HC.SERVER_FILES_DIR, HC.SERVER_THUMBNAILS_DIR, HC.SERVER_MESSAGES_DIR )
+            
+            hex_chars = '0123456789abcdef'
+            
+            for dir in dirs:
+                
+                for ( one, two ) in itertools.product( hex_chars, hex_chars ):
+                    
+                    new_dir = dir + os.path.sep + one + two
+                    
+                    if not os.path.exists( new_dir ): os.mkdir( new_dir )
+                    
                 
             
         

@@ -1665,9 +1665,13 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         self._thread_info = wx.StaticText( self._thread_panel, label = 'enter a 4chan thread url' )
         
-        self._thread_time = wx.SpinCtrl( self._thread_panel, min = 30, max = 1800 )
+        self._thread_times_to_check = wx.SpinCtrl( self._thread_panel, size = ( 60, -1 ), min = 0, max = 100 )
+        self._thread_times_to_check.SetValue( 5 )
+        self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
+        
+        self._thread_time = wx.SpinCtrl( self._thread_panel, size = ( 100, -1 ), min = 30, max = 86400 )
         self._thread_time.SetValue( 180 )
-        self._thread_time.Bind( wx.EVT_SPINCTRL, self.EventThreadTime )
+        self._thread_time.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
         
         self._thread_input = wx.TextCtrl( self._thread_panel, style = wx.TE_PROCESS_ENTER )
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
@@ -1677,7 +1681,9 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( wx.StaticText( self._thread_panel, label = 'check every ' ), FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self._thread_panel, label = 'check ' ), FLAGS_MIXED )
+        hbox.AddF( self._thread_times_to_check, FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self._thread_panel, label = ' more times, every ' ), FLAGS_MIXED )
         hbox.AddF( self._thread_time, FLAGS_MIXED )
         hbox.AddF( wx.StaticText( self._thread_panel, label = ' seconds' ), FLAGS_MIXED )
         
@@ -1695,13 +1701,15 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_PERPENDICULAR )
         
     
-    def _SetThreadTime( self ):
+    def _SetThreadVariables( self ):
         
         import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
         thread_time = self._thread_time.GetValue()
+        thread_times_to_check = self._thread_times_to_check.GetValue()
         
         import_queue_job_key.SetVariable( 'thread_time', thread_time )
+        import_queue_job_key.SetVariable( 'thread_times_to_check', thread_times_to_check )
         
     
     def _UpdateGUI( self ):
@@ -1736,10 +1744,22 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
         else: self._thread_pause_button.Disable()
         
+        # times to check
+        
+        try:
+            
+            thread_times_to_check = import_queue_job_key.GetVariable( 'thread_times_to_check' )
+            
+            self._thread_times_to_check.SetValue( thread_times_to_check )
+            
+        except: self._SetThreadVariables()
+        
     
     def EventKeyDown( self, event ):
         
         if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            self._SetThreadVariables()
             
             url = self._thread_input.GetValue()
             
@@ -1759,31 +1779,59 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                     
                 except: raise Exception ( 'Could not understand that url!' )
                 
-                if host is None or '4chan.org' not in host: raise Exception( 'This only works for 4chan right now!' )
+                is_4chan = '4chan.org' in host
+                is_8chan = '8chan.co' in host
+                
+                if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan right now!' )
                 
                 try:
                     
+                    # 4chan
                     # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
+                    # http://a.4cdn.org/asp/thread/382059.json
+                    # http://i.4cdn.org/asp/ for images
                     
-                    ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
+                    # 8chan
+                    # /v/res/406061.html
+                    # http://8chan.co/v/res/406061.json
+                    # http://8chan.co/v/src/ for images
                     
-                    if '/' in rest_of_request: ( thread_id, gumpf ) = rest_of_request.split( '/' )
-                    else: thread_id = rest_of_request
+                    if is_4chan:
+                        
+                        ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
+                        
+                        if '/' in rest_of_request: ( thread_id, gumpf ) = rest_of_request.split( '/' )
+                        else: thread_id = rest_of_request
+                        
+                        json_url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
+                        image_base = 'http://i.4cdn.org/' + board + '/'
+                        
+                    elif is_8chan:
+                        
+                        ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
+                        
+                        json_url = url[:-4] + 'json'
+                        image_base = 'http://8chan.co/' + board + '/src/'
+                        
                     
                 except: raise Exception( 'Could not understand the board or thread id!' )
                 
             except Exception as e:
                 
-                self._thread_info.SetLabel( HC.u( e ) )
+                import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+                
+                import_queue_job_key.SetVariable( 'status', HC.u( e ) )
+                
+                HC.ShowException( e )
                 
                 return
                 
             
             self._thread_input.Disable()
             
-            self._SetThreadTime()
+            self._SetThreadVariables()
             
-            self._import_controller.PendImportQueue( ( board, thread_id ) )
+            self._import_controller.PendImportQueue( ( json_url, image_base ) )
             
         else: event.Skip()
         
@@ -1797,7 +1845,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._UpdateGUI()
         
     
-    def EventThreadTime( self, event ): self._SetThreadTime()
+    def EventThreadVariable( self, event ): self._SetThreadVariables()
     
     def GetAdvancedTagOptions( self ): return self._advanced_tag_options.GetInfo()
     

@@ -1270,42 +1270,43 @@ class TagDB( object ):
     
 class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
-    def _AddFiles( self, c, files_info_rows ):
+    def _AddFile( self, c, service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ):
         
-        # service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words
+        result = c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
-        c.executemany( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', files_info_rows )
-        
-        service_ids_to_rows = HC.BuildKeyToListDict( [ ( row[ 0 ], row[ 1: ] ) for row in files_info_rows ] )
-        
-        for ( service_id, rows ) in service_ids_to_rows.items():
+        if result is None:
             
-            hash_ids = [ row[ 0 ] for row in rows ]
-            
-            splayed_hash_ids = HC.SplayListForDB( hash_ids )
-            
-            c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-            
-            num_deleted_files_rescinded = self._GetRowCount( c )
-            
-            c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-            
-            total_size = sum( [ row[ 1 ] for row in rows ] )
-            num_files = len( rows )
-            num_thumbnails = len( [ 1 for row in rows if row[ 2 ] in HC.MIMES_WITH_THUMBNAILS ] )
+            c.execute( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
             service_info_updates = []
             
-            service_info_updates.append( ( total_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
-            service_info_updates.append( ( num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
-            service_info_updates.append( ( num_thumbnails, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
-            service_info_updates.append( ( -num_deleted_files_rescinded, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
+            result = c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+            
+            if result is not None:
+                
+                c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) )
+                
+                service_info_updates.append( ( -1, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
+                
+            
+            if service_id != self._local_file_service_id:
+                
+                result = c.execute( 'SELECT 1 FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                
+                if result is not None: service_info_updates.append( ( 1, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
+                
+            
+            service_info_updates.append( ( size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
+            service_info_updates.append( ( 1, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+            if mime in HC.MIMES_WITH_THUMBNAILS: service_info_updates.append( ( 1, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
             
             c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
             
-            c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type IN ' + HC.SplayListForDB( ( HC.SERVICE_INFO_NUM_INBOX, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) ) + ';', ( service_id, ) )
+            c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id = ? ;', ( service_id, hash_id ) )
             
-            self._UpdateAutocompleteTagCacheFromFiles( c, service_id, hash_ids, 1 )
+            if mime in HC.MIMES_WITH_THUMBNAILS: c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
+            
+            self._UpdateAutocompleteTagCacheFromFiles( c, service_id, ( hash_id, ), 1 )
             
         
     
@@ -3081,9 +3082,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 self._AddThumbnails( c, [ ( hash, thumbnail ) ] )
                 
             
-            files_info_rows = [ ( self._local_file_service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) ]
-            
-            self._AddFiles( c, files_info_rows )
+            self._AddFile( c, self._local_file_service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
             
             content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
@@ -3182,9 +3181,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hash_id = self._GetHashId( c, hash )
                             
-                            file_info_row = ( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
-                            
-                            self._AddFiles( c, ( file_info_row, ) )
+                            self._AddFile( c, service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
                             
                             notify_new_thumbnails = True
                             
@@ -5307,6 +5304,25 @@ class DB( ServiceDB ):
                     c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                     
                 
+            
+        
+        if version == 132:
+            
+            c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_FILES, ) )
+            
+            #
+            
+            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            client_size = HC.options[ 'client_size' ]
+            
+            client_size[ 'fs_fullscreen' ] = True
+            
+            client_size[ 'gui_fullscreen' ] = False
+            
+            del HC.options[ 'fullscreen_borderless' ]
+            
+            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

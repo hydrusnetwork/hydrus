@@ -1234,12 +1234,7 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         self._job_key.SetVariable( 'status', 'downloading' )
         
-        ( md5, board, image_name, ext, filename ) = self._item
-        
-        # where do I get 4chan_board from? is it set to the controller_job_key?
-        # that'd prob be the best place, but think about it
-        
-        url = 'http://images.4chan.org/' + board + '/src/' + image_name + ext
+        ( md5, image_url, filename ) = self._item
         
         def hook( range, value ):
             
@@ -1247,20 +1242,20 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
             self._job_key.SetVariable( 'value', value )
             
         
-        temp_path = HC.http.Request( HC.GET, url, report_hooks = [ hook ], response_to_path = True )
+        temp_path = HC.http.Request( HC.GET, image_url, report_hooks = [ hook ], response_to_path = True )
         
-        tags = [ 'filename:' + filename + ext ]
+        tags = [ 'filename:' + filename ]
         
         service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
-        return ( url, temp_path, service_keys_to_tags, url )
+        return ( image_url, temp_path, service_keys_to_tags, image_url )
         
     
     def _CheckCurrentStatus( self ):
         
         self._job_key.SetVariable( 'status', 'checking md5 status' )
         
-        ( md5, board, image_name, ext, filename ) = self._item
+        ( md5, image_url, filename ) = self._item
         
         ( status, hash ) = HC.app.Read( 'md5_status', md5 )
         
@@ -1684,13 +1679,31 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
         
         try:
             
-            ( board, thread_id ) = self._item
+            ( json_url, image_base ) = self._item
             
             last_thread_check = 0
             image_infos_already_added = set()
             
-            while True:
+            first_run = True
             
+            while True:
+                
+                if not first_run:
+                    
+                    thread_times_to_check = self._job_key.GetVariable( 'thread_times_to_check' )
+                    
+                    while thread_times_to_check == 0:
+                        
+                        self._job_key.SetVariable( 'status', 'checking is finished' )
+                        
+                        time.sleep( 1 )
+                        
+                        if self._job_key.IsCancelled(): break
+                        
+                        thread_times_to_check = self._job_key.GetVariable( 'thread_times_to_check' )
+                        
+                    
+                
                 if self._job_key.IsPaused():
                     
                     self._job_key.SetVariable( 'status', 'paused' )
@@ -1710,17 +1723,26 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                     
                     self._job_key.SetVariable( 'status', 'checking thread' )
                     
-                    url = 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
-                    
                     try:
                         
-                        raw_json = HC.http.Request( HC.GET, url )
+                        raw_json = HC.http.Request( HC.GET, json_url )
                         
                         json_dict = json.loads( raw_json )
                         
                         posts_list = json_dict[ 'posts' ]
                         
-                        image_infos = [ ( post[ 'md5' ].decode( 'base64' ), board, HC.u( post[ 'tim' ] ), post[ 'ext' ], post[ 'filename' ] ) for post in posts_list if 'md5' in post ]
+                        image_infos = []
+                        
+                        for post in posts_list:
+                            
+                            if 'md5' not in post: continue
+                            
+                            image_md5 = post[ 'md5' ].decode( 'base64' )
+                            image_url = image_base + HC.u( post[ 'tim' ] ) + post[ 'ext' ]
+                            image_original_filename = post[ 'filename' ] + post[ 'ext' ]
+                            
+                            image_infos.append( ( image_md5, image_url, image_original_filename ) )
+                            
                         
                         image_infos_i_can_add = [ image_info for image_info in image_infos if image_info not in image_infos_already_added ]
                         
@@ -1741,8 +1763,15 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                     
                     last_thread_check = HC.GetNow()
                     
+                    if first_run: first_run = False
+                    else:
+                        
+                        if thread_times_to_check > 0: self._job_key.SetVariable( 'thread_times_to_check', thread_times_to_check - 1 )
+                        
+                    
                 else: self._job_key.SetVariable( 'status', 'rechecking thread ' + HC.ConvertTimestampToPrettyPending( next_thread_check ) )
                 
+                time.sleep( 0.1 )
                 
             
         except Exception as e:

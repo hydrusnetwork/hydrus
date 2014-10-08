@@ -2853,8 +2853,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._default_tag_repository = ClientGUICommon.BetterChoice( self._gui_page )
             
-            self._fullscreen_borderless = wx.CheckBox( self._gui_page )
-            
             self._listbook.AddPage( self._gui_page, 'gui' )
             
             # sound
@@ -3083,8 +3081,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._default_tag_repository.SelectClientData( default_tag_repository_key )
             
-            self._fullscreen_borderless.SetValue( HC.options[ 'fullscreen_borderless' ] )
-            
             #
             
             self._play_dumper_noises.SetValue( HC.options[ 'play_dumper_noises' ] )
@@ -3277,9 +3273,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self._gui_page, label = 'By default, search non-local tags in write-autocomplete: ' ), FLAGS_MIXED )
             gridbox.AddF( self._gui_show_all_tags_in_autocomplete, FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._gui_page, label = 'By default, show fullscreen without borders: ' ), FLAGS_MIXED )
-            gridbox.AddF( self._fullscreen_borderless, FLAGS_MIXED )
             
             self._gui_page.SetSizer( gridbox )
             
@@ -3721,7 +3714,6 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
         HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
         HC.options[ 'show_all_tags_in_autocomplete' ] = self._gui_show_all_tags_in_autocomplete.GetValue()
-        HC.options[ 'fullscreen_borderless' ] = self._fullscreen_borderless.GetValue()
         
         HC.options[ 'export_path' ] = HC.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
         HC.options[ 'default_sort' ] = self._default_sort.GetSelection() 

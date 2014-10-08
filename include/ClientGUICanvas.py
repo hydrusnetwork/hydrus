@@ -879,11 +879,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         
         self.Show( True )
         
-        if self.IsMaximized() and HC.options[ 'fullscreen_borderless' ]:
-            
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-            
-        
         HC.app.SetTopWindow( self )
         
         self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
@@ -1637,6 +1632,11 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
         if self._timer_slideshow.IsRunning(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow_pause_play' ), 'stop slideshow' )
         
+        menu.AppendSeparator()
+        
+        if self.IsFullScreen(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
+        else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
+        
         self._menu_open = True
         
         self.PopupMenu( menu )
@@ -1991,16 +1991,19 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
         copy_menu = wx.Menu()
         
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
+        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
         menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
         
         menu.AppendSeparator()
+        
+        if self.IsFullScreen(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
+        else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
         
         self._menu_open = True
         
@@ -2757,11 +2760,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         self._splitter.SetSashGravity( 0.5 ) # stay in the middle
         
         self.Show( True )
-        
-        if self.IsMaximized() and HC.options[ 'fullscreen_borderless' ]:
-            
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-            
         
         HC.app.SetTopWindow( self )
         

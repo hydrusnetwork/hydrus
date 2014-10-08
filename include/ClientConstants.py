@@ -228,7 +228,6 @@ default_sort_by_choices.append( ( 'namespaces', [ 'creator', 'series', 'title', 
 
 CLIENT_DEFAULT_OPTIONS[ 'sort_by' ] = default_sort_by_choices
 CLIENT_DEFAULT_OPTIONS[ 'show_all_tags_in_autocomplete' ] = True
-CLIENT_DEFAULT_OPTIONS[ 'fullscreen_borderless' ] = True
 
 CLIENT_DEFAULT_OPTIONS[ 'default_advanced_tag_options' ] = {}
 
@@ -295,9 +294,11 @@ CLIENT_DEFAULT_OPTIONS[ 'pause_subs_sync' ] = False
 
 client_size = {}
 
+client_size[ 'gui_fullscreen' ] = False
 client_size[ 'gui_maximised' ] = True
 client_size[ 'gui_restored_size' ] = [ 640, 480 ]
 client_size[ 'gui_restored_position' ] = [ 20, 20 ]
+client_size[ 'fs_fullscreen' ] = True
 client_size[ 'fs_maximised' ] = True
 client_size[ 'fs_restored_size' ] = [ 640, 480 ]
 client_size[ 'fs_restored_position' ] = [ 20, 20 ]

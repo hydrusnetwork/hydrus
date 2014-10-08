@@ -1153,3 +1153,55 @@ class TestServerDB( unittest.TestCase ):
         HC.SERVER_THUMBNAILS_DIR = self._old_server_thumbnails_dir
         
     
+    # add read and write funcs like with client db
+    
+    def _test_account_creation( self ):
+        
+        # create rkeys
+        # create akeys
+        # test successive rkey fetch gives new akeys
+        # get session with akey
+        # make sure rkey is now dead
+        
+        pass
+        
+    
+    def _test_content_creation( self ):
+        
+        # create some tag and hashes business, try uploading a file, and test that
+        
+        # fetch content update, test it. I think that works
+        
+        pass
+        
+    
+    def _test_init_server_admin( self ):
+        
+        # do it, however it works
+        
+        pass
+        
+    
+    def _test_service_creation( self ):
+        
+        # add tag, add file repo
+        
+        # fetch service info or whatever to test
+        
+        # change the port
+        
+        # fetch service info or whatever to test
+        
+        pass
+        
+    
+    def test_server( self ):
+        
+        self._test_init_server_admin()
+        
+        self._test_service_creation()
+        
+        self._test_account_creation()
+        
+        self._test_content_creation()
+        
