@@ -3004,6 +3004,19 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._listbook.AddPage( self._shortcuts_page, 'shortcuts' )
             
+            # thread checker
+            
+            self._thread_checker_page = wx.Panel( self._listbook )
+            self._thread_checker_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._thread_times_to_check = wx.SpinCtrl( self._thread_checker_page, min = 0, max = 100 )
+            self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
+            
+            self._thread_check_period = wx.SpinCtrl( self._thread_checker_page, min = 30, max = 86400 )
+            self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
+            
+            self._listbook.AddPage( self._thread_checker_page, 'thread checker' )
+            
             #
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'Save' )
@@ -3192,6 +3205,14 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 
             
             self._SortListCtrl()
+            
+            #
+            
+            ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
+            
+            self._thread_times_to_check.SetValue( times_to_check )
+            
+            self._thread_check_period.SetValue( check_period )
             
         
         def ArrangeControls():
@@ -3470,6 +3491,19 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self._shortcuts_page.SetSizer( vbox )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._thread_checker_page, label = 'default number of times to check: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._thread_times_to_check, FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._thread_checker_page, label = 'default wait in seconds between checks: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._thread_check_period, FLAGS_MIXED )
+            
+            self._thread_checker_page.SetSizer( gridbox )
             
             #
             
@@ -3790,6 +3824,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         if new_local_port != HC.options[ 'local_port' ]: HC.pubsub.pub( 'restart_server' )
         
         HC.options[ 'local_port' ] = new_local_port
+        
+        HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
         
         try: HC.app.Write( 'save_options' )
         except: wx.MessageBox( traceback.format_exc() )
@@ -5022,9 +5058,24 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 ( service_key, service_type, name, info ) = service_panel.GetInfo()
                 
-                self._edit_log.append( ( HC.DELETE, service_key ) )
-                
-                services_listbook.DeleteCurrentPage()
+                if service_type == HC.TAG_REPOSITORY:
+                    
+                    text = 'Deleting a tag service is a potentially very expensive operation.'
+                    text += os.linesep * 2
+                    text += 'If you have millions of tags, it could take twenty minutes or more, during which time your database will be locked.'
+                    text += os.linesep * 2
+                    text += 'Are you sure you want to delete ' + name + '?'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_YES:
+                            
+                            self._edit_log.append( ( HC.DELETE, service_key ) )
+                            
+                            services_listbook.DeleteCurrentPage()
+                            
+                        
+                    
                 
             
         

@@ -277,7 +277,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
         
     
     def OnInit( self ):
-        
+        self.SetAssertMode(wx.PYAPP_ASSERT_SUPPRESS)
         HC.app = self
         HC.http = HydrusNetworking.HTTPConnectionManager()
         

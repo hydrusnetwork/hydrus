@@ -4195,6 +4195,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         HC.repos_changed = True
         
         recalc_combined_mappings = False
+        message = None
         
         for ( action, details ) in edit_log:
             
@@ -4211,6 +4212,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 service_id = self._GetServiceId( c, service_key )
                 
                 service = self._GetService( c, service_id )
+                
+                if service.GetServiceType() == HC.TAG_REPOSITORY:
+                    
+                    recalc_combined_mappings = True
+                    
+                    if message is None:
+                        
+                        message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'updating services: deleting tag data' } )
+                        
+                        HC.pubsub.pub( 'message', message )
+                        
+                    
                 
                 c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
@@ -4263,7 +4276,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if recalc_combined_mappings: self._RecalcCombinedMappings( c )
+        if recalc_combined_mappings:
+            
+            message.SetInfo( 'text', 'updating services: recalculating combined tag data' )
+            
+            self._RecalcCombinedMappings( c )
+            
+            message.SetInfo( 'text', 'updating services: done!' )
+            
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -5800,12 +5820,13 @@ def DAEMONCheckImportFolders():
                                 
                                 details[ 'failed_imported_paths' ].add( path )
                                 
-                                HC.ShowText( 'Import folder failed to import ' + path + ':' + os.linesep + traceback.format_exc() )
+                                HC.ShowText( 'Import folder failed to import ' + path + ':' + os.linesep * 2 + traceback.format_exc() )
                                 
                                 should_action = False
                                 
                             
-                            os.remove( temp_path )
+                            try: os.remove( temp_path )
+                            except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                             
                         
                         if should_action:

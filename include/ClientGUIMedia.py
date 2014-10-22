@@ -559,8 +559,6 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self._shift_focussed_media = None
         
-        self._RefitCanvas()
-        
         self._RedrawCanvas()
         
         self._PublishSelectionChange()
@@ -614,7 +612,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def _Select( self, select_type ):
         
-        self._RedrawCanvas()
+        self._RefitCanvas()
         
         if select_type == 'all': self._DeselectSelect( [], self._sorted_media )
         else:
@@ -1310,7 +1308,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.DoPrepareDC( cdc ) # because this is a scrolled window
         
-        return wx.BufferedDC( cdc, self._canvas_bmp )
+        return wx.BufferedDC( cdc, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
         
     
     def _GetThumbnailUnderMouse( self, mouse_event ):
@@ -2037,6 +2035,10 @@ class MediaPanelThumbnails( MediaPanel ):
         # it seems that some scroll events happen after the viewstart has changed, some happen before
         # so I have to keep track of a manual current_y_start
         
+        ( start_x, start_y ) = self.GetViewStart()
+        
+        ( my_virtual_width, my_virtual_height ) = self.GetVirtualSize()
+        
         ( my_width, my_height ) = self.GetClientSize()
         
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
@@ -2051,6 +2053,8 @@ class MediaPanelThumbnails( MediaPanel ):
         elif event_type == wx.wxEVT_SCROLLWIN_THUMBRELEASE: self._current_y_offset = 0
         elif event_type == wx.wxEVT_SCROLLWIN_PAGEUP: self._current_y_offset = - page_of_y_units
         elif event_type == wx.wxEVT_SCROLLWIN_PAGEDOWN: self._current_y_offset = page_of_y_units
+        elif event_type == wx.wxEVT_SCROLLWIN_TOP: self._current_y_offset = - start_y
+        elif event_type == wx.wxEVT_SCROLLWIN_BOTTOM: self._current_y_offset = ( my_virtual_height / yUnit ) - start_y
         
         self._RefitCanvas()
         
@@ -2139,8 +2143,6 @@ class MediaPanelThumbnails( MediaPanel ):
         self.SetScrollRate( 0, thumbnail_span_height )
         
         for t in self._sorted_media: t.ReloadFromDBLater()
-        
-        self._RefitCanvas()
         
         self._RedrawCanvas() # to force redraw
         

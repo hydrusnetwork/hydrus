@@ -192,6 +192,7 @@ CLIENT_DEFAULT_OPTIONS[ 'num_autocomplete_chars' ] = 2
 CLIENT_DEFAULT_OPTIONS[ 'gui_capitalisation' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'default_gui_session' ] = 'just a blank page'
 CLIENT_DEFAULT_OPTIONS[ 'ac_timings' ] = ( 3, 500, 250 )
+CLIENT_DEFAULT_OPTIONS[ 'thread_checker_timings' ] = ( 3, 1200 )
 
 system_predicates = {}
 
@@ -258,22 +259,22 @@ shortcuts[ wx.ACCEL_CTRL ][ ord( 'I' ) ] = 'synchronised_wait_switch'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'Z' ) ] = 'undo'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'Y' ) ] = 'redo'
 
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_UP ] = 'previous'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_LEFT ] = 'previous'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_UP ] = 'previous'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_LEFT ] = 'previous'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_PAGEUP ] = 'previous'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_PAGEUP ] = 'previous'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_DOWN ] = 'next'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_RIGHT ] = 'next'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_DOWN ] = 'next'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_RIGHT ] = 'next'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_PAGEDOWN ] = 'next'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_PAGEDOWN ] = 'next'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_HOME ] = 'first'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_HOME ] = 'first'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_END ] = 'last'
-shortcuts[ wx.ACCEL_CTRL ][ wx.WXK_NUMPAD_END ] = 'last'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_UP ] = 'previous'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_LEFT ] = 'previous'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_UP ] = 'previous'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_LEFT ] = 'previous'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_PAGEUP ] = 'previous'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_PAGEUP ] = 'previous'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_DOWN ] = 'next'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_RIGHT ] = 'next'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_DOWN ] = 'next'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_RIGHT ] = 'next'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_PAGEDOWN ] = 'next'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_PAGEDOWN ] = 'next'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_HOME ] = 'first'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_HOME ] = 'first'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_END ] = 'last'
+shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_NUMPAD_END ] = 'last'
 
 shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_UP ] = 'pan_up'
 shortcuts[ wx.ACCEL_SHIFT ][ wx.WXK_DOWN ] = 'pan_down'

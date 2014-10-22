@@ -9,6 +9,7 @@ import HydrusThreading
 import lz4
 import numpy
 import os
+from PIL import _imaging
 from PIL import Image as PILImage
 import shutil
 import struct

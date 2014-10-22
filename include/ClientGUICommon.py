@@ -14,6 +14,10 @@ import wx.richtext
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 
+TEXT_CUTOFF = 1024
+
+#
+
 ID_TIMER_ANIMATED = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
@@ -425,13 +429,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._current_namespace = ''
         self._current_matches = []
         
-        self._file_service = HC.app.GetManager( 'services' ).GetService( file_service_key )
-        self._tag_service = HC.app.GetManager( 'services' ).GetService( tag_service_key )
+        self._file_service_key = file_service_key
+        self._tag_service_key = tag_service_key
         
-        self._file_repo_button = wx.Button( self._dropdown_window, label = self._file_service.GetName() )
+        file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
+        tag_service = HC.app.GetManager( 'services' ).GetService( self._tag_service_key )
+        
+        self._file_repo_button = wx.Button( self._dropdown_window, label = file_service.GetName() )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
         
-        self._tag_repo_button = wx.Button( self._dropdown_window, label = self._tag_service.GetName() )
+        self._tag_repo_button = wx.Button( self._dropdown_window, label = tag_service.GetName() )
         self._tag_repo_button.Bind( wx.EVT_BUTTON, self.EventTagButton )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
@@ -465,7 +472,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service ), service.GetName() )
+        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
         
         self.PopupMenu( menu )
         
@@ -482,27 +489,27 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
             if command == 'change_file_repository':
                 
-                service = data
+                self._file_service_key = data
                 
-                self._file_service = service
+                file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
                 
-                name = service.GetName()
+                name = file_service.GetName()
                 
                 self._file_repo_button.SetLabel( name )
                 
-                HC.pubsub.pub( 'change_file_repository', self._page_key, service.GetServiceKey() )
+                HC.pubsub.pub( 'change_file_repository', self._page_key, self._file_service_key )
                 
             elif command == 'change_tag_repository':
                 
-                service = data
+                self._tag_service_key = data
                 
-                self._tag_service = service
+                tag_service = tag_service = HC.app.GetManager( 'services' ).GetService( self._tag_service_key )
                 
-                name = service.GetName()
+                name = tag_service.GetName()
                 
                 self._tag_repo_button.SetLabel( name )
                 
-                HC.pubsub.pub( 'change_tag_repository', self._page_key, service.GetServiceKey() )
+                HC.pubsub.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
                 
             else:
                 
@@ -529,7 +536,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service ), service.GetName() )
+        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
         
         self.PopupMenu( menu )
         
@@ -609,8 +616,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._first_letters = ''
             self._current_namespace = ''
             
-            if self._file_service.GetServiceKey() == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service.GetServiceKey()
-            else: search_service_key = self._file_service.GetServiceKey()
+            if self._file_service_key == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
+            else: search_service_key = self._file_service_key
             
             matches = HC.app.Read( 'file_system_predicates', search_service_key )
             
@@ -653,7 +660,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if len( search_text ) < num_first_letters:
                         
-                        results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                        results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                         
                         matches = results.GetMatches( half_complete_tag )
                         
@@ -663,7 +670,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                             
                             self._first_letters = half_complete_tag
                             
-                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                             
                         
                         matches = self._cached_results.GetMatches( half_complete_tag )
@@ -682,8 +689,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         else: tags_managers.append( m.GetTagsManager() )
                         
                     
-                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service.GetServiceKey() ) ) for tags_manager in tags_managers ]
-                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service.GetServiceKey() ) ) for tags_manager in tags_managers ]
+                    lists_of_current_tags = [ list( tags_manager.GetCurrent( self._tag_service_key ) ) for tags_manager in tags_managers ]
+                    lists_of_pending_tags = [ list( tags_manager.GetPending( self._tag_service_key ) ) for tags_manager in tags_managers ]
                     
                     current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                     pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
@@ -705,7 +712,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    results = CC.AutocompleteMatchesPredicates( self._tag_service.GetServiceKey(), [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
+                    results = CC.AutocompleteMatchesPredicates( self._tag_service_key, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
                     
                     matches = results.GetMatches( half_complete_tag )
                     
@@ -791,15 +798,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
             
-            result = tag_censorship_manager.FilterTags( self._tag_service.GetServiceKey(), ( tag, ) )
+            result = tag_censorship_manager.FilterTags( self._tag_service_key, ( tag, ) )
             
             if len( result ) > 0:
                 
                 tag_parents_manager = HC.app.GetManager( 'tag_parents' )
                 
-                parents = tag_parents_manager.GetParents( self._tag_service.GetServiceKey(), tag )
+                parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
                 
-                parents = tag_censorship_manager.FilterTags( self._tag_service.GetServiceKey(), parents )
+                parents = tag_censorship_manager.FilterTags( self._tag_service_key, parents )
                 
                 self._chosen_tag_callable( tag, parents )
                 
@@ -845,7 +852,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if len( search_text ) < num_first_letters:
                 
-                results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), tag = search_text, collapse = False )
+                results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, collapse = False )
                 
                 matches = results.GetMatches( half_complete_tag )
                 
@@ -855,7 +862,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     self._first_letters = half_complete_tag
                     
-                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service.GetServiceKey(), tag_service_key = self._tag_service.GetServiceKey(), half_complete_tag = search_text, collapse = False )
+                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, collapse = False )
                     
                 
                 matches = self._cached_results.GetMatches( half_complete_tag )
@@ -905,7 +912,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                         
                         parents_manager = HC.app.GetManager( 'tag_parents' )
                         
-                        raw_parents = parents_manager.GetParents( self._tag_service.GetServiceKey(), tag )
+                        raw_parents = parents_manager.GetParents( self._tag_service_key, tag )
                         
                         parents = [ HC.Predicate( HC.PREDICATE_TYPE_PARENT, raw_parent ) for raw_parent in raw_parents ]
                         
@@ -1859,7 +1866,7 @@ class ListBox( wx.ScrolledWindow ):
         
         self.DoPrepareDC( cdc ) # because this is a scrolled window
         
-        return wx.BufferedDC( cdc, self._canvas_bmp )
+        return wx.BufferedDC( cdc, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
         
     
     def _GetTextColour( self, text ): return ( 0, 111, 250 )
@@ -1968,7 +1975,20 @@ class ListBox( wx.ScrolledWindow ):
             
             ( command, data ) = action
             
-            if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+            if command == 'copy_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                HC.pubsub.pub( 'clipboard', 'text', term )
+                
+            elif command == 'copy_sub_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                sub_term = term.split( ':', 1 )[1]
+                
+                HC.pubsub.pub( 'clipboard', 'text', sub_term )
+                
             else:
                 
                 event.Skip()
@@ -1990,13 +2010,13 @@ class ListBox( wx.ScrolledWindow ):
             
             term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', term ), 'copy ' + term )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy ' + term )
             
             if ':' in term:
                 
                 sub_term = term.split( ':', 1 )[1]
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', sub_term ), 'copy ' + sub_term )
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy ' + sub_term )
                 
             
             self.PopupMenu( menu )
@@ -2540,6 +2560,17 @@ class PopupMessageError( PopupMessage ):
         
         if len( HC.u( value ) ) > 0:
             
+            if len( HC.u( value ) ) > TEXT_CUTOFF:
+                
+                new_value = 'An error occured that is too long to display here. Here is the start of it (the rest is printed to the log):'
+                
+                new_value += os.linesep * 2
+                
+                new_value += value[:TEXT_CUTOFF]
+                
+                value = new_value
+                
+            
             text = FitResistantStaticText( self, label = HC.u( value ) )
             text.Wrap( 380 )
             text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
@@ -2593,7 +2624,7 @@ class PopupMessageFiles( PopupMessage ):
         
         PopupMessage.__init__( self, parent, message )
         
-        text = message.GetInfo( 'text' )
+        text = message.GetInfo( 'text' )[:TEXT_CUTOFF]
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2717,7 +2748,7 @@ class PopupMessageGauge( PopupMessage ):
     def Update( self ):
         
         mode = self._message.GetInfo( 'mode' )
-        text = self._message.GetInfo( 'text' )
+        text = self._message.GetInfo( 'text' )[:TEXT_CUTOFF]
     
         if self._job_key.IsPausable() and self._created - HC.GetNow() > 2: self._pause_button.Show()
         else: self._pause_button.Hide()
@@ -2771,7 +2802,7 @@ class PopupMessageText( PopupMessage ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        text = message.GetInfo( 'text' )
+        text = self._ProcessText( HC.u( message.GetInfo( 'text' ) ) )
         
         self._text = FitResistantStaticText( self, label = text )
         self._text.Wrap( 380 )
@@ -2782,9 +2813,25 @@ class PopupMessageText( PopupMessage ):
         self.SetSizer( vbox )
         
     
+    def _ProcessText( self, text ):
+        
+        if len( text ) > TEXT_CUTOFF:
+            
+            new_text = 'A text notice occured that is too long to display here. Here is the start of it (the rest is printed to the log):'
+            
+            new_text += os.linesep * 2
+            
+            new_text += text[:TEXT_CUTOFF]
+            
+            text = new_text
+            
+        
+        return text
+        
+    
     def Update( self ):
         
-        text = self._message.GetInfo( 'text' )
+        text = self._ProcessText( self._message.GetInfo( 'text' ) )
         
         if self._text.GetLabel() != text: self._text.SetLabel( text )
         
@@ -2906,23 +2953,46 @@ class PopupMessageManager( wx.Frame ):
     
     def _SizeAndPositionAndShow( self ):
         
-        self.Fit()
-        
-        parent = self.GetParent()
-        
-        ( parent_width, parent_height ) = parent.GetClientSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        my_x = ( parent_width - my_width ) - 5
-        my_y = ( parent_height - my_height ) - 15
-        
-        self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
-        
-        num_messages_displayed = self._message_vbox.GetItemCount()
-        
-        if num_messages_displayed > 0: self.Show()
-        else: self.Hide()
+        try:
+            
+            self.Fit()
+            
+            parent = self.GetParent()
+            
+            ( parent_width, parent_height ) = parent.GetClientSize()
+            
+            ( my_width, my_height ) = self.GetClientSize()
+            
+            my_x = ( parent_width - my_width ) - 5
+            my_y = ( parent_height - my_height ) - 15
+            
+            self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+            
+            num_messages_displayed = self._message_vbox.GetItemCount()
+            
+            if num_messages_displayed > 0: self.Show()
+            else: self.Hide()
+            
+        except:
+            
+            # I don't understand the error here.
+            # It happened for someone in Fit(), causing 'C++ assertion 'm_hDWP failed at blah ... EndRepositioningChildren Shouldn't be called'
+            # It might be related to an id-cache overflow error I had before, in which case it is fixed
+            
+            text = 'The popup message manager experienced a fatal error and will now stop working! Please restart the client as soon as possible! If this keeps happening, please email the details and your client.log to the hydrus developer.'
+            
+            print( text )
+            
+            print( traceback.format_exc() )
+            
+            wx.MessageBox( text )
+            
+            self._timer.Stop()
+            
+            self.CleanBeforeDestroy()
+            
+            self.Destroy()
+            
         
     
     def AddMessage( self, message ):
@@ -4010,12 +4080,25 @@ class TagsBox( ListBox ):
             
             ( command, data ) = action
             
-            if command == 'copy': HC.pubsub.pub( 'clipboard', 'text', data )
+            if command == 'copy_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                HC.pubsub.pub( 'clipboard', 'text', term )
+                
+            elif command == 'copy_sub_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                sub_term = term.split( ':', 1 )[1]
+                
+                HC.pubsub.pub( 'clipboard', 'text', sub_term )
+                
             elif command == 'copy_all_tags': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
             elif command == 'copy_all_tags_with_counts': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
             elif command in ( 'parent', 'sibling' ):
                 
-                tag = data
+                tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
                 import ClientGUIDialogsManage
                 
@@ -4056,19 +4139,19 @@ class TagsBox( ListBox ):
                 
                 if type( term ) in ( str, unicode ):
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', term ), 'copy ' + term )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy ' + term )
                     
                     if ':' in term:
                         
                         sub_term = term.split( ':', 1 )[1]
                         
-                        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy', sub_term ), 'copy ' + sub_term )
+                        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy ' + sub_term )
                         
                     
                     menu.AppendSeparator()
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent', term ), 'add parent to ' + term )
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling', term ), 'add sibling to ' + term )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent' ), 'add parent to ' + term )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling' ), 'add sibling to ' + term )
                     
                 
             

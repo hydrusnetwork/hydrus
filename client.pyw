@@ -62,5 +62,7 @@ except:
     
     import traceback
     
+    print( 'Critical error occured! Details written to crash.log!' )
+    
     with open( 'crash.log', 'wb' ) as f: f.write( traceback.format_exc() )
     

@@ -1098,7 +1098,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         requests_dict = HC.BuildKeyToListDict( all_requests )
         
-        c.executemany( 'UPDATE account SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE account_key = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), sqlite3.Binary( account_key ) ) for ( account_key, num_bytes_list ) in requests_dict.items() ] )
+        c.executemany( 'UPDATE accounts SET used_bytes = used_bytes + ?, used_requests = used_requests + ? WHERE account_key = ?;', [ ( sum( num_bytes_list ), len( num_bytes_list ), sqlite3.Binary( account_key ) ) for ( account_key, num_bytes_list ) in requests_dict.items() ] )
         
     
     def _GenerateRegistrationKeys( self, c, service_key, num, title, lifetime = None ):

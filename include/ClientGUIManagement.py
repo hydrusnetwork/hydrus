@@ -1665,13 +1665,15 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         self._thread_info = wx.StaticText( self._thread_panel, label = 'enter a 4chan thread url' )
         
+        ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
+        
         self._thread_times_to_check = wx.SpinCtrl( self._thread_panel, size = ( 60, -1 ), min = 0, max = 100 )
-        self._thread_times_to_check.SetValue( 5 )
+        self._thread_times_to_check.SetValue( times_to_check )
         self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
         
-        self._thread_time = wx.SpinCtrl( self._thread_panel, size = ( 100, -1 ), min = 30, max = 86400 )
-        self._thread_time.SetValue( 180 )
-        self._thread_time.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
+        self._thread_check_period = wx.SpinCtrl( self._thread_panel, size = ( 100, -1 ), min = 30, max = 86400 )
+        self._thread_check_period.SetValue( check_period )
+        self._thread_check_period.Bind( wx.EVT_SPINCTRL, self.EventThreadVariable )
         
         self._thread_input = wx.TextCtrl( self._thread_panel, style = wx.TE_PROCESS_ENTER )
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
@@ -1684,7 +1686,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         hbox.AddF( wx.StaticText( self._thread_panel, label = 'check ' ), FLAGS_MIXED )
         hbox.AddF( self._thread_times_to_check, FLAGS_MIXED )
         hbox.AddF( wx.StaticText( self._thread_panel, label = ' more times, every ' ), FLAGS_MIXED )
-        hbox.AddF( self._thread_time, FLAGS_MIXED )
+        hbox.AddF( self._thread_check_period, FLAGS_MIXED )
         hbox.AddF( wx.StaticText( self._thread_panel, label = ' seconds' ), FLAGS_MIXED )
         
         self._thread_panel.AddF( self._thread_info, FLAGS_EXPAND_PERPENDICULAR )
@@ -1705,7 +1707,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
-        thread_time = self._thread_time.GetValue()
+        thread_time = self._thread_check_period.GetValue()
         thread_times_to_check = self._thread_times_to_check.GetValue()
         
         import_queue_job_key.SetVariable( 'thread_time', thread_time )
@@ -1858,7 +1860,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
-        if import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsPaused():
+        if self._thread_times_to_check.GetValue() > 0 and import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsPaused():
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
@@ -2148,7 +2150,7 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def AddPredicate( self, page_key, predicate ): 
         
-        if page_key == self._page_key:
+        if self._show_search and page_key == self._page_key:
             
             if predicate is not None:
                 

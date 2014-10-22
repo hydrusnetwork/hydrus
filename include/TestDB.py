@@ -1110,7 +1110,7 @@ class TestClientDB( unittest.TestCase ):
 class TestServerDB( unittest.TestCase ):
     
     def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, *args, **kwargs )
     
     @classmethod
     def setUpClass( self ):
@@ -1153,10 +1153,10 @@ class TestServerDB( unittest.TestCase ):
         HC.SERVER_THUMBNAILS_DIR = self._old_server_thumbnails_dir
         
     
-    # add read and write funcs like with client db
-    
     def _test_account_creation( self ):
         
+        # create new account types
+        # edit the account types
         # create rkeys
         # create akeys
         # test successive rkey fetch gives new akeys
@@ -1177,22 +1177,80 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_init_server_admin( self ):
         
-        # do it, however it works
+        result = self._read( 'init' ) # an access key
         
-        pass
+        self.assertEqual( type( result ), str )
+        self.assertEqual( len( result ), 32 )
+        
+        self._admin_access_key = result
+        
+        result = self._read( 'account_key_from_access_key', HC.SERVER_ADMIN_KEY, self._admin_access_key )
+        
+        self.assertEqual( type( result ), str )
+        self.assertEqual( len( result ), 32 )
+        
+        self._admin_account_key = result
         
     
     def _test_service_creation( self ):
         
-        # add tag, add file repo
+        self._tag_service_key = os.urandom( 32 )
+        self._file_service_key = os.urandom( 32 )
         
-        # fetch service info or whatever to test
+        edit_log = []
         
-        # change the port
+        t_options = { 'max_monthly_data' : None, 'message' : 'tag repo message', 'port' : 100, 'upnp' : None }
+        f_options = { 'max_monthly_data' : None, 'message' : 'file repo message', 'port' : 101, 'upnp' : None }
         
-        # fetch service info or whatever to test
+        edit_log.append( ( HC.ADD, ( self._tag_service_key, HC.TAG_REPOSITORY, t_options ) ) )
+        edit_log.append( ( HC.ADD, ( self._file_service_key, HC.FILE_REPOSITORY, f_options ) ) )
         
-        pass
+        result = self._write( 'services', self._admin_account_key, edit_log )
+        
+        self.assertIn( self._tag_service_key, result )
+        
+        self._tag_service_admin_access_key = result[ self._tag_service_key ]
+        
+        self.assertEqual( type( self._tag_service_admin_access_key ), str )
+        self.assertEqual( len( self._tag_service_admin_access_key ), 32 )
+        
+        self.assertIn( self._file_service_key, result )
+        
+        self._file_service_admin_access_key = result[ self._file_service_key ]
+        
+        self.assertEqual( type( self._tag_service_admin_access_key ), str )
+        self.assertEqual( len( self._tag_service_admin_access_key ), 32 )
+        
+        #
+        
+        result = self._read( 'service_keys', HC.REPOSITORIES )
+        
+        self.assertEqual( set( result ), { self._tag_service_key, self._file_service_key } )
+        
+        #
+        
+        result = self._read( 'services_info' )
+        
+        services_info = { service_key : ( service_type, options ) for ( service_key, service_type, options ) in result }
+        
+        self.assertEqual( services_info[ HC.SERVER_ADMIN_KEY ], ( 99, { 'max_monthly_data' : None, 'message' : 'hydrus server administration service', 'max_storage' : None, 'upnp' : None, 'port' : 45870 } ) )
+        self.assertEqual( services_info[ self._tag_service_key ], ( HC.TAG_REPOSITORY, t_options ) )
+        self.assertEqual( services_info[ self._file_service_key ], ( HC.FILE_REPOSITORY, f_options ) )
+        
+        #
+        
+        f_options_modified = dict( f_options )
+        f_options_modified[ 'port' ] = 102
+        
+        edit_log = [ ( HC.EDIT, ( self._file_service_key, HC.FILE_REPOSITORY, f_options_modified ) ) ]
+        
+        self._write( 'services', self._admin_account_key, edit_log )
+        
+        result = self._read( 'services_info' )
+        
+        services_info = { service_key : ( service_type, options ) for ( service_key, service_type, options ) in result }
+        
+        self.assertEqual( services_info[ self._file_service_key ], ( HC.FILE_REPOSITORY, f_options_modified ) )
         
     
     def test_server( self ):

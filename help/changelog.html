@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 134</h3></li>
+				<ul>
+					<li>updated to wx 3.0.1.1</li>
+					<li>fixed a critical media scrolling bug due to the wx update</li>
+					<li>improved some bad media scrolling code, sped things up a bit</li>
+					<li>fixed 'top' and 'bottom' media scrolling events</li>
+					<li>fixed a typo that meant the default fullscreen media browsing shortcuts were ctrl+ appended rather than working on their own</li>
+					<li>overly-verbose errors and other text popups are now cropped to 1KB for gui display, with a notice. the full message will be printed to the log as usual</li>
+					<li>improved how severe boot crashes are reported</li>
+					<li>fixed a bit of text-reporting code that wasn't handling non-text very well</li>
+					<li>improved handling of a weird popup message manager error</li>
+					<li>fixed an occasional overhasty cleanup error in the checkimportfolders daemon</li>
+					<li>added options for default values for the thread watcher's number of times to check and check period</li>
+					<li>fixed the thread watcher complaining about closing when the checking was finished</li>
+					<li>optimised some id generating code to stop spamming the id cache, which I think was overloading after a while and causing weird PyAssertionErrors</li>
+					<li>neatened autocomplete dropdown service storage and menu id generation</li>
+					<li>improved menu id generation for tagbox</li>
+					<li>fixed opening new petition page from view menu</li>
+					<li>added a 'this might take ages' warning yes/no dialog when trying to delete a tag service</li>
+					<li>added a little popup message info to report on progress when deleting a tag service</li>
+					<li>added some server db testing</li>
+					<li>fixed an error when double-clicking a tag in a page without search predicates</li>
+					<li>updated some help links from mediafire to the new github releases page</li>
+					<li>fixed a typo bug in server db's account flushing code</li>
+				</ul>
 				<li><h3>version 133</h3></li>
 				<ul>
 					<li>reworked the add file process to correct file repository file counts</li>
