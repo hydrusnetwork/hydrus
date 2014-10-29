@@ -64,7 +64,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 134
+SOFTWARE_VERSION = 135
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1752,6 +1752,56 @@ class ContentUpdate( object ):
         
     
     def ToTuple( self ): return ( self._data_type, self._action, self._row )
+    
+class EditLogAction( object ):
+    
+    yaml_tag = u'!EditLogAction'
+    
+    def __init__( self, action ): self._action = action
+    
+    def GetAction( self ): return self._action
+    
+class EditLogActionAdd( EditLogAction ):
+    
+    yaml_tag = u'!EditLogActionAdd'
+    
+    def __init__( self, data ):
+        
+        EditLogAction.__init__( self, ADD )
+        
+        self._data = data
+        
+    
+    def GetData( self ): return self._data
+    
+class EditLogActionDelete( EditLogAction ):
+    
+    yaml_tag = u'!EditLogActionDelete'
+    
+    def __init__( self, identifier ):
+        
+        EditLogAction.__init__( self, DELETE )
+        
+        self._identifier = identifier
+        
+    
+    def GetIdentifier( self ): return self._identifier
+    
+class EditLogActionEdit( EditLogAction ):
+    
+    yaml_tag = u'!EditLogActionEdit'
+    
+    def __init__( self, identifier, data ):
+        
+        EditLogAction.__init__( self, EDIT )
+        
+        self._identifier = identifier
+        self._data = data
+        
+    
+    def GetData( self ): return self._data
+    
+    def GetIdentifier( self ): return self._identifier
     
 class JobDatabase( object ):
     

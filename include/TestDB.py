@@ -58,7 +58,8 @@ class TestClientDB( unittest.TestCase ):
             
             os.chmod( path, stat.S_IWRITE )
             
-            function_called( path ) # try again
+            try: function_called( path ) # try again
+            except: pass
             
         
         if os.path.exists( HC.DB_DIR ): shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
@@ -1016,10 +1017,10 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( ( HC.ADD, new_tag_repo ) )
-        edit_log.append( ( HC.ADD, other_new_tag_repo ) )
-        edit_log.append( ( HC.ADD, new_local_like ) )
-        edit_log.append( ( HC.ADD, new_local_numerical ) )
+        edit_log.append( HC.EditLogActionAdd( new_tag_repo ) )
+        edit_log.append( HC.EditLogActionAdd( other_new_tag_repo ) )
+        edit_log.append( HC.EditLogActionAdd( new_local_like ) )
+        edit_log.append( HC.EditLogActionAdd( new_local_numerical ) )
         
         self._write( 'update_services', edit_log )
         
@@ -1043,8 +1044,8 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( ( HC.DELETE, new_local_like[0] ) )
-        edit_log.append( ( HC.EDIT, other_new_tag_repo_updated ) )
+        edit_log.append( HC.EditLogActionDelete( new_local_like[0] ) )
+        edit_log.append( HC.EditLogActionEdit( other_new_tag_repo_updated[0], other_new_tag_repo_updated ) )
         
         self._write( 'update_services', edit_log )
         
@@ -1056,7 +1057,7 @@ class TestClientDB( unittest.TestCase ):
         
         edit_log = []
         
-        edit_log.append( ( HC.DELETE, other_new_tag_repo_updated[0] ) )
+        edit_log.append( HC.EditLogActionDelete( other_new_tag_repo_updated[0] ) )
         
         self._write( 'update_services', edit_log )
         
@@ -1143,7 +1144,8 @@ class TestServerDB( unittest.TestCase ):
             
             os.chmod( path, stat.S_IWRITE )
             
-            function_called( path ) # try again
+            try: function_called( path ) # try again
+            except: pass
             
         
         if os.path.exists( HC.DB_DIR ): shutil.rmtree( HC.DB_DIR, onerror = make_temp_files_deletable )
@@ -1155,15 +1157,75 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_account_creation( self ):
         
-        # create new account types
-        # edit the account types
-        # create rkeys
-        # create akeys
-        # test successive rkey fetch gives new akeys
-        # get session with akey
-        # make sure rkey is now dead
+        result = self._read( 'account_types', self._tag_service_key )
         
-        pass
+        ( service_admin_at, ) = result
+        
+        self.assertEqual( service_admin_at.GetTitle(), 'service admin' )
+        self.assertEqual( service_admin_at.GetPermissions(), [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN ] )
+        self.assertEqual( service_admin_at.GetMaxBytes(), None )
+        self.assertEqual( service_admin_at.GetMaxRequests(), None )
+        
+        #
+        
+        user_at = HC.AccountType( 'user', [ HC.GET_DATA, HC.POST_DATA ], ( 50000, 500 ) )
+        
+        edit_log = [ ( HC.ADD, user_at ) ]
+        
+        self._write( 'account_types', self._tag_service_key, edit_log )
+        
+        result = self._read( 'account_types', self._tag_service_key )
+        
+        ( at_1, at_2 ) = result
+        
+        d = { at_1.GetTitle() : at_1, at_2.GetTitle() : at_2 }
+        
+        at = d[ 'user' ]
+        
+        self.assertEqual( at.GetPermissions(), [ HC.GET_DATA, HC.POST_DATA ] )
+        self.assertEqual( at.GetMaxBytes(), 50000 )
+        self.assertEqual( at.GetMaxRequests(), 500 )
+        
+        #
+        
+        user_at_diff = HC.AccountType( 'user different', [ HC.GET_DATA ], ( 40000, None ) )
+        
+        edit_log = [ ( HC.EDIT, ( 'user', user_at_diff ) ) ]
+        
+        self._write( 'account_types', self._tag_service_key, edit_log )
+        
+        result = self._read( 'account_types', self._tag_service_key )
+        
+        ( at_1, at_2 ) = result
+        
+        d = { at_1.GetTitle() : at_1, at_2.GetTitle() : at_2 }
+        
+        at = d[ 'user different' ]
+        
+        self.assertEqual( at.GetPermissions(), [ HC.GET_DATA ] )
+        self.assertEqual( at.GetMaxBytes(), 40000 )
+        self.assertEqual( at.GetMaxRequests(), None )
+        
+        #
+        
+        r_keys = self._read( 'registration_keys', self._tag_service_key, 5, 'user different', 86400 * 365 )
+        
+        self.assertEqual( len( r_keys ), 5 )
+        
+        for r_key in r_keys: self.assertEqual( len( r_key ), 32 )
+        
+        r_key = r_keys[0]
+        
+        access_key = self._read( 'access_key', r_key )
+        access_key_2 = self._read( 'access_key', r_key )
+        
+        self.assertNotEqual( access_key, access_key_2 )
+        
+        self.assertRaises( HydrusExceptions.ForbiddenException, self._read, 'account_key_from_access_key', self._tag_service_key, access_key )
+        
+        account_key = self._read( 'account_key_from_access_key', self._tag_service_key, access_key_2 )
+        
+        self.assertRaises( HydrusExceptions.ForbiddenException, self._read, 'access_key', r_key )
         
     
     def _test_content_creation( self ):

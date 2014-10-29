@@ -3759,7 +3759,19 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
         HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
         
-        HC.options[ 'thumbnail_dimensions' ] = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
+        new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
+        
+        if new_thumbnail_dimensions != HC.options[ 'thumbnail_dimensions' ]:
+            
+            text = 'You have changed the thumbnail dimensions, which will mean deleting all the old resized thumbnails right now, during which time the database will be locked. If you have tens or hundreds of thousands of files, this could take a long time.'
+            text += os.linesep * 2
+            text += 'Are you sure you want to change your thumbnail dimensions?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES: HC.options[ 'thumbnail_dimensions' ] = new_thumbnail_dimensions
+                
+            
         
         HC.options[ 'num_autocomplete_chars' ] = self._num_autocomplete_chars.GetValue()
         
@@ -4941,7 +4953,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                             info[ 'upper' ] = 5
                             
                         
-                        self._edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
+                        self._edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
                         
                         page = self._Panel( services_listbook, service_key, service_type, name, info )
                         
@@ -5022,7 +5034,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             for page in all_pages:
                 
-                if page.HasChanges(): self._edit_log.append( ( HC.EDIT, page.GetInfo() ) )
+                if page.HasChanges():
+                    
+                    ( service_key, service_type, name, info ) = page.GetInfo()
+                    
+                    self._edit_log.append( HC.EditLogActionEdit( service_key, ( service_key, service_type, name, info ) ) )
+                    
                 
             
         
@@ -5068,14 +5085,13 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     
                     with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                         
-                        if dlg.ShowModal() == wx.ID_YES:
-                            
-                            self._edit_log.append( ( HC.DELETE, service_key ) )
-                            
-                            services_listbook.DeleteCurrentPage()
-                            
+                        if dlg.ShowModal() != wx.ID_YES: return
                         
                     
+                
+                self._edit_log.append( HC.EditLogActionDelete( service_key ) )
+                
+                services_listbook.DeleteCurrentPage()
                 
             
         
@@ -5152,7 +5168,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
             else:
                 
-                self._edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
+                self._edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
                 
                 page = self._Panel( services_listbook, service_key, service_type, name, info )
                 
@@ -5394,8 +5410,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             name = self._service_name.GetValue()
             
             if name == '': raise Exception( 'Please enter a name' )
-            
-            info = {}
             
             if service_type in HC.REMOTE_SERVICES:
                 

@@ -161,7 +161,8 @@ The database will be locked while the backup occurs, which may lock up your gui 
                 
                 os.chmod( path, stat.S_IWRITE )
                 
-                function_called( path ) # try again
+                try: function_called( path ) # try again
+                except: pass
                 
             
             if os.path.exists( HC.TEMP_DIR ): shutil.rmtree( HC.TEMP_DIR, onerror = make_temp_files_deletable )
@@ -248,6 +249,8 @@ The database will be locked while the backup occurs, which may lock up your gui 
         self._db.StartDaemons()
         
     
+    def JustWokeFromSleep( self ): return self._just_woke_from_sleep
+    
     def MaintainDB( self ):
         
         sys.stdout.flush()
@@ -270,20 +273,24 @@ The database will be locked while the backup occurs, which may lock up your gui 
             
             for service in services: self.Read( 'service_info', service.GetServiceKey() )
             
-            self._timestamps[ 'service_info_cache_fatten' ] = HC.GetNow()
+            self._timestamps[ 'last_service_info_cache_fatten' ] = HC.GetNow()
             
         
         HC.pubsub.pub( 'clear_closed_pages' )
         
     
     def OnInit( self ):
-        self.SetAssertMode(wx.PYAPP_ASSERT_SUPPRESS)
+        
+        self.SetAssertMode( wx.PYAPP_ASSERT_SUPPRESS )
+        
         HC.app = self
         HC.http = HydrusNetworking.HTTPConnectionManager()
         
         self._timestamps = collections.defaultdict( lambda: 0 )
         
         self._timestamps[ 'boot' ] = HC.GetNow()
+        
+        self._just_woke_from_sleep = False
         
         self._local_service = None
         self._booru_service = None
@@ -546,9 +553,10 @@ Once it is done, the client will restart.'''
         self._timestamps[ 'last_check_idle_time' ] = HC.GetNow()
         
         # this tests if we probably just woke up from a sleep
-        if HC.GetNow() - last_time_this_ran > MAINTENANCE_PERIOD + ( 5 * 60 ): return
+        if HC.GetNow() - last_time_this_ran > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
+        else: self._just_woke_from_sleep = False
         
-        if self.CurrentlyIdle(): self.MaintainDB()
+        if not self._just_woke_from_sleep and self.CurrentlyIdle(): self.MaintainDB()
         
     
     def WaitUntilGoodTimeToUseGUIThread( self ):

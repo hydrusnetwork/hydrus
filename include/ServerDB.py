@@ -1121,10 +1121,17 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
     
     def _GetAccessKey( self, c, registration_key ):
         
-        try: ( access_key, ) = c.execute( 'SELECT access_key FROM registration_keys WHERE registration_key = ?;', ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), ) ).fetchone()
+        # we generate a new access_key every time this is requested so that if the registration_key leaks, no one grab the access_key before the legit user does
+        # the reg_key is deleted when the last-requested access_key is used to create a session, which calls getaccountkeyfromaccesskey
+        
+        try: ( one, ) = c.execute( 'SELECT 1 FROM registration_keys WHERE registration_key = ?;', ( sqlite3.Binary( hashlib.sha256( registration_key ).digest() ), ) ).fetchone()
         except: raise HydrusExceptions.ForbiddenException( 'The service could not find that registration key in its database.' )
         
-        return access_key
+        new_access_key = os.urandom( HC.HYDRUS_KEY_LENGTH )
+        
+        c.execute( 'UPDATE registration_keys SET access_key = ? WHERE registration_key = ?;', ( sqlite3.Binary( new_access_key ), sqlite3.Binary( hashlib.sha256( registration_key ).digest() ) ) )
+        
+        return new_access_key
         
     
     def _GetAccount( self, c, account_key ):

@@ -57,6 +57,13 @@ class DAEMONQueue( DAEMON ):
                 self._event.clear()
                 
             
+            while HC.app.JustWokeFromSleep():
+                
+                if HC.shutdown: return
+                
+                time.sleep( 10 )
+                
+            
             items = []
             
             while not self._queue.empty(): items.append( self._queue.get() )
@@ -92,6 +99,13 @@ class DAEMONWorker( DAEMON ):
             if HC.shutdown: return
             
             time.sleep( self._pre_callable_wait )
+            
+            while HC.app.JustWokeFromSleep():
+                
+                if HC.shutdown: return
+                
+                time.sleep( 10 )
+                
             
             try: self._callable()
             except Exception as e:

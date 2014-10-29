@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 135</h3></li>
+				<ul>
+					<li>added a menu option to any tag's right-click menu to open a new search page for that tag</li>
+					<li>added a subscription cache to the client database to speed up subs checking</li>
+					<li>added a filter to the message popup system so those annoying and 99% pointless PyDeadObjectErrors will not display. they will still be written to the log</li>
+					<li>cleaned up a couple of temporary file deletion errors</li>
+					<li>improved some more temp file deletion error handling</li>
+					<li>fixed a bug that I think was stopping file repositories from being deleted</li>
+					<li>improved the manage services db edit log</li>
+					<li>fixed a bad comparison that was causing superfluous edit actions after a manage services dialog ok</li>
+					<li>fixed a new bug related to displaying non text in the popup system</li>
+					<li>added a 'just woke from sleep' check to all daemons, so CPU heavy stuff like repository sync will not initialise if you just woke your computer. the grace period lasts about ten minutes</li>
+					<li>retuned the way the subscrption daemon initialises (it'll now wait two minutes after startup before firing)</li>
+					<li>fixed a typo that was causing fatten service info to fire more often than it should</li>
+					<li>added a yes/no warning to options ok when the thumbnail dimensions have been changed</li>
+					<li>added a popup message when thumbnail dimensions have been changed to report on deletion progress</li>
+					<li>added account testing to my server db testing suite</li>
+					<li>improved the security of the registration_key->access_key transaction; it'll now generate a new access_key with every call</li>
+				</ul>
 				<li><h3>version 134</h3></li>
 				<ul>
 					<li>updated to wx 3.0.1.1</li>

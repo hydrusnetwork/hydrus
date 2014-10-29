@@ -348,7 +348,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info[ 'port' ] = 45871
             info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
             
-            edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
+            edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
             service_key = os.urandom( 32 )
             service_type = HC.FILE_REPOSITORY
@@ -360,7 +360,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info[ 'port' ] = 45872
             info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
             
-            edit_log.append( ( HC.ADD, ( service_key, service_type, name, info ) ) )
+            edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -443,7 +443,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             info[ 'port' ] = port
             info[ 'access_key' ] = ''
             
-            edit_log.append( ( HC.ADD, ( admin_service_key, service_type, name, info ) ) )
+            edit_log.append( HC.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) )
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -481,7 +481,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             info_update = { 'access_key' : access_key }
             
-            edit_log = [ ( HC.EDIT, ( admin_service_key, service_type, name, info_update ) ) ]
+            edit_log = [ HC.EditLogActionEdit( admin_service_key, ( admin_service_key, service_type, name, info_update ) ) ]
             
             HC.app.Write( 'update_services', edit_log )
             
@@ -2870,7 +2870,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             
             info_update = { 'access_key' : access_key }
             
-            edit_log = [ ( HC.EDIT, ( service_key, service_type, name, info_update ) ) ]
+            edit_log = [ HC.EditLogActionEdit( service_key, ( service_key, service_type, name, info_update ) ) ]
             
             HC.app.Write( 'update_services', edit_log )
             

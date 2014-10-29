@@ -256,7 +256,8 @@ class MessageDB( object ):
                         
                     except: pass
                     
-                    os.remove( temp_path )
+                    try: os.remove( temp_path )
+                    except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                     
                 
                 hash_ids = self._GetHashIds( c, attachment_hashes )
@@ -1587,6 +1588,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if dump_name is None: c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
         else:
+            
+            if dump_type == YAML_DUMP_ID_SUBSCRIPTION and dump_name in self._subscriptions_cache: del self._subscriptions_cache[ dump_name ]
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
@@ -2965,6 +2968,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         else:
             
+            if dump_type == YAML_DUMP_ID_SUBSCRIPTION and dump_name in self._subscriptions_cache: return self._subscriptions_cache[ dump_name ]
+            
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
             result = c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
@@ -2980,6 +2985,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 if result is None: raise Exception( dump_name + ' was not found!' )
                 
             else: ( result, ) = result
+            
+            if dump_type == YAML_DUMP_ID_SUBSCRIPTION: self._subscriptions_cache[ dump_name ] = result
             
         
         return result
@@ -3771,6 +3778,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _SetYAMLDump( self, c, dump_type, dump_name, data ):
         
+        if dump_type == YAML_DUMP_ID_SUBSCRIPTION: self._subscriptions_cache[ dump_name ] = data
+        
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
         
         c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
@@ -4197,17 +4206,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         recalc_combined_mappings = False
         message = None
         
-        for ( action, details ) in edit_log:
+        for entry in edit_log:
+            
+            action = entry.GetAction()
             
             if action == HC.ADD:
                 
-                ( service_key, service_type, name, info ) = details
+                ( service_key, service_type, name, info ) = entry.GetData()
                 
                 self._AddService( c, service_key, service_type, name, info )
                 
             elif action == HC.DELETE:
                 
-                service_key = details
+                service_key = entry.GetIdentifier()
                 
                 service_id = self._GetServiceId( c, service_key )
                 
@@ -4249,7 +4260,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             elif action == HC.EDIT:
                 
-                ( service_key, service_type, new_name, info_update ) = details
+                ( service_key, service_type, new_name, info_update ) = entry.GetData()
                 
                 service_id = self._GetServiceId( c, service_key )
                 
@@ -4308,6 +4319,8 @@ class DB( ServiceDB ):
         
         self._jobs = Queue.PriorityQueue()
         self._pubsubs = []
+        
+        self._subscriptions_cache = {}
         
         self._currently_doing_job = False
         
@@ -4659,11 +4672,22 @@ class DB( ServiceDB ):
         
         if resize_thumbs:
             
-            thumbnail_paths = [ path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) ]
+            message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'deleting old thumbnails: initialising' } )
             
-            for path in thumbnail_paths: os.remove( path )
+            HC.pubsub.pub( 'message', message )
+            
+            thumbnail_paths = ( path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
+            
+            for ( i, path ) in enumerate( thumbnail_paths ):
+                
+                os.remove( path )
+                
+                if i % 100 == 0: message.SetInfo( 'text', 'deleting old thumbnails: done ' + HC.ConvertIntToPrettyString( i ) )
+                
             
             self.pub_after_commit( 'thumbnail_resize' )
+            
+            message.SetInfo( 'text', 'deleting old thumbnails: done' )
             
         
         self.pub_after_commit( 'notify_new_options' )
@@ -4733,31 +4757,6 @@ class DB( ServiceDB ):
         
     
     def _UpdateDB( self, c, version ):
-        
-        if version == 84:
-            
-            boorus = []
-            
-            name = 'e621'
-            search_url = 'https://e621.net/post/index?page=%index%&tags=%tags%'
-            search_separator = '%20'
-            advance_by_page_num = True
-            thumb_classname = 'thumb'
-            image_id = None
-            image_data = 'Download'
-            tag_classnames_to_namespaces = { 'tag-type-general categorized-tag' : '', 'tag-type-character categorized-tag' : 'character', 'tag-type-copyright categorized-tag' : 'series', 'tag-type-artist categorized-tag' : 'creator', 'tag-type-species categorized-tag' : 'species' }
-            
-            boorus.append( CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) )
-            
-            for booru in boorus:
-                
-                name = booru.GetName()
-                
-                c.execute( 'DELETE FROM boorus WHERE name = ?;', ( name, ) )
-                
-                c.execute( 'INSERT INTO boorus VALUES ( ?, ? );', ( name, booru ) )
-                
-            
         
         if version == 87:
             
@@ -5426,7 +5425,6 @@ class DB( ServiceDB ):
                 elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
                 elif action == 'subscription_names': result = self._GetYAMLDumpNames( c, YAML_DUMP_ID_SUBSCRIPTION )
                 elif action == 'subscription': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
-                elif action == 'subscriptions': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
                 elif action == 'tag_censorship': result = self._GetTagCensorship( c, *args, **kwargs )
                 elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
                 elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
@@ -5629,7 +5627,7 @@ class DB( ServiceDB ):
         HydrusThreading.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
         HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360 )
+        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
         HydrusThreading.DAEMONWorker( 'UPnP', DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
         HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
@@ -5894,7 +5892,8 @@ def DAEMONDownloadFiles():
                     
                     HC.app.WriteSynchronous( 'import_file', temp_path )
                     
-                    os.remove( temp_path )
+                    try: os.remove( temp_path )
+                    except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                     
                     break
                     
@@ -6770,7 +6769,8 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_keys_to_tags = service_keys_to_tags, url = url )
                                 
-                                os.remove( temp_path )
+                                try: os.remove( temp_path )
+                                except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                                 
                                 if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
                                 

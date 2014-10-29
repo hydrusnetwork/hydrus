@@ -108,6 +108,8 @@ class Controller( wx.App ):
     
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
+    def JustWokeFromSleep( self ): return False
+    
     def OnInit( self ):
         
         HC.app = self

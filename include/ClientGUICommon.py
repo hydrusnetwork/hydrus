@@ -2010,13 +2010,13 @@ class ListBox( wx.ScrolledWindow ):
             
             term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy ' + term )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + term + '"' )
             
             if ':' in term:
                 
                 sub_term = term.split( ':', 1 )[1]
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy ' + sub_term )
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
                 
             
             self.PopupMenu( menu )
@@ -2831,7 +2831,7 @@ class PopupMessageText( PopupMessage ):
     
     def Update( self ):
         
-        text = self._ProcessText( self._message.GetInfo( 'text' ) )
+        text = self._ProcessText( HC.u( self._message.GetInfo( 'text' ) ) )
         
         if self._text.GetLabel() != text: self._text.SetLabel( text )
         
@@ -2951,6 +2951,20 @@ class PopupMessageManager( wx.Frame ):
         except: print( repr( message_string ) )
         
     
+    def _ShouldDisplayMessage( self, message ):
+        
+        message_type = message.GetType()
+        
+        if message_type == HC.MESSAGE_TYPE_ERROR:
+            
+            ( etype, value, trace ) = message.GetInfo( 'error' )
+            
+            if etype == wx.PyDeadObjectError: return False
+            
+        
+        return True
+        
+    
     def _SizeAndPositionAndShow( self ):
         
         try:
@@ -3001,9 +3015,12 @@ class PopupMessageManager( wx.Frame ):
             
             self._PrintMessage( message )
             
-            self._pending_messages.append( message )
-            
-            self._CheckPending()
+            if self._ShouldDisplayMessage( message ):
+                
+                self._pending_messages.append( message )
+                
+                self._CheckPending()
+                
             
         except:
             
@@ -4096,6 +4113,12 @@ class TagsBox( ListBox ):
                 
             elif command == 'copy_all_tags': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
             elif command == 'copy_all_tags_with_counts': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
+            elif command == 'new_search_page_with_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ) ) ] )
+                
             elif command in ( 'parent', 'sibling' ):
                 
                 tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
@@ -4130,6 +4153,18 @@ class TagsBox( ListBox ):
         
             menu = wx.Menu()
             
+            if self._current_selected_index is not None:
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                if type( term ) in ( str, unicode ):
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + term  + '"' )
+                    
+                    menu.AppendSeparator()
+                    
+                
+            
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
             if self.has_counts: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
             
@@ -4139,13 +4174,13 @@ class TagsBox( ListBox ):
                 
                 if type( term ) in ( str, unicode ):
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy ' + term )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + term + '"' )
                     
                     if ':' in term:
                         
                         sub_term = term.split( ':', 1 )[1]
                         
-                        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy ' + sub_term )
+                        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
                         
                     
                     menu.AppendSeparator()
