@@ -613,7 +613,14 @@ class TestAMP( unittest.TestCase ):
         
         deferred.addErrback( err )
         
-        while not deferred.called: time.sleep( 0.1 )
+        before = time.time()
+        
+        while not deferred.called:
+            
+            time.sleep( 0.1 )
+            
+            if time.time() - before > 10: raise Exception( 'Trying to get deferred timed out!' )
+            
         
         result = deferred.result
         

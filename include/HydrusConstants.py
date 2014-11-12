@@ -7,6 +7,7 @@ BASE_DIR = sys.path[0]
 
 BIN_DIR = BASE_DIR + os.path.sep + 'bin'
 DB_DIR = BASE_DIR + os.path.sep + 'db'
+CLIENT_ARCHIVES_DIR = DB_DIR + os.path.sep + 'client_archives'
 CLIENT_FILES_DIR = DB_DIR + os.path.sep + 'client_files'
 SERVER_FILES_DIR = DB_DIR + os.path.sep + 'server_files'
 CLIENT_THUMBNAILS_DIR = DB_DIR + os.path.sep + 'client_thumbnails'
@@ -64,7 +65,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 135
+SOFTWARE_VERSION = 136
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -193,7 +194,9 @@ RATINGS_SERVICES = [ LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPO
 REPOSITORIES = [ TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY ]
 RESTRICTED_SERVICES = ( REPOSITORIES ) + [ SERVER_ADMIN, MESSAGE_DEPOT ]
 REMOTE_SERVICES = list( RESTRICTED_SERVICES )
+TAG_SERVICES = [ LOCAL_TAG, TAG_REPOSITORY ]
 LOCAL_SERVICES = [ LOCAL_FILE, LOCAL_TAG, LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_BOORU, COMBINED_FILE, COMBINED_TAG ]
+NONEDITABLE_SERVICES = [ LOCAL_BOORU, LOCAL_FILE, LOCAL_TAG ]
 ALL_SERVICES = list( REMOTE_SERVICES ) + list( LOCAL_SERVICES )
 
 SERVICES_WITH_THUMBNAILS = [ FILE_REPOSITORY, LOCAL_FILE ]
@@ -777,6 +780,14 @@ def ConvertPortablePathToAbsPath( portable_path ):
     if os.path.exists( abs_path ): return abs_path
     else: return None
     
+def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
+    
+    result = { s for s in pretty_strings if s != 'no namespace' }
+    
+    if 'no namespace' in pretty_strings: result.add( '' )
+    
+    return result
+    
 def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
     num_files = 0
@@ -1071,6 +1082,16 @@ def ConvertTimeToPrettyTime( secs ):
     
     return time.strftime( '%H:%M:%S', time.gmtime( secs ) )
     
+def ConvertUglyNamespacesToPrettyStrings( namespaces ):
+    
+    result = [ namespace for namespace in namespaces if namespace != '' and namespace is not None ]
+    
+    result.sort()
+    
+    if '' in namespaces or None in namespaces: result.insert( 0, 'no namespace' )
+    
+    return result
+    
 def ConvertUnitToInteger( unit ):
     
     if unit == 'B': return 1
@@ -1178,6 +1199,17 @@ def MergeKeyToListDicts( key_to_list_dicts ):
         
     
     return result
+    
+def ReadFileLikeAsBlocks( f, block_size ):
+    
+    next_block = f.read( block_size )
+    
+    while next_block != '':
+        
+        yield next_block
+        
+        next_block = f.read( block_size )
+        
     
 def SearchEntryMatchesPredicate( search_entry, predicate ):
     

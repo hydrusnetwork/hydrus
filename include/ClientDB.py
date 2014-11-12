@@ -12,6 +12,7 @@ import HydrusImageHandling
 import HydrusMessageHandling
 import HydrusNATPunch
 import HydrusServer
+import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
@@ -1356,6 +1357,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
+        if service_type in HC.TAG_SERVICES:
+            
+            if 'tag_archive_sync' not in info: info[ 'tag_archive_sync' ] = {}
+            
+        
         if service_type in HC.REPOSITORIES:
             
             if 'first_timestamp' not in info: info[ 'first_timestamp' ] = None
@@ -1434,6 +1440,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         shutil.copy( self._db_path, path + os.path.sep + 'client.db' )
         if os.path.exists( self._db_path + '-wal' ): shutil.copy( self._db_path + '-wal', path + os.path.sep + 'client.db-wal' )
         
+        shutil.copytree( HC.CLIENT_ARCHIVES_DIR, path + os.path.sep + 'client_archives'  )
         shutil.copytree( HC.CLIENT_FILES_DIR, path + os.path.sep + 'client_files' )
         shutil.copytree( HC.CLIENT_THUMBNAILS_DIR, path + os.path.sep + 'client_thumbnails'  )
         shutil.copytree( HC.CLIENT_UPDATES_DIR, path + os.path.sep + 'client_updates'  )
@@ -2810,6 +2817,46 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return shutdown_timestamps
         
     
+    def _GetTagArchiveInfo( self, c ): return { archive_name : hta.GetNamespaces() for ( archive_name, hta ) in self._tag_archives.items() }
+    
+    def _GetTagArchiveTags( self, c, hashes ):
+        
+        result = {}
+        
+        for ( archive_name, hta ) in self._tag_archives.items():
+            
+            hash_type == hta.GetHashType()
+            
+            sha256_to_archive_hashes = {}
+            
+            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
+                
+                sha256_to_archive_hashes = { hash : hash for hash in hashes }
+                
+            else:
+                
+                if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
+                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
+                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
+                
+                for hash in hashes:
+                    
+                    hash_id = self._GetHashId( c, hash )
+                    
+                    ( archive_hash, ) = c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                    
+                    sha256_to_archive_hashes[ hash ] = archive_hash
+                    
+                
+            
+            hashes_to_tags = { hash : hta.GetMappings( sha256_to_archive_hashes[ hash ] ) for hash in hashes }
+            
+            result[ archive_name ] = hashes_to_tags
+            
+        
+        return result
+        
+    
     def _GetTagCensorship( self, c, service_key = None ):
         
         if service_key is None:
@@ -3095,9 +3142,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             self.pub_content_updates_after_commit( { HC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
             
-            ( md5, sha1 ) = HydrusFileHandling.GetMD5AndSHA1FromPath( path )
+            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( path )
             
-            c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1 ) VALUES ( ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ) ) )
+            c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
             
             if not archive: self._InboxFiles( c, ( hash_id, ) )
             
@@ -3117,6 +3164,22 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
             self._ProcessContentUpdates( c, service_keys_to_content_updates )
+            
+        
+        tag_services = self._GetServices( c, HC.TAG_SERVICES )
+        
+        for service in tag_services:
+            
+            service_key = service.GetServiceKey()
+            info = service.GetInfo()
+            
+            tag_archive_sync = info[ 'tag_archive_sync' ]
+            
+            for ( archive_name, namespaces ) in tag_archive_sync.items():
+                
+                try: self._SyncToTagArchive( c, hash_id, archive_name, namespaces, service_key )
+                except: pass
+                
             
         
         if generate_media_result:
@@ -3148,7 +3211,43 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _ProcessContentUpdates( self, c, service_keys_to_content_updates ):
+    def _InitialiseTagArchiveSync( self, c, archive_name, namespaces, service_key ):
+        
+        prefix_string = 'initialising sync to tag archive ' + archive_name + ': '
+        
+        job_key = HC.JobKey( pausable = False, cancellable = False )
+        
+        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        
+        HC.pubsub.pub( 'message', message )
+        
+        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
+        
+        block_size = 100
+        
+        next_block = []
+        
+        for ( i, hash_id ) in enumerate( hash_ids ):
+            
+            try: self._SyncToTagArchive( c, hash_id, archive_name, namespaces, service_key )
+            except: pass
+            
+            if i % 100 == 0:
+                
+                message.SetInfo( 'range', len( hash_ids ) )
+                message.SetInfo( 'value', i )
+                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
+                message.SetInfo( 'mode', 'gauge' )
+                
+            
+        
+        message.SetInfo( 'text', prefix_string + 'done!' )
+        message.SetInfo( 'mode', 'text' )
+        
+        self.pub_after_commit( 'notify_new_pending' )
+        
+    
+    def _ProcessContentUpdates( self, c, service_keys_to_content_updates, pub_immediate = False ):
         
         notify_new_downloads = False
         notify_new_pending = False
@@ -3574,17 +3673,25 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
-        if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
-        if notify_new_parents: self.pub_after_commit( 'notify_new_parents' )
-        if notify_new_siblings:
+        if pub_immediate:
             
-            self.pub_after_commit( 'notify_new_siblings' )
-            self.pub_after_commit( 'notify_new_parents' )
+            HC.pubsub.pub( 'content_updates_data', service_keys_to_content_updates )
+            HC.pubsub.pub( 'content_updates_gui', service_keys_to_content_updates )
             
-        if notify_new_thumbnails: self.pub_after_commit( 'notify_new_thumbnails' )
-        
-        self.pub_content_updates_after_commit( service_keys_to_content_updates )
+        else:
+            
+            if notify_new_downloads: self.pub_after_commit( 'notify_new_downloads' )
+            if notify_new_pending: self.pub_after_commit( 'notify_new_pending' )
+            if notify_new_parents: self.pub_after_commit( 'notify_new_parents' )
+            if notify_new_siblings:
+                
+                self.pub_after_commit( 'notify_new_siblings' )
+                self.pub_after_commit( 'notify_new_parents' )
+                
+            if notify_new_thumbnails: self.pub_after_commit( 'notify_new_thumbnails' )
+            
+            self.pub_content_updates_after_commit( service_keys_to_content_updates )
+            
         
     
     def _ProcessServiceUpdates( self, c, service_keys_to_service_updates ):
@@ -3799,6 +3906,43 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
             HC.pubsub.pub( 'refresh_local_booru_shares' )
+            
+        
+    
+    def _SyncToTagArchive( self, c, hash_id, archive_name, namespaces, service_key ):
+        
+        hta = self._tag_archives[ archive_name ]
+        
+        hash_type = hta.GetHashType()
+        
+        hash = self._GetHash( c, hash_id )
+        
+        if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = hash
+        else:
+            
+            if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
+            elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
+            elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
+            
+            ( archive_hash, ) = c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            
+        
+        tags = hta.GetMappings( archive_hash )
+        
+        desired_tags = HydrusTags.FilterNamespaces( tags, namespaces )
+        
+        if len( desired_tags ) > 0:
+            
+            if service_key == HC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
+            else: action = HC.CONTENT_UPDATE_PENDING
+            
+            rows = [ ( tag, ( hash, )  ) for tag in desired_tags ]
+            
+            content_updates = [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, row ) for row in rows ]
+            
+            service_keys_to_content_updates = { service_key : content_updates }
+            
+            self._ProcessContentUpdates( c, service_keys_to_content_updates, pub_immediate = True )
             
         
     
@@ -4277,6 +4421,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     self.pub_after_commit( 'permissions_are_stale' )
                     
                 
+                if service_type in HC.TAG_SERVICES:
+                    
+                    ( old_info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    
+                    old_tag_archive_sync = old_info[ 'tag_archive_sync' ]
+                    new_tag_archive_sync = info_update[ 'tag_archive_sync' ]
+                    
+                    for archive_name in new_tag_archive_sync:
+                        
+                        namespaces = set( new_tag_archive_sync[ archive_name ] )
+                        
+                        if archive_name in old_tag_archive_sync:
+                            
+                            old_namespaces = old_tag_archive_sync[ archive_name ]
+                            
+                            namespaces.difference_update( old_namespaces )
+                            
+                            if len( namespaces ) == 0: continue
+                            
+                        
+                        self._InitialiseTagArchiveSync( c, archive_name, namespaces, service_key )
+                        
+                    
+                
                 self._UpdateServiceInfo( c, service_id, info_update )
                 
                 if service_type == HC.LOCAL_BOORU:
@@ -4454,12 +4622,38 @@ class DB( ServiceDB ):
         return site_id
         
     
+    def _InitArchives( self ):
+        
+        self._tag_archives = {}
+        
+        for filename in dircache.listdir( HC.CLIENT_ARCHIVES_DIR ):
+            
+            if filename.endswith( '.db' ):
+                
+                try:
+                    
+                    hta = HydrusTagArchive.HydrusTagArchive( HC.CLIENT_ARCHIVES_DIR + os.path.sep + filename )
+                    
+                    archive_name = filename[:-3]
+                    
+                    self._tag_archives[ archive_name ] = hta
+                    
+                except Exception as e:
+                    
+                    HC.ShowText( 'An archive failed to load on boot.' )
+                    HC.ShowException( e )
+                    
+                
+            
+        
+    
     def _InitDB( self ):
         
         if not os.path.exists( self._db_path ):
             
             HC.is_first_start = True
             
+            if not os.path.exists( HC.CLIENT_ARCHIVES_DIR ): os.mkdir( HC.CLIENT_ARCHIVES_DIR )
             if not os.path.exists( HC.CLIENT_FILES_DIR ): os.mkdir( HC.CLIENT_FILES_DIR )
             if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
             if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
@@ -4520,9 +4714,10 @@ class DB( ServiceDB ):
             
             c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
             
-            c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES );' )
+            c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
             c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
             c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
+            c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
             
             c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, rating REAL, PRIMARY KEY( service_id, hash_id ) );' )
             c.execute( 'CREATE INDEX local_ratings_hash_id_index ON local_ratings ( hash_id );' )
@@ -5344,6 +5539,54 @@ class DB( ServiceDB ):
             c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
+        if version == 135:
+            
+            if not os.path.exists( HC.CLIENT_ARCHIVES_DIR ): os.mkdir( HC.CLIENT_ARCHIVES_DIR )
+            
+            #
+            
+            extra_hashes_data = c.execute( 'SELECT * FROM local_hashes;' ).fetchall()
+            
+            c.execute( 'DROP TABLE local_hashes;' )
+            
+            c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
+            c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
+            c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
+            c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
+            
+            for ( i, ( hash_id, md5, sha1 ) ) in enumerate( extra_hashes_data ):
+                
+                hash = self._GetHash( c, hash_id )
+                
+                try: path = CC.GetFilePath( hash )
+                except: continue
+                
+                h_sha512 = hashlib.sha512()
+                
+                with open( path, 'rb' ) as f:
+                    
+                    for block in HC.ReadFileLikeAsBlocks( f, 65536 ): h_sha512.update( block )
+                    
+                    sha512 = h_sha512.digest()
+                    
+                
+                c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+                
+                if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'generating sha512 hashes: ' + HC.ConvertIntToPrettyString( i ) )
+                
+            
+            #
+            
+            tag_service_info = c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.TAG_SERVICES ) + ';' ).fetchall()
+            
+            for ( service_id, info ) in tag_service_info:
+                
+                info[ 'tag_archive_sync' ] = {}
+                
+                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                
+            
+        
         c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True
@@ -5387,6 +5630,8 @@ class DB( ServiceDB ):
             def ProcessRead( action, args, kwargs ):
                 
                 if action == '4chan_pass': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, '4chan_pass' )
+                elif action == 'tag_archive_info': result = self._GetTagArchiveInfo( c, *args, **kwargs )
+                elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( c, *args, **kwargs )
                 elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
                 elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
                 elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
@@ -5539,6 +5784,8 @@ class DB( ServiceDB ):
             HC.pubsub.pub( 'db_locked_status', '' )
             
         
+        self._InitArchives()
+        
         ( db, c ) = self._GetDBCursor()
         
         while not ( ( self._local_shutdown or HC.shutdown ) and self._jobs.empty() ):
@@ -5611,6 +5858,7 @@ class DB( ServiceDB ):
         shutil.copy( path + os.path.sep + 'client.db', self._db_path )
         if os.path.exists( path + os.path.sep + 'client.db-wal' ): shutil.copy( path + os.path.sep + 'client.db-wal', self._db_path + '-wal' )
         
+        shutil.copytree( path + os.path.sep + 'client_archives', HC.CLIENT_ARCHIVES_DIR )
         shutil.copytree( path + os.path.sep + 'client_files', HC.CLIENT_FILES_DIR )
         shutil.copytree( path + os.path.sep + 'client_thumbnails', HC.CLIENT_THUMBNAILS_DIR )
         shutil.copytree( path + os.path.sep + 'client_updates', HC.CLIENT_UPDATES_DIR )

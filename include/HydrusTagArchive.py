@@ -61,6 +61,7 @@ class HydrusTagArchive( object ):
         if create_db: self._InitDB()
         
         self._namespaces = { namespace for ( namespace, ) in self._c.execute( 'SELECT namespace FROM namespaces;' ) }
+        self._namespaces.add( '' )
         
     
     def _InitDB( self ):
@@ -157,6 +158,7 @@ class HydrusTagArchive( object ):
     def DeleteNamespaces( self ):
         
         self._namespaces = {}
+        self._namespaces.add( '' )
         
         self._c.execute( 'DELETE FROM namespaces;' )
         
@@ -164,7 +166,22 @@ class HydrusTagArchive( object ):
     def GetHashType( self ):
         
         try: ( hash_type, ) = self._c.execute( 'SELECT hash_type FROM hash_type;' ).fetchone()
-        except: raise Exception( 'This archive has no hash type set.' )
+        except:
+            
+            try:
+                
+                ( hash, ) = self._c.execute( 'SELECT hash FROM hashes;' ).fetchone()
+                
+                if len( hash ) == 16: self.SetHashType( HASH_TYPE_MD5 )
+                elif len( hash ) == 20: self.SetHashType( HASH_TYPE_SHA1 )
+                elif len( hash ) == 32: self.SetHashType( HASH_TYPE_SHA256 )
+                elif len( hash ) == 64: self.SetHashType( HASH_TYPE_SHA512 )
+                else: raise Exception()
+                
+                return self.GetHashType()
+                
+            except: raise Exception( 'This archive has no hash type set, and as it has no files, no hash type guess can be made.' )
+            
         
         return hash_type
         
@@ -192,9 +209,24 @@ class HydrusTagArchive( object ):
         except: return False
         
     
+    def IterateMappings( self ):
+        
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM hashes;' ) ]
+        
+        for hash_id in hash_ids:
+            
+            ( hash, ) = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            
+            tags = self.GetMappings( hash )
+            
+            if len( tags ) > 0: yield ( hash, tags )
+            
+        
+    
     def RebuildNamespaces( self, namespaces_to_exclude = set() ):
         
         self._namespaces = set()
+        self._namespaces.add( '' )
         
         self._c.execute( 'DELETE FROM namespaces;' )
         

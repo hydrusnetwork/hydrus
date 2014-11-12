@@ -6,7 +6,6 @@ import HydrusExceptions
 import HydrusNetworking
 import HydrusThreading
 import json
-import lxml
 import os
 import pafy
 import threading

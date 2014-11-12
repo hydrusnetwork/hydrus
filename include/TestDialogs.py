@@ -162,8 +162,8 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
             
-            wx.CallAfter( dlg._strings.Select, 0 )
-            PressKey( dlg._strings, wx.WXK_SPACE )
+            wx.CallLater( 500, dlg._strings.Select, 0 )
+            wx.CallLater( 1000, PressKey, dlg._strings, wx.WXK_SPACE )
             
             result = dlg.ShowModal()
             
@@ -185,9 +185,8 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
             
-            wx.CallAfter( dlg._strings.Select, 1 )
-            
-            HitButton( dlg._ok )
+            wx.CallLater( 500, dlg._strings.Select, 1 )
+            wx.CallLater( 1000, HitButton, dlg._ok )
             
             result = dlg.ShowModal()
             

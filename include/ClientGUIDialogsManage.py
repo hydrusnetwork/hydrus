@@ -4764,13 +4764,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
         
         def PopulateControls():
             
-            manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU ]
+            manageable_service_types = HC.RESTRICTED_SERVICES + [ HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_BOORU ]
             
             for service_type in manageable_service_types:
                 
                 if service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
                 elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
                 elif service_type == HC.LOCAL_BOORU: name = 'booru'
+                elif service_type == HC.LOCAL_TAG: name = 'local tags'
                 elif service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
                 elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
                 #elif service_type == HC.MESSAGE_DEPOT: name = 'message repositories'
@@ -5106,7 +5107,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             service_type = self._listbooks_to_service_types[ services_listbook ]
             
-            if service_type == HC.LOCAL_BOORU:
+            if service_type in HC.NONEDITABLE_SERVICES:
                 
                 self._add.Disable()
                 self._remove.Disable()
@@ -5187,27 +5188,30 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             def InitialiseControls():
                 
-                if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
-                else: title = 'name'
-                
-                self._credentials_panel = ClientGUICommon.StaticBox( self, title )
-                
-                self._service_name = wx.TextCtrl( self._credentials_panel )
-                
-                if service_type in HC.REMOTE_SERVICES:
+                if service_type not in HC.NONEDITABLE_SERVICES:
                     
-                    host = info[ 'host' ]
-                    port = info[ 'port' ]
+                    if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
+                    else: title = 'name'
                     
-                    if 'access_key' in info: access_key = info[ 'access_key' ]
-                    else: access_key = None
+                    self._credentials_panel = ClientGUICommon.StaticBox( self, title )
                     
-                    credentials = CC.Credentials( host, port, access_key )
+                    self._service_name = wx.TextCtrl( self._credentials_panel )
                     
-                    self._service_credentials = wx.TextCtrl( self._credentials_panel, value = credentials.GetConnectionString() )
-                    
-                    self._check_service = wx.Button( self._credentials_panel, label = 'test credentials' )
-                    self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
+                    if service_type in HC.REMOTE_SERVICES:
+                        
+                        host = info[ 'host' ]
+                        port = info[ 'port' ]
+                        
+                        if 'access_key' in info: access_key = info[ 'access_key' ]
+                        else: access_key = None
+                        
+                        credentials = CC.Credentials( host, port, access_key )
+                        
+                        self._service_credentials = wx.TextCtrl( self._credentials_panel, value = credentials.GetConnectionString() )
+                        
+                        self._check_service = wx.Button( self._credentials_panel, label = 'test credentials' )
+                        self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
+                        
                     
                 
                 if service_type in HC.REPOSITORIES:
@@ -5220,7 +5224,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     self._reset.Bind( wx.EVT_BUTTON, self.EventServiceReset )
                     
                 
-                if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                if service_type in HC.RATINGS_SERVICES:
                     
                     self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
                     
@@ -5241,6 +5245,26 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         self._lower.SetValue( lower )
                         self._upper = wx.SpinCtrl( self._local_rating_panel, min = -2000, max = 2000 )
                         self._upper.SetValue( upper )
+                        
+                    
+                
+                if service_type in HC.TAG_SERVICES:
+                    
+                    self._archive_info = HC.app.Read( 'tag_archive_info' )
+                    
+                    self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
+                    
+                    self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
+                    
+                    self._archive_sync_add = wx.Button( self._archive_panel, label = 'add' )
+                    self._archive_sync_add.Bind( wx.EVT_BUTTON, self.EventArchiveAdd )
+                    
+                    self._archive_sync_edit = wx.Button( self._archive_panel, label = 'edit' )
+                    self._archive_sync_edit.Bind( wx.EVT_BUTTON, self.EventArchiveEdit )
+                    
+                    self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
+                    self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
+                    
                     
                 
                 if service_type == HC.LOCAL_BOORU:
@@ -5257,11 +5281,28 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             def PopulateControls():
                 
-                self._service_name.SetValue( name )
+                if service_type not in HC.NONEDITABLE_SERVICES:
+                    
+                    self._service_name.SetValue( name )
+                    
                 
                 if service_type in HC.REPOSITORIES:
                     
                     self._pause_synchronisation.SetValue( info[ 'paused' ] )
+                    
+                
+                if service_type in HC.TAG_SERVICES:
+                    
+                    for ( archive_name, namespaces ) in info[ 'tag_archive_sync' ].items():
+                        
+                        name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
+                        
+                        self._archive_sync.Append( name_to_display, ( archive_name, namespaces ) )
+                        
+                    
+                    potential_archives = self._GetPotentialArchives()
+                    
+                    if len( potential_archives ) == 0: self._archive_sync_add.Disable()
                     
                 
                 if service_type == HC.LOCAL_BOORU:
@@ -5278,28 +5319,31 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                if service_type == HC.LOCAL_BOORU: self._credentials_panel.Hide()
-                
-                gridbox = wx.FlexGridSizer( 0, 2 )
-                
-                gridbox.AddGrowableCol( 1, 1 )
-                
-                gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), FLAGS_MIXED )
-                gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
-                
-                
-                if service_type in HC.REMOTE_SERVICES:
+                if service_type not in HC.NONEDITABLE_SERVICES:
                     
-                    gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'credentials' ), FLAGS_MIXED )
-                    gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
+                    self._credentials_panel.Hide()
                     
-                    gridbox.AddF( ( 20, 20 ), FLAGS_MIXED )
-                    gridbox.AddF( self._check_service, FLAGS_LONE_BUTTON )
+                    gridbox = wx.FlexGridSizer( 0, 2 )
                     
-                
-                self._credentials_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                vbox.AddF( self._credentials_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    gridbox.AddGrowableCol( 1, 1 )
+                    
+                    gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), FLAGS_MIXED )
+                    gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    
+                    if service_type in HC.REMOTE_SERVICES:
+                        
+                        gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'credentials' ), FLAGS_MIXED )
+                        gridbox.AddF( self._service_credentials, FLAGS_EXPAND_BOTH_WAYS )
+                        
+                        gridbox.AddF( ( 20, 20 ), FLAGS_MIXED )
+                        gridbox.AddF( self._check_service, FLAGS_LONE_BUTTON )
+                        
+                    
+                    self._credentials_panel.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                    
+                    vbox.AddF( self._credentials_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
                 
                 if service_type in HC.REPOSITORIES:
                     
@@ -5337,6 +5381,20 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     vbox.AddF( self._local_rating_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
                 
+                if service_type in HC.TAG_SERVICES:
+                    
+                    hbox = wx.BoxSizer( wx.HORIZONTAL )
+                    
+                    hbox.AddF( self._archive_sync_add, FLAGS_MIXED )
+                    hbox.AddF( self._archive_sync_edit, FLAGS_MIXED )
+                    hbox.AddF( self._archive_sync_remove, FLAGS_MIXED )
+                    
+                    self._archive_panel.AddF( self._archive_sync, FLAGS_EXPAND_BOTH_WAYS )
+                    self._archive_panel.AddF( hbox, FLAGS_BUTTON_SIZERS )
+                    
+                    vbox.AddF( self._archive_panel, FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
                 if service_type == HC.LOCAL_BOORU:
                     
                     hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -5359,6 +5417,119 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             PopulateControls()
             
             ArrangeControls()
+            
+        
+        def _GetArchiveNameToDisplay( self, archive_name, namespaces ):
+            
+            if len( namespaces ) == 0: name_to_display = archive_name
+            else: name_to_display = archive_name + ' (' + ', '.join( HC.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
+            
+            return name_to_display
+            
+        
+        def _GetPotentialArchives( self ):
+            
+            existing_syncs = set()
+            
+            for i in range( self._archive_sync.GetCount() ):
+                
+                ( archive_name, namespaces ) = self._archive_sync.GetClientData( i )
+                
+                existing_syncs.add( archive_name )
+                
+            
+            potential_archives = { archive_name for archive_name in self._archive_info.keys() if archive_name not in existing_syncs }
+            
+            return potential_archives
+            
+        
+        def EventArchiveAdd( self, event ):
+            
+            if self._archive_sync.GetCount() == 0:
+                
+                wx.MessageBox( 'Be careful with this tool! Synching a lot of files to a large archive can take a very long time to initialise.' )
+                
+            
+            potential_archives = self._GetPotentialArchives()
+            
+            if len( potential_archives ) == 1:
+                
+                ( archive_name, ) = potential_archives
+                
+                wx.MessageBox( 'There is only one tag archive, ' + archive_name + ', to select, so I am selecting it for you.' )
+                
+            else:
+                
+                with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'Select the tag archive to add', potential_archives ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK: archive_name = dlg.GetString()
+                    else: return
+                    
+                
+            
+            potential_namespaces = self._archive_info[ archive_name ]
+            
+            with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HC.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    namespaces = HC.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
+                    
+                else: return
+                
+            
+            name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
+            
+            self._archive_sync.Append( name_to_display, ( archive_name, namespaces ) )
+            
+            potential_archives = self._GetPotentialArchives()
+            
+            if len( potential_archives ) == 0: self._archive_sync_add.Disable()
+            
+        
+        def EventArchiveEdit( self, event ):
+            
+            selection = self._archive_sync.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                ( archive_name, existing_namespaces ) = self._archive_sync.GetClientData( selection )
+                
+                if archive_name not in self._archive_info.keys():
+                    
+                    wx.MessageBox( 'This archive does not seem to exist any longer!' )
+                    
+                    return
+                    
+                
+                archive_namespaces = self._archive_info[ archive_name ]
+                
+                with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HC.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ), HC.ConvertUglyNamespacesToPrettyStrings( existing_namespaces ) ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        namespaces = HC.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
+                        
+                    else: return
+                    
+                
+                name_to_display = self._GetArchiveNameToDisplay( archive_name, namespaces )
+                
+                self._archive_sync.SetString( selection, name_to_display )
+                self._archive_sync.SetClientData( selection, ( archive_name, namespaces ) )
+                
+            
+        
+        def EventArchiveRemove( self, event ):
+            
+            selection = self._archive_sync.GetSelection()
+            
+            if selection != wx.NOT_FOUND: self._archive_sync.Delete( selection )
+            
+            potential_archives = self._GetPotentialArchives()
+            
+            if len( potential_archives ) == 0: self._archive_sync_add.Disable()
+            else: self._archive_sync_add.Enable()
             
         
         def EventCheckService( self, event ):
@@ -5407,9 +5578,14 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             ( service_key, service_type, name, info ) = self._original_info
             
-            name = self._service_name.GetValue()
+            info = dict( info )
             
-            if name == '': raise Exception( 'Please enter a name' )
+            if service_type not in HC.NONEDITABLE_SERVICES:
+                
+                name = self._service_name.GetValue()
+                
+                if name == '': raise Exception( 'Please enter a name' )
+                
             
             if service_type in HC.REMOTE_SERVICES:
                 
@@ -5460,6 +5636,20 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 info[ 'lower' ] = lower
                 info[ 'upper' ] = upper
+                
+            
+            if service_type in HC.TAG_SERVICES:
+                
+                tag_archives = {}
+                
+                for i in range( self._archive_sync.GetCount() ):
+                    
+                    ( archive_name, namespaces ) = self._archive_sync.GetClientData( i )
+                    
+                    tag_archives[ archive_name ] = namespaces
+                    
+                
+                info[ 'tag_archive_sync' ] = tag_archives
                 
             
             if service_type == HC.LOCAL_BOORU:

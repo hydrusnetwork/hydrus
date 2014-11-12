@@ -286,13 +286,11 @@ class HTTPConnection( object ):
         
         data = ''
         
-        next_block = response.read( self.read_block_size )
-        
-        while next_block != '':
+        for block in HC.ReadFileLikeAsBlocks( response, self.read_block_size ):
             
             if HC.shutdown: raise Exception( 'Application is shutting down!' )
             
-            data += next_block
+            data += block
             
             if content_length is not None and len( data ) > content_length:
                 
@@ -300,8 +298,6 @@ class HTTPConnection( object ):
                 
             
             for hook in report_hooks: hook( content_length, len( data ) )
-            
-            next_block = response.read( self.read_block_size )
             
         
         size_of_response = len( data )
@@ -360,24 +356,20 @@ class HTTPConnection( object ):
         
         with open( temp_path, 'wb' ) as f:
             
-            next_block = response.read( self.read_block_size )
-            
-            while next_block != '':
+            for block in HC.ReadFileLikeAsBlocks( response, self.read_block_size ):
                 
                 if HC.shutdown: raise Exception( 'Application is shutting down!' )
                 
-                size_of_response += len( next_block )
+                size_of_response += len( block )
                 
                 if content_length is not None and size_of_response > content_length:
                     
                     raise Exception( 'Response was longer than suggested!' )
                     
                 
-                f.write( next_block )
+                f.write( block )
                 
                 for hook in report_hooks: hook( content_length, size_of_response )
-                
-                next_block = response.read( self.read_block_size )
                 
             
         

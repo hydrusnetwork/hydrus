@@ -131,46 +131,34 @@ def GetHashFromPath( path ):
     
     h = hashlib.sha256()
     
-    block_size = 65536
-    
     with open( path, 'rb' ) as f:
         
-        next_block = f.read( 65536 )
-        
-        while next_block != '':
-            
-            h.update( next_block )
-            
-            next_block = f.read( 65536 )
-            
-        
-        return h.digest()
+        for block in HC.ReadFileLikeAsBlocks( f, 65536 ): h.update( block )
         
     
-def GetMD5AndSHA1FromPath( path ):
+    return h.digest()
+    
+def GetExtraHashesFromPath( path ):
     
     h_md5 = hashlib.md5()
     h_sha1 = hashlib.sha1()
-    
-    block_size = 65536
+    h_sha512 = hashlib.sha512()
     
     with open( path, 'rb' ) as f:
         
-        next_block = f.read( 65536 )
-        
-        while next_block != '':
+        for block in HC.ReadFileLikeAsBlocks( f, 65536 ):
             
-            h_md5.update( next_block )
-            h_sha1.update( next_block )
-            
-            next_block = f.read( 65536 )
+            h_md5.update( block )
+            h_sha1.update( block )
+            h_sha512.update( block )
             
         
-        md5 = h_md5.digest()
-        sha1 = h_sha1.digest()
-        
-        return ( md5, sha1 )
-        
+    
+    md5 = h_md5.digest()
+    sha1 = h_sha1.digest()
+    sha512 = h_sha512.digest()
+    
+    return ( md5, sha1, sha512 )
     
 header_and_mime = [
     ( 0, '\xff\xd8', HC.IMAGE_JPEG ),

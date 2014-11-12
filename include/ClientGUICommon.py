@@ -968,7 +968,7 @@ class BetterChoice( wx.Choice ):
         selection = self.GetSelection()
         
         if selection != wx.NOT_FOUND: return self.GetClientData( selection )
-        else: raise Exception( 'choice not chosen' )
+        else: raise Exception( 'Choice not chosen!' )
         
     
     def SelectClientData( self, client_data ):

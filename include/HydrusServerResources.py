@@ -203,13 +203,7 @@ class HydrusResourceCommand( Resource ):
             
             with open( temp_path, 'wb' ) as f:
                 
-                block_size = 65536
-                
-                while True:
-                    
-                    block = request.content.read( block_size )
-                    
-                    if block == '': break
+                for block in HC.ReadFileLikeAsBlocks( request.content, 65536 ): 
                     
                     f.write( block )
                     

@@ -153,6 +153,32 @@ def CombineTagSiblingPairs( service_keys_to_statuses_to_pairs ):
     
     return processed_siblings
     
+def FilterNamespaces( tags, namespaces ):
+    
+    processed_tags = collections.defaultdict( set )
+    
+    for tag in tags:
+        
+        if ':' in tag:
+            
+            ( namespace, subtag ) = tag.split( ':', 1 )
+            
+            processed_tags[ namespace ].add( tag )
+            
+        else: processed_tags[ '' ].add( tag )
+        
+    
+    result = set()
+    
+    for namespace in namespaces:
+        
+        if namespace in ( '', None ): result.update( processed_tags[ '' ] )
+        
+        result.update( processed_tags[ namespace ] )
+        
+    
+    return result
+    
 def LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ):
     
     potential_loop_paths = { parent }

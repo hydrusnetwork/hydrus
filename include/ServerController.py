@@ -160,7 +160,23 @@ class Controller( wx.App ):
             
             self.StartDaemons()
             
-            self._tbicon = TaskBarIcon()
+            if HC.PLATFORM_WINDOWS: self._tbicon = TaskBarIcon()
+            else:
+                
+                stay_open_frame = wx.Frame( None, title = 'Hydrus Server' )
+                
+                stay_open_frame.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+                
+                stay_open_frame.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
+                
+                wx.StaticText( stay_open_frame, label = 'The hydrus server is now running.' + os.linesep * 2 + 'Close this window to stop it.' )
+                
+                ( x, y ) = stay_open_frame.GetEffectiveMinSize()
+                
+                stay_open_frame.SetInitialSize( ( x, y ) )
+                
+                stay_open_frame.Show()
+                
             
             return True
             

@@ -2195,37 +2195,6 @@ class DB( ServiceDB ):
     
     def _UpdateDB( self, c, version ):
         
-        if version == 86:
-            
-            c.execute( 'COMMIT' )
-            
-            c.execute( 'PRAGMA foreign_keys = OFF;' )
-            
-            c.execute( 'BEGIN IMMEDIATE' )
-            
-            old_service_info = c.execute( 'SELECT * FROM services;' ).fetchall()
-            
-            c.execute( 'DROP TABLE services;' )
-            
-            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, type INTEGER, options TEXT_YAML );' ).fetchall()
-            
-            for ( service_id, service_type, port, options ) in old_service_info:
-                
-                if service_type == HC.SERVER_ADMIN: service_key = 'server admin'
-                else: service_key = os.urandom( 32 )
-                
-                options[ 'port' ] = port
-                
-                c.execute( 'INSERT INTO services ( service_id, service_key, type, options ) VALUES ( ?, ?, ?, ? );', ( service_id, sqlite3.Binary( service_key ), service_type, options ) )
-                
-            
-            c.execute( 'COMMIT' )
-            
-            c.execute( 'PRAGMA foreign_keys = ON;' )
-            
-            c.execute( 'BEGIN IMMEDIATE' )
-            
-        
         if version == 90:
             
             for ( service_id, options ) in c.execute( 'SELECT service_id, options FROM services;' ).fetchall():

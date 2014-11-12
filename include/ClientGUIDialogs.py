@@ -4856,6 +4856,62 @@ class DialogSelectImageboard( Dialog ):
     
     def GetImageboard( self ): return self._tree.GetItemData( self._tree.GetSelection() ).GetData()
     
+class DialogCheckFromListOfStrings( Dialog ):
+    
+    def __init__( self, parent, title, list_of_strings, checked_strings = [] ):
+        
+        def InitialiseControls():
+            
+            self._strings = wx.CheckListBox( self )
+            
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+            self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
+            
+    
+        def PopulateControls():
+            
+            for s in list_of_strings: self._strings.Append( s )
+            
+            for s in checked_strings:
+                
+                i = self._strings.FindString( s )
+                
+                if i != wx.NOT_FOUND: self._strings.Check( i, True )
+                
+            
+        
+        def ArrangeControls():
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._ok, FLAGS_MIXED )
+            hbox.AddF( self._cancel, FLAGS_MIXED )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._strings, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, FLAGS_BUTTON_SIZERS )
+            
+            self.SetSizer( vbox )
+            
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            if x < 320: x = 320
+            
+            self.SetInitialSize( ( x, y ) )
+            
+        
+        Dialog.__init__( self, parent, title )
+        
+        InitialiseControls()
+        
+        PopulateControls()
+        
+        ArrangeControls()
+        
+    
+    def GetChecked( self ): return self._strings.GetCheckedStrings()
+    
 class DialogSelectFromListOfStrings( Dialog ):
     
     def __init__( self, parent, title, list_of_strings ):
@@ -4864,7 +4920,7 @@ class DialogSelectFromListOfStrings( Dialog ):
             
             self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
-            self._strings = wx.ListBox( self, choices = list_of_strings )
+            self._strings = wx.ListBox( self )
             self._strings.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
             self._strings.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
             
@@ -4875,7 +4931,7 @@ class DialogSelectFromListOfStrings( Dialog ):
     
         def PopulateControls():
             
-            pass
+            for s in list_of_strings: self._strings.Append( s )
             
         
         def ArrangeControls():
