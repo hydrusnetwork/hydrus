@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 136</h3></li>
+				<ul>
+					<li>added tag archives</li>
+					<li>added tag archive sync initialisation on all existing local files</li>
+					<li>added tag archive sync maintenance on newly imported files</li>
+					<li>added a new db directory, client_archives</li>
+					<li>added tag archive sync options to tag services in manage services dialog</li>
+					<li>added local tags service to manage services dialog</li>
+					<li>added sha512 to local hash cache</li>
+					<li>added tag archive hash_type guessing</li>
+					<li>added a new dialog for selecting n arbitrary strings</li>
+					<li>got testing to work on all platforms</li>
+					<li>fixed the hydrus server for linux and os x; it now has a stay-alive frame rather than a taskbaricon</li>
+					<li>improved some dialog testing code so it would work on all platforms</li>
+					<li>fixed a deffered problem that was causing the server AMP test to hang on Linux and OS X</li>
+					<li>neatened and harmonised a bit of common file and network streaming code</li>
+					<li>improved some misc manage services dialog code</li>
+					<li>fixed a critical bug that was meaning certain service changes were not being saved to the database, so were being forgotten on restart</li>
+					<li>fixed some select-string code that wasn't taking sets of strings for a weird wx reason</li>
+				</ul>
 				<li><h3>version 135</h3></li>
 				<ul>
 					<li>added a menu option to any tag's right-click menu to open a new search page for that tag</li>

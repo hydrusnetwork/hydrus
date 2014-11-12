@@ -29,6 +29,16 @@
 			<p>Here is a particularly zoomed out view, after importing volume 2:</p>
 			<p><img src="gunnerkrigg_volume.png"/></p>
 			<p>Importing with tags is great for long-running series with well-formatted filenames, and will save you literally hours' finicky tagging.</p>
+			<h3>tag archives</h3>
+			<p>A user told me he had scraped all of danbooru's tags, and we got to discussing if his data could be integrated with hydrus.</p>
+			<p>There are some technical limitations that prohibit rawly importing that data into a hydrus tag repository (our different systems use different file hash standards), but I figured it would be possible to import his data into a hydrus <i>client</i>, at least for any locally stored files.</p>
+			<p>After a bit of planning, I developed the concept of a <i>tag archive</i>, which is just a big and efficiently indexed database of hashes and tags that you can share very easily. Storing a tag archive in the right directory in your client's database allows you to <i>synchronise</i> with that archive, importing whatever tags it thinks your files should have to whatever tag service you wish.</p>
+			<p>The folder to place archives is <i>install_dir/db/client_archives</i>. You can get some archives that I have prepared <a href="http://www.mediafire.com/hydrus">here</a>.</p>
+			<p>Once you have put something in your archive folder, start the client, and then go <i>services->manage services</i> and browse to your local tag service or a remote tag repository. You should see a box for managing tag archives.</p>
+			<p><img src="tag_archives.png" /></p>
+			<p>Tag archive sync works a bit like the advanced tag options when you download from a booru or other gallery service; you select the namespaces the archive offers that you are interested in, and then, when you click OK, the client will search the archive for your local files. It will fetch the archive's tags for those files, filter according to your namespace selection, and then add or pend the tags as appropriate, just as if you had entered them in the manage tags dialog.</p>
+			<p>New files that you import will also be checked against your archive syncs, keeping you up to date.</p>
+			<p>Be careful with this tool! If you have tens of thousands of files and sync with an archive that has tens of millions of mappings, you may end up adding or pending tens of thousands of tags. It may take several minutes to initialise the sync, as well. Make sure you get your namespaces set exactly how you want before you click OK on the dialog.</p>
 			<h3>export to zip and encrypted</h3>
 			<p>The export dialog now supports exporting to zip, and, further, encrypting it:</p>
 			<p><img src="export_zip.png" /></p>
