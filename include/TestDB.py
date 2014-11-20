@@ -7,6 +7,7 @@ import itertools
 import os
 import ServerDB
 import shutil
+import sqlite3
 import stat
 import TestConstants
 import time
@@ -18,7 +19,9 @@ class TestClientDB( unittest.TestCase ):
     
     def _clear_db( self ):
         
-        ( db, c ) = self._db._GetDBCursor()
+        db = sqlite3.connect( self._db._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        
+        c = db.cursor()
         
         c.execute( 'DELETE FROM files_info;' )
         c.execute( 'DELETE FROM mappings;' )

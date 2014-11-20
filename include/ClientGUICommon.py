@@ -44,7 +44,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -1225,18 +1225,7 @@ class ExportPatternButton( wx.Button ):
         if id == self.ID_TAG: phrase = '(...)'
         else: event.Skip()
         
-        if phrase is not None:
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.TextDataObject( phrase )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
+        if phrase is not None: HC.pubsub.pub( 'clipboard', 'text', phrase )
         
     
     def EventButton( self, event ):
@@ -2696,7 +2685,9 @@ class PopupMessageGauge( PopupMessage ):
             
             import ClientGUIDialogs
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Do you want to continue in the background, or stop right now?', yes_label = 'continue', no_label = 'stop' ) as dlg:
+            message = 'Do you want to continue in the background, or stop right now?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Please choose whether the job continues in the background.', yes_label = 'continue', no_label = 'stop' ) as dlg:
                 
                 result = dlg.ShowModal()
                 
@@ -3216,18 +3207,7 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_FILENAME: phrase = r'(?<=' + os.path.sep.encode( 'string_escape' ) + r')[\w\s]*?(?=\..*$)'
         else: event.Skip()
         
-        if phrase is not None:
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.TextDataObject( phrase )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
+        if phrase is not None: HC.pubsub.pub( 'clipboard', 'text', phrase )
         
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):

@@ -42,7 +42,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -542,6 +542,23 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
         
     
+    def _CheckFileIntegrity( self ):
+        
+        message = 'This will go through all the files the database thinks it has and check that they actually exist. Any files that are missing will be deleted from the internal record.'
+        message += os.linesep * 2
+        message += 'You can perform a quick existence check, which will only look to see if a file exists, or a thorough content check, which will also make sure existing files are not corrupt or otherwise incorrect.'
+        message += os.linesep * 2
+        message += 'The thorough check will have to read all of your files\' content, which can take a long time. You should probably only do it if you suspect hard drive corruption and are now working on a safe drive.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose how thorough your integrity check will be.', yes_label = 'quick', no_label = 'thorough' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES: HC.app.Write( 'file_integrity', 'quick' )
+            elif result == wx.ID_NO: HC.app.Write( 'file_integrity', 'thorough' )
+            
+        
+    
     def _CloseCurrentPage( self, polite = True ):
         
         selection = self._notebook.GetSelection()
@@ -605,6 +622,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_pending', service_key )
+            
+        
+    
+    def _DeleteServiceInfo( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to clear the cached service info? Rebuilding it may slow some GUI elements for a little while.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_service_info' )
             
         
     
@@ -811,7 +836,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear Service Info Cache' ), p( 'Delete all cache service info, in case it has become desynchronised.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_combined_mappings' ), p( '&Regenerate Combined Mappings' ), p( 'Delete and rebuild the combined cache of all your services\' mappings.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'clear_caches' ), p( '&Clear Caches' ), p( 'Fully clear the fullscreen, preview and thumbnail caches.' ) )
             
@@ -1426,6 +1454,14 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._statusbar.SetStatusText( self._statusbar_db_locked, number = 3 )
         
     
+    def _RegenerateCombinedMappings( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to regenerate the combined mappings? This can take a long time.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'regenerate_combined_mappings' )
+            
+        
+    
     def _RegenerateThumbnails( self ):
         
         message = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
@@ -1436,7 +1472,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 def THREADRegenerateThumbnails():
                     
-                    message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'regenerating thumbnails - creating directories' } )
+                    prefix = 'regenerating thumbnails: '
+                    
+                    message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : prefix + 'creating directories' } )
                     
                     HC.pubsub.pub( 'message', message )
                     
@@ -1451,9 +1489,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         if not os.path.exists( dir ): os.mkdir( dir )
                         
                     
-                    i = 0
+                    num_broken = 0
                     
-                    for path in CC.IterateAllFilePaths():
+                    for ( i, path ) in enumerate( CC.IterateAllFilePaths() ):
                         
                         try:
                             
@@ -1461,9 +1499,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                if i % 100 == 0: message.SetInfo( 'text', 'regenerating thumbnails - ' + HC.ConvertIntToPrettyString( i ) + ' done' )
-                                
-                                i += 1
+                                if i % 100 == 0: message.SetInfo( 'text', prefix + HC.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 ( base, filename ) = os.path.split( path )
                                 
@@ -1486,10 +1522,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             if HC.shutdown: return
                             
-                        except: continue
+                        except:
+                            
+                            print( path )
+                            print( traceback.format_exc() )
+                            
+                            num_broken += 1
+                            
                         
                     
-                    message.SetInfo( 'text', 'done regenerating thumbnails' )
+                    if num_broken > 0: message.SetInfo( 'text', prefix + 'done! ' + HC.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
+                    else: message.SetInfo( 'text', prefix + 'done!' )
                     
                 
                 HydrusThreading.CallToThread( THREADRegenerateThumbnails )
@@ -1795,9 +1838,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'delete_orphans': self._DeleteOrphans()
             elif command == 'delete_pending': self._DeletePending( data )
+            elif command == 'delete_service_info': self._DeleteServiceInfo()
             elif command == 'exit': self.EventExit( event )
             elif command == 'fetch_ip': self._FetchIP( data )
             elif command == 'forum': webbrowser.open( 'http://hydrus.x10.mx/forum' )
+            elif command == 'file_integrity': self._CheckFileIntegrity()
             elif command == 'help': webbrowser.open( 'file://' + HC.BASE_DIR + '/help/index.html' )
             elif command == 'help_about': self._AboutWindow()
             elif command == 'help_shortcuts': wx.MessageBox( CC.SHORTCUT_HELP )
@@ -1846,6 +1891,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None: page.RefreshQuery()
                 
+            elif command == 'regenerate_combined_mappings': self._RegenerateCombinedMappings()
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
             elif command == 'restore_database': HC.app.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()
@@ -2162,7 +2208,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._notebook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._edit, FLAGS_SMALL_INDENT )
-            vbox.AddF( self._ok, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( self._ok, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2361,7 +2407,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
                 if service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
-                    self._service_wide_update = wx.Button( self, label = 'perform a service-wide update' )
+                    self._service_wide_update = wx.Button( self, label = 'perform a service-wide operation' )
                     self._service_wide_update.Bind( wx.EVT_BUTTON, self.EventServiceWideUpdate )
                     
                 
@@ -2460,7 +2506,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     b_box.AddF( self._booru_edit, FLAGS_MIXED )
                     b_box.AddF( self._booru_delete, FLAGS_MIXED )
                     
-                    self._booru_shares_panel.AddF( b_box, FLAGS_BUTTON_SIZERS )
+                    self._booru_shares_panel.AddF( b_box, FLAGS_BUTTON_SIZER )
                     
                     vbox.AddF( self._booru_shares_panel, FLAGS_EXPAND_BOTH_WAYS )
                     
@@ -2485,7 +2531,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                         repo_buttons_hbox.AddF( self._copy_account_key, FLAGS_MIXED )
                         
                     
-                    vbox.AddF( repo_buttons_hbox, FLAGS_BUTTON_SIZERS )
+                    vbox.AddF( repo_buttons_hbox, FLAGS_BUTTON_SIZER )
                     
                 
                 self.SetSizer( vbox )

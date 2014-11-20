@@ -47,9 +47,11 @@ class Controller( wx.App ):
                 
                 path = dlg.GetPath()
                 
-                message = '''Are you sure "''' + path + '''" is the correct directory?
-Everything already in that directory will be deleted before the backup starts.
-The database will be locked while the backup occurs, which may lock up your gui as well.'''
+                message = 'Are you sure "' + path + '" is the correct directory?'
+                message += os.linesep * 2
+                message += 'Everything already in that directory will be deleted before the backup starts.'
+                message += os.linesep * 2
+                message += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
                 
                 with ClientGUIDialogs.DialogYesNo( self._gui, message ) as dlg_yn:
                     
@@ -109,6 +111,47 @@ The database will be locked while the backup occurs, which may lock up your gui 
                 wx.TheClipboard.Close()
                 
             else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        elif data_type == 'bmp':
+            
+            media = data
+            
+            image_container = HC.app.GetFullscreenImageCache().GetImage( media )
+            
+            def THREADWait():
+                
+                # have to do this in thread, because the image rendered needs the wx event queue to render
+                
+                start_time = time.time()
+                
+                while not image_container.IsRendered():
+                    
+                    if time.time() - start_time > 15: raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                    
+                    time.sleep( 0.1 )
+                    
+                
+                wx.CallAfter( CopyToClipboard )
+                
+            
+            def CopyToClipboard():
+                
+                if wx.TheClipboard.Open():
+                    
+                    hydrus_bmp = image_container.GetHydrusBitmap()
+                    
+                    wx_bmp = hydrus_bmp.GetWxBitmap()
+                    
+                    data = wx.BitmapDataObject( wx_bmp )
+                    
+                    wx.TheClipboard.SetData( data )
+                    
+                    wx.TheClipboard.Close()
+                    
+                else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                
+            
+            HydrusThreading.CallToThread( THREADWait )
             
         
     
@@ -194,7 +237,7 @@ The database will be locked while the backup occurs, which may lock up your gui 
                 message += os.linesep * 2
                 message += 'If the old instance does not close for a _very_ long time, you can usually safely force-close it from task manager.'
                 
-                with ClientGUIDialogs.DialogYesNo( None, message, yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( None, message, 'There was a problem connecting to the database.', yes_label = 'wait a bit, then try again', no_label = 'forget it' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES: time.sleep( 3 )
                     else: raise HydrusExceptions.PermissionException()
@@ -252,9 +295,6 @@ The database will be locked while the backup occurs, which may lock up your gui 
     def JustWokeFromSleep( self ): return self._just_woke_from_sleep
     
     def MaintainDB( self ):
-        
-        sys.stdout.flush()
-        sys.stderr.flush()
         
         gc.collect()
         
@@ -465,10 +505,11 @@ The database will be locked while the backup occurs, which may lock up your gui 
                 
                 path = dlg.GetPath()
                 
-                message = '''Are you sure you want to restore a backup from "''' + path + '''"?
-Everything in your current database will be deleted!
-The gui will shut down, and then it will take a while to complete the restore.
-Once it is done, the client will restart.'''
+                message = 'Are you sure you want to restore a backup from "' + path + '"?'
+                message += os.linesep * 2
+                message += 'Everything in your current database will be deleted!'
+                message += os.linesep * 2
+                message += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
                 
                 with ClientGUIDialogs.DialogYesNo( self._gui, message ) as dlg_yn:
                     
@@ -547,6 +588,9 @@ Once it is done, the client will restart.'''
         
     
     def TIMEREventMaintenance( self, event ):
+        
+        sys.stdout.flush()
+        sys.stderr.flush()
         
         last_time_this_ran = self._timestamps[ 'last_check_idle_time' ]
         

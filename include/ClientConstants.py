@@ -2242,10 +2242,11 @@ class RenderedImageCache( object ):
     
     def Clear( self ): self._data_cache.Clear()
     
-    def GetImage( self, media, target_resolution ):
+    def GetImage( self, media, target_resolution = None ):
         
         hash = media.GetHash()
-        mime = media.GetMime()
+        
+        if target_resolution is None: target_resolution = media.GetResolution()
         
         key = ( hash, target_resolution )
         
@@ -2644,6 +2645,8 @@ class ThumbnailCache( object ):
             
             if not self._data_cache.HasData( hash ):
                 
+                path = None
+                
                 try:
                     
                     path = GetThumbnailPath( hash, False )
@@ -2652,9 +2655,10 @@ class ThumbnailCache( object ):
                     
                 except Exception as e:
                     
+                    HC.ShowText( path )
                     HC.ShowException( e )
                     
-                    return self._not_found
+                    return self._special_thumbs[ 'hydrus' ]
                     
                 
                 self._data_cache.AddData( hash, hydrus_bitmap )

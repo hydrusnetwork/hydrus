@@ -63,9 +63,11 @@ def ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ):
             
             for namespace in namespaces:
                 
-                if namespace == '': tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if not ':' in tag ] )
-                else: tags_to_add_here.extend( [ HC.CleanTag( tag ) for tag in tags if tag.startswith( namespace + ':' ) ] )
+                if namespace == '': tags_to_add_here.extend( [ tag for tag in tags if not ':' in tag ] )
+                else: tags_to_add_here.extend( [ tag for tag in tags if tag.startswith( namespace + ':' ) ] )
                 
+            
+            tags_to_add_here = HC.CleanTags( tags_to_add_here )
             
             if len( tags_to_add_here ) > 0:
                 

@@ -7,6 +7,7 @@ import ServerConstants as SC
 import ServerDB
 import os
 import random
+import sys
 import threading
 import time
 import traceback
@@ -14,6 +15,10 @@ import wx
 import yaml
 from twisted.internet import reactor
 from twisted.internet import defer
+
+ID_MAINTENANCE_EVENT_TIMER = wx.NewId()
+
+MAINTENANCE_PERIOD = 5 * 60
 
 class Controller( wx.App ):
     
@@ -120,6 +125,8 @@ class Controller( wx.App ):
             
             self._db = ServerDB.DB()
             
+            threading.Thread( target = self._db.MainLoop, name = 'Database Main Loop' ).start()
+            
             self.Bind( wx.EVT_MENU, self.EventExit, id=wx.ID_EXIT )
             
             self._managers = {}
@@ -130,6 +137,13 @@ class Controller( wx.App ):
             HC.pubsub.sub( self, 'ActionService', 'action_service' )
             
             self._services = {}
+            
+            #
+            
+            self.Bind( wx.EVT_TIMER, self.TIMEREventMaintenance, id = ID_MAINTENANCE_EVENT_TIMER )
+            
+            self._maintenance_event_timer = wx.Timer( self, ID_MAINTENANCE_EVENT_TIMER )
+            self._maintenance_event_timer.Start( MAINTENANCE_PERIOD * 1000, wx.TIMER_CONTINUOUS )
             
             #
             
@@ -208,6 +222,12 @@ class Controller( wx.App ):
         HydrusThreading.DAEMONWorker( 'GenerateUpdates', ServerDB.DAEMONGenerateUpdates, period = 1200 )
         HydrusThreading.DAEMONWorker( 'CheckDataUsage', ServerDB.DAEMONCheckDataUsage, period = 86400 )
         HydrusThreading.DAEMONWorker( 'UPnP', ServerDB.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 )
+        
+    
+    def TIMEREventMaintenance( self, event ):
+        
+        sys.stdout.flush()
+        sys.stderr.flush()
         
     
     def Write( self, action, *args, **kwargs ):

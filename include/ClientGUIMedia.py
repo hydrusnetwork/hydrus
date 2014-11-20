@@ -6,6 +6,7 @@ import ClientGUIDialogsManage
 import ClientGUICanvas
 import ClientGUIMixins
 import collections
+import HydrusThreading
 import itertools
 import os
 import random
@@ -33,7 +34,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -122,58 +123,41 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _CopyBMPToClipboard( self ):
+        
+        media = self._focussed_media.GetDisplayMedia()
+        
+        HC.pubsub.pub( 'clipboard', 'bmp', media )
+        
+    
     def _CopyHashToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        hex_hash = self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', hex_hash )
         
     
     def _CopyHashesToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( os.linesep.join( [ hash.encode( 'hex' ) for hash in self._GetSelectedHashes() ] ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        hex_hashes = os.linesep.join( [ hash.encode( 'hex' ) for hash in self._GetSelectedHashes() ] )
+        
+        HC.pubsub.pub( 'clipboard', 'text', hex_hashes )
         
     
     def _CopyLocalUrlToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
+    
+        display_media = self._focussed_media.GetDisplayMedia()
         
-        if wx.TheClipboard.Open():
-            
-            display_media = self._focussed_media.GetDisplayMedia()
-            
-            data = wx.TextDataObject( CC.GetFilePath( display_media.GetHash(), display_media.GetMime() ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        path = CC.GetFilePath( display_media.GetHash(), display_media.GetMime() )
+        
+        HC.pubsub.pub( 'clipboard', 'text', path )
         
     
     def _CustomFilter( self ):
@@ -1542,6 +1526,7 @@ class MediaPanelThumbnails( MediaPanel ):
             ( command, data ) = action
             
             if command == 'archive': self._Archive()
+            elif command == 'copy_bmp': self._CopyBMPToClipboard()
             elif command == 'copy_files':
                 with wx.BusyCursor(): HC.app.Write( 'copy_files', self._GetSelectedHashes( CC.DISCRIMINANT_LOCAL ) )
             elif command == 'copy_hash': self._CopyHashToClipboard()
@@ -1954,6 +1939,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), copy_phrase )
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
                 if multiple_selected: copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes' ) , 'hashes' )
+                if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None: copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ) , 'image' )
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
                 copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
                 
@@ -2357,11 +2343,11 @@ class Thumbnail( Selectable ):
         
         y_offset = ( height - thumb_height ) / 2
         
-        hydrus_bmp = self._hydrus_bmp.CreateWxBmp()
+        wx_bmp = self._hydrus_bmp.GetWxBitmap()
         
-        dc.DrawBitmap( hydrus_bmp, x_offset, y_offset )
+        dc.DrawBitmap( wx_bmp, x_offset, y_offset )
         
-        wx.CallAfter( hydrus_bmp.Destroy )
+        wx.CallAfter( wx_bmp.Destroy )
         
         collections_string = ''
         

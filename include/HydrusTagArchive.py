@@ -16,7 +16,7 @@ HASH_TYPE_SHA512 = 3 # 64 bytes long
 # hta = HydrusTagArchive.HydrusTagArchive( 'my_little_archive.db' )
 # hta.SetHashType( HydrusTagArchive.HASH_TYPE_MD5 )
 # hta.BeginBigJob()
-# for ( hash, tags ) in my_complex_mappings_generator: hta.SetMappings( hash, tags )
+# for ( hash, tags ) in my_complex_mappings_generator: hta.AddMappings( hash, tags )
   # -or-
 # for ( hash, tag ) in my_simple_mapping_generator: hta.AddMapping( hash, tag )
 # hta.CommitBigJob()
@@ -64,6 +64,11 @@ class HydrusTagArchive( object ):
         self._namespaces.add( '' )
         
     
+    def _AddMappings( self, hash_id, tag_ids ):
+        
+        self._c.executemany( 'INSERT OR IGNORE INTO mappings ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for tag_id in tag_ids ) )
+        
+    
     def _InitDB( self ):
         
         self._c.execute( 'CREATE TABLE hash_type ( hash_type INTEGER );', )
@@ -71,7 +76,7 @@ class HydrusTagArchive( object ):
         self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
         self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
         
-        self._c.execute( 'CREATE TABLE mappings ( hash_id INTEGER, tag_id INTEGER );' )
+        self._c.execute( 'CREATE TABLE mappings ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY( hash_id, tag_id ) );' )
         self._c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
         
         self._c.execute( 'CREATE TABLE namespaces ( namespace TEXT );' )
@@ -147,12 +152,31 @@ class HydrusTagArchive( object ):
         self._c.execute( 'INSERT OR IGNORE INTO mappings ( hash_id, tag_id ) VALUES ( ?, ? );', ( hash_id, tag_id ) )
         
     
+    def AddMappings( self, hash, tags ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        tag_ids = [ self._GetTagId( tag ) for tag in tags ]
+        
+        self._AddMappings( hash_id, tag_ids )
+        
+    
     def DeleteMapping( self, hash, tag ):
         
         hash_id = self._GetHashId( hash )
         tag_id = self._GetTagId( tag )
         
         self._c.execute( 'DELETE FROM mappings WHERE hash_id = ? AND tag_id = ?;', ( hash_id, tag_id ) )
+        
+    
+    def DeleteMappings( self, hash ): self.DeleteTags( hash )
+    
+    def DeleteTags( self, hash ):
+        
+        try: hash_id = self._GetHashId( hash, read_only = True )
+        except: return
+        
+        self._c.execute( 'DELET FROM mappings WHERE hash_id = ?;', ( hash_id, ) )
         
     
     def DeleteNamespaces( self ):
@@ -186,7 +210,11 @@ class HydrusTagArchive( object ):
         return hash_type
         
     
-    def GetMappings( self, hash ):
+    def GetMappings( self, hash ): return self.GetTags( hash )
+    
+    def GetNamespaces( self ): return self._namespaces
+    
+    def GetTags( self, hash ):
         
         try: hash_id = self._GetHashId( hash, read_only = True )
         except: return []
@@ -195,8 +223,6 @@ class HydrusTagArchive( object ):
         
         return result
         
-    
-    def GetNamespaces( self ): return self._namespaces
     
     def HasHash( self, hash ):
         
@@ -217,7 +243,7 @@ class HydrusTagArchive( object ):
             
             ( hash, ) = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
             
-            tags = self.GetMappings( hash )
+            tags = self.GetTags( hash )
             
             if len( tags ) > 0: yield ( hash, tags )
             
@@ -261,11 +287,6 @@ class HydrusTagArchive( object ):
         
         tag_ids = [ self._GetTagId( tag ) for tag in tags ]
         
-        for tag in tags:
-            
-            tag_id = self._GetTagId( tag )
-            
-            self._c.execute( 'INSERT INTO mappings ( hash_id, tag_id ) VALUES ( ?, ? );', ( hash_id, tag_id ) )
-            
+        self._AddMappings( hash_id, tag_ids )
         
     

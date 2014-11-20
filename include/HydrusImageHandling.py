@@ -542,7 +542,7 @@ class HydrusBitmap( object ):
         self._size = size
         
     
-    def CreateWxBmp( self ):
+    def GetWxBitmap( self ):
         
         ( width, height ) = self._size
         

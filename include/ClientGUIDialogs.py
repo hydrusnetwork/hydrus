@@ -5,6 +5,7 @@ import HydrusEncryption
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
+import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
@@ -54,7 +55,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -83,7 +84,7 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
         
         services = { HC.app.GetManager( 'services' ).GetService( service_key ) for service_key in service_keys }
         
-        names_to_service_keys = { service.GetName() : service_key for service in services }
+        names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in services }
         
         with DialogSelectFromListOfStrings( HC.app.GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
             
@@ -133,16 +134,27 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         def InitialiseControls():
             
-            self._action_dropdown = ClientGUICommon.BetterChoice( self )
-            self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
-            self._tag_type_dropdown = ClientGUICommon.BetterChoice( self )
-            self._service_key_dropdown = ClientGUICommon.BetterChoice( self )
+            self._internal_actions = ClientGUICommon.StaticBox( self, 'internal' )
             
-            self._go = wx.Button( self, label = 'Go!' )
+            self._action_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+            self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
+            self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+            self._service_key_dropdown = ClientGUICommon.BetterChoice( self._internal_actions )
+            
+            self._go = wx.Button( self._internal_actions, label = 'Go!' )
             self._go.Bind( wx.EVT_BUTTON, self.EventGo )
             
-            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_KEY, self._service_key )
-            self._specific_tag = wx.StaticText( self, label = '', size = ( 100, -1 ) )
+            self._tag_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._internal_actions, self.SetSomeTag, HC.COMBINED_FILE_SERVICE_KEY, self._service_key )
+            self._specific_tag = wx.StaticText( self._internal_actions, label = '', size = ( 100, -1 ) )
+            
+            #
+            
+            self._external_actions = ClientGUICommon.StaticBox( self, 'external' )
+            
+            self._export_to_hta = wx.Button( self._external_actions, label = 'export to hydrus tag archive' )
+            self._export_to_hta.Bind( wx.EVT_BUTTON, self.EventExportToHTA )
+            
+            #
             
             self._done = wx.Button( self, label = 'done' )
             
@@ -180,6 +192,31 @@ class DialogAdvancedContentUpdate( Dialog ):
         
         def ArrangeControls():
             
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._action_dropdown, FLAGS_MIXED )
+            hbox.AddF( self._tag_type_dropdown, FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._internal_actions, label = 'to' ), FLAGS_MIXED )
+            hbox.AddF( self._service_key_dropdown, FLAGS_MIXED )
+            hbox.AddF( self._go, FLAGS_MIXED )
+            
+            self._internal_actions.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), FLAGS_MIXED )
+            hbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._specific_tag, FLAGS_EXPAND_BOTH_WAYS )
+            
+            self._internal_actions.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            self._external_actions.AddF( self._export_to_hta, FLAGS_LONE_BUTTON )
+            
+            #
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable. You may need to refresh your existing searches to see their effect.' 
@@ -189,24 +226,8 @@ class DialogAdvancedContentUpdate( Dialog ):
             st.Wrap( 360 )
             
             vbox.AddF( st, FLAGS_EXPAND_BOTH_WAYS )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._action_dropdown, FLAGS_MIXED )
-            hbox.AddF( self._tag_type_dropdown, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = 'to' ), FLAGS_MIXED )
-            hbox.AddF( self._service_key_dropdown, FLAGS_MIXED )
-            hbox.AddF( self._go, FLAGS_MIXED )
-            
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( wx.StaticText( self, label = 'set specific tag or namespace: ' ), FLAGS_MIXED )
-            hbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._specific_tag, FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._internal_actions, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._external_actions, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._done, FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
@@ -239,7 +260,54 @@ class DialogAdvancedContentUpdate( Dialog ):
         else: self._service_key_dropdown.Enable()
         
     
+    def EventExportToHTA( self, event ):
+        
+        with wx.FileDialog( self, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK: path = dlg.GetPath()
+            else: return
+            
+        
+        message = 'Would you like to use hydrus\'s normal hash type, or an alternative?'
+        message += os.linesep * 2
+        message += 'Hydrus uses SHA256 to identify files, but other services use different standards. MD5, SHA1 and SHA512 are available, but only for local files, which may limit your export.'
+        message += os.linesep * 2
+        message += 'If you do not know what this stuff means, click \'normal\'.'
+        
+        with DialogYesNo( self, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result in ( wx.ID_YES, wx.ID_NO ):
+                
+                if result == wx.ID_YES: hash_type = HydrusTagArchive.HASH_TYPE_SHA256
+                else:
+                    
+                    with DialogSelectFromListOfStrings( self, 'Select the hash type', [ 'md5', 'sha1', 'sha512' ] ) as hash_dlg:
+                        
+                        if hash_dlg.ShowModal() == wx.ID_OK:
+                            
+                            s = hash_dlg.GetString()
+                            
+                            if s == 'md5': hash_type = HydrusTagArchive.HASH_TYPE_MD5
+                            elif s == 'sha1': hash_type = HydrusTagArchive.HASH_TYPE_SHA1
+                            elif s == 'sha512': hash_type = HydrusTagArchive.HASH_TYPE_SHA512
+                            
+                        else: return
+                        
+                    
+                
+                HC.app.Write( 'export_mappings', path, self._service_key, hash_type, self._hashes )
+                
+            
+        
+    
     def EventGo( self, event ):
+        
+        with DialogYesNo( self, 'Are you sure?' ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES: return
+            
         
         action = self._action_dropdown.GetChoice()
         
@@ -640,7 +708,7 @@ class DialogGenerateNewAccounts( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( ctrl_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -750,7 +818,7 @@ class DialogInputAdvancedTagOptions( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2190,8 +2258,8 @@ class DialogInputLocalBooruShare( Dialog ):
             vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( timeout_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( link_box, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( link_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2340,7 +2408,7 @@ class DialogInputLocalFiles( Dialog ):
             vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._delete_after_success, FLAGS_LONE_BUTTON )
             vbox.AddF( ( 0, 5 ), FLAGS_NONE )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3084,7 +3152,7 @@ class DialogInputNamespaceRegex( Dialog ):
             vbox.AddF( control_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._shortcuts, FLAGS_LONE_BUTTON )
             vbox.AddF( self._regex_link, FLAGS_LONE_BUTTON )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3183,7 +3251,7 @@ class DialogInputNewAccountType( Dialog ):
             vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._max_num_mb, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._max_num_requests, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3317,7 +3385,7 @@ class DialogInputNewFormField( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3391,7 +3459,7 @@ class DialogInputShortcut( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3481,7 +3549,7 @@ class DialogInputUPnPMapping( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3642,7 +3710,7 @@ class DialogModifyAccounts( Dialog ):
             vbox.AddF( self._account_types_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._expiration_panel, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._ban_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._exit, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( self._exit, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3760,8 +3828,8 @@ class DialogNews( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._news, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( donebox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
+            vbox.AddF( donebox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4119,7 +4187,7 @@ class DialogPathsToTagsRegex( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4294,7 +4362,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 button_box.AddF( self._delete_quick_namespace_button, FLAGS_MIXED )
                 
                 self._quick_namespaces_panel.AddF( self._quick_namespaces_list, FLAGS_EXPAND_BOTH_WAYS )
-                self._quick_namespaces_panel.AddF( button_box, FLAGS_BUTTON_SIZERS )
+                self._quick_namespaces_panel.AddF( button_box, FLAGS_BUTTON_SIZER )
                 
                 #
                 
@@ -4408,7 +4476,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 tags.append( num_namespace + ':' + HC.u( num ) )
                 
             
-            tags = [ HC.CleanTag( tag ) for tag in tags ]
+            tags = HC.CleanTags( tags )
             
             return tags
             
@@ -4655,7 +4723,7 @@ class DialogRegisterService( Dialog ):
             buttonbox.AddF( self._register_button, FLAGS_MIXED )
             buttonbox.AddF( self._cancel, FLAGS_MIXED )
             
-            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4890,7 +4958,7 @@ class DialogCheckFromListOfStrings( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._strings, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5016,7 +5084,7 @@ class DialogSelectYoutubeURL( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._urls, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5145,8 +5213,8 @@ class DialogSetupCustomFilterActions( Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._actions, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( action_buttons, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( action_buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             button_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -5157,7 +5225,7 @@ class DialogSetupCustomFilterActions( Dialog ):
             f_vbox = wx.BoxSizer( wx.VERTICAL )
             
             f_vbox.AddF( self._favourites, FLAGS_EXPAND_BOTH_WAYS )
-            f_vbox.AddF( button_hbox, FLAGS_BUTTON_SIZERS )
+            f_vbox.AddF( button_hbox, FLAGS_BUTTON_SIZER )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -5717,7 +5785,7 @@ class DialogTextEntry( Dialog ):
             
             vbox.AddF( st_message, FLAGS_BIG_INDENT )
             vbox.AddF( self._text, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5764,7 +5832,7 @@ class DialogTextEntry( Dialog ):
     
 class DialogYesNo( Dialog ):
     
-    def __init__( self, parent, message, yes_label = 'yes', no_label = 'no' ):
+    def __init__( self, parent, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no' ):
         
         def InitialiseControls():
             
@@ -5796,7 +5864,7 @@ class DialogYesNo( Dialog ):
             text.Wrap( 480 )
             
             vbox.AddF( text, FLAGS_BIG_INDENT )
-            vbox.AddF( hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5805,7 +5873,7 @@ class DialogYesNo( Dialog ):
             self.SetInitialSize( ( x, y ) )
             
         
-        Dialog.__init__( self, parent, 'are you sure?', position = 'center' )
+        Dialog.__init__( self, parent, title, position = 'center' )
         
         InitialiseControls()
         

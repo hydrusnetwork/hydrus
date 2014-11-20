@@ -53,7 +53,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -133,11 +133,11 @@ class Animation( wx.Window ):
         
         dc.SetUserScale( x_scale, y_scale )
         
-        hydrus_bmp = current_frame.CreateWxBmp()
+        wx_bmp = current_frame.GetWxBitmap()
         
-        dc.DrawBitmap( hydrus_bmp, 0, 0 )
+        dc.DrawBitmap( wx_bmp, 0, 0 )
         
-        wx.CallAfter( hydrus_bmp.Destroy )
+        wx.CallAfter( wx_bmp.Destroy )
         
         dc.SetUserScale( 1.0, 1.0 )
         
@@ -437,15 +437,9 @@ class Canvas( object ):
     
     def _CopyHashToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( self._current_display_media.GetHash().encode( 'hex' ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        hex_hash = self._current_display_media.GetHash().encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', hex_hash )
         
     
     def _DrawBackgroundBitmap( self ):
@@ -1390,28 +1384,16 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
     def _CopyLocalUrlToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        path = CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
+        
+        HC.pubsub.pub( 'clipboard', 'text', path )
         
     
     def _Delete( self ):
@@ -1678,28 +1660,16 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
     
     def _CopyLocalUrlToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' )
+        
+        HC.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
         
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject( CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) )
-            
-            wx.TheClipboard.SetData( data )
-            
-            wx.TheClipboard.Close()
-            
-        else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+        path = CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
+        
+        HC.pubsub.pub( 'clipboard', 'text', path )
         
     
     def _Delete( self ):
@@ -4066,7 +4036,7 @@ class StaticImage( wx.Window ):
             
             dc.SetUserScale( x_scale, y_scale )
             
-            wx_bitmap = hydrus_bitmap.CreateWxBmp()
+            wx_bitmap = hydrus_bitmap.GetWxBitmap()
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
@@ -4111,9 +4081,7 @@ class StaticImage( wx.Window ):
                     
                     if we_just_zoomed_in and self._image_container.IsScaled():
                         
-                        full_resolution = self._media.GetResolution()
-                        
-                        self._image_container = self._image_cache.GetImage( self._media, full_resolution )
+                        self._image_container = self._image_cache.GetImage( self._media )
                         
                     
                 

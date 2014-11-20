@@ -42,7 +42,7 @@ YAML_DUMP_ID_LOCAL_BOORU = 8
 
 class FileDB( object ):
     
-    def _AddThumbnails( self, c, thumbnails ):
+    def _AddThumbnails( self, thumbnails ):
         
         for ( hash, thumbnail ) in thumbnails:
             
@@ -58,9 +58,9 @@ class FileDB( object ):
             
             phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
             
-            hash_id = self._GetHashId( c, hash )
+            hash_id = self._GetHashId( hash )
             
-            c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+            self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
             
         
         hashes = { hash for ( hash, thumbnail ) in thumbnails }
@@ -68,7 +68,7 @@ class FileDB( object ):
         self.pub_after_commit( 'new_thumbnails', hashes )
         
     
-    def _CopyFiles( self, c, hashes ):
+    def _CopyFiles( self, hashes ):
         
         if len( hashes ) > 0:
             
@@ -84,7 +84,7 @@ class FileDB( object ):
                 
                 try:
                     
-                    hash_id = self._GetHashId( c, hash )
+                    hash_id = self._GetHashId( hash )
                     
                     path_from = CC.GetFilePath( hash )
                     
@@ -107,7 +107,7 @@ class FileDB( object ):
             
         
     
-    def _GenerateHashIdsEfficiently( self, c, hashes ):
+    def _GenerateHashIdsEfficiently( self, hashes ):
         
         hashes_not_in_db = set( hashes )
         
@@ -115,15 +115,15 @@ class FileDB( object ):
             
             hashes_subset = hashes[ i : i + 250 ]
             
-            hashes_not_in_db.difference_update( [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes WHERE hash IN (' + ','.join( '?' * len( hashes_subset ) ) + ');', [ sqlite3.Binary( hash ) for hash in hashes_subset ] ) ] )
+            hashes_not_in_db.difference_update( [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash IN (' + ','.join( '?' * len( hashes_subset ) ) + ');', [ sqlite3.Binary( hash ) for hash in hashes_subset ] ) ] )
             
         
-        if len( hashes_not_in_db ) > 0: c.executemany( 'INSERT INTO hashes ( hash ) VALUES( ? );', [ ( sqlite3.Binary( hash ), ) for hash in hashes_not_in_db ] )
+        if len( hashes_not_in_db ) > 0: self._c.executemany( 'INSERT INTO hashes ( hash ) VALUES( ? );', [ ( sqlite3.Binary( hash ), ) for hash in hashes_not_in_db ] )
         
     
-    def _GetHash( self, c, hash_id ):
+    def _GetHash( self, hash_id ):
         
-        result = c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
         if result is None: raise Exception( 'File hash error in database' )
         
@@ -132,24 +132,24 @@ class FileDB( object ):
         return hash
         
     
-    def _GetHashes( self, c, hash_ids ): return [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
+    def _GetHashes( self, hash_ids ): return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
     
-    def _GetHashId( self, c, hash ):
+    def _GetHashId( self, hash ):
         
-        result = c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+        result = self._c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO hashes ( hash ) VALUES ( ? );', ( sqlite3.Binary( hash ), ) )
+            self._c.execute( 'INSERT INTO hashes ( hash ) VALUES ( ? );', ( sqlite3.Binary( hash ), ) )
             
-            hash_id = c.lastrowid
+            hash_id = self._c.lastrowid
             
         else: ( hash_id, ) = result
         
         return hash_id
         
     
-    def _GetHashIds( self, c, hashes ):
+    def _GetHashIds( self, hashes ):
         
         hash_ids = []
         
@@ -159,7 +159,7 @@ class FileDB( object ):
             
             hashes_subset = hashes[ i : i + 250 ]
             
-            hash_ids.extend( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM hashes WHERE hash IN (' + ','.join( '?' * len( hashes_subset ) ) + ');', [ sqlite3.Binary( hash ) for hash in hashes_subset ] ) ] )
+            hash_ids.extend( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM hashes WHERE hash IN (' + ','.join( '?' * len( hashes_subset ) ) + ');', [ sqlite3.Binary( hash ) for hash in hashes_subset ] ) ] )
             
         
         if len( hashes ) > len( hash_ids ):
@@ -168,16 +168,16 @@ class FileDB( object ):
                 
                 # must be some new hashes the db has not seen before, so let's generate them as appropriate
                 
-                self._GenerateHashIdsEfficiently( c, hashes )
+                self._GenerateHashIdsEfficiently( hashes )
                 
-                hash_ids = self._GetHashIds( c, hashes )
+                hash_ids = self._GetHashIds( hashes )
                 
             
         
         return hash_ids
         
     
-    def _GetHashIdsToHashes( self, c, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
+    def _GetHashIdsToHashes( self, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
     
     def _GetThumbnail( self, hash, full_size = False ):
         
@@ -190,7 +190,7 @@ class FileDB( object ):
     
 class MessageDB( object ):
     
-    def _AddContact( self, c, contact ):
+    def _AddContact( self, contact ):
         
         ( public_key, name, host, port ) = contact.GetInfo()
         
@@ -198,10 +198,10 @@ class MessageDB( object ):
         
         if public_key is not None: contact_key = sqlite3.Binary( contact_key )
         
-        c.execute( 'INSERT OR IGNORE INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( contact_key, public_key, name, host, port ) )
+        self._c.execute( 'INSERT OR IGNORE INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( contact_key, public_key, name, host, port ) )
         
     
-    def _AddMessage( self, c, transport_message, serverside_message_key = None, forced_status = None ):
+    def _AddMessage( self, transport_message, serverside_message_key = None, forced_status = None ):
         
         ( contact_from, contacts_to, message_key, conversation_key, timestamp, subject, body, files ) = transport_message.GetInfo()
         
@@ -211,10 +211,10 @@ class MessageDB( object ):
             
         else:
             
-            contact_id_from = self._GetContactId( c, contact_from )
+            contact_id_from = self._GetContactId( contact_from )
             
             # changes whatever they want to say their name and public key is to whatever we prefer it to be
-            contact_from = self._GetContact( c, contact_id_from )
+            contact_from = self._GetContact( contact_id_from )
             
             public_key = contact_from.GetPublicKey()
             
@@ -227,17 +227,17 @@ class MessageDB( object ):
                 
             
         
-        conversation_id = self._GetConversationId( c, conversation_key, subject )
+        conversation_id = self._GetConversationId( conversation_key, subject )
         
-        message_id = self._GetMessageId( c, message_key )
+        message_id = self._GetMessageId( message_key )
         
-        result = c.execute( 'SELECT 1 FROM messages WHERE message_id = ?;', ( message_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM messages WHERE message_id = ?;', ( message_id, ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT OR IGNORE INTO messages ( conversation_id, message_id, contact_id_from, timestamp ) VALUES ( ?, ?, ?, ? );', ( conversation_id, message_id, contact_id_from, timestamp ) )
+            self._c.execute( 'INSERT OR IGNORE INTO messages ( conversation_id, message_id, contact_id_from, timestamp ) VALUES ( ?, ?, ?, ? );', ( conversation_id, message_id, contact_id_from, timestamp ) )
             
-            c.execute( 'INSERT OR IGNORE INTO message_bodies ( docid, body ) VALUES ( ?, ? );', ( message_id, body ) )
+            self._c.execute( 'INSERT OR IGNORE INTO message_bodies ( docid, body ) VALUES ( ?, ? );', ( message_id, body ) )
             
             attachment_hashes = []
             
@@ -251,7 +251,7 @@ class MessageDB( object ):
                     
                     try:
                         
-                        ( result, hash ) = self._ImportFile( c, temp_path, override_deleted = True ) # what if the file fails?
+                        ( result, hash ) = self._ImportFile( temp_path, override_deleted = True ) # what if the file fails?
                         
                         attachment_hashes.append( hash )
                         
@@ -261,32 +261,32 @@ class MessageDB( object ):
                     except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                     
                 
-                hash_ids = self._GetHashIds( c, attachment_hashes )
+                hash_ids = self._GetHashIds( attachment_hashes )
                 
-                c.executemany( 'INSERT OR IGNORE INTO message_attachments ( message_id, hash_id ) VALUES ( ?, ? );', [ ( message_id, hash_id ) for hash_id in hash_ids ] )
+                self._c.executemany( 'INSERT OR IGNORE INTO message_attachments ( message_id, hash_id ) VALUES ( ?, ? );', [ ( message_id, hash_id ) for hash_id in hash_ids ] )
                 
             
             if forced_status is None: status = 'sent'
             else: status = forced_status
             
-            status_id = self._GetStatusId( c, status )
+            status_id = self._GetStatusId( status )
             
-            inboxable_contact_ids = { id for ( id, ) in c.execute( 'SELECT contact_id FROM message_depots;' ) }
+            inboxable_contact_ids = { id for ( id, ) in self._c.execute( 'SELECT contact_id FROM message_depots;' ) }
             
             inbox = False
             
             for contact_to in contacts_to:
                 
-                contact_id_to = self._GetContactId( c, contact_to )
+                contact_id_to = self._GetContactId( contact_to )
                 
                 if contact_id_to in inboxable_contact_ids:
                     
-                    c.execute( 'INSERT OR IGNORE INTO message_inbox ( message_id ) VALUES ( ? );', ( message_id, ) )
+                    self._c.execute( 'INSERT OR IGNORE INTO message_inbox ( message_id ) VALUES ( ? );', ( message_id, ) )
                     
                     inbox = True
                     
                 
-                c.execute( 'INSERT OR IGNORE INTO message_destination_map ( message_id, contact_id_to, status_id ) VALUES ( ?, ?, ? );', ( message_id, contact_id_to, status_id ) )
+                self._c.execute( 'INSERT OR IGNORE INTO message_destination_map ( message_id, contact_id_to, status_id ) VALUES ( ?, ?, ? );', ( message_id, contact_id_to, status_id ) )
                 
             
             destinations = [ ( contact_to, status ) for contact_to in contacts_to ]
@@ -298,21 +298,21 @@ class MessageDB( object ):
         
         if serverside_message_key is not None:
             
-            serverside_message_id = self._GetMessageId( c, serverside_message_key )
+            serverside_message_id = self._GetMessageId( serverside_message_key )
             
-            c.execute( 'DELETE FROM message_downloads WHERE message_id = ?;', ( serverside_message_id, ) )
+            self._c.execute( 'DELETE FROM message_downloads WHERE message_id = ?;', ( serverside_message_id, ) )
             
         
     
-    def _AddMessageInfoSince( self, c, service_key, serverside_message_keys, statuses, new_last_check ):
+    def _AddMessageInfoSince( self, service_key, serverside_message_keys, statuses, new_last_check ):
         
         # message_keys
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        serverside_message_ids = set( self._GetMessageIds( c, serverside_message_keys ) )
+        serverside_message_ids = set( self._GetMessageIds( serverside_message_keys ) )
         
-        c.executemany( 'INSERT OR IGNORE INTO message_downloads ( service_id, message_id ) VALUES ( ?, ? );', [ ( service_id, serverside_message_id ) for serverside_message_id in serverside_message_ids ] )
+        self._c.executemany( 'INSERT OR IGNORE INTO message_downloads ( service_id, message_id ) VALUES ( ?, ? );', [ ( service_id, serverside_message_id ) for serverside_message_id in serverside_message_ids ] )
         
         # statuses
         
@@ -326,7 +326,7 @@ class MessageDB( object ):
             if message_key in message_keys_dict: message_id = message_keys_dict[ message_key ]
             else:
                 
-                message_id = self._GetMessageId( c, message_key )
+                message_id = self._GetMessageId( message_key )
                 
                 message_keys_dict[ message_key ] = message_id
                 
@@ -334,7 +334,7 @@ class MessageDB( object ):
             if status in statuses_dict: status_id = statuses_dict[ status ]
             else:
                 
-                status_id = self._GetStatusId( c, status )
+                status_id = self._GetStatusId( status )
                 
                 statuses_dict[ status ] = status_id
                 
@@ -343,32 +343,32 @@ class MessageDB( object ):
             
         
         # replace is important here
-        c.executemany( 'INSERT OR REPLACE INTO incoming_message_statuses ( message_id, contact_key, status_id ) VALUES ( ?, ?, ? );', inserts )
+        self._c.executemany( 'INSERT OR REPLACE INTO incoming_message_statuses ( message_id, contact_key, status_id ) VALUES ( ?, ?, ? );', inserts )
         
         # finally:
         
-        c.execute( 'UPDATE message_depots SET last_check = ? WHERE service_id = ?;', ( new_last_check, service_id ) )
+        self._c.execute( 'UPDATE message_depots SET last_check = ? WHERE service_id = ?;', ( new_last_check, service_id ) )
         
     
-    def _ArchiveConversation( self, c, conversation_key ):
+    def _ArchiveConversation( self, conversation_key ):
         
-        conversation_id = self._GetMessageId( c, conversation_key )
+        conversation_id = self._GetMessageId( conversation_key )
         
-        message_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM messages WHERE conversation_id = ?;', ( conversation_id, ) ) ]
+        message_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM messages WHERE conversation_id = ?;', ( conversation_id, ) ) ]
         
-        c.execute( 'DELETE FROM message_inbox WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' )
+        self._c.execute( 'DELETE FROM message_inbox WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' )
         
         self.pub_after_commit( 'archive_conversation_data', conversation_key )
         self.pub_after_commit( 'archive_conversation_gui', conversation_key )
         
-        self._DoStatusNumInbox( c )
+        self._DoStatusNumInbox()
         
     
-    def _AssociateContact( self, c, service_key ):
+    def _AssociateContact( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        service = self._GetService( c, service_id )
+        service = self._GetService( service_id )
         
         private_key = service.GetPrivateKey()
         
@@ -376,49 +376,49 @@ class MessageDB( object ):
         
         contact_key = hashlib.sha256( public_key ).digest()
         
-        contact_id = self._GetContactId( c, service_id )
+        contact_id = self._GetContactId( service_id )
         
-        c.execute( 'UPDATE contacts SET contact_key = ?, public_key = ? WHERE contact_id = ?;', ( sqlite3.Binary( contact_key ), public_key, contact_id ) )
+        self._c.execute( 'UPDATE contacts SET contact_key = ?, public_key = ? WHERE contact_id = ?;', ( sqlite3.Binary( contact_key ), public_key, contact_id ) )
         
     
-    def _DeleteConversation( self, c, conversation_key ):
+    def _DeleteConversation( self, conversation_key ):
         
-        conversation_id = self._GetMessageId( c, conversation_key )
+        conversation_id = self._GetMessageId( conversation_key )
         
-        message_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM messages WHERE conversation_id = ?;', ( conversation_id, ) ) ]
+        message_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM messages WHERE conversation_id = ?;', ( conversation_id, ) ) ]
         
         splayed_message_ids = HC.SplayListForDB( message_ids )
         
-        c.execute( 'DELETE FROM message_keys WHERE message_id IN ' + splayed_message_ids + ';' )
-        c.execute( 'DELETE FROM message_bodies WHERE docid IN ' + splayed_message_ids + ';' )
-        c.execute( 'DELETE FROM conversation_subjects WHERE docid IN ' + splayed_message_ids + ';' )
+        self._c.execute( 'DELETE FROM message_keys WHERE message_id IN ' + splayed_message_ids + ';' )
+        self._c.execute( 'DELETE FROM message_bodies WHERE docid IN ' + splayed_message_ids + ';' )
+        self._c.execute( 'DELETE FROM conversation_subjects WHERE docid IN ' + splayed_message_ids + ';' )
         
         self.pub_after_commit( 'delete_conversation_data', conversation_key )
         self.pub_after_commit( 'delete_conversation_gui', conversation_key )
         
-        self._DoStatusNumInbox( c )
+        self._DoStatusNumInbox()
         
     
-    def _DeleteDraft( self, c, draft_key ):
+    def _DeleteDraft( self, draft_key ):
         
-        message_id = self._GetMessageId( c, draft_key )
+        message_id = self._GetMessageId( draft_key )
         
-        c.execute( 'DELETE FROM message_keys WHERE message_id = ?;', ( message_id, ) )
-        c.execute( 'DELETE FROM message_bodies WHERE docid = ?;', ( message_id, ) )
-        c.execute( 'DELETE FROM conversation_subjects WHERE docid = ?;', ( message_id, ) )
+        self._c.execute( 'DELETE FROM message_keys WHERE message_id = ?;', ( message_id, ) )
+        self._c.execute( 'DELETE FROM message_bodies WHERE docid = ?;', ( message_id, ) )
+        self._c.execute( 'DELETE FROM conversation_subjects WHERE docid = ?;', ( message_id, ) )
         
         self.pub_after_commit( 'delete_draft_data', draft_key )
         self.pub_after_commit( 'delete_draft_gui', draft_key )
         self.pub_after_commit( 'notify_check_messages' )
         
     
-    def _DoMessageQuery( self, c, query_key, search_context ):
+    def _DoMessageQuery( self, query_key, search_context ):
         
         identity = search_context.GetIdentity()
         
         name = identity.GetName()
         
-        contact_id = self._GetContactId( c, identity )
+        contact_id = self._GetContactId( identity )
         
         system_predicates = search_context.GetSystemPredicates()
         
@@ -426,7 +426,7 @@ class MessageDB( object ):
         
         if draft:
             
-            draft_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM messages, message_drafts USING ( message_id ) WHERE contact_id_from = ?;', ( contact_id, ) ) ]
+            draft_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM messages, message_drafts USING ( message_id ) WHERE contact_id_from = ?;', ( contact_id, ) ) ]
             
             query_message_ids = draft_ids
             
@@ -436,7 +436,7 @@ class MessageDB( object ):
             
             if name != 'Anonymous':
                 
-                service = self._GetService( c, identity )
+                service = self._GetService( identity )
                 
                 if not service.ReceivesAnon(): sql_predicates.append( 'contact_id_from != 1' )
                 
@@ -445,28 +445,28 @@ class MessageDB( object ):
                 
                 if status == 'unread': status = 'sent'
                 
-                status_id = self._GetStatusId( c, status )
+                status_id = self._GetStatusId( status )
                 
                 sql_predicates.append( '( contact_id_to = ' + HC.u( contact_id ) + ' AND status_id = ' + HC.u( status_id ) + ')' )
                 
             
             if contact_from is not None:
                 
-                contact_id_from = self._GetContactId( c, contact_from )
+                contact_id_from = self._GetContactId( contact_from )
                 
                 sql_predicates.append( 'contact_id_from = ' + HC.u( contact_id_from ) )
                 
             
             if contact_to is not None:
                 
-                contact_id_to = self._GetContactId( c, contact_to )
+                contact_id_to = self._GetContactId( contact_to )
                 
                 sql_predicates.append( 'contact_id_to = ' + HC.u( contact_id_to ) )
                 
             
             if contact_started is not None:
                 
-                contact_id_started = self._GetContactId( c, contact_started )
+                contact_id_started = self._GetContactId( contact_started )
                 
                 sql_predicates.append( 'conversation_id = message_id AND contact_id_from = ' + HC.u( contact_id_started ) )
                 
@@ -474,11 +474,11 @@ class MessageDB( object ):
             if min_timestamp is not None: sql_predicates.append( 'timestamp >= ' + HC.u( min_timestamp ) )
             if max_timestamp is not None: sql_predicates.append( 'timestamp <= ' + HC.u( max_timestamp ) )
             
-            query_message_ids = { message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM messages, message_destination_map USING ( message_id ) WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
+            query_message_ids = { message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM messages, message_destination_map USING ( message_id ) WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
             
             if inbox or archive:
                 
-                inbox_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM message_inbox, message_destination_map USING ( message_id ) WHERE contact_id_to = ?;', ( contact_id, ) ) ]
+                inbox_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM message_inbox, message_destination_map USING ( message_id ) WHERE contact_id_to = ?;', ( contact_id, ) ) ]
                 
                 if inbox: query_message_ids.intersection_update( inbox_ids )
                 elif archive: query_message_ids.difference_update( inbox_ids )
@@ -487,28 +487,28 @@ class MessageDB( object ):
         
         for term in search_context.GetTermsToInclude():
             
-            body_query_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT docid FROM message_bodies WHERE body MATCH ?;', ( term, ) ) ]
-            subject_query_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT docid FROM conversation_subjects WHERE subject MATCH ?;', ( term, ) ) ]
+            body_query_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT docid FROM message_bodies WHERE body MATCH ?;', ( term, ) ) ]
+            subject_query_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT docid FROM conversation_subjects WHERE subject MATCH ?;', ( term, ) ) ]
             
             query_message_ids.intersection_update( body_query_ids + subject_query_ids )
             
         
         for term in search_context.GetTermsToExclude():
             
-            body_query_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT docid FROM message_bodies WHERE body MATCH ?;', ( term, ) ) ]
-            subject_query_ids = [ message_id for ( message_id, ) in c.execute( 'SELECT docid FROM conversation_subjects WHERE subject MATCH ?;', ( term, ) ) ]
+            body_query_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT docid FROM message_bodies WHERE body MATCH ?;', ( term, ) ) ]
+            subject_query_ids = [ message_id for ( message_id, ) in self._c.execute( 'SELECT docid FROM conversation_subjects WHERE subject MATCH ?;', ( term, ) ) ]
             
             query_message_ids.difference_update( body_query_ids + subject_query_ids )
             
         
-        conversations = self._GetConversations( c, search_context, query_message_ids )
+        conversations = self._GetConversations( search_context, query_message_ids )
         
         self.pub_after_commit( 'message_query_done', query_key, conversations )
         
     
-    def _DoStatusNumInbox( self, c ):
+    def _DoStatusNumInbox( self ):
         
-        convo_ids = { id for ( id, ) in c.execute( 'SELECT conversation_id FROM messages, message_inbox USING ( message_id );' ) }
+        convo_ids = { id for ( id, ) in self._c.execute( 'SELECT conversation_id FROM messages, message_inbox USING ( message_id );' ) }
         
         num_inbox = len( convo_ids )
         
@@ -518,44 +518,44 @@ class MessageDB( object ):
         self.pub_after_commit( 'inbox_status', inbox_string )
         
     
-    def _DraftMessage( self, c, draft_message ):
+    def _DraftMessage( self, draft_message ):
         
         ( draft_key, conversation_key, subject, contact_from, contact_names_to, recipients_visible, body, attachment_hashes ) = draft_message.GetInfo()
         
-        old_message_id = self._GetMessageId( c, draft_key )
+        old_message_id = self._GetMessageId( draft_key )
         
-        c.execute( 'DELETE FROM message_keys WHERE message_id = ?;', ( old_message_id, ) )
-        c.execute( 'DELETE FROM message_bodies WHERE docid = ?;', ( old_message_id, ) )
-        c.execute( 'DELETE FROM conversation_subjects WHERE docid = ?;', ( old_message_id, ) )
+        self._c.execute( 'DELETE FROM message_keys WHERE message_id = ?;', ( old_message_id, ) )
+        self._c.execute( 'DELETE FROM message_bodies WHERE docid = ?;', ( old_message_id, ) )
+        self._c.execute( 'DELETE FROM conversation_subjects WHERE docid = ?;', ( old_message_id, ) )
         
-        message_id = self._GetMessageId( c, draft_key )
+        message_id = self._GetMessageId( draft_key )
         
-        conversation_id = self._GetConversationId( c, conversation_key, subject )
+        conversation_id = self._GetConversationId( conversation_key, subject )
         
-        contact_id_from = self._GetContactId( c, contact_from )
+        contact_id_from = self._GetContactId( contact_from )
         
-        c.execute( 'INSERT INTO messages ( conversation_id, message_id, contact_id_from, timestamp ) VALUES ( ?, ?, ?, ? );', ( conversation_id, message_id, contact_id_from, None ) )
+        self._c.execute( 'INSERT INTO messages ( conversation_id, message_id, contact_id_from, timestamp ) VALUES ( ?, ?, ?, ? );', ( conversation_id, message_id, contact_id_from, None ) )
         
-        c.execute( 'INSERT INTO message_bodies ( docid, body ) VALUES ( ?, ? );', ( message_id, body ) )
+        self._c.execute( 'INSERT INTO message_bodies ( docid, body ) VALUES ( ?, ? );', ( message_id, body ) )
         
-        status_id = self._GetStatusId( c, 'draft' )
+        status_id = self._GetStatusId( 'draft' )
         
-        contact_ids_to = [ self._GetContactId( c, contact_name_to ) for contact_name_to in contact_names_to ]
+        contact_ids_to = [ self._GetContactId( contact_name_to ) for contact_name_to in contact_names_to ]
         
-        c.executemany( 'INSERT INTO message_destination_map ( message_id, contact_id_to, status_id ) VALUES ( ?, ?, ? );', [ ( message_id, contact_id_to, status_id ) for contact_id_to in contact_ids_to ] )
+        self._c.executemany( 'INSERT INTO message_destination_map ( message_id, contact_id_to, status_id ) VALUES ( ?, ?, ? );', [ ( message_id, contact_id_to, status_id ) for contact_id_to in contact_ids_to ] )
         
-        c.execute( 'INSERT INTO message_drafts ( message_id, recipients_visible ) VALUES ( ?, ? );', ( message_id, recipients_visible ) )
+        self._c.execute( 'INSERT INTO message_drafts ( message_id, recipients_visible ) VALUES ( ?, ? );', ( message_id, recipients_visible ) )
         
-        hash_ids = self._GetHashIds( c, attachment_hashes )
+        hash_ids = self._GetHashIds( attachment_hashes )
         
-        c.executemany( 'INSERT INTO message_attachments ( message_id, hash_id ) VALUES ( ?, ? );', [ ( message_id, hash_id ) for hash_id in hash_ids ] )
+        self._c.executemany( 'INSERT INTO message_attachments ( message_id, hash_id ) VALUES ( ?, ? );', [ ( message_id, hash_id ) for hash_id in hash_ids ] )
         
         self.pub_after_commit( 'draft_saved', draft_key, draft_message )
         
     
-    def _FlushMessageStatuses( self, c ):
+    def _FlushMessageStatuses( self ):
         
-        incoming_message_statuses = HC.BuildKeyToListDict( [ ( message_id, ( contact_key, status_id ) ) for ( message_id, contact_key, status_id ) in c.execute( 'SELECT message_id, contact_key, status_id FROM incoming_message_statuses, messages USING ( message_id );' ) ] )
+        incoming_message_statuses = HC.BuildKeyToListDict( [ ( message_id, ( contact_key, status_id ) ) for ( message_id, contact_key, status_id ) in self._c.execute( 'SELECT message_id, contact_key, status_id FROM incoming_message_statuses, messages USING ( message_id );' ) ] )
         
         for ( message_id, status_infos ) in incoming_message_statuses.items():
             
@@ -563,25 +563,25 @@ class MessageDB( object ):
                 
                 try:
                     
-                    contact_id_to = self._GetContactId( c, contact_key )
+                    contact_id_to = self._GetContactId( contact_key )
                     
-                    c.execute( 'INSERT OR REPLACE INTO message_destination_map ( message_id, contact_id_to, status_id ) VALUES ( ?, ?, ? );', ( message_id, contact_id_to, status_id ) )
+                    self._c.execute( 'INSERT OR REPLACE INTO message_destination_map ( message_id, contact_id_to, status_id ) VALUES ( ?, ?, ? );', ( message_id, contact_id_to, status_id ) )
                     
                 except: pass
                 
             
-            c.execute( 'DELETE FROM incoming_message_statuses WHERE message_id = ?;', ( message_id, ) )
+            self._c.execute( 'DELETE FROM incoming_message_statuses WHERE message_id = ?;', ( message_id, ) )
             
-            message_key = self._GetMessageKey( c, message_id )
+            message_key = self._GetMessageKey( message_id )
             
-            status_updates = [ ( contact_key, self._GetStatus( c, status_id ) ) for ( contact_key, status_id ) in status_infos ]
+            status_updates = [ ( contact_key, self._GetStatus( status_id ) ) for ( contact_key, status_id ) in status_infos ]
             
             self.pub_after_commit( 'message_statuses_data', message_key, status_updates )
             self.pub_after_commit( 'message_statuses_gui', message_key, status_updates )
             
         
     
-    def _GenerateMessageIdsEfficiently( self, c, message_keys ):
+    def _GenerateMessageIdsEfficiently( self, message_keys ):
         
         message_keys_not_in_db = set( message_keys )
         
@@ -589,17 +589,17 @@ class MessageDB( object ):
             
             message_keys_subset = message_keys[ i : i + 250 ]
             
-            message_keys_not_in_db.difference_update( [ message_key for ( message_key, ) in c.execute( 'SELECT message_key FROM message_keys WHERE message_key IN (' + ','.join( '?' * len( message_keys_subset ) ) + ');', [ sqlite3.Binary( message_key ) for message_key in message_keys_subset ] ) ] )
+            message_keys_not_in_db.difference_update( [ message_key for ( message_key, ) in self._c.execute( 'SELECT message_key FROM message_keys WHERE message_key IN (' + ','.join( '?' * len( message_keys_subset ) ) + ');', [ sqlite3.Binary( message_key ) for message_key in message_keys_subset ] ) ] )
             
         
-        if len( message_keys_not_in_db ) > 0: c.executemany( 'INSERT INTO message_keys ( message_key ) VALUES( ? );', [ ( sqlite3.Binary( message_key ), ) for message_key in message_keys_not_in_db ] )
+        if len( message_keys_not_in_db ) > 0: self._c.executemany( 'INSERT INTO message_keys ( message_key ) VALUES( ? );', [ ( sqlite3.Binary( message_key ), ) for message_key in message_keys_not_in_db ] )
         
     
-    def _GetAutocompleteContacts( self, c, half_complete_name, name_to_exclude = None ):
+    def _GetAutocompleteContacts( self, half_complete_name, name_to_exclude = None ):
         
         # expand this later to do groups as well
         
-        names = [ name for ( name, ) in c.execute( 'SELECT name FROM contacts WHERE name LIKE ? AND name != ? AND public_key NOTNULL;', ( half_complete_name + '%', 'Anonymous' ) ) ]
+        names = [ name for ( name, ) in self._c.execute( 'SELECT name FROM contacts WHERE name LIKE ? AND name != ? AND public_key NOTNULL;', ( half_complete_name + '%', 'Anonymous' ) ) ]
         
         if name_to_exclude is not None: names = [ name for name in names if name != name_to_exclude ]
         
@@ -608,26 +608,26 @@ class MessageDB( object ):
         return matches
         
     
-    def _GetContact( self, c, parameter ):
+    def _GetContact( self, parameter ):
         
-        if type( parameter ) == int: ( public_key, name, host, port ) = c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE contact_id = ?;', ( parameter, ) ).fetchone()
+        if type( parameter ) == int: ( public_key, name, host, port ) = self._c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE contact_id = ?;', ( parameter, ) ).fetchone()
         elif type( parameter ) in ( str, unicode ):
-            try: ( public_key, name, host, port ) = c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( parameter ), ) ).fetchone()
-            except: ( public_key, name, host, port ) = c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE name = ?;', ( parameter, ) ).fetchone()
+            try: ( public_key, name, host, port ) = self._c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( parameter ), ) ).fetchone()
+            except: ( public_key, name, host, port ) = self._c.execute( 'SELECT public_key, name, host, port FROM contacts WHERE name = ?;', ( parameter, ) ).fetchone()
         
         return ClientConstantsMessages.Contact( public_key, name, host, port )
         
     
-    def _GetContactId( self, c, parameter ):
+    def _GetContactId( self, parameter ):
         
         if type( parameter ) in ( str, unicode ): 
             
             if parameter == 'Anonymous': return 1
             
-            try: ( contact_id, ) = c.execute( 'SELECT contact_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( parameter ), ) ).fetchone()
-            except: ( contact_id, ) = c.execute( 'SELECT contact_id FROM contacts WHERE name = ?;', ( parameter, ) ).fetchone()
+            try: ( contact_id, ) = self._c.execute( 'SELECT contact_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( parameter ), ) ).fetchone()
+            except: ( contact_id, ) = self._c.execute( 'SELECT contact_id FROM contacts WHERE name = ?;', ( parameter, ) ).fetchone()
             
-        elif type( parameter ) == int: ( contact_id, ) = c.execute( 'SELECT contact_id FROM contacts, message_depots USING ( contact_id ) WHERE service_id = ?;', ( parameter, ) ).fetchone()
+        elif type( parameter ) == int: ( contact_id, ) = self._c.execute( 'SELECT contact_id FROM contacts, message_depots USING ( contact_id ) WHERE service_id = ?;', ( parameter, ) ).fetchone()
         elif type( parameter ) == ClientConstantsMessages.Contact:
             
             contact_key = parameter.GetContactKey()
@@ -638,21 +638,21 @@ class MessageDB( object ):
             
             if contact_key is not None:
                 
-                result = c.execute( 'SELECT contact_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
+                result = self._c.execute( 'SELECT contact_id FROM contacts WHERE contact_key = ?;', ( sqlite3.Binary( contact_key ), ) ).fetchone()
                 
                 if result is None:
                     
                     # we have a new contact from an outside source!
                     # let's generate a name that'll fit into the db
                     
-                    while c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( name, ) ).fetchone() is not None: name += HC.u( random.randint( 0, 9 ) )
+                    while self._c.execute( 'SELECT 1 FROM contacts WHERE name = ?;', ( name, ) ).fetchone() is not None: name += HC.u( random.randint( 0, 9 ) )
                     
                 
             else:
                 
                 # one of our user-entered contacts that doesn't have a public key yet
                 
-                result = c.execute( 'SELECT contact_id FROM contacts WHERE name = ?;', ( name, ) ).fetchone()
+                result = self._c.execute( 'SELECT contact_id FROM contacts WHERE name = ?;', ( name, ) ).fetchone()
                 
             
             if result is None:
@@ -662,9 +662,9 @@ class MessageDB( object ):
                 
                 if public_key is not None: contact_key = sqlite3.Binary( contact_key )
                 
-                c.execute( 'INSERT INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( contact_key, public_key, name, host, port ) )
+                self._c.execute( 'INSERT INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( contact_key, public_key, name, host, port ) )
                 
-                contact_id = c.lastrowid
+                contact_id = self._c.lastrowid
                 
             else: ( contact_id, ) = result
             
@@ -672,21 +672,21 @@ class MessageDB( object ):
         return contact_id
         
     
-    def _GetContactIdsToContacts( self, c, contact_ids ): return { contact_id : ClientConstantsMessages.Contact( public_key, name, host, port ) for ( contact_id, public_key, name, host, port ) in c.execute( 'SELECT contact_id, public_key, name, host, port FROM contacts WHERE contact_id IN ' + HC.SplayListForDB( contact_ids ) + ';' ) }
+    def _GetContactIdsToContacts( self, contact_ids ): return { contact_id : ClientConstantsMessages.Contact( public_key, name, host, port ) for ( contact_id, public_key, name, host, port ) in self._c.execute( 'SELECT contact_id, public_key, name, host, port FROM contacts WHERE contact_id IN ' + HC.SplayListForDB( contact_ids ) + ';' ) }
     
-    def _GetContactNames( self, c ): return [ name for ( name, ) in c.execute( 'SELECT name FROM contacts;' ) ]
+    def _GetContactNames( self ): return [ name for ( name, ) in self._c.execute( 'SELECT name FROM contacts;' ) ]
     
-    def _GetConversations( self, c, search_context, query_message_ids ):
+    def _GetConversations( self, search_context, query_message_ids ):
         
         system_predicates = search_context.GetSystemPredicates()
         
-        conversation_ids = { conversation_id for ( conversation_id, ) in c.execute( 'SELECT conversation_id FROM messages WHERE message_id IN ' + HC.SplayListForDB( query_message_ids ) + ';' ) }
+        conversation_ids = { conversation_id for ( conversation_id, ) in self._c.execute( 'SELECT conversation_id FROM messages WHERE message_id IN ' + HC.SplayListForDB( query_message_ids ) + ';' ) }
         
         splayed_conversation_ids = HC.SplayListForDB( conversation_ids )
         
-        conversation_infos = c.execute( 'SELECT message_id, message_key, subject FROM message_keys, conversation_subjects ON message_id = conversation_subjects.docid WHERE message_id IN ' + splayed_conversation_ids + ';' ).fetchall()
+        conversation_infos = self._c.execute( 'SELECT message_id, message_key, subject FROM message_keys, conversation_subjects ON message_id = conversation_subjects.docid WHERE message_id IN ' + splayed_conversation_ids + ';' ).fetchall()
         
-        conversation_ids_to_message_infos = HC.BuildKeyToListDict( [ ( conversation_id, ( message_id, contact_id_from, timestamp, body ) ) for ( conversation_id, message_id, contact_id_from, timestamp, body ) in c.execute( 'SELECT conversation_id, message_id, contact_id_from, timestamp, body FROM messages, message_bodies ON message_id = message_bodies.docid WHERE conversation_id IN ' + splayed_conversation_ids + ' ORDER BY timestamp ASC;' ) ] )
+        conversation_ids_to_message_infos = HC.BuildKeyToListDict( [ ( conversation_id, ( message_id, contact_id_from, timestamp, body ) ) for ( conversation_id, message_id, contact_id_from, timestamp, body ) in self._c.execute( 'SELECT conversation_id, message_id, contact_id_from, timestamp, body FROM messages, message_bodies ON message_id = message_bodies.docid WHERE conversation_id IN ' + splayed_conversation_ids + ' ORDER BY timestamp ASC;' ) ] )
         
         message_ids = []
         contact_ids = set()
@@ -697,13 +697,13 @@ class MessageDB( object ):
             contact_ids.update( [ contact_id_from for ( message_id, contact_id_from, timestamp, body ) in message_infos ] )
             
         
-        message_ids_to_message_keys = self._GetMessageIdsToMessageKeys( c, message_ids )
+        message_ids_to_message_keys = self._GetMessageIdsToMessageKeys( message_ids )
         
         splayed_message_ids = HC.SplayListForDB( message_ids )
         
-        message_ids_to_destination_ids = HC.BuildKeyToListDict( [ ( message_id, ( contact_id_to, status_id ) ) for ( message_id, contact_id_to, status_id ) in c.execute( 'SELECT message_id, contact_id_to, status_id FROM message_destination_map WHERE message_id IN ' + splayed_message_ids + ';' ) ] )
+        message_ids_to_destination_ids = HC.BuildKeyToListDict( [ ( message_id, ( contact_id_to, status_id ) ) for ( message_id, contact_id_to, status_id ) in self._c.execute( 'SELECT message_id, contact_id_to, status_id FROM message_destination_map WHERE message_id IN ' + splayed_message_ids + ';' ) ] )
         
-        messages_ids_to_recipients_visible = { message_id : recipients_visible for ( message_id, recipients_visible ) in c.execute( 'SELECT message_id, recipients_visible FROM message_drafts;' ) }
+        messages_ids_to_recipients_visible = { message_id : recipients_visible for ( message_id, recipients_visible ) in self._c.execute( 'SELECT message_id, recipients_visible FROM message_drafts;' ) }
         
         status_ids = set()
         
@@ -713,20 +713,20 @@ class MessageDB( object ):
             status_ids.update( [ status_id for ( contact_id_to, status_id ) in destination_ids ] )
             
         
-        contact_ids_to_contacts = self._GetContactIdsToContacts( c, contact_ids )
-        status_ids_to_statuses = self._GetStatusIdsToStatuses( c, status_ids )
+        contact_ids_to_contacts = self._GetContactIdsToContacts( contact_ids )
+        status_ids_to_statuses = self._GetStatusIdsToStatuses( status_ids )
         
-        message_ids_to_hash_ids = HC.BuildKeyToListDict( c.execute( 'SELECT message_id, hash_id FROM message_attachments WHERE message_id IN ' + splayed_message_ids + ';' ).fetchall() )
+        message_ids_to_hash_ids = HC.BuildKeyToListDict( self._c.execute( 'SELECT message_id, hash_id FROM message_attachments WHERE message_id IN ' + splayed_message_ids + ';' ).fetchall() )
         
         hash_ids = set()
         
         for sub_hash_ids in message_ids_to_hash_ids.values(): hash_ids.update( sub_hash_ids )
         
-        hash_ids_to_hashes = self._GetHashIdsToHashes( c, hash_ids )
+        hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
         
         identity = search_context.GetIdentity()
         
-        inbox_ids = { message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM message_inbox;' ) }
+        inbox_ids = { message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM message_inbox;' ) }
         
         conversations = []
         
@@ -777,60 +777,60 @@ class MessageDB( object ):
         return conversations
         
     
-    def _GetConversationId( self, c, conversation_key, subject ):
+    def _GetConversationId( self, conversation_key, subject ):
         
-        result = c.execute( 'SELECT message_id FROM message_keys, conversation_subjects ON message_id = conversation_subjects.docid WHERE message_key = ?;', ( sqlite3.Binary( conversation_key ), ) ).fetchone()
+        result = self._c.execute( 'SELECT message_id FROM message_keys, conversation_subjects ON message_id = conversation_subjects.docid WHERE message_key = ?;', ( sqlite3.Binary( conversation_key ), ) ).fetchone()
         
         if result is None:
             
-            conversation_id = self._GetMessageId( c, conversation_key )
+            conversation_id = self._GetMessageId( conversation_key )
             
-            c.execute( 'INSERT INTO conversation_subjects ( docid, subject ) VALUES ( ?, ? );', ( conversation_id, subject ) )
+            self._c.execute( 'INSERT INTO conversation_subjects ( docid, subject ) VALUES ( ?, ? );', ( conversation_id, subject ) )
             
         else: ( conversation_id, ) = result
         
         return conversation_id
         
     
-    def _GetIdentities( self, c ):
+    def _GetIdentities( self ):
         
-        my_identities = [ ClientConstantsMessages.Contact( public_key, name, host, port ) for ( public_key, name, host, port ) in c.execute( 'SELECT public_key, name, host, port FROM contacts, message_depots USING ( contact_id ) ORDER BY name ASC;' ) ]
+        my_identities = [ ClientConstantsMessages.Contact( public_key, name, host, port ) for ( public_key, name, host, port ) in self._c.execute( 'SELECT public_key, name, host, port FROM contacts, message_depots USING ( contact_id ) ORDER BY name ASC;' ) ]
         
-        return my_identities + [ self._GetContact( c, 'Anonymous' ) ]
+        return my_identities + [ self._GetContact( 'Anonymous' ) ]
         
     
-    def _GetIdentitiesAndContacts( self, c ):
+    def _GetIdentitiesAndContacts( self ):
         
-        contacts_info = c.execute( 'SELECT contact_id, public_key, name, host, port FROM contacts ORDER BY name ASC;' ).fetchall()
+        contacts_info = self._c.execute( 'SELECT contact_id, public_key, name, host, port FROM contacts ORDER BY name ASC;' ).fetchall()
         
-        identity_ids = { contact_id for ( contact_id, ) in c.execute( 'SELECT contact_id FROM message_depots;' ) }
+        identity_ids = { contact_id for ( contact_id, ) in self._c.execute( 'SELECT contact_id FROM message_depots;' ) }
         
         identities = [ ClientConstantsMessages.Contact( public_key, name, host, port ) for ( contact_id, public_key, name, host, port ) in contacts_info if contact_id in identity_ids ]
         contacts = [ ClientConstantsMessages.Contact( public_key, name, host, port ) for ( contact_id, public_key, name, host, port ) in contacts_info if contact_id not in identity_ids and name != 'Anonymous' ]
         
         contact_contact_ids = [ contact_id for ( contact_id, public_key, name, host, port ) in contacts_info if contact_id not in identity_ids and name != 'Anonymous' ]
         
-        deletable_names = { name for ( name, ) in c.execute( 'SELECT name FROM contacts WHERE contact_id IN ' + HC.SplayListForDB( contact_contact_ids ) + ' AND NOT EXISTS ( SELECT 1 FROM message_destination_map WHERE contact_id_to = contact_id ) AND NOT EXISTS ( SELECT 1 FROM messages WHERE contact_id_from = contact_id );' ) }
+        deletable_names = { name for ( name, ) in self._c.execute( 'SELECT name FROM contacts WHERE contact_id IN ' + HC.SplayListForDB( contact_contact_ids ) + ' AND NOT EXISTS ( SELECT 1 FROM message_destination_map WHERE contact_id_to = contact_id ) AND NOT EXISTS ( SELECT 1 FROM messages WHERE contact_id_from = contact_id );' ) }
         
         return ( identities, contacts, deletable_names )
         
     
-    def _GetMessageId( self, c, message_key ):
+    def _GetMessageId( self, message_key ):
         
-        result = c.execute( 'SELECT message_id FROM message_keys WHERE message_key = ?;', ( sqlite3.Binary( message_key ), ) ).fetchone()
+        result = self._c.execute( 'SELECT message_id FROM message_keys WHERE message_key = ?;', ( sqlite3.Binary( message_key ), ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO message_keys ( message_key ) VALUES ( ? );', ( sqlite3.Binary( message_key ), ) )
+            self._c.execute( 'INSERT INTO message_keys ( message_key ) VALUES ( ? );', ( sqlite3.Binary( message_key ), ) )
             
-            message_id = c.lastrowid
+            message_id = self._c.lastrowid
             
         else: ( message_id, ) = result
         
         return message_id
         
     
-    def _GetMessageIds( self, c, message_keys ):
+    def _GetMessageIds( self, message_keys ):
         
         message_ids = []
         
@@ -840,7 +840,7 @@ class MessageDB( object ):
             
             message_keys_subset = message_keys[ i : i + 250 ]
             
-            message_ids.extend( [ message_id for ( message_id, ) in c.execute( 'SELECT message_id FROM message_keys WHERE message_key IN (' + ','.join( '?' * len( message_keys_subset ) ) + ');', [ sqlite3.Binary( message_key ) for message_key in message_keys_subset ] ) ] )
+            message_ids.extend( [ message_id for ( message_id, ) in self._c.execute( 'SELECT message_id FROM message_keys WHERE message_key IN (' + ','.join( '?' * len( message_keys_subset ) ) + ');', [ sqlite3.Binary( message_key ) for message_key in message_keys_subset ] ) ] )
             
         
         if len( message_keys ) > len( message_ids ):
@@ -849,22 +849,22 @@ class MessageDB( object ):
                 
                 # must be some new messages the db has not seen before, so let's generate them as appropriate
                 
-                self._GenerateMessageIdsEfficiently( c, message_keys )
+                self._GenerateMessageIdsEfficiently( message_keys )
                 
-                message_ids = self._GetMessageIds( c, message_keys )
+                message_ids = self._GetMessageIds( message_keys )
                 
             
         
         return message_ids
         
     
-    def _GetMessageIdsToMessages( self, c, message_ids ): return { message_id : message for ( message_id, message ) in c.execute( 'SELECT message_id, message FROM messages WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' ) }
+    def _GetMessageIdsToMessages( self, message_ids ): return { message_id : message for ( message_id, message ) in self._c.execute( 'SELECT message_id, message FROM messages WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' ) }
     
-    def _GetMessageIdsToMessageKeys( self, c, message_ids ): return { message_id : message_key for ( message_id, message_key ) in c.execute( 'SELECT message_id, message_key FROM message_keys WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' ) }
+    def _GetMessageIdsToMessageKeys( self, message_ids ): return { message_id : message_key for ( message_id, message_key ) in self._c.execute( 'SELECT message_id, message_key FROM message_keys WHERE message_id IN ' + HC.SplayListForDB( message_ids ) + ';' ) }
     
-    def _GetMessageKey( self, c, message_id ):
+    def _GetMessageKey( self, message_id ):
         
-        result = c.execute( 'SELECT message_key FROM message_keys WHERE message_id = ?;', ( message_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT message_key FROM message_keys WHERE message_id = ?;', ( message_id, ) ).fetchone()
         
         if result is None: raise Exception( 'Message key error in database' )
         
@@ -873,29 +873,29 @@ class MessageDB( object ):
         return message_key
         
     
-    def _GetMessageKeysToDownload( self, c, service_key ):
+    def _GetMessageKeysToDownload( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        message_keys = [ message_key for ( message_key, ) in c.execute( 'SELECT message_key FROM message_downloads, message_keys USING ( message_id ) WHERE service_id = ?;', ( service_id, ) ) ]
+        message_keys = [ message_key for ( message_key, ) in self._c.execute( 'SELECT message_key FROM message_downloads, message_keys USING ( message_id ) WHERE service_id = ?;', ( service_id, ) ) ]
         
         return message_keys
         
     
-    def _GetMessagesToSend( self, c ):
+    def _GetMessagesToSend( self ):
         
-        status_id = self._GetStatusId( c, 'pending' )
+        status_id = self._GetStatusId( 'pending' )
         
-        message_id_to_contact_ids = HC.BuildKeyToListDict( c.execute( 'SELECT message_id, contact_id_to FROM message_destination_map WHERE status_id = ?;', ( status_id, ) ) )
+        message_id_to_contact_ids = HC.BuildKeyToListDict( self._c.execute( 'SELECT message_id, contact_id_to FROM message_destination_map WHERE status_id = ?;', ( status_id, ) ) )
         
-        messages_to_send = [ ( self._GetMessageKey( c, message_id ), [ self._GetContact( c, contact_id_to ) for contact_id_to in contact_ids_to ] ) for ( message_id, contact_ids_to ) in message_id_to_contact_ids.items() ]
+        messages_to_send = [ ( self._GetMessageKey( message_id ), [ self._GetContact( contact_id_to ) for contact_id_to in contact_ids_to ] ) for ( message_id, contact_ids_to ) in message_id_to_contact_ids.items() ]
         
         return messages_to_send
         
     
-    def _GetStatus( self, c, status_id ):
+    def _GetStatus( self, status_id ):
         
-        result = c.execute( 'SELECT status FROM statuses WHERE status_id = ?;', ( status_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT status FROM statuses WHERE status_id = ?;', ( status_id, ) ).fetchone()
         
         if result is None: raise Exception( 'Status error in database' )
         
@@ -904,36 +904,36 @@ class MessageDB( object ):
         return status
         
     
-    def _GetStatusId( self, c, status ):
+    def _GetStatusId( self, status ):
         
-        result = c.execute( 'SELECT status_id FROM statuses WHERE status = ?;', ( status, ) ).fetchone()
+        result = self._c.execute( 'SELECT status_id FROM statuses WHERE status = ?;', ( status, ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO statuses ( status ) VALUES ( ? );', ( status, ) )
+            self._c.execute( 'INSERT INTO statuses ( status ) VALUES ( ? );', ( status, ) )
             
-            status_id = c.lastrowid
+            status_id = self._c.lastrowid
             
         else: ( status_id, ) = result
         
         return status_id
         
     
-    def _GetStatusIdsToStatuses( self, c, status_ids ): return { status_id : status for ( status_id, status ) in c.execute( 'SELECT status_id, status FROM statuses WHERE status_id IN ' + HC.SplayListForDB( status_ids ) + ';' ) }
+    def _GetStatusIdsToStatuses( self, status_ids ): return { status_id : status for ( status_id, status ) in self._c.execute( 'SELECT status_id, status FROM statuses WHERE status_id IN ' + HC.SplayListForDB( status_ids ) + ';' ) }
     
-    def _GetTransportMessage( self, c, message_key ):
+    def _GetTransportMessage( self, message_key ):
         
-        message_id = self._GetMessageId( c, message_key )
+        message_id = self._GetMessageId( message_key )
         
-        ( conversation_id, contact_id_from, timestamp ) = c.execute( 'SELECT conversation_id, contact_id_from, timestamp FROM messages WHERE message_id = ?;', ( message_id, ) ).fetchone()
+        ( conversation_id, contact_id_from, timestamp ) = self._c.execute( 'SELECT conversation_id, contact_id_from, timestamp FROM messages WHERE message_id = ?;', ( message_id, ) ).fetchone()
         
-        contact_ids_to = [ contact_id_to for ( contact_id_to, ) in c.execute( 'SELECT contact_id_to FROM message_destination_map WHERE message_id = ?;', ( message_id, ) ) ]
+        contact_ids_to = [ contact_id_to for ( contact_id_to, ) in self._c.execute( 'SELECT contact_id_to FROM message_destination_map WHERE message_id = ?;', ( message_id, ) ) ]
         
-        ( subject, ) = c.execute( 'SELECT subject FROM conversation_subjects WHERE docid = ?;', ( conversation_id, ) ).fetchone()
+        ( subject, ) = self._c.execute( 'SELECT subject FROM conversation_subjects WHERE docid = ?;', ( conversation_id, ) ).fetchone()
         
-        ( body, ) = c.execute( 'SELECT body FROM message_bodies WHERE docid = ?;', ( message_id, ) ).fetchone()
+        ( body, ) = self._c.execute( 'SELECT body FROM message_bodies WHERE docid = ?;', ( message_id, ) ).fetchone()
         
-        attachment_hashes = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM message_attachments, hashes USING ( hash_id ) WHERE message_id = ?;', ( message_id, ) ) ]
+        attachment_hashes = [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM message_attachments, hashes USING ( hash_id ) WHERE message_id = ?;', ( message_id, ) ) ]
         
         attachment_hashes.sort()
         
@@ -948,11 +948,11 @@ class MessageDB( object ):
             files.append( file )
             
         
-        conversation_key = self._GetMessageKey( c, conversation_id )
+        conversation_key = self._GetMessageKey( conversation_id )
         
-        contact_from = self._GetContact( c, contact_id_from )
+        contact_from = self._GetContact( contact_id_from )
         
-        contacts_to = [ self._GetContact( c, contact_id_to ) for contact_id_to in contact_ids_to ]
+        contacts_to = [ self._GetContact( contact_id_to ) for contact_id_to in contact_ids_to ]
         
         if contact_from.GetName() == 'Anonymous':
             
@@ -962,7 +962,7 @@ class MessageDB( object ):
             
         else:
             
-            message_depot = self._GetService( c, contact_from )
+            message_depot = self._GetService( contact_from )
             private_key = message_depot.GetPrivateKey()
             
         
@@ -973,7 +973,7 @@ class MessageDB( object ):
         return message
         
     
-    def _GetTransportMessagesFromDraft( self, c, draft_message ):
+    def _GetTransportMessagesFromDraft( self, draft_message ):
         
         ( draft_key, conversation_key, subject, contact_from, contact_names_to, recipients_visible, body, attachment_hashes ) = draft_message.GetInfo()
         
@@ -992,7 +992,7 @@ class MessageDB( object ):
             files.append( file )
             
         
-        contact_id_from = self._GetContactId( c, contact_from )
+        contact_id_from = self._GetContactId( contact_from )
         
         if contact_from.GetName() == 'Anonymous':
             
@@ -1002,13 +1002,13 @@ class MessageDB( object ):
             
         else:
             
-            message_depot = self._GetService( c, contact_from )
+            message_depot = self._GetService( contact_from )
             private_key = message_depot.GetPrivateKey()
             
         
         timestamp = HC.GetNow()
         
-        contacts_to = [ self._GetContact( c, contact_name_to ) for contact_name_to in contact_names_to ]
+        contacts_to = [ self._GetContact( contact_name_to ) for contact_name_to in contact_names_to ]
         
         if conversation_key == draft_key: conversation_key = None
         
@@ -1018,21 +1018,21 @@ class MessageDB( object ):
         return messages
         
     
-    def _InboxConversation( self, c, conversation_key ):
+    def _InboxConversation( self, conversation_key ):
         
-        conversation_id = self._GetMessageId( c, conversation_key )
+        conversation_id = self._GetMessageId( conversation_key )
         
-        inserts = c.execute( 'SELECT message_id FROM messages WHERE conversation_id = ?;', ( conversation_id, ) ).fetchall()
+        inserts = self._c.execute( 'SELECT message_id FROM messages WHERE conversation_id = ?;', ( conversation_id, ) ).fetchall()
         
-        c.executemany( 'INSERT OR IGNORE INTO message_inbox ( message_id ) VALUES ( ? );', inserts )
+        self._c.executemany( 'INSERT OR IGNORE INTO message_inbox ( message_id ) VALUES ( ? );', inserts )
         
         self.pub_after_commit( 'inbox_conversation_data', conversation_key )
         self.pub_after_commit( 'inbox_conversation_gui', conversation_key )
         
-        self._DoStatusNumInbox( c )
+        self._DoStatusNumInbox()
         
     
-    def _UpdateContacts( self, c, edit_log ):
+    def _UpdateContacts( self, edit_log ):
         
         for ( action, details ) in edit_log:
             
@@ -1040,15 +1040,15 @@ class MessageDB( object ):
                 
                 contact = details
                 
-                self._AddContact( c, contact )
+                self._AddContact( contact )
                 
             elif action == HC.DELETE:
                 
                 name = details
                 
-                result = c.execute( 'SELECT 1 FROM contacts WHERE name = ? AND NOT EXISTS ( SELECT 1 FROM message_destination_map WHERE contact_id_to = contact_id ) AND NOT EXISTS ( SELECT 1 FROM messages WHERE contact_id_from = contact_id );', ( name, ) ).fetchone()
+                result = self._c.execute( 'SELECT 1 FROM contacts WHERE name = ? AND NOT EXISTS ( SELECT 1 FROM message_destination_map WHERE contact_id_to = contact_id ) AND NOT EXISTS ( SELECT 1 FROM messages WHERE contact_id_from = contact_id );', ( name, ) ).fetchone()
                 
-                if result is not None: c.execute( 'DELETE FROM contacts WHERE name = ?;', ( name, ) )
+                if result is not None: self._c.execute( 'DELETE FROM contacts WHERE name = ?;', ( name, ) )
                 
             elif action == HC.EDIT:
                 
@@ -1056,7 +1056,7 @@ class MessageDB( object ):
                 
                 try:
                     
-                    contact_id = self._GetContactId( c, old_name )
+                    contact_id = self._GetContactId( old_name )
                     
                     ( public_key, name, host, port ) = contact.GetInfo()
                     
@@ -1064,7 +1064,7 @@ class MessageDB( object ):
                     
                     if public_key is not None: contact_key = sqlite3.Binary( contact_key )
                     
-                    c.execute( 'UPDATE contacts SET contact_key = ?, public_key = ?, name = ?, host = ?, port = ? WHERE contact_id = ?;', ( contact_key, public_key, name, host, port, contact_id ) )
+                    self._c.execute( 'UPDATE contacts SET contact_key = ?, public_key = ?, name = ?, host = ?, port = ? WHERE contact_id = ?;', ( contact_key, public_key, name, host, port, contact_id ) )
                     
                 except: pass
                 
@@ -1073,21 +1073,21 @@ class MessageDB( object ):
         self.pub_after_commit( 'notify_new_contacts' )
         
     
-    def _UpdateMessageStatuses( self, c, message_key, status_updates ):
+    def _UpdateMessageStatuses( self, message_key, status_updates ):
         
-        message_id = self._GetMessageId( c, message_key )
+        message_id = self._GetMessageId( message_key )
         
         updates = []
         
         for ( contact_key, status ) in status_updates:
             
-            contact_id = self._GetContactId( c, contact_key )
-            status_id = self._GetStatusId( c, status )
+            contact_id = self._GetContactId( contact_key )
+            status_id = self._GetStatusId( status )
             
             updates.append( ( contact_id, status_id ) )
             
         
-        c.executemany( 'UPDATE message_destination_map SET status_id = ? WHERE contact_id_to = ? AND message_id = ?;', [ ( status_id, contact_id, message_id ) for ( contact_id, status_id ) in updates ] )
+        self._c.executemany( 'UPDATE message_destination_map SET status_id = ? WHERE contact_id_to = ? AND message_id = ?;', [ ( status_id, contact_id, message_id ) for ( contact_id, status_id ) in updates ] )
         
         self.pub_after_commit( 'message_statuses_data', message_key, status_updates )
         self.pub_after_commit( 'message_statuses_gui', message_key, status_updates )
@@ -1096,9 +1096,9 @@ class MessageDB( object ):
     
 class RatingDB( object ):
     
-    def _GetRatingsMediaResult( self, c, service_key, min, max ):
+    def _GetRatingsMediaResult( self, service_key, min, max ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
         half_point = ( min + max ) / 2
         
@@ -1106,49 +1106,49 @@ class RatingDB( object ):
         tighter_max = ( max + half_point ) / 2
         
         # I know this is horrible, ordering by random, but I can't think of a better way to do it right now
-        result = c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, tighter_min, tighter_max ) ).fetchone()
+        result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, tighter_min, tighter_max ) ).fetchone()
         
-        if result is None: result = c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, min, max ) ).fetchone()
+        if result is None: result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, min, max ) ).fetchone()
         
         if result is None: return None
         else:
             
             ( hash_id, ) = result
             
-            ( media_result, ) = self._GetMediaResults( c, HC.COMBINED_FILE_SERVICE_KEY, { hash_id } )
+            ( media_result, ) = self._GetMediaResults( HC.COMBINED_FILE_SERVICE_KEY, { hash_id } )
             
             return media_result
             
         
     
-    def _GetRatingsFilter( self, c, service_key, hashes ):
+    def _GetRatingsFilter( self, service_key, hashes ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        hash_ids = self._GetHashIds( c, hashes )
+        hash_ids = self._GetHashIds( hashes )
         
         empty_rating = lambda: ( 0.0, 1.0 )
         
         ratings_filter = collections.defaultdict( empty_rating )
         
-        ratings_filter.update( ( ( hash, ( min, max ) ) for ( hash, min, max ) in c.execute( 'SELECT hash, min, max FROM ratings_filter, hashes USING ( hash_id ) WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
+        ratings_filter.update( ( ( hash, ( min, max ) ) for ( hash, min, max ) in self._c.execute( 'SELECT hash, min, max FROM ratings_filter, hashes USING ( hash_id ) WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
         
         return ratings_filter
         
     
     # leave this until I am more sure of how it'll work remotely
     # pending is involved here too
-    def _UpdateRemoteRatings( self, c, service_key, ratings ):
+    def _UpdateRemoteRatings( self, service_key, ratings ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
         hashes = [ hash for ( hash, count, rating ) in ratings ]
         
-        hash_ids = self._GetHashIds( c, hashes )
+        hash_ids = self._GetHashIds( hashes )
         
-        c.execute( 'DELETE FROM ratings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
+        self._c.execute( 'DELETE FROM ratings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
         
-        c.executemany( 'INSERT INTO ratings ( service_id, hash_id, count, rating, score ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, self._GetHashId( c, hash ), count, rating, HC.CalculateScoreFromRating( count, rating ) ) for ( hash, count, rating ) in ratings if count > 0 ] )
+        self._c.executemany( 'INSERT INTO ratings ( service_id, hash_id, count, rating, score ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, self._GetHashId( hash ), count, rating, HC.CalculateScoreFromRating( count, rating ) ) for ( hash, count, rating ) in ratings if count > 0 ] )
         
         # these need count and score in
         #self.pub_after_commit( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_key, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
@@ -1157,7 +1157,7 @@ class RatingDB( object ):
     
 class TagDB( object ):
     
-    def _GenerateTagIdsEfficiently( self, c, tags ):
+    def _GenerateTagIdsEfficiently( self, tags ):
         
         namespaced_tags = [ tag.split( ':', 1 ) for tag in tags if ':' in tag ]
         
@@ -1171,10 +1171,10 @@ class TagDB( object ):
             
             namespaces_subset = namespaces[ i : i + 250 ]
             
-            namespaces_not_in_db.difference_update( [ namespace for ( namespace, ) in c.execute( 'SELECT namespace FROM namespaces WHERE namespace IN (' + ','.join( '?' * len( namespaces_subset ) ) + ');', [ namespace for namespace in namespaces_subset ] ) ] )
+            namespaces_not_in_db.difference_update( [ namespace for ( namespace, ) in self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace IN (' + ','.join( '?' * len( namespaces_subset ) ) + ');', [ namespace for namespace in namespaces_subset ] ) ] )
             
         
-        if len( namespaces_not_in_db ) > 0: c.executemany( 'INSERT INTO namespaces( namespace ) VALUES( ? );', [ ( namespace, ) for namespace in namespaces_not_in_db ] )
+        if len( namespaces_not_in_db ) > 0: self._c.executemany( 'INSERT INTO namespaces( namespace ) VALUES( ? );', [ ( namespace, ) for namespace in namespaces_not_in_db ] )
         
         tags_not_in_db = set( tags )
         
@@ -1182,22 +1182,22 @@ class TagDB( object ):
             
             tags_subset = tags[ i : i + 250 ]
             
-            tags_not_in_db.difference_update( [ tag for ( tag, ) in c.execute( 'SELECT tag FROM tags WHERE tag IN (' + ','.join( '?' * len( tags_subset ) ) + ');', [ tag for tag in tags_subset ] ) ] )
+            tags_not_in_db.difference_update( [ tag for ( tag, ) in self._c.execute( 'SELECT tag FROM tags WHERE tag IN (' + ','.join( '?' * len( tags_subset ) ) + ');', [ tag for tag in tags_subset ] ) ] )
             
         
         if len( tags_not_in_db ) > 0:
             
             inserts = [ ( tag, ) for tag in tags_not_in_db ]
             
-            c.executemany( 'INSERT INTO tags ( tag ) VALUES ( ? );', inserts )
+            self._c.executemany( 'INSERT INTO tags ( tag ) VALUES ( ? );', inserts )
             
-            c.executemany( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags WHERE tag = ?;', inserts )
+            self._c.executemany( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags WHERE tag = ?;', inserts )
             
         
     
-    def _GetNamespaceTag( self, c, namespace_id, tag_id ):
+    def _GetNamespaceTag( self, namespace_id, tag_id ):
         
-        result = c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
         
         if result is None: raise Exception( 'Tag error in database' )
         
@@ -1206,7 +1206,7 @@ class TagDB( object ):
         if namespace_id == 1: return tag
         else:
             
-            result = c.execute( 'SELECT namespace FROM namespaces WHERE namespace_id = ?;', ( namespace_id, ) ).fetchone()
+            result = self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace_id = ?;', ( namespace_id, ) ).fetchone()
             
             if result is None: raise Exception( 'Namespace error in database' )
             
@@ -1216,55 +1216,57 @@ class TagDB( object ):
             
         
     
-    def _GetNamespaceId( self, c, namespace ):
+    def _GetNamespaceId( self, namespace ):
         
-        result = c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
+        result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO namespaces ( namespace ) VALUES ( ? );', ( namespace, ) )
+            self._c.execute( 'INSERT INTO namespaces ( namespace ) VALUES ( ? );', ( namespace, ) )
             
-            namespace_id = c.lastrowid
+            namespace_id = self._c.lastrowid
             
         else: ( namespace_id, ) = result
         
         return namespace_id
         
     
-    def _GetNamespaceIdTagId( self, c, tag ):
+    def _GetNamespaceIdTagId( self, tag ):
         
         tag = HC.CleanTag( tag )
+        
+        HC.CheckTagNotEmpty( tag )
         
         if ':' in tag:
             
             ( namespace, tag ) = tag.split( ':', 1 )
             
-            namespace_id = self._GetNamespaceId( c, namespace )
+            namespace_id = self._GetNamespaceId( namespace )
             
         else: namespace_id = 1
         
-        result = c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
+        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
+            self._c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
             
-            tag_id = c.lastrowid
+            tag_id = self._c.lastrowid
             
-            c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
+            self._c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
             
         else: ( tag_id, ) = result
         
-        result = c.execute( 'SELECT 1 FROM existing_tags WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM existing_tags WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', ( namespace_id, tag_id ) )
+            self._c.execute( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', ( namespace_id, tag_id ) )
             
-            tag_service_ids = self._GetServiceIds( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
-            file_service_ids = self._GetServiceIds( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
+            tag_service_ids = self._GetServiceIds( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
+            file_service_ids = self._GetServiceIds( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
             
-            c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, file_service_id ) in itertools.product( tag_service_ids, file_service_ids ) ] )
+            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, file_service_id ) in itertools.product( tag_service_ids, file_service_ids ) ] )
             
         
         return ( namespace_id, tag_id )
@@ -1272,28 +1274,28 @@ class TagDB( object ):
     
 class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
-    def _AddFile( self, c, service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ):
+    def _AddFile( self, service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ):
         
-        result = c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
+            self._c.execute( 'INSERT OR IGNORE INTO files_info VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );', ( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
             service_info_updates = []
             
-            result = c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+            result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
             
             if result is not None:
                 
-                c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) )
+                self._c.execute( 'DELETE FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) )
                 
                 service_info_updates.append( ( -1, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
                 
             
             if service_id != self._local_file_service_id:
                 
-                result = c.execute( 'SELECT 1 FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                result = self._c.execute( 'SELECT 1 FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
                 if result is not None: service_info_updates.append( ( 1, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
                 
@@ -1302,24 +1304,24 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             service_info_updates.append( ( 1, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             if mime in HC.MIMES_WITH_THUMBNAILS: service_info_updates.append( ( 1, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
             
-            c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
+            self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
             
-            c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id = ? ;', ( service_id, hash_id ) )
+            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id = ? ;', ( service_id, hash_id ) )
             
-            if mime in HC.MIMES_WITH_THUMBNAILS: c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
+            if mime in HC.MIMES_WITH_THUMBNAILS: self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) )
             
-            self._UpdateAutocompleteTagCacheFromFiles( c, service_id, ( hash_id, ), 1 )
+            self._UpdateAutocompleteTagCacheFromFiles( service_id, ( hash_id, ), 1 )
             
         
     
-    def _AddHydrusSession( self, c, service_key, session_key, expires ):
+    def _AddHydrusSession( self, service_key, session_key, expires ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expires ) )
+        self._c.execute( 'REPLACE INTO hydrus_sessions ( service_id, session_key, expiry ) VALUES ( ?, ?, ? );', ( service_id, sqlite3.Binary( session_key ), expires ) )
         
     
-    def _AddService( self, c, service_key, service_type, name, info ):
+    def _AddService( self, service_key, service_type, name, info ):
         
         if service_type in HC.LOCAL_SERVICES:
             
@@ -1371,54 +1373,54 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             info[ 'paused' ] = False
             
         
-        c.execute( 'INSERT INTO services ( service_key, service_type, name, info ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, info ) )
+        self._c.execute( 'INSERT INTO services ( service_key, service_type, name, info ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( service_key ), service_type, name, info ) )
         
-        service_id = c.lastrowid
+        service_id = self._c.lastrowid
         
         if service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
-            file_service_ids = self._GetServiceIds( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
+            file_service_ids = self._GetServiceIds( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
             
-            existing_tag_ids = c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
+            existing_tag_ids = self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
             
             inserts = ( ( file_service_id, service_id, namespace_id, tag_id, 0, 0 ) for ( file_service_id, ( namespace_id, tag_id ) ) in itertools.product( file_service_ids, existing_tag_ids ) )
             
-            c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
+            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
             
         elif service_type == HC.FILE_REPOSITORY:
             
-            tag_service_ids = self._GetServiceIds( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
+            tag_service_ids = self._GetServiceIds( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
             
-            existing_tag_ids = c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
+            existing_tag_ids = self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags;' ).fetchall()
             
             inserts = ( ( service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, ( namespace_id, tag_id ) ) in itertools.product( tag_service_ids, existing_tag_ids ) )
             
-            c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
+            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', inserts )
             
         
     
-    def _AddWebSession( self, c, name, cookies, expires ):
+    def _AddWebSession( self, name, cookies, expires ):
         
-        c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
+        self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
         
     
-    def _ArchiveFiles( self, c, hash_ids ):
+    def _ArchiveFiles( self, hash_ids ):
         
-        valid_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_inbox WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
+        valid_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_inbox WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
         
         if len( valid_hash_ids ) > 0:
             
             splayed_hash_ids = HC.SplayListForDB( valid_hash_ids )
             
-            c.execute( 'DELETE FROM file_inbox WHERE hash_id IN ' + splayed_hash_ids + ';' )
+            self._c.execute( 'DELETE FROM file_inbox WHERE hash_id IN ' + splayed_hash_ids + ';' )
             
-            updates = c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
+            updates = self._c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
             
-            c.executemany( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
+            self._c.executemany( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
             
         
     
-    def _Backup( self, c, path ):
+    def _Backup( self, path ):
         
         deletee_filenames = dircache.listdir( path )
         
@@ -1448,13 +1450,63 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         HC.ShowText( 'Database backup done!' )
         
     
-    def _DeleteFiles( self, c, service_id, hash_ids ):
+    def _CheckFileIntegrity( self, mode ):
+        
+        prefix_string = 'checking file integrity: '
+        
+        job_key = HC.JobKey( pausable = False, cancellable = False )
+        
+        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        
+        HC.pubsub.pub( 'message', message )
+        
+        info = self._c.execute( 'SELECT hash_id, mime FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchall()
+        
+        deletee_hash_ids = []
+        
+        for ( i, ( hash_id, mime ) ) in enumerate( info ):
+            
+            if i % 100 == 0:
+                
+                message.SetInfo( 'range', len( info ) )
+                message.SetInfo( 'value', i )
+                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( info ) ) )
+                message.SetInfo( 'mode', 'gauge' )
+                
+            
+            hash = self._GetHash( hash_id )
+            
+            try: path = CC.GetFilePath( hash, mime )
+            except HydrusExceptions.NotFoundException:
+                
+                deletee_hash_ids.append( hash_id )
+                
+                continue
+                
+            
+            if mode == 'thorough':
+                
+                actual_hash = HydrusFileHandling.GetHashFromPath( path )
+                
+                if actual_hash != hash: deletee_hash_ids.append( hash_id )
+                
+            
+        
+        message.SetInfo( 'text', prefix_string + 'deleting the incorrect records' )
+        message.SetInfo( 'mode', 'text' )
+        
+        self._DeleteFiles( self._local_file_service_id, deletee_hash_ids )
+        
+        message.SetInfo( 'text', prefix_string + 'done! ' + HC.ConvertIntToPrettyString( len( deletee_hash_ids ) ) + ' files deleted!' )
+        
+    
+    def _DeleteFiles( self, service_id, hash_ids ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
-        if service_id == self._local_file_service_id: c.execute( 'DELETE FROM file_inbox WHERE hash_id IN ' + splayed_hash_ids + ';' )
+        if service_id == self._local_file_service_id: self._c.execute( 'DELETE FROM file_inbox WHERE hash_id IN ' + splayed_hash_ids + ';' )
         
-        info = c.execute( 'SELECT size, mime FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ).fetchall()
+        info = self._c.execute( 'SELECT size, mime FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ).fetchall()
         
         total_size = sum( [ row[ 0 ] for row in info ] )
         num_files = len( info )
@@ -1467,34 +1519,34 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         service_info_updates.append( ( num_thumbnails, service_id, HC.SERVICE_INFO_NUM_THUMBNAILS ) )
         service_info_updates.append( ( -num_files, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) ) # - because we want to increment in the following query
         
-        c.executemany( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
+        self._c.executemany( 'UPDATE service_info SET info = info - ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         
-        c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type IN ' + HC.SplayListForDB( ( HC.SERVICE_INFO_NUM_INBOX, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) ) + ';', ( service_id, ) )
+        self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type IN ' + HC.SplayListForDB( ( HC.SERVICE_INFO_NUM_INBOX, HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL ) ) + ';', ( service_id, ) )
         
-        c.execute( 'DELETE FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
-        c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+        self._c.execute( 'DELETE FROM files_info WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+        self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
         
-        invalid_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) }
+        invalid_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) }
         
         actual_hash_ids_i_can_delete = set( hash_ids )
         
         actual_hash_ids_i_can_delete.difference_update( invalid_hash_ids )
         
-        c.executemany( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in actual_hash_ids_i_can_delete ] )
+        self._c.executemany( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in actual_hash_ids_i_can_delete ] )
         
-        self._UpdateAutocompleteTagCacheFromFiles( c, service_id, actual_hash_ids_i_can_delete, -1 )
+        self._UpdateAutocompleteTagCacheFromFiles( service_id, actual_hash_ids_i_can_delete, -1 )
         
         self.pub_after_commit( 'notify_new_pending' )
         
     
-    def _DeleteHydrusSessionKey( self, c, service_key ):
+    def _DeleteHydrusSessionKey( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        c.execute( 'DELETE FROM hydrus_sessions WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM hydrus_sessions WHERE service_id = ?;', ( service_id, ) )
         
     
-    def _DeleteOrphans( self, c ):
+    def _DeleteOrphans( self ):
         
         HC.pubsub.pub( 'set_splash_text', 'deleting orphan files' )
         
@@ -1502,15 +1554,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         # files
         
-        deleted_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
+        deleted_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
         
-        pending_upload_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers;', ) }
+        pending_upload_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers;', ) }
         
-        message_attachment_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM message_attachments;' ) }
+        message_attachment_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM message_attachments;' ) }
         
         deletee_hash_ids = ( deleted_hash_ids - pending_upload_hash_ids ) - message_attachment_hash_ids
         
-        deletee_hashes = set( self._GetHashes( c, deletee_hash_ids ) )
+        deletee_hashes = set( self._GetHashes( deletee_hash_ids ) )
         
         local_files_hashes = CC.GetAllFileHashes()
         
@@ -1529,17 +1581,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         # perceptual_hashes and thumbs
         
-        perceptual_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM perceptual_hashes;' ) }
+        perceptual_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes;' ) }
         
-        hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info;' ) }
+        hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info;' ) }
         
         perceptual_deletees = perceptual_hash_ids - hash_ids
         
-        c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HC.SplayListForDB( perceptual_deletees ) + ';' )
+        self._c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HC.SplayListForDB( perceptual_deletees ) + ';' )
         
         local_thumbnail_hashes = CC.GetAllThumbnailHashes()
         
-        hashes = set( self._GetHashes( c, hash_ids ) )
+        hashes = set( self._GetHashes( hash_ids ) )
         
         thumbnail_deletees = local_thumbnail_hashes - hashes
         
@@ -1552,36 +1604,36 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             if os.path.exists( resized_path ): os.remove( resized_path )
             
         
-        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
+        self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
         
         HC.ShowText( 'Database maintenance: orphaned files successfully deleted.' )
         
     
-    def _DeletePending( self, c, service_key ):
+    def _DeletePending( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        service = self._GetService( c, service_id )
+        service = self._GetService( service_id )
         
         if service.GetServiceType() == HC.TAG_REPOSITORY:
             
-            pending_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
+            pending_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
             pending_rescinded_mappings_ids = [ ( namespace_id, tag_id, hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in pending_rescinded_mappings_ids.items() ]
             
-            petitioned_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
+            petitioned_rescinded_mappings_ids = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
             
             petitioned_rescinded_mappings_ids = [ ( namespace_id, tag_id, hash_ids ) for ( ( namespace_id, tag_id ), hash_ids ) in petitioned_rescinded_mappings_ids.items() ]
             
-            self._UpdateMappings( c, service_id, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
+            self._UpdateMappings( service_id, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
             
-            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
-            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+            self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
+            self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
             
         elif service.GetServiceType() == HC.FILE_REPOSITORY:
             
-            c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
-            c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
+            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ?;', ( service_id, ) )
+            self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ?;', ( service_id, ) )
             
         
         self.pub_after_commit( 'notify_new_pending' )
@@ -1591,42 +1643,108 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_service_updates_after_commit( { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
-    def _DeleteYAMLDump( self, c, dump_type, dump_name = None ):
+    def _DeleteServiceInfo( self ): self._c.execute( 'DELETE FROM service_info;' )
+    
+    def _DeleteYAMLDump( self, dump_type, dump_name = None ):
         
-        if dump_name is None: c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
+        if dump_name is None: self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
         else:
             
             if dump_type == YAML_DUMP_ID_SUBSCRIPTION and dump_name in self._subscriptions_cache: del self._subscriptions_cache[ dump_name ]
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
-            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
         
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
             
-            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_KEY )
+            service_id = self._GetServiceId( HC.LOCAL_BOORU_SERVICE_KEY )
             
-            c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
+            self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
             HC.pubsub.pub( 'refresh_local_booru_shares' )
             
         
     
-    def _FattenAutocompleteCache( self, c ):
+    def _ExportToTagArchive( self, path, service_key, hash_type, hashes = None ):
         
-        tag_services = self._GetServices( c, ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
-        file_services = self._GetServices( c, ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
+        # This could nicely take a whitelist or a blacklist for namespace filtering
         
-        for ( tag_service, file_service ) in itertools.product( tag_services, file_services ): self._GetAutocompleteTags( c, tag_service_key = tag_service.GetServiceKey(), file_service_key = file_service.GetServiceKey(), collapse = False )
+        prefix_string = 'exporting to tag archive: '
         
-        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, HC.GetNow() ) )
+        job_key = HC.JobKey( pausable = False, cancellable = False )
+        
+        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        
+        HC.pubsub.pub( 'message', message )
+        
+        service_id = self._GetServiceId( service_key )
+        
+        hta_exists = os.path.exists( path )
+        
+        hta = HydrusTagArchive.HydrusTagArchive( path )
+        
+        if hta_exists and hta.GetHashType() != hash_type: raise Exception( 'This tag archive does not use the expected hash type, so it cannot be exported to!' )
+        
+        hta.SetHashType( hash_type )
+        
+        if hashes is None: hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE service_id = ?;', ( service_id, ) ) ]
+        else: hash_ids = self._GetHashIds( hashes )
+        
+        hta.BeginBigJob()
+        
+        for ( i, hash_id ) in enumerate( hash_ids ):
+            
+            if i % 1000 == 0:
+                
+                message.SetInfo( 'range', len( hash_ids ) )
+                message.SetInfo( 'value', i )
+                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
+                message.SetInfo( 'mode', 'gauge' )
+                
+            
+            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = self._GetHash( hash_id )
+            else:
+                
+                if hash_type == HydrusTagArchive.HASH_TYPE_MD5: h = 'md5'
+                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
+                elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
+                
+                result = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                
+                if result is None: continue
+                
+                ( archive_hash, ) = result
+                
+            
+            tags = { namespace + ':' + tag if namespace != '' else tag for ( namespace, tag ) in self._c.execute( 'SELECT namespace, tag FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? );', ( hash_id, service_id, HC.CURRENT, HC.PENDING ) ) }
+            
+            hta.AddMappings( archive_hash, tags )
+            
+        
+        message.SetInfo( 'text', prefix_string + 'commiting the change and vacuuming the archive' )
+        message.SetInfo( 'mode', 'text' )
+        
+        hta.CommitBigJob()
+        
+        message.SetInfo( 'text', prefix_string + 'done!' )
         
     
-    def _GetAutocompleteTags( self, c, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY, file_service_key = HC.COMBINED_FILE_SERVICE_KEY, tag = '', half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
+    def _FattenAutocompleteCache( self ):
         
-        tag_service_id = self._GetServiceId( c, tag_service_key )
-        file_service_id = self._GetServiceId( c, file_service_key )
+        tag_services = self._GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
+        file_services = self._GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
+        
+        for ( tag_service, file_service ) in itertools.product( tag_services, file_services ): self._GetAutocompleteTags( tag_service_key = tag_service.GetServiceKey(), file_service_key = file_service.GetServiceKey(), collapse = False )
+        
+        self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, HC.GetNow() ) )
+        
+    
+    def _GetAutocompleteTags( self, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY, file_service_key = HC.COMBINED_FILE_SERVICE_KEY, tag = '', half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
+        
+        tag_service_id = self._GetServiceId( tag_service_key )
+        file_service_id = self._GetServiceId( file_service_key )
         
         if file_service_key == HC.COMBINED_FILE_SERVICE_KEY:
             
@@ -1665,8 +1783,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 # a search for '[s' actually only does 's'
                 # so, let's do the old and slower LIKE instead of MATCH in weird cases
                 
-                if half_complete_tag_can_be_matched: return [ tag_id for ( tag_id, ) in c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
-                else: return [ tag_id for ( tag_id, ) in c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( '%' + half_complete_tag + '%', ) ) ]
+                if half_complete_tag_can_be_matched: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
+                else: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( '%' + half_complete_tag + '%', ) ) ]
                 
             
             if ':' in half_complete_tag:
@@ -1678,7 +1796,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 if half_complete_tag == '': return CC.AutocompleteMatchesCounted( {} )
                 else:
                     
-                    result = c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
+                    result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
                     
                     if result is None: return CC.AutocompleteMatchesCounted( {} )
                     else:
@@ -1700,16 +1818,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         elif len( tag ) > 0:
             
-            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-            
-            predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id = ' + HC.u( tag_id )
+            try:
+                
+                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
+                
+                predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id = ' + HC.u( tag_id )
+                
+            except: predicates_phrase = '1 = 1'
             
         else:
             
             predicates_phrase = '1 = 1'
             
         
-        results = { result for result in c.execute( 'SELECT namespace_id, tag_id FROM existing_tags WHERE ' + predicates_phrase + ';' ) }
+        results = { result for result in self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags WHERE ' + predicates_phrase + ';' ) }
         
         if collapse:
             
@@ -1721,7 +1843,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
             else: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( '' )
             
-            sibling_results = [ self._GetNamespaceIdTagId( c, sibling_tag ) for sibling_tag in all_associated_sibling_tags ]
+            sibling_results = []
+            
+            for sibling_tag in all_associated_sibling_tags:
+                
+                try: self._GetNamespaceIdTagId( sibling_tag )
+                except: continue
+                
             
             results.update( sibling_results )
             
@@ -1732,9 +1860,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( half_complete_tag ) > 0 or len( tag ) > 0:
             
-            for ( namespace_id, tag_ids ) in HC.BuildKeyToListDict( results ).items(): cache_results.extend( c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ';', ( tag_service_id, file_service_id, namespace_id ) ).fetchall() )
+            for ( namespace_id, tag_ids ) in HC.BuildKeyToListDict( results ).items(): cache_results.extend( self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ? AND namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ';', ( tag_service_id, file_service_id, namespace_id ) ).fetchall() )
             
-        else: cache_results = c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ?', ( tag_service_id, file_service_id ) ).fetchall()
+        else: cache_results = self._c.execute( 'SELECT namespace_id, tag_id, current_count, pending_count FROM autocomplete_tags_cache WHERE tag_service_id = ? AND file_service_id = ?', ( tag_service_id, file_service_id ) ).fetchall()
         
         results_hit = { ( namespace_id, tag_id ) for ( namespace_id, tag_id, current_count, pending_count ) in cache_results }
         
@@ -1747,10 +1875,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             current_counts = collections.defaultdict( zero )
             pending_counts = collections.defaultdict( zero )
             
-            current_counts.update( { tag_id : count for ( tag_id, count ) in c.execute( 'SELECT tag_id, COUNT( * ) FROM ' + current_tables_phrase + 'namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( namespace_id, ) ) } )
-            pending_counts.update( { tag_id : count for ( tag_id, count ) in c.execute( 'SELECT tag_id, COUNT( * ) FROM ' + pending_tables_phrase + 'namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( namespace_id, ) ) } )
+            current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( 'SELECT tag_id, COUNT( * ) FROM ' + current_tables_phrase + 'namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( namespace_id, ) ) } )
+            pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( 'SELECT tag_id, COUNT( * ) FROM ' + pending_tables_phrase + 'namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( namespace_id, ) ) } )
             
-            c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
+            self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
             
             cache_results.extend( [ ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
             
@@ -1779,7 +1907,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if include_current: ids_to_do.update( ( id for ( id, count ) in current_ids_to_count.items() if count > 0 ) )
         if include_pending: ids_to_do.update( ( id for ( id, count ) in pending_ids_to_count.items() if count > 0 ) )
         
-        ids_to_tags = { ( namespace_id, tag_id ) : self._GetNamespaceTag( c, namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_do }
+        ids_to_tags = { ( namespace_id, tag_id ) : self._GetNamespaceTag( namespace_id, tag_id ) for ( namespace_id, tag_id ) in ids_to_do }
         
         tag_info = [ ( ids_to_tags[ id ], current_ids_to_count[ id ], pending_ids_to_count[ id ] ) for id in ids_to_do ]
         
@@ -1796,20 +1924,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return matches
         
     
-    def _GetDownloads( self, c ): return { hash for ( hash, ) in c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
+    def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
     
-    def _GetFileQueryIds( self, c, search_context ):
+    def _GetFileQueryIds( self, search_context ):
         
         system_predicates = search_context.GetSystemPredicates()
         
         file_service_key = search_context.GetFileServiceKey()
         tag_service_key = search_context.GetTagServiceKey()
         
-        file_service_id = self._GetServiceId( c, file_service_key )
-        tag_service_id = self._GetServiceId( c, tag_service_key )
+        file_service_id = self._GetServiceId( file_service_key )
+        tag_service_id = self._GetServiceId( tag_service_key )
         
-        file_service = self._GetService( c, file_service_id )
-        tag_service = self._GetService( c, tag_service_id )
+        file_service = self._GetService( file_service_id )
+        tag_service = self._GetService( tag_service_id )
         
         file_service_type = file_service.GetServiceType()
         tag_service_type = tag_service.GetServiceType()
@@ -1900,23 +2028,23 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             query_hash_ids = None
             
-            if len( tags_to_include ) > 0: query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromTag( c, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+            if len( tags_to_include ) > 0: query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
             
             if len( namespaces_to_include ) > 0:
                 
-                namespace_query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( c, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
+                namespace_query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
                 
                 if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
                 else: query_hash_ids.intersection_update( namespace_query_hash_ids )
                 
             
-            if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
+            if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
             
         else:
             
-            if file_service_key != HC.COMBINED_FILE_SERVICE_KEY: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
-            elif tag_service_key != HC.COMBINED_TAG_SERVICE_KEY: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
-            else: query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
+            if file_service_key != HC.COMBINED_FILE_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) }
+            elif tag_service_key != HC.COMBINED_TAG_SERVICE_KEY: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( tag_service_id, HC.CURRENT, HC.PENDING ) ) }
+            else: query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings UNION SELECT hash_id FROM files_info;' ) }
             
         
         #
@@ -1962,7 +2090,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             if len( namespaces ) == 0: namespace_predicate = ''
             else:
                 
-                namespace_ids = [ self._GetNamespaceId( c, namespace ) for namespace in namespaces ]
+                namespace_ids = [ self._GetNamespaceId( namespace ) for namespace in namespaces ]
                 
                 if blacklist: namespace_predicate = ' AND namespace_id NOT IN ' + HC.SplayListForDB( namespace_ids )
                 else: namespace_predicate = ' AND namespace_id IN ' + HC.SplayListForDB( namespace_ids )
@@ -1971,7 +2099,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if num_tags_zero or num_tags_nonzero:
             
-            nonzero_tag_query_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ';', ( tag_service_id, ) ) }
+            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ';', ( tag_service_id, ) ) }
             
             if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
             elif num_tags_nonzero: query_hash_ids = nonzero_tag_query_hash_ids
@@ -1979,14 +2107,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( tag_predicates ) > 0:
             
-            query_hash_ids = { id for ( id, count ) in c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
+            query_hash_ids = { id for ( id, count ) in self._c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
             
         
         #
         
         if hash is not None:
             
-            hash_id = self._GetHashId( c, hash )
+            hash_id = self._GetHashId( hash )
             
             query_hash_ids.intersection_update( { hash_id } )
             
@@ -1995,11 +2123,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         exclude_query_hash_ids = set()
         
-        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( c, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
+        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
         
-        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( c, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
+        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
         
-        if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
+        if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
@@ -2009,45 +2137,45 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for service_key in file_services_to_include_current:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for service_key in file_services_to_include_pending:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
+            query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for service_key in file_services_to_exclude_current:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for service_key in file_services_to_exclude_pending:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
+            query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM file_transfers WHERE service_id = ?;', ( service_id, ) ) ] )
             
         
         for ( service_key, operator, value ) in system_predicates.GetRatingsPredicates():
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'uncertain': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM ratings_filter WHERE service_id = ?;', ( service_id, ) ) ] )
+            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            elif value == 'uncertain': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ratings_filter WHERE service_id = ?;', ( service_id, ) ) ] )
             else:
                 
                 if operator == u'\u2248': predicate = HC.u( value * 0.95 ) + ' < rating AND rating < ' + HC.u( value * 1.05 )
                 else: predicate = 'rating ' + operator + ' ' + HC.u( value )
                 
-                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
+                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
                 
             
         
@@ -2066,7 +2194,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             else:
                 
-                local_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
+                local_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
                 
                 if must_be_local: query_hash_ids.intersection_update( local_hash_ids )
                 else: query_hash_ids.difference_update( local_hash_ids )
@@ -2075,7 +2203,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if must_be_inbox or must_be_archive:
             
-            inbox_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM file_inbox;' ) }
+            inbox_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM file_inbox;' ) }
             
             if must_be_inbox: query_hash_ids.intersection_update( inbox_hash_ids )
             elif must_be_archive: query_hash_ids.difference_update( inbox_hash_ids )
@@ -2087,16 +2215,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
             
-            hash_id = self._GetHashId( c, similar_to_hash )
+            hash_id = self._GetHashId( similar_to_hash )
             
-            result = c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            result = self._c.execute( 'SELECT phash FROM perceptual_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
             
             if result is None: query_hash_ids = set()
             else:
                 
                 ( phash, ) = result
                 
-                similar_hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
+                similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes WHERE hydrus_hamming( phash, ? ) <= ?;', ( sqlite3.Binary( phash ), max_hamming ) ) ]
                 
                 query_hash_ids.intersection_update( similar_hash_ids )
                 
@@ -2105,11 +2233,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return query_hash_ids
         
     
-    def _GetFileSystemPredicates( self, c, service_key ):
+    def _GetFileSystemPredicates( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        service = self._GetService( c, service_id )
+        service = self._GetService( service_id )
         
         service_type = service.GetServiceType()
         
@@ -2118,7 +2246,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ): predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
         elif service_type in ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ):
             
-            service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
+            service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
@@ -2128,7 +2256,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         elif service_type in ( HC.LOCAL_FILE, HC.FILE_REPOSITORY ):
             
-            service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_INBOX } )
+            service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_INBOX } )
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
@@ -2136,7 +2264,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if HC.options[ 'exclude_deleted_files' ]:
                     
-                    ( num_everything_deleted, ) = c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+                    ( num_everything_deleted, ) = self._c.execute( 'SELECT COUNT( * ) FROM files_info, deleted_files USING ( hash_id ) WHERE files_info.service_id = ? AND deleted_files.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
                     
                     num_everything -= num_everything_deleted
                     
@@ -2147,7 +2275,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                ( num_local, ) = c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
+                ( num_local, ) = self._c.execute( 'SELECT COUNT( * ) FROM files_info AS remote_files_info, files_info USING ( hash_id ) WHERE remote_files_info.service_id = ? AND files_info.service_id = ?;', ( service_id, self._local_file_service_id ) ).fetchone()
                 
                 num_not_local = num_everything - num_local
                 
@@ -2174,7 +2302,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return predicates
         
     
-    def _GetHashIdsFromNamespace( self, c, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ):
         
         statuses = []
         
@@ -2184,19 +2312,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if len( statuses ) > 0: status_phrase = 'mappings.status IN ' + HC.SplayListForDB( statuses ) + ' AND '
         else: status_phrase = ''
         
-        tag_service_id = self._GetServiceId( c, tag_service_key )
+        tag_service_id = self._GetServiceId( tag_service_key )
         
-        file_service_id = self._GetServiceId( c, file_service_key )
+        file_service_id = self._GetServiceId( file_service_key )
         
-        namespace_id = self._GetNamespaceId( c, namespace )
+        namespace_id = self._GetNamespaceId( namespace )
         
-        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'namespace_id = ?;', ( tag_service_id, namespace_id ) ) }
-        else: hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'namespace_id = ?;', ( tag_service_id, file_service_id, namespace_id ) ) }
+        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'namespace_id = ?;', ( tag_service_id, namespace_id ) ) }
+        else: hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'namespace_id = ?;', ( tag_service_id, file_service_id, namespace_id ) ) }
         
         return hash_ids
         
     
-    def _GetHashIdsFromTag( self, c, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ):
         
         # this does siblings and censorship too!
         
@@ -2208,9 +2336,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if len( statuses ) > 0: status_phrase = 'mappings.status IN ' + HC.SplayListForDB( statuses ) + ' AND '
         else: status_phrase = ''
         
-        tag_service_id = self._GetServiceId( c, tag_service_key )
+        tag_service_id = self._GetServiceId( tag_service_key )
         
-        file_service_id = self._GetServiceId( c, file_service_key )
+        file_service_id = self._GetServiceId( file_service_key )
         
         siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
@@ -2224,36 +2352,37 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for tag in tags:
             
-            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+            try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
+            except: continue
             
             if ':' in tag:
                 
-                if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids.update( ( id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'namespace_id = ? AND tag_id = ?;', ( tag_service_id, namespace_id, tag_id ) ) ) )
-                else: hash_ids.update( ( id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'namespace_id = ? AND tag_id = ?;', ( tag_service_id, file_service_id, namespace_id, tag_id ) ) ) )
+                if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'namespace_id = ? AND tag_id = ?;', ( tag_service_id, namespace_id, tag_id ) ) ) )
+                else: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'namespace_id = ? AND tag_id = ?;', ( tag_service_id, file_service_id, namespace_id, tag_id ) ) ) )
                 
             else:
                 
-                if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids.update( ( id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'tag_id = ?;', ( tag_service_id, tag_id ) ) ) )
-                else: hash_ids.update( ( id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'tag_id = ?;', ( tag_service_id, file_service_id, tag_id ) ) ) )
+                if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'tag_id = ?;', ( tag_service_id, tag_id ) ) ) )
+                else: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'tag_id = ?;', ( tag_service_id, file_service_id, tag_id ) ) ) )
                 
             
         
         return hash_ids
         
     
-    def _GetHydrusSessions( self, c ):
+    def _GetHydrusSessions( self ):
         
         now = HC.GetNow()
         
-        c.execute( 'DELETE FROM hydrus_sessions WHERE ? > expiry;', ( now, ) )
+        self._c.execute( 'DELETE FROM hydrus_sessions WHERE ? > expiry;', ( now, ) )
         
         sessions = []
         
-        results = c.execute( 'SELECT service_id, session_key, expiry FROM hydrus_sessions;' ).fetchall()
+        results = self._c.execute( 'SELECT service_id, session_key, expiry FROM hydrus_sessions;' ).fetchall()
         
         for ( service_id, session_key, expires ) in results:
             
-            service = self._GetService( c, service_id )
+            service = self._GetService( service_id )
             
             service_key = service.GetServiceKey()
             
@@ -2263,9 +2392,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return sessions
         
     
-    def _GetMD5Status( self, c, md5 ):
+    def _GetMD5Status( self, md5 ):
         
-        result = c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( md5 ), ) ).fetchone()
+        result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( md5 ), ) ).fetchone()
         
         if result is not None:
             
@@ -2273,16 +2402,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if HC.options[ 'exclude_deleted_files' ]:
                 
-                result = c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
                 if result is not None: return ( 'deleted', None )
                 
             
-            result = c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
+            result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
             
             if result is not None:
                 
-                hash = self._GetHash( c, hash_id )
+                hash = self._GetHash( hash_id )
                 
                 return ( 'redundant', hash )
                 
@@ -2291,17 +2420,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return ( 'new', None )
         
     
-    def _GetMediaResults( self, c, service_key, hash_ids ):
+    def _GetMediaResults( self, service_key, hash_ids ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        inbox_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM file_inbox;' ) }
+        inbox_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM file_inbox;' ) }
         
         # get first detailed results
         
         if service_key == HC.COMBINED_FILE_SERVICE_KEY:
             
-            all_services_results = c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ).fetchall()
+            all_services_results = self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ).fetchall()
             
             hash_ids_i_have_info_for = set()
             
@@ -2321,33 +2450,33 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             results.extend( [ ( hash_id, None, HC.APPLICATION_UNKNOWN, None, None, None, None, None, None ) for hash_id in hash_ids if hash_id not in hash_ids_i_have_info_for ] )
             
-        else: results = c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ).fetchall()
+        else: results = self._c.execute( 'SELECT hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words FROM files_info WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ).fetchall()
         
         # get tagged results
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
-        hash_ids_to_hashes = self._GetHashIdsToHashes( c, hash_ids )
+        hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
         
-        hash_ids_to_tags = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, ( status, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( status, tag ) ) ) for ( hash_id, service_id, namespace, tag, status ) in c.execute( 'SELECT hash_id, service_id, namespace, tag, status FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
+        hash_ids_to_tags = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, ( status, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( status, tag ) ) ) for ( hash_id, service_id, namespace, tag, status ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag, status FROM namespaces, ( tags, mappings USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
-        hash_ids_to_petitioned_tags = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, ( HC.PETITIONED, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( HC.PETITIONED, tag ) ) ) for ( hash_id, service_id, namespace, tag ) in c.execute( 'SELECT hash_id, service_id, namespace, tag FROM namespaces, ( tags, mapping_petitions USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
+        hash_ids_to_petitioned_tags = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, ( HC.PETITIONED, namespace + ':' + tag ) ) ) if namespace != '' else ( hash_id, ( service_id, ( HC.PETITIONED, tag ) ) ) for ( hash_id, service_id, namespace, tag ) in self._c.execute( 'SELECT hash_id, service_id, namespace, tag FROM namespaces, ( tags, mapping_petitions USING ( tag_id ) ) USING ( namespace_id ) WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
         for ( hash_id, tag_data ) in hash_ids_to_petitioned_tags.items(): hash_ids_to_tags[ hash_id ].extend( tag_data )
         
-        hash_ids_to_current_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
+        hash_ids_to_current_file_service_ids = HC.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
-        hash_ids_to_deleted_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
+        hash_ids_to_deleted_file_service_ids = HC.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
-        hash_ids_to_pending_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
+        hash_ids_to_pending_file_service_ids = HC.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
-        hash_ids_to_petitioned_file_service_ids = HC.BuildKeyToListDict( c.execute( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
+        hash_ids_to_petitioned_file_service_ids = HC.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN ' + splayed_hash_ids + ';' ) )
         
-        hash_ids_to_local_ratings = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
+        hash_ids_to_local_ratings = HC.BuildKeyToListDict( [ ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN ' + splayed_hash_ids + ';' ) ] )
         
         # do current and pending remote ratings here
         
-        service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in c.execute( 'SELECT service_id, service_key FROM services;' ) }
+        service_ids_to_service_keys = { service_id : service_key for ( service_id, service_key ) in self._c.execute( 'SELECT service_id, service_key FROM services;' ) }
         
         # build it
         
@@ -2398,14 +2527,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return media_results
         
     
-    def _GetMediaResultsFromHashes( self, c, service_key, hashes ):
+    def _GetMediaResultsFromHashes( self, service_key, hashes ):
         
-        query_hash_ids = set( self._GetHashIds( c, hashes ) )
+        query_hash_ids = set( self._GetHashIds( hashes ) )
         
-        return self._GetMediaResults( c, service_key, query_hash_ids )
+        return self._GetMediaResults( service_key, query_hash_ids )
         
     
-    def _GetMessageSystemPredicates( self, c, identity ):
+    def _GetMessageSystemPredicates( self, identity ):
         
         name = identity.GetName()
         
@@ -2415,21 +2544,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if name != 'Anonymous':
             
-            service = self._GetService( c, identity )
+            service = self._GetService( identity )
             
             if not service.ReceivesAnon(): additional_predicate = 'contact_id_from != 1 AND '
             
         
-        contact_id = self._GetContactId( c, name )
+        contact_id = self._GetContactId( name )
         
-        unread_status_id = self._GetStatusId( c, 'sent' )
+        unread_status_id = self._GetStatusId( 'sent' )
         
-        #service_info = self._GetServiceInfoSpecific( c, service_id, service_type, { HC.SERVICE_INFO_NUM_CONVERSATIONS, HC.SERVICE_INFO_NUM_INBOX, HC.SERVICE_INFO_NUM_UNREAD, HC.SERVICE_INFO_NUM_DRAFTS } )
+        #service_info = self._GetServiceInfoSpecific( service_id, service_type, { HC.SERVICE_INFO_NUM_CONVERSATIONS, HC.SERVICE_INFO_NUM_INBOX, HC.SERVICE_INFO_NUM_UNREAD, HC.SERVICE_INFO_NUM_DRAFTS } )
         
-        ( num_conversations, ) = c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM messages, message_destination_map USING ( message_id ) WHERE ' + additional_predicate + '( contact_id_from = ? OR contact_id_to = ? );', ( contact_id, contact_id ) ).fetchone()
-        ( num_inbox, ) = c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM message_destination_map, ( messages, message_inbox USING ( message_id ) ) USING ( message_id ) WHERE ' + additional_predicate + 'contact_id_to = ?;', ( contact_id, ) ).fetchone()
-        ( num_drafts, ) = c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM messages, message_drafts USING ( message_id ) WHERE contact_id_from = ?;', ( contact_id, ) ).fetchone()
-        ( num_unread, ) = c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM messages, message_destination_map USING ( message_id ) WHERE ' + additional_predicate + 'contact_id_to = ? AND status_id = ?;', ( contact_id, unread_status_id ) ).fetchone()
+        ( num_conversations, ) = self._c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM messages, message_destination_map USING ( message_id ) WHERE ' + additional_predicate + '( contact_id_from = ? OR contact_id_to = ? );', ( contact_id, contact_id ) ).fetchone()
+        ( num_inbox, ) = self._c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM message_destination_map, ( messages, message_inbox USING ( message_id ) ) USING ( message_id ) WHERE ' + additional_predicate + 'contact_id_to = ?;', ( contact_id, ) ).fetchone()
+        ( num_drafts, ) = self._c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM messages, message_drafts USING ( message_id ) WHERE contact_id_from = ?;', ( contact_id, ) ).fetchone()
+        ( num_unread, ) = self._c.execute( 'SELECT COUNT( DISTINCT conversation_id ) FROM messages, message_destination_map USING ( message_id ) WHERE ' + additional_predicate + 'contact_id_to = ? AND status_id = ?;', ( contact_id, unread_status_id ) ).fetchone()
         
         predicates = []
         
@@ -2452,9 +2581,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return predicates
         
     
-    def _GetMime( self, c, service_id, hash_id ):
+    def _GetMime( self, service_id, hash_id ):
         
-        result = c.execute( 'SELECT mime FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
+        result = self._c.execute( 'SELECT mime FROM files_info WHERE service_id = ? AND hash_id = ?;', ( service_id, hash_id ) ).fetchone()
         
         if result is None: raise HydrusExceptions.NotFoundException()
         
@@ -2463,18 +2592,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return mime
         
     
-    def _GetNews( self, c, service_key ):
+    def _GetNews( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        news = c.execute( 'SELECT post, timestamp FROM news WHERE service_id = ?;', ( service_id, ) ).fetchall()
+        news = self._c.execute( 'SELECT post, timestamp FROM news WHERE service_id = ?;', ( service_id, ) ).fetchall()
         
         return news
         
     
-    def _GetNumsPending( self, c ):
+    def _GetNumsPending( self ):
         
-        services = self._GetServices( c, ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) )
+        services = self._GetServices( ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY ) )
         
         pendings = {}
         
@@ -2483,22 +2612,22 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             service_key = service.GetServiceKey()
             service_type = service.GetServiceType()
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
             if service_type == HC.FILE_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES }
             elif service_type == HC.TAG_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS }
             
-            pendings[ service_key ] = self._GetServiceInfoSpecific( c, service_id, service_type, info_types )
+            pendings[ service_key ] = self._GetServiceInfoSpecific( service_id, service_type, info_types )
             
         
         return pendings
         
     
-    def _GetPending( self, c, service_key ):
+    def _GetPending( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        service = self._GetService( c, service_id )
+        service = self._GetService( service_id )
         
         service_type = service.GetServiceType()
         
@@ -2516,11 +2645,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             current_update_weight = 0
             
-            pending_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
+            pending_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM mappings INDEXED BY mappings_service_id_status_index WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ) ] )
             
             for ( ( namespace_id, tag_id ), hash_ids ) in pending_dict.items():
                 
-                pending = ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids )
+                pending = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids )
                 
                 content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PENDING ].append( pending )
                 
@@ -2530,7 +2659,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if current_update_weight > max_update_weight:
                     
-                    hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                    hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
                     updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
                     
@@ -2542,11 +2671,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 
             
-            petitioned_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
+            petitioned_dict = HC.BuildKeyToListDict( [ ( ( namespace_id, tag_id, reason_id ), hash_id ) for ( namespace_id, tag_id, hash_id, reason_id ) in self._c.execute( 'SELECT namespace_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ) ] )
             
             for ( ( namespace_id, tag_id, reason_id ), hash_ids ) in petitioned_dict.items():
                 
-                petitioned = ( self._GetNamespaceTag( c, namespace_id, tag_id ), hash_ids, self._GetReason( c, reason_id ) )
+                petitioned = ( self._GetNamespaceTag( namespace_id, tag_id ), hash_ids, self._GetReason( reason_id ) )
                 
                 content_data[ HC.CONTENT_DATA_TYPE_MAPPINGS ][ HC.CONTENT_UPDATE_PETITION ].append( petitioned )
                 
@@ -2556,7 +2685,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if current_update_weight > max_update_weight:
                     
-                    hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                    hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                     
                     updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
                     
@@ -2570,7 +2699,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if len( content_data ) > 0:
                 
-                hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                 
                 updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
                 
@@ -2583,27 +2712,27 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # tag siblings
             
-            pending = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
-            petitioned = [ ( ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ), self._GetReason( c, reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
+            petitioned = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
             # tag parents
             
-            pending = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
+            pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
-            petitioned = [ ( ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ), self._GetReason( c, reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
+            petitioned = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
             content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
             if len( content_data ) > 0:
                 
-                hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+                hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
                 
                 updates.append( HC.ClientToServerUpdate( content_data, hash_ids_to_hashes ) )
                 
@@ -2612,17 +2741,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         elif service_type == HC.FILE_REPOSITORY:
             
-            upload_hashes = [ hash for ( hash, ) in c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ) ]
+            upload_hashes = [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes, file_transfers USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ) ]
             
             content_data = HC.GetEmptyDataDict()
             
             content_data[ HC.CONTENT_DATA_TYPE_FILES ] = {}
             
-            petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HC.BuildKeyToListDict( c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items() ]
+            petitioned = [ ( hash_ids, reason ) for ( reason, hash_ids ) in HC.BuildKeyToListDict( self._c.execute( 'SELECT reason, hash_id FROM reasons, file_petitions USING ( reason_id ) WHERE service_id = ?;', ( service_id, ) ) ).items() ]
             
             all_hash_ids = { hash_id for hash_id in itertools.chain.from_iterable( ( hash_ids for ( hash_ids, reason ) in petitioned ) ) }
             
-            hash_ids_to_hashes = self._GetHashIdsToHashes( c, all_hash_ids )
+            hash_ids_to_hashes = self._GetHashIdsToHashes( all_hash_ids )
             
             content_data[ HC.CONTENT_DATA_TYPE_FILES ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
@@ -2632,9 +2761,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _GetReason( self, c, reason_id ):
+    def _GetReason( self, reason_id ):
         
-        result = c.execute( 'SELECT reason FROM reasons WHERE reason_id = ?;', ( reason_id, ) ).fetchone()
+        result = self._c.execute( 'SELECT reason FROM reasons WHERE reason_id = ?;', ( reason_id, ) ).fetchone()
         
         if result is None: raise Exception( 'Reason error in database' )
         
@@ -2643,33 +2772,33 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return reason
         
     
-    def _GetReasonId( self, c, reason ):
+    def _GetReasonId( self, reason ):
         
-        result = c.execute( 'SELECT reason_id FROM reasons WHERE reason=?;', ( reason, ) ).fetchone()
+        result = self._c.execute( 'SELECT reason_id FROM reasons WHERE reason=?;', ( reason, ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO reasons ( reason ) VALUES ( ? );', ( reason, ) )
+            self._c.execute( 'INSERT INTO reasons ( reason ) VALUES ( ? );', ( reason, ) )
             
-            reason_id = c.lastrowid
+            reason_id = self._c.lastrowid
             
         else: ( reason_id, ) = result
         
         return reason_id
         
     
-    def _GetService( self, c, service_id ):
+    def _GetService( self, service_id ):
         
-        ( service_key, service_type, name, info ) = c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        ( service_key, service_type, name, info ) = self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
         return CC.Service( service_key, service_type, name, info )
         
     
-    def _GetServices( self, c, limited_types = HC.ALL_SERVICES ):
+    def _GetServices( self, limited_types = HC.ALL_SERVICES ):
         
         services = []
         
-        for ( service_key, service_type, name, info ) in c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ):
+        for ( service_key, service_type, name, info ) in self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ):
             
             services.append( CC.Service( service_key, service_type, name, info ) )
             
@@ -2677,9 +2806,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return services
         
     
-    def _GetServiceId( self, c, service_key ):
+    def _GetServiceId( self, service_key ):
         
-        result = c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
+        result = self._c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
         
         if result is None: raise Exception( 'Service id error in database' )
         
@@ -2688,13 +2817,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return service_id
         
     
-    def _GetServiceIds( self, c, service_types ): return [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services WHERE service_type IN ' + HC.SplayListForDB( service_types ) + ';' ) ]
+    def _GetServiceIds( self, service_types ): return [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type IN ' + HC.SplayListForDB( service_types ) + ';' ) ]
     
-    def _GetServiceInfo( self, c, service_key ):
+    def _GetServiceInfo( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        service = self._GetService( c, service_id )
+        service = self._GetService( service_id )
         
         service_type = service.GetServiceType()
         
@@ -2706,14 +2835,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         elif service_type == HC.LOCAL_BOORU: info_types = { HC.SERVICE_INFO_NUM_SHARES }
         else: info_types = set()
         
-        service_info = self._GetServiceInfoSpecific( c, service_id, service_type, info_types )
+        service_info = self._GetServiceInfoSpecific( service_id, service_type, info_types )
         
         return service_info
         
     
-    def _GetServiceInfoSpecific( self, c, service_id, service_type, info_types ):
+    def _GetServiceInfoSpecific( self, service_id, service_type, info_types ):
         
-        results = { info_type : info for ( info_type, info ) in c.execute( 'SELECT info_type, info FROM service_info WHERE service_id = ? AND info_type IN ' + HC.SplayListForDB( info_types ) + ';', ( service_id, ) ) }
+        results = { info_type : info for ( info_type, info ) in self._c.execute( 'SELECT info_type, info FROM service_info WHERE service_id = ? AND info_type IN ' + HC.SplayListForDB( info_types ) + ';', ( service_id, ) ) }
         
         if len( results ) != len( info_types ):
             
@@ -2727,15 +2856,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if common_tag_info_types <= info_types_missed:
                     
-                    ( num_files, num_namespaces, num_tags ) = c.execute( 'SELECT COUNT( DISTINCT hash_id ), COUNT( DISTINCT namespace_id ), COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    ( num_files, num_namespaces, num_tags ) = self._c.execute( 'SELECT COUNT( DISTINCT hash_id ), COUNT( DISTINCT namespace_id ), COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
                     
                     results[ HC.SERVICE_INFO_NUM_FILES ] = num_files
                     results[ HC.SERVICE_INFO_NUM_NAMESPACES ] = num_namespaces
                     results[ HC.SERVICE_INFO_NUM_TAGS ] = num_tags
                     
-                    c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, HC.SERVICE_INFO_NUM_FILES, num_files ) )
-                    c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, HC.SERVICE_INFO_NUM_NAMESPACES, num_namespaces ) )
-                    c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, HC.SERVICE_INFO_NUM_TAGS, num_tags ) )
+                    self._c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, HC.SERVICE_INFO_NUM_FILES, num_files ) )
+                    self._c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, HC.SERVICE_INFO_NUM_NAMESPACES, num_namespaces ) )
+                    self._c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, HC.SERVICE_INFO_NUM_TAGS, num_tags ) )
                     
                     info_types_missed.difference_update( common_tag_info_types )
                     
@@ -2749,49 +2878,49 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     if info_type in ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES ): save_it = False
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_TOTAL_SIZE: result = c.execute( 'SELECT SUM( size ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_DELETED_FILES: result = c.execute( 'SELECT COUNT( * ) FROM deleted_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES: result = c.execute( 'SELECT COUNT( * ) FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES: result = c.execute( 'SELECT COUNT( * ) FROM file_petitions where service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_TOTAL_SIZE: result = self._c.execute( 'SELECT SUM( size ) FROM files_info WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_DELETED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM deleted_files WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_transfers WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM file_petitions where service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
                         
                         thumbnails_i_have = CC.GetAllThumbnailHashes()
                         
-                        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
+                        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
                         
-                        thumbnails_i_should_have = self._GetHashes( c, hash_ids )
+                        thumbnails_i_should_have = self._GetHashes( hash_ids )
                         
                         thumbnails_i_have.intersection_update( thumbnails_i_should_have )
                         
                         result = ( len( thumbnails_i_have ), )
                         
-                    elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = c.execute( 'SELECT COUNT( * ) FROM file_inbox, files_info USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_INBOX: result = self._c.execute( 'SELECT COUNT( * ) FROM file_inbox, files_info USING ( hash_id ) WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
                 elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
                     
                     if info_type in ( HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS ): save_it = False
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_NAMESPACES: result = c.execute( 'SELECT COUNT( DISTINCT namespace_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_TAGS: result = c.execute( 'SELECT COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.DELETED ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS: result = c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS: result = c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS: result = c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS: result = c.execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
-                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS: result = c.execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = self._c.execute( 'SELECT COUNT( DISTINCT hash_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_NAMESPACES: result = self._c.execute( 'SELECT COUNT( DISTINCT namespace_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_TAGS: result = self._c.execute( 'SELECT COUNT( DISTINCT tag_id ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( service_id, HC.CURRENT, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_DELETED_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.DELETED ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM mappings WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM mapping_petitions WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS: result = self._c.execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS: result = self._c.execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchone()
+                    elif info_type == HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS: result = self._c.execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchone()
                     
                 elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                     
-                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = c.execute( 'SELECT COUNT( * ) FROM local_ratings WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_FILES: result = self._c.execute( 'SELECT COUNT( * ) FROM local_ratings WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
                 elif service_type == HC.LOCAL_BOORU:
                     
-                    if info_type == HC.SERVICE_INFO_NUM_SHARES: result = c.execute( 'SELECT COUNT( * ) FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_LOCAL_BOORU, ) ).fetchone()
+                    if info_type == HC.SERVICE_INFO_NUM_SHARES: result = self._c.execute( 'SELECT COUNT( * ) FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_LOCAL_BOORU, ) ).fetchone()
                     
                 
                 if result is None: info = 0
@@ -2799,7 +2928,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if info is None: info = 0
                 
-                if save_it: c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, info_type, info ) )
+                if save_it: self._c.execute( 'INSERT INTO service_info ( service_id, info_type, info ) VALUES ( ?, ?, ? );', ( service_id, info_type, info ) )
                 
                 results[ info_type ] = info
                 
@@ -2808,18 +2937,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return results
         
     
-    def _GetShutdownTimestamps( self, c ):
+    def _GetShutdownTimestamps( self ):
         
         shutdown_timestamps = collections.defaultdict( lambda: 0 )
         
-        shutdown_timestamps.update( c.execute( 'SELECT shutdown_type, timestamp FROM shutdown_timestamps;' ).fetchall() )
+        shutdown_timestamps.update( self._c.execute( 'SELECT shutdown_type, timestamp FROM shutdown_timestamps;' ).fetchall() )
         
         return shutdown_timestamps
         
     
-    def _GetTagArchiveInfo( self, c ): return { archive_name : hta.GetNamespaces() for ( archive_name, hta ) in self._tag_archives.items() }
+    def _GetTagArchiveInfo( self ): return { archive_name : hta.GetNamespaces() for ( archive_name, hta ) in self._tag_archives.items() }
     
-    def _GetTagArchiveTags( self, c, hashes ):
+    def _GetTagArchiveTags( self, hashes ):
         
         result = {}
         
@@ -2841,15 +2970,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 for hash in hashes:
                     
-                    hash_id = self._GetHashId( c, hash )
+                    hash_id = self._GetHashId( hash )
                     
-                    ( archive_hash, ) = c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                    ( archive_hash, ) = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                     
                     sha256_to_archive_hashes[ hash ] = archive_hash
                     
                 
             
-            hashes_to_tags = { hash : hta.GetMappings( sha256_to_archive_hashes[ hash ] ) for hash in hashes }
+            hashes_to_tags = { hash : hta.GetTags( sha256_to_archive_hashes[ hash ] ) for hash in hashes }
             
             result[ archive_name ] = hashes_to_tags
             
@@ -2857,15 +2986,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return result
         
     
-    def _GetTagCensorship( self, c, service_key = None ):
+    def _GetTagCensorship( self, service_key = None ):
         
         if service_key is None:
             
             result = []
             
-            for ( service_id, blacklist, tags ) in c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall():
+            for ( service_id, blacklist, tags ) in self._c.execute( 'SELECT service_id, blacklist, tags FROM tag_censorship;' ).fetchall():
                 
-                service = self._GetService( c, service_id )
+                service = self._GetService( service_id )
                 
                 service_key = service.GetServiceKey()
                 
@@ -2874,9 +3003,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         else:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            result = c.execute( 'SELECT blacklist, tags FROM tag_censorship WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            result = self._c.execute( 'SELECT blacklist, tags FROM tag_censorship WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
             if result is None: result = ( True, [] )
             
@@ -2884,21 +3013,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return result
         
     
-    def _GetTagParents( self, c, service_key = None ):
+    def _GetTagParents( self, service_key = None ):
         
         if service_key is None:
             
-            service_ids_to_statuses_and_pair_ids = HC.BuildKeyToListDict( ( ( service_id, ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) ) for ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) in c.execute( 'SELECT service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parents UNION SELECT service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parent_petitions;' ) ) )
+            service_ids_to_statuses_and_pair_ids = HC.BuildKeyToListDict( ( ( service_id, ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) ) for ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) in self._c.execute( 'SELECT service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parents UNION SELECT service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parent_petitions;' ) ) )
             
             service_keys_to_statuses_to_pairs = collections.defaultdict( HC.default_dict_set )
             
             for ( service_id, statuses_and_pair_ids ) in service_ids_to_statuses_and_pair_ids.items():
                 
-                service = self._GetService( c, service_id )
+                service = self._GetService( service_id )
                 
                 service_key = service.GetServiceKey()
                 
-                statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ) ) for ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) in statuses_and_pair_ids ) )
+                statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ) ) for ( status, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) in statuses_and_pair_ids ) )
                 
                 service_keys_to_statuses_to_pairs[ service_key ] = statuses_to_pairs
                 
@@ -2907,31 +3036,31 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         else:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            statuses_and_pair_ids = c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parents WHERE service_id = ? UNION SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
+            statuses_and_pair_ids = self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parents WHERE service_id = ? UNION SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
-            statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, child_namespace_id, child_tag_id ), self._GetNamespaceTag( c, parent_namespace_id, parent_tag_id ) ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) in statuses_and_pair_ids ) )
+            statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) in statuses_and_pair_ids ) )
             
             return statuses_to_pairs
             
         
     
-    def _GetTagSiblings( self, c, service_key = None ):
+    def _GetTagSiblings( self, service_key = None ):
         
         if service_key is None:
             
-            service_ids_to_statuses_and_pair_ids = HC.BuildKeyToListDict( ( ( service_id, ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) in c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_siblings UNION SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_sibling_petitions;' ) ) )
+            service_ids_to_statuses_and_pair_ids = HC.BuildKeyToListDict( ( ( service_id, ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) ) for ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) in self._c.execute( 'SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_siblings UNION SELECT service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_sibling_petitions;' ) ) )
             
             service_keys_to_statuses_to_pairs = collections.defaultdict( HC.default_dict_set )
             
             for ( service_id, statuses_and_pair_ids ) in service_ids_to_statuses_and_pair_ids.items():
                 
-                service = self._GetService( c, service_id )
+                service = self._GetService( service_id )
                 
                 service_key = service.GetServiceKey()
                 
-                statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) ) for ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in statuses_and_pair_ids ) )
+                statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ) ) for ( status, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id ) in statuses_and_pair_ids ) )
                 
                 service_keys_to_statuses_to_pairs[ service_key ] = statuses_to_pairs
                 
@@ -2940,30 +3069,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         else:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            statuses_and_pair_ids = c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_siblings WHERE service_id = ? UNION SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
+            statuses_and_pair_ids = self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_siblings WHERE service_id = ? UNION SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
             
-            statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( c, old_namespace_id, old_tag_id ), self._GetNamespaceTag( c, new_namespace_id, new_tag_id ) ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) in statuses_and_pair_ids ) )
+            statuses_to_pairs = HC.BuildKeyToSetDict( ( ( status, ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) in statuses_and_pair_ids ) )
             
             return statuses_to_pairs
             
         
     
-    def _GetThumbnailHashesIShouldHave( self, c, service_key ):
+    def _GetThumbnailHashesIShouldHave( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
         
-        hashes = set( self._GetHashes( c, hash_ids ) )
+        hashes = set( self._GetHashes( hash_ids ) )
         
         return hashes
         
     
-    def _GetURLStatus( self, c, url ):
+    def _GetURLStatus( self, url ):
         
-        result = c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
+        result = self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
         
         if result is not None:
             
@@ -2971,16 +3100,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if HC.options[ 'exclude_deleted_files' ]:
                 
-                result = c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+                result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
                 
                 if result is not None: return ( 'deleted', None )
                 
             
-            result = c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
+            result = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone()
             
             if result is not None:
                 
-                hash = self._GetHash( c, hash_id )
+                hash = self._GetHash( hash_id )
                 
                 return ( 'redundant', hash )
                 
@@ -2989,24 +3118,24 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return ( 'new', None )
         
     
-    def _GetWebSessions( self, c ):
+    def _GetWebSessions( self ):
         
         now = HC.GetNow()
         
-        c.execute( 'DELETE FROM web_sessions WHERE ? > expiry;', ( now, ) )
+        self._c.execute( 'DELETE FROM web_sessions WHERE ? > expiry;', ( now, ) )
         
         sessions = []
         
-        sessions = c.execute( 'SELECT name, cookies, expiry FROM web_sessions;' ).fetchall()
+        sessions = self._c.execute( 'SELECT name, cookies, expiry FROM web_sessions;' ).fetchall()
         
         return sessions
         
     
-    def _GetYAMLDump( self, c, dump_type, dump_name = None ):
+    def _GetYAMLDump( self, dump_type, dump_name = None ):
         
         if dump_name is None:
             
-            result = { dump_name : data for ( dump_name, data ) in c.execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) }
+            result = { dump_name : data for ( dump_name, data ) in self._c.execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) }
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
                 
@@ -3019,7 +3148,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
-            result = c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
+            result = self._c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
             
             if result is None:
                 
@@ -3039,9 +3168,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return result
         
     
-    def _GetYAMLDumpNames( self, c, dump_type ):
+    def _GetYAMLDumpNames( self, dump_type ):
         
-        names = [ name for ( name, ) in c.execute( 'SELECT dump_name FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) ]
+        names = [ name for ( name, ) in self._c.execute( 'SELECT dump_name FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) ]
         
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
             
@@ -3051,7 +3180,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return names
         
     
-    def _ImportFile( self, c, path, advanced_import_options = {}, service_keys_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
+    def _ImportFile( self, path, advanced_import_options = {}, service_keys_to_tags = {}, generate_media_result = False, override_deleted = False, url = None ):
         
         result = 'successful'
         
@@ -3065,11 +3194,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash = HydrusFileHandling.GetHashFromPath( path )
         
-        hash_id = self._GetHashId( c, hash )
+        hash_id = self._GetHashId( hash )
         
-        if url is not None: c.execute( 'INSERT OR IGNORE INTO urls ( url, hash_id ) VALUES ( ?, ? );', ( url, hash_id ) )
+        if url is not None: self._c.execute( 'INSERT OR IGNORE INTO urls ( url, hash_id ) VALUES ( ?, ? );', ( url, hash_id ) )
         
-        already_in_db = c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None
+        already_in_db = self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None
         
         if already_in_db:
             
@@ -3077,7 +3206,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if archive:
                 
-                c.execute( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) )
+                self._c.execute( 'DELETE FROM file_inbox WHERE hash_id = ?;', ( hash_id, ) )
                 
                 self.pub_content_updates_after_commit( { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
                 
@@ -3088,7 +3217,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if not override_deleted:
                 
-                if exclude_deleted_files and c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
+                if exclude_deleted_files and self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
                     
                     result = 'deleted'
                     
@@ -3133,10 +3262,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 thumbnail = HydrusFileHandling.GenerateThumbnail( path )
                 
-                self._AddThumbnails( c, [ ( hash, thumbnail ) ] )
+                self._AddThumbnails( [ ( hash, thumbnail ) ] )
                 
             
-            self._AddFile( c, self._local_file_service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
+            self._AddFile( self._local_file_service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
             
             content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) )
             
@@ -3144,12 +3273,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( path )
             
-            c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+            self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
             
-            if not archive: self._InboxFiles( c, ( hash_id, ) )
+            if not archive: self._InboxFiles( ( hash_id, ) )
             
         
-        if len( service_keys_to_tags ) > 0 and c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
+        if len( service_keys_to_tags ) > 0 and self._c.execute( 'SELECT 1 FROM files_info WHERE service_id = ? AND hash_id = ?;', ( self._local_file_service_id, hash_id ) ).fetchone() is not None:
             
             service_keys_to_content_updates = collections.defaultdict( list )
             
@@ -3163,10 +3292,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 service_keys_to_content_updates[ service_key ].extend( ( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ) )
                 
             
-            self._ProcessContentUpdates( c, service_keys_to_content_updates )
+            self._ProcessContentUpdates( service_keys_to_content_updates )
             
         
-        tag_services = self._GetServices( c, HC.TAG_SERVICES )
+        tag_services = self._GetServices( HC.TAG_SERVICES )
         
         for service in tag_services:
             
@@ -3177,7 +3306,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             for ( archive_name, namespaces ) in tag_archive_sync.items():
                 
-                try: self._SyncToTagArchive( c, hash_id, archive_name, namespaces, service_key )
+                try: self._SyncFileToTagArchive( hash_id, archive_name, namespaces, service_key )
                 except: pass
                 
             
@@ -3186,7 +3315,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if ( can_add or already_in_db ):
                 
-                ( media_result, ) = self._GetMediaResults( c, HC.LOCAL_FILE_SERVICE_KEY, { hash_id } )
+                ( media_result, ) = self._GetMediaResults( HC.LOCAL_FILE_SERVICE_KEY, { hash_id } )
                 
                 return ( result, media_result )
                 
@@ -3195,59 +3324,23 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         else: return ( result, hash )
         
     
-    def _InboxFiles( self, c, hash_ids ):
+    def _InboxFiles( self, hash_ids ):
         
-        c.executemany( 'INSERT OR IGNORE INTO file_inbox VALUES ( ? );', [ ( hash_id, ) for hash_id in hash_ids ] )
+        self._c.executemany( 'INSERT OR IGNORE INTO file_inbox VALUES ( ? );', [ ( hash_id, ) for hash_id in hash_ids ] )
         
-        num_added = self._GetRowCount( c )
+        num_added = self._GetRowCount()
         
         if num_added > 0:
             
             splayed_hash_ids = HC.SplayListForDB( hash_ids )
             
-            updates = c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
+            updates = self._c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + splayed_hash_ids + ' GROUP BY service_id;' ).fetchall()
             
-            c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
+            self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', [ ( count, service_id, HC.SERVICE_INFO_NUM_INBOX ) for ( service_id, count ) in updates ] )
             
         
     
-    def _InitialiseTagArchiveSync( self, c, archive_name, namespaces, service_key ):
-        
-        prefix_string = 'initialising sync to tag archive ' + archive_name + ': '
-        
-        job_key = HC.JobKey( pausable = False, cancellable = False )
-        
-        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
-        
-        HC.pubsub.pub( 'message', message )
-        
-        hash_ids = [ hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
-        
-        block_size = 100
-        
-        next_block = []
-        
-        for ( i, hash_id ) in enumerate( hash_ids ):
-            
-            try: self._SyncToTagArchive( c, hash_id, archive_name, namespaces, service_key )
-            except: pass
-            
-            if i % 100 == 0:
-                
-                message.SetInfo( 'range', len( hash_ids ) )
-                message.SetInfo( 'value', i )
-                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
-                message.SetInfo( 'mode', 'gauge' )
-                
-            
-        
-        message.SetInfo( 'text', prefix_string + 'done!' )
-        message.SetInfo( 'mode', 'text' )
-        
-        self.pub_after_commit( 'notify_new_pending' )
-        
-    
-    def _ProcessContentUpdates( self, c, service_keys_to_content_updates, pub_immediate = False ):
+    def _ProcessContentUpdates( self, service_keys_to_content_updates, pub_immediate = False ):
         
         notify_new_downloads = False
         notify_new_pending = False
@@ -3257,10 +3350,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
-            try: service_id = self._GetServiceId( c, service_key )
+            try: service_id = self._GetServiceId( service_key )
             except: continue
             
-            service = self._GetService( c, service_id )
+            service = self._GetService( service_id )
             
             service_type = service.GetServiceType()
             
@@ -3285,9 +3378,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words ) = row
                             
-                            hash_id = self._GetHashId( c, hash )
+                            hash_id = self._GetHashId( hash )
                             
-                            self._AddFile( c, service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
+                            self._AddFile( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
                             
                             notify_new_thumbnails = True
                             
@@ -3295,9 +3388,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hashes = row
                             
-                            hash_ids = self._GetHashIds( c, hashes )
+                            hash_ids = self._GetHashIds( hashes )
                             
-                            c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in hash_ids ] )
+                            self._c.executemany( 'INSERT OR IGNORE INTO file_transfers ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in hash_ids ] )
                             
                             if service_key == HC.LOCAL_FILE_SERVICE_KEY: notify_new_downloads = True
                             else: notify_new_pending = True
@@ -3306,13 +3399,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( hashes, reason ) = row
                             
-                            hash_ids = self._GetHashIds( c, hashes )
+                            hash_ids = self._GetHashIds( hashes )
                             
-                            reason_id = self._GetReasonId( c, reason )
+                            reason_id = self._GetReasonId( reason )
                             
-                            c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
+                            self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
                             
-                            c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
+                            self._c.executemany( 'INSERT OR IGNORE INTO file_petitions ( service_id, hash_id, reason_id ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, reason_id ) for hash_id in hash_ids ] )
                             
                             notify_new_pending = True
                             
@@ -3320,9 +3413,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hashes = row
                             
-                            hash_ids = self._GetHashIds( c, hashes )
+                            hash_ids = self._GetHashIds( hashes )
                             
-                            c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
+                            self._c.execute( 'DELETE FROM file_transfers WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
                             
                             notify_new_pending = True
                             
@@ -3330,9 +3423,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hashes = row
                             
-                            hash_ids = self._GetHashIds( c, hashes )
+                            hash_ids = self._GetHashIds( hashes )
                             
-                            c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
+                            self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
                             
                             notify_new_pending = True
                             
@@ -3340,11 +3433,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             hashes = row
                             
-                            hash_ids = self._GetHashIds( c, hashes )
+                            hash_ids = self._GetHashIds( hashes )
                             
-                            if action == HC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( c, hash_ids )
-                            elif action == HC.CONTENT_UPDATE_INBOX: self._InboxFiles( c, hash_ids )
-                            elif action == HC.CONTENT_UPDATE_DELETE: self._DeleteFiles( c, service_id, hash_ids )
+                            if action == HC.CONTENT_UPDATE_ARCHIVE: self._ArchiveFiles( hash_ids )
+                            elif action == HC.CONTENT_UPDATE_INBOX: self._InboxFiles( hash_ids )
+                            elif action == HC.CONTENT_UPDATE_DELETE: self._DeleteFiles( service_id, hash_ids )
                             
                         
                     
@@ -3354,7 +3447,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         if action == HC.CONTENT_UPDATE_ADVANCED:
                             
-                            c.execute( 'CREATE TABLE temp_operation ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER );' )
+                            self._c.execute( 'CREATE TABLE temp_operation ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER );' )
                             
                             predicates = [ 'service_id = ' + str( service_id ) ]
                             
@@ -3364,7 +3457,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 ( tag, hashes, service_key_target ) = sub_row
                                 
-                                service_id_target = self._GetServiceId( c, service_key_target )
+                                service_id_target = self._GetServiceId( service_key_target )
                                 
                                 predicates.append( 'status = ' + str( HC.CURRENT ) )
                                 
@@ -3387,14 +3480,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 if tag_type == 'tag':
                                     
-                                    ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
+                                    try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
+                                    except: continue
                                     
                                     predicates.append( 'namespace_id = ' + str( namespace_id ) )
                                     predicates.append( 'tag_id = ' + str( tag_id ) )
                                     
                                 elif tag_type == 'namespace':
                                     
-                                    namespace_id = self._GetNamespaceId( c, tag )
+                                    namespace_id = self._GetNamespaceId( tag )
                                     
                                     predicates.append( 'namespace_id = ' + str( namespace_id ) )
                                     
@@ -3402,14 +3496,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             if hashes is not None:
                                 
-                                hash_ids = self._GetHashIds( c, hashes )
+                                hash_ids = self._GetHashIds( hashes )
                                 
                                 predicates.append( 'hash_id IN ' + HC.SplayListForDB( hash_ids ) )
                                 
                             
-                            c.execute( 'INSERT INTO temp_operation ( namespace_id, tag_id, hash_id ) SELECT namespace_id, tag_id, hash_id FROM mappings WHERE ' + ' AND '.join( predicates ) + ';' )
+                            self._c.execute( 'INSERT INTO temp_operation ( namespace_id, tag_id, hash_id ) SELECT namespace_id, tag_id, hash_id FROM mappings WHERE ' + ' AND '.join( predicates ) + ';' )
                             
-                            num_to_do = self._GetRowCount( c )
+                            num_to_do = self._GetRowCount()
                             
                             i = 0
                             
@@ -3417,7 +3511,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             while i < num_to_do:
                                 
-                                advanced_mappings_ids = c.execute( 'SELECT namespace_id, tag_id, hash_id FROM temp_operation WHERE job_id BETWEEN ? AND ?;', ( i, i + block_size - 1 ) )
+                                advanced_mappings_ids = self._c.execute( 'SELECT namespace_id, tag_id, hash_id FROM temp_operation WHERE job_id BETWEEN ? AND ?;', ( i, i + block_size - 1 ) )
                                 
                                 advanced_mappings_ids = HC.BuildKeyToListDict( ( ( ( namespace_id, tag_id ), hash_id ) for ( namespace_id, tag_id, hash_id ) in advanced_mappings_ids ) )
                                 
@@ -3425,33 +3519,33 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 if sub_action == 'copy':
                                     
-                                    service_target = self._GetService( c, service_id_target )
+                                    service_target = self._GetService( service_id_target )
                                     
                                     if service_target.GetServiceType() == HC.LOCAL_TAG: kwarg = 'mappings_ids'
                                     else: kwarg = 'pending_mappings_ids'
                                     
                                     kwargs = { kwarg : advanced_mappings_ids }
                                     
-                                    self._UpdateMappings( c, service_id_target, **kwargs )
+                                    self._UpdateMappings( service_id_target, **kwargs )
                                     
                                 elif sub_action == 'delete':
                                     
-                                    self._UpdateMappings( c, service_id, deleted_mappings_ids = advanced_mappings_ids )
+                                    self._UpdateMappings( service_id, deleted_mappings_ids = advanced_mappings_ids )
                                     
                                 elif sub_action == 'delete_deleted':
                                     
                                     for ( namespace_id, tag_id, hash_ids ) in advanced_mappings_ids:
                                         
-                                        c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
+                                        self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, namespace_id, tag_id ) )
                                         
                                     
-                                    c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+                                    self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
                                     
                                 
                                 i += block_size
                                 
                             
-                            c.execute( 'DROP TABLE temp_operation;' )
+                            self._c.execute( 'DROP TABLE temp_operation;' )
                             
                             self.pub_after_commit( 'notify_new_pending' )
                             
@@ -3460,11 +3554,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             if action == HC.CONTENT_UPDATE_PETITION: ( tag, hashes, reason ) = row
                             else: ( tag, hashes ) = row
                             
-                            if tag == '': continue
+                            try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
+                            except: continue
                             
-                            ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( c, tag )
-                            
-                            hash_ids = self._GetHashIds( c, hashes )
+                            hash_ids = self._GetHashIds( hashes )
                             
                             if action == HC.CONTENT_UPDATE_ADD: ultimate_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             elif action == HC.CONTENT_UPDATE_DELETE: ultimate_deleted_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
@@ -3472,7 +3565,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             elif action == HC.CONTENT_UPDATE_RESCIND_PENDING: ultimate_pending_rescinded_mappings_ids.append( ( namespace_id, tag_id, hash_ids ) )
                             elif action == HC.CONTENT_UPDATE_PETITION:
                                 
-                                reason_id = self._GetReasonId( c, reason )
+                                reason_id = self._GetReasonId( reason )
                                 
                                 ultimate_petitioned_mappings_ids.append( ( namespace_id, tag_id, hash_ids, reason_id ) )
                                 
@@ -3488,14 +3581,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( old_tag, new_tag ) = row
                             
-                            ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                            try:
+                                
+                                ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( old_tag )
+                                
+                                ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( new_tag )
+                                
+                            except: continue
                             
-                            ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                            self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
+                            self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
                             
-                            c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
-                            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
-                            
-                            c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, new_status ) )
+                            self._c.execute( 'INSERT OR IGNORE INTO tag_siblings ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, new_status ) )
                             
                         elif action in ( HC.CONTENT_UPDATE_PENDING, HC.CONTENT_UPDATE_PETITION ):
                             
@@ -3504,15 +3601,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( ( old_tag, new_tag ), reason ) = row
                             
-                            ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                            try:
+                                
+                                ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( old_tag )
+                                
+                                ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( new_tag )
+                                
+                            except: continue
                             
-                            ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( c, new_tag )
+                            reason_id = self._GetReasonId( reason )
                             
-                            reason_id = self._GetReasonId( c, reason )
+                            self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
                             
-                            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
-                            
-                            c.execute( 'INSERT OR IGNORE INTO tag_sibling_petitions ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id, new_status ) )
+                            self._c.execute( 'INSERT OR IGNORE INTO tag_sibling_petitions ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id, new_status ) )
                             
                             notify_new_pending = True
                             
@@ -3523,9 +3624,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( old_tag, new_tag ) = row
                             
-                            ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( c, old_tag )
+                            try: ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( old_tag )
+                            except: continue
                             
-                            c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
+                            self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
                             
                             notify_new_pending = True
                             
@@ -3541,24 +3643,28 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( child_tag, parent_tag ) = row
                             
-                            ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
+                            try:
+                                
+                                ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( child_tag )
+                                
+                                ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( parent_tag )
+                                
+                            except: continue
                             
-                            ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
+                            self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
+                            self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
                             
-                            c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
-                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
-                            
-                            c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, new_status ) )
+                            self._c.execute( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, new_status ) )
                             
                             if action == HC.CONTENT_UPDATE_ADD and service_key == HC.LOCAL_TAG_SERVICE_KEY:
                                 
-                                existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT ) ) ]
+                                existing_hash_ids = [ hash for ( hash, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT ) ) ]
                                 
-                                existing_hashes = self._GetHashes( c, existing_hash_ids )
+                                existing_hashes = self._GetHashes( existing_hash_ids )
                                 
                                 mappings_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
                                 
-                                self._UpdateMappings( c, service_id, mappings_ids = mappings_ids )
+                                self._UpdateMappings( service_id, mappings_ids = mappings_ids )
                                 
                                 special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, existing_hashes ) )
                                 
@@ -3572,25 +3678,29 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( ( child_tag, parent_tag ), reason ) = row
                             
-                            ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
+                            try:
+                                
+                                ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( child_tag )
+                                
+                                ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( parent_tag )
+                                
+                            except: continue
                             
-                            ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
+                            reason_id = self._GetReasonId( reason )
                             
-                            reason_id = self._GetReasonId( c, reason )
+                            self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
                             
-                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
-                            
-                            c.execute( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, new_status ) )
+                            self._c.execute( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id, new_status ) )
                             
                             if action == HC.CONTENT_UPDATE_PENDING:
                                 
-                                existing_hash_ids = [ hash for ( hash, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status IN ( ?, ? );', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT, HC.PENDING ) ) ]
+                                existing_hash_ids = [ hash for ( hash, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND status IN ( ?, ? );', ( service_id, child_namespace_id, child_tag_id, HC.CURRENT, HC.PENDING ) ) ]
                                 
-                                existing_hashes = self._GetHashes( c, existing_hash_ids )
+                                existing_hashes = self._GetHashes( existing_hash_ids )
                                 
                                 mappings_ids = [ ( parent_namespace_id, parent_tag_id, existing_hash_ids ) ]
                                 
-                                self._UpdateMappings( c, service_id, pending_mappings_ids = mappings_ids )
+                                self._UpdateMappings( service_id, pending_mappings_ids = mappings_ids )
                                 
                                 special_content_update = HC.ContentUpdate( HC.CONTENT_DATA_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PENDING, ( parent_tag, existing_hashes ) )
                                 
@@ -3606,11 +3716,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ( child_tag, parent_tag ) = row
                             
-                            ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( c, child_tag )
+                            try:
+                                
+                                ( child_namespace_id, child_tag_id ) = self._GetNamespaceIdTagId( child_tag )
+                                
+                                ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( parent_tag )
+                                
+                            except: continue
                             
-                            ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( c, parent_tag )
-                            
-                            c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
+                            self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
                             
                             notify_new_pending = True
                             
@@ -3624,7 +3738,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         ( rating, hashes ) = row
                         
-                        hash_ids = self._GetHashIds( c, hashes )
+                        hash_ids = self._GetHashIds( hashes )
                         
                         splayed_hash_ids = HC.SplayListForDB( hash_ids )
                         
@@ -3632,20 +3746,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             ratings_added = 0
                             
-                            c.execute( 'DELETE FROM local_ratings WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+                            self._c.execute( 'DELETE FROM local_ratings WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
                             
-                            rowcount = self._GetRowCount( c )
+                            rowcount = self._GetRowCount()
                             
                             if rating is not None:
                                 
-                                c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+                                self._c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
                                 
-                                c.executemany( 'INSERT INTO local_ratings ( service_id, hash_id, rating ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, rating ) for hash_id in hash_ids ] )
+                                self._c.executemany( 'INSERT INTO local_ratings ( service_id, hash_id, rating ) VALUES ( ?, ?, ? );', [ ( service_id, hash_id, rating ) for hash_id in hash_ids ] )
                                 
-                                ratings_added += self._GetRowCount( c )
+                                ratings_added += self._GetRowCount()
                                 
                             
-                            c.execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+                            self._c.execute( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ratings_added, service_id, HC.SERVICE_INFO_NUM_FILES ) )
                             
                             # and then do a thing here where it looks up remote services links and then pends/rescinds pends appropriately
                             
@@ -3654,20 +3768,20 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         ( min, max, hashes ) = row
                         
-                        hash_ids = self._GetHashIds( c, hashes )
+                        hash_ids = self._GetHashIds( hashes )
                         
                         splayed_hash_ids = HC.SplayListForDB( hash_ids )
                         
-                        c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
+                        self._c.execute( 'DELETE FROM ratings_filter WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) )
                         
-                        c.executemany( 'INSERT INTO ratings_filter ( service_id, hash_id, min, max ) VALUES ( ?, ?, ?, ? );', [ ( service_id, hash_id, min, max ) for hash_id in hash_ids ] )
+                        self._c.executemany( 'INSERT INTO ratings_filter ( service_id, hash_id, min, max ) VALUES ( ?, ?, ?, ? );', [ ( service_id, hash_id, min, max ) for hash_id in hash_ids ] )
                         
                     
                 
             
             if len( ultimate_mappings_ids ) + len( ultimate_deleted_mappings_ids ) + len( ultimate_pending_mappings_ids ) + len( ultimate_pending_rescinded_mappings_ids ) + len( ultimate_petitioned_mappings_ids ) + len( ultimate_petitioned_rescinded_mappings_ids ) > 0:
                 
-                self._UpdateMappings( c, service_id, mappings_ids = ultimate_mappings_ids, deleted_mappings_ids = ultimate_deleted_mappings_ids, pending_mappings_ids = ultimate_pending_mappings_ids, pending_rescinded_mappings_ids = ultimate_pending_rescinded_mappings_ids, petitioned_mappings_ids = ultimate_petitioned_mappings_ids, petitioned_rescinded_mappings_ids = ultimate_petitioned_rescinded_mappings_ids )
+                self._UpdateMappings( service_id, mappings_ids = ultimate_mappings_ids, deleted_mappings_ids = ultimate_deleted_mappings_ids, pending_mappings_ids = ultimate_pending_mappings_ids, pending_rescinded_mappings_ids = ultimate_pending_rescinded_mappings_ids, petitioned_mappings_ids = ultimate_petitioned_mappings_ids, petitioned_rescinded_mappings_ids = ultimate_petitioned_rescinded_mappings_ids )
                 
                 notify_new_pending = True
                 
@@ -3694,7 +3808,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _ProcessServiceUpdates( self, c, service_keys_to_service_updates ):
+    def _ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
         do_new_permissions = False
         
@@ -3703,10 +3817,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
-            try: service_id = self._GetServiceId( c, service_key )
+            try: service_id = self._GetServiceId( service_key )
             except: continue
             
-            service = self._GetService( c, service_id )
+            service = self._GetService( service_id )
             
             ( service_key, service_type, name, info ) = service.ToTuple()
             
@@ -3720,7 +3834,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     update = { 'account' : account, 'last_error' : 0 }
                     
-                    self._UpdateServiceInfo( c, service_id, update )
+                    self._UpdateServiceInfo( service_id, update )
                     
                     do_new_permissions = True
                     
@@ -3728,7 +3842,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     update = { 'last_error' : HC.GetNow() }
                     
-                    self._UpdateServiceInfo( c, service_id, update )
+                    self._UpdateServiceInfo( service_id, update )
                     
                 elif action == HC.SERVICE_UPDATE_REQUEST_MADE:
                     
@@ -3741,7 +3855,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     news_rows = row
                     
-                    c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in news_rows ] )
+                    self._c.executemany( 'INSERT OR IGNORE INTO news VALUES ( ?, ?, ? );', [ ( service_id, post, timestamp ) for ( post, timestamp ) in news_rows ] )
                     
                     now = HC.GetNow()
                     
@@ -3764,7 +3878,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         if info[ 'first_timestamp' ] is None: update = { 'first_timestamp' : next_download_timestamp, 'next_download_timestamp' : next_download_timestamp }
                         else: update = { 'next_download_timestamp' : next_download_timestamp }
                         
-                        self._UpdateServiceInfo( c, service_id, update )
+                        self._UpdateServiceInfo( service_id, update )
                         
                     
                 elif action == HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP:
@@ -3775,7 +3889,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         info_update = { 'next_processing_timestamp' : next_processing_timestamp }
                         
-                        self._UpdateServiceInfo( c, service_id, info_update )
+                        self._UpdateServiceInfo( service_id, info_update )
                         
                     
                 
@@ -3785,7 +3899,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( service_id, nums_bytes ) in HC.BuildKeyToListDict( hydrus_requests_made ).items():
             
-            service = self._GetService( c, service_id )
+            service = self._GetService( service_id )
             
             info = service.GetInfo()
             
@@ -3793,14 +3907,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             for num_bytes in nums_bytes: account.RequestMade( num_bytes )
             
-            c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+            self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
             
         
         if len( local_booru_requests_made ) > 0:
             
-            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_KEY )
+            service_id = self._GetServiceId( HC.LOCAL_BOORU_SERVICE_KEY )
             
-            service = self._GetService( c, service_id )
+            service = self._GetService( service_id )
             
             info = service.GetInfo()
             
@@ -3821,37 +3935,37 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             info[ 'used_monthly_data' ] += sum( local_booru_requests_made )
             info[ 'used_monthly_requests' ] += len( local_booru_requests_made )
             
-            c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+            self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
             
         
         if do_new_permissions: self.pub_after_commit( 'notify_new_permissions' )
         
     
-    def _RecalcCombinedMappings( self, c ):
+    def _RecalcCombinedMappings( self ):
         
-        service_ids = self._GetServiceIds( c, ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+        self._c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
         
-        c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
+        service_ids = self._GetServiceIds( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
         
         for service_id in service_ids:
             
-            c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, status FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( self._combined_tag_service_id, service_id, HC.CURRENT, HC.PENDING ) )
+            self._c.execute( 'INSERT OR IGNORE INTO mappings SELECT ?, namespace_id, tag_id, hash_id, status FROM mappings WHERE service_id = ? AND status IN ( ?, ? );', ( self._combined_tag_service_id, service_id, HC.CURRENT, HC.PENDING ) )
             
         
-        c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
+        self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
         
     
-    def _ResetService( self, c, service_key ):
+    def _ResetService( self, service_key ):
         
-        service_id = self._GetServiceId( c, service_key )
+        service_id = self._GetServiceId( service_key )
         
-        service = self._GetService( c, service_id )
+        service = self._GetService( service_id )
         
         ( service_key, service_type, name, info ) = service.ToTuple()
         
-        c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+        self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
-        if service_type == HC.TAG_REPOSITORY: self._RecalcCombinedMappings( c )
+        if service_type == HC.TAG_REPOSITORY: self._RecalcCombinedMappings()
         
         if service_type in HC.REPOSITORIES:
             
@@ -3860,7 +3974,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             self.pub_after_commit( 'notify_restart_repo_sync_daemon' )
             
         
-        self._AddService( c, service_key, service_type, name, info )
+        self._AddService( service_key, service_type, name, info )
         
         self.pub_service_updates_after_commit( { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET ) ] } )
         self.pub_after_commit( 'notify_new_pending' )
@@ -3869,29 +3983,29 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         HC.ShowText( 'Service ' + name + ' was reset successfully!' )
         
     
-    def _SetTagCensorship( self, c, info ):
+    def _SetTagCensorship( self, info ):
         
-        c.execute( 'DELETE FROM tag_censorship;' )
+        self._c.execute( 'DELETE FROM tag_censorship;' )
         
         for ( service_key, blacklist, tags ) in info:
             
-            service_id = self._GetServiceId( c, service_key )
+            service_id = self._GetServiceId( service_key )
             
-            c.execute( 'INSERT OR IGNORE INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
+            self._c.execute( 'INSERT OR IGNORE INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
             
         
         self.pub_after_commit( 'notify_new_tag_censorship' )
         
     
-    def _SetYAMLDump( self, c, dump_type, dump_name, data ):
+    def _SetYAMLDump( self, dump_type, dump_name, data ):
         
         if dump_type == YAML_DUMP_ID_SUBSCRIPTION: self._subscriptions_cache[ dump_name ] = data
         
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
         
-        c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
+        self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
         
-        try: c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
+        try: self._c.execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
         except:
             
             print( ( dump_type, dump_name, data ) )
@@ -3901,21 +4015,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
             
-            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_KEY )
+            service_id = self._GetServiceId( HC.LOCAL_BOORU_SERVICE_KEY )
             
-            c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
+            self._c.execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
             HC.pubsub.pub( 'refresh_local_booru_shares' )
             
         
     
-    def _SyncToTagArchive( self, c, hash_id, archive_name, namespaces, service_key ):
+    def _SyncFileToTagArchive( self, hash_id, archive_name, namespaces, service_key ):
         
         hta = self._tag_archives[ archive_name ]
         
         hash_type = hta.GetHashType()
         
-        hash = self._GetHash( c, hash_id )
+        hash = self._GetHash( hash_id )
         
         if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = hash
         else:
@@ -3924,10 +4038,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             elif hash_type == HydrusTagArchive.HASH_TYPE_SHA1: h = 'sha1'
             elif hash_type == HydrusTagArchive.HASH_TYPE_SHA512: h = 'sha512'
             
-            ( archive_hash, ) = c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            ( archive_hash, ) = self._c.execute( 'SELECT ' + h + ' FROM local_hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
             
         
-        tags = hta.GetMappings( archive_hash )
+        tags = HC.CleanTags( hta.GetTags( archive_hash ) )
         
         desired_tags = HydrusTags.FilterNamespaces( tags, namespaces )
         
@@ -3942,28 +4056,60 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_keys_to_content_updates = { service_key : content_updates }
             
-            self._ProcessContentUpdates( c, service_keys_to_content_updates, pub_immediate = True )
+            self._ProcessContentUpdates( service_keys_to_content_updates, pub_immediate = True )
             
         
     
-    def _UpdateAutocompleteTagCacheFromFiles( self, c, file_service_id, hash_ids, direction ):
+    def _SyncToTagArchive( self, archive_name, namespaces, service_key ):
+        
+        prefix_string = 'syncing to tag archive ' + archive_name + ': '
+        
+        job_key = HC.JobKey( pausable = False, cancellable = False )
+        
+        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        
+        HC.pubsub.pub( 'message', message )
+        
+        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
+        
+        for ( i, hash_id ) in enumerate( hash_ids ):
+            
+            try: self._SyncFileToTagArchive( hash_id, archive_name, namespaces, service_key )
+            except: pass
+            
+            if i % 100 == 0:
+                
+                message.SetInfo( 'range', len( hash_ids ) )
+                message.SetInfo( 'value', i )
+                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
+                message.SetInfo( 'mode', 'gauge' )
+                
+            
+        
+        message.SetInfo( 'text', prefix_string + 'done!' )
+        message.SetInfo( 'mode', 'text' )
+        
+        self.pub_after_commit( 'notify_new_pending' )
+        
+    
+    def _UpdateAutocompleteTagCacheFromFiles( self, file_service_id, hash_ids, direction ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
         
-        current_tags = c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status = ? GROUP BY service_id, namespace_id, tag_id;', ( HC.CURRENT, ) ).fetchall()
-        pending_tags = c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status = ? GROUP BY service_id, namespace_id, tag_id;', ( HC.PENDING, ) ).fetchall()
+        current_tags = self._c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status = ? GROUP BY service_id, namespace_id, tag_id;', ( HC.CURRENT, ) ).fetchall()
+        pending_tags = self._c.execute( 'SELECT service_id, namespace_id, tag_id, COUNT( * ) FROM mappings WHERE hash_id IN ' + splayed_hash_ids + ' AND status = ? GROUP BY service_id, namespace_id, tag_id;', ( HC.PENDING, ) ).fetchall()
         
-        c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
-        c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
+        self._c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
+        self._c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
         
     
-    def _UpdateMappings( self, c, tag_service_id, mappings_ids = [], deleted_mappings_ids = [], pending_mappings_ids = [], pending_rescinded_mappings_ids = [], petitioned_mappings_ids = [], petitioned_rescinded_mappings_ids = [] ):
+    def _UpdateMappings( self, tag_service_id, mappings_ids = [], deleted_mappings_ids = [], pending_mappings_ids = [], pending_rescinded_mappings_ids = [], petitioned_mappings_ids = [], petitioned_rescinded_mappings_ids = [] ):
         
         # this method grew into a monster that merged deleted, pending and current according to a heirarchy of services
         # this cost a lot of CPU time and was extremely difficult to maintain
         # now it attempts a simpler union, not letting delete overwrite a current or pending
         
-        other_service_ids = [ service_id for service_id in self._GetServiceIds( c, ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service_id != tag_service_id ]
+        other_service_ids = [ service_id for service_id in self._GetServiceIds( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) if service_id != tag_service_id ]
         
         splayed_other_service_ids = HC.SplayListForDB( other_service_ids )
         
@@ -3972,19 +4118,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             # when we commit a tag that is both deleted and pending, we merge two statuses into one!
             # in this case, we have to be careful about the counts (decrement twice, but only increment once), hence why this returns two numbers
             
-            pertinent_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, old_status ) ) ]
+            pertinent_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, old_status ) ) ]
             
-            existing_hash_ids = { id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, new_status ) ) }
+            existing_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, new_status ) ) }
             
             deletable_hash_ids = existing_hash_ids.intersection( pertinent_hash_ids )
             
-            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, old_status ) )
+            self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( deletable_hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, old_status ) )
             
-            num_old_deleted = self._GetRowCount( c )
+            num_old_deleted = self._GetRowCount()
             
-            c.execute( 'UPDATE mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( pertinent_hash_ids ) + ' AND status = ?;', ( new_status, tag_service_id, namespace_id, tag_id, old_status ) )
+            self._c.execute( 'UPDATE mappings SET status = ? WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( pertinent_hash_ids ) + ' AND status = ?;', ( new_status, tag_service_id, namespace_id, tag_id, old_status ) )
             
-            num_old_made_new = self._GetRowCount( c )
+            num_old_made_new = self._GetRowCount()
             
             if old_status != HC.PENDING and new_status == HC.PENDING:
                 
@@ -4021,21 +4167,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if action == 'delete':
                 
-                existing_other_service_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_other_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, status ) ) }
+                existing_other_service_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_other_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, status ) ) }
                 
                 pertinent_hash_ids = set( hash_ids ).difference( existing_other_service_hash_ids )
                 
-                c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( pertinent_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, status ) )
+                self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( pertinent_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, status ) )
                 
                 direction = -1
                 
             elif action == 'insert':
                 
-                existing_combined_hash_ids = { hash_id for ( hash_id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, status ) ) }
+                existing_combined_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, status ) ) }
                 
                 pertinent_hash_ids = set( hash_ids ).difference( existing_combined_hash_ids )
                 
-                c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, status ) for hash_id in pertinent_hash_ids ] )
+                self._c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, status ) for hash_id in pertinent_hash_ids ] )
                 
                 direction = 1
                 
@@ -4045,9 +4191,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def DeletePending( namespace_id, tag_id, hash_ids ):
             
-            c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, HC.PENDING ) )
+            self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( tag_service_id, namespace_id, tag_id, HC.PENDING ) )
             
-            num_deleted = self._GetRowCount( c )
+            num_deleted = self._GetRowCount()
             
             UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, hash_ids, HC.PENDING, -1 )
             
@@ -4058,23 +4204,23 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def DeletePetitions( namespace_id, tag_id, hash_ids ):
             
-            c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( tag_service_id, namespace_id, tag_id ) )
+            self._c.execute( 'DELETE FROM mapping_petitions WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( tag_service_id, namespace_id, tag_id ) )
             
-            num_deleted = self._GetRowCount( c )
+            num_deleted = self._GetRowCount()
             
             return num_deleted
             
         
         def InsertMappings( namespace_id, tag_id, hash_ids, status ):
             
-            if status in ( HC.CURRENT, HC.DELETED ): existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( tag_service_id, namespace_id, tag_id ) ) ]
-            elif status == HC.PENDING: existing_hash_ids = [ id for ( id, ) in c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status != ?;', ( tag_service_id, namespace_id, tag_id, HC.DELETED ) ) ]
+            if status in ( HC.CURRENT, HC.DELETED ): existing_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( tag_service_id, namespace_id, tag_id ) ) ]
+            elif status == HC.PENDING: existing_hash_ids = [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status != ?;', ( tag_service_id, namespace_id, tag_id, HC.DELETED ) ) ]
             
             new_hash_ids = set( hash_ids ).difference( existing_hash_ids )
             
-            c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( tag_service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
+            self._c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( tag_service_id, namespace_id, tag_id, hash_id, status ) for hash_id in new_hash_ids ] )
             
-            num_rows_added = self._GetRowCount( c )
+            num_rows_added = self._GetRowCount()
             
             if status == HC.CURRENT:
                 
@@ -4094,23 +4240,23 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         def InsertPetitions( namespace_id, tag_id, hash_ids, reason_id ):
             
-            c.executemany( 'INSERT OR IGNORE INTO mapping_petitions VALUES ( ?, ?, ?, ?, ? );', [ ( tag_service_id, namespace_id, tag_id, hash_id, reason_id ) for hash_id in hash_ids ] )
+            self._c.executemany( 'INSERT OR IGNORE INTO mapping_petitions VALUES ( ?, ?, ?, ?, ? );', [ ( tag_service_id, namespace_id, tag_id, hash_id, reason_id ) for hash_id in hash_ids ] )
             
-            num_rows_added = self._GetRowCount( c )
+            num_rows_added = self._GetRowCount()
             
             return num_rows_added
             
         
         def UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, hash_ids, status, direction ):
             
-            file_service_info = c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' GROUP BY service_id;' ).fetchall()
+            file_service_info = self._c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' GROUP BY service_id;' ).fetchall()
             
             file_service_info.append( ( self._combined_file_service_id, len( hash_ids ) ) )
             
             if status == HC.CURRENT: critical_phrase = 'current_count = current_count + ?'
             elif status == HC.PENDING: critical_phrase = 'pending_count = pending_count + ?'
             
-            c.executemany( 'UPDATE autocomplete_tags_cache SET ' + critical_phrase + ' WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( file_service_id, count ) in file_service_info ] )
+            self._c.executemany( 'UPDATE autocomplete_tags_cache SET ' + critical_phrase + ' WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( file_service_id, count ) in file_service_info ] )
             
         
         change_in_num_mappings = 0
@@ -4141,9 +4287,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tag_ids_to_search_for = tag_ids_being_added.union( tag_ids_being_removed )
         hash_ids_to_search_for = hash_ids_being_added.union( hash_ids_being_removed )
         
-        pre_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( namespace_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
-        pre_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( tag_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
-        pre_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( hash_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        pre_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if self._c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( namespace_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        pre_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if self._c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( tag_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        pre_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if self._c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( hash_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
         
         num_namespaces_added = len( namespace_ids_being_added.difference( pre_existing_namespace_ids ) )
         num_tags_added = len( tag_ids_being_added.difference( pre_existing_tag_ids ) )
@@ -4191,9 +4337,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             change_in_num_pending_mappings -= num_pending_rescinded
             
         
-        post_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( namespace_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
-        post_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( tag_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
-        post_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( hash_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        post_existing_namespace_ids = { namespace_id for namespace_id in namespace_ids_to_search_for if self._c.execute( 'SELECT 1 WHERE EXISTS ( SELECT namespace_id FROM mappings WHERE namespace_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( namespace_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        post_existing_tag_ids = { tag_id for tag_id in tag_ids_to_search_for if self._c.execute( 'SELECT 1 WHERE EXISTS ( SELECT tag_id FROM mappings WHERE tag_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( tag_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
+        post_existing_hash_ids = { hash_id for hash_id in hash_ids_to_search_for if self._c.execute( 'SELECT 1 WHERE EXISTS ( SELECT hash_id FROM mappings WHERE hash_id = ? AND service_id = ? AND status IN ( ?, ? ) );', ( hash_id, tag_service_id, HC.CURRENT, HC.PENDING ) ).fetchone() is not None }
         
         num_namespaces_removed = len( pre_existing_namespace_ids.intersection( namespace_ids_being_removed ).difference( post_existing_namespace_ids ) )
         num_tags_removed = len( pre_existing_tag_ids.intersection( tag_ids_being_removed ).difference( post_existing_tag_ids ) )
@@ -4227,17 +4373,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if change_in_num_tags != 0: service_info_updates.append( ( change_in_num_tags, tag_service_id, HC.SERVICE_INFO_NUM_TAGS ) )
         if change_in_num_files != 0: service_info_updates.append( ( change_in_num_files, tag_service_id, HC.SERVICE_INFO_NUM_FILES ) )
         
-        if len( service_info_updates ) > 0: c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
+        if len( service_info_updates ) > 0: self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         
     
-    def _UpdateServerServices( self, c, admin_service_key, original_services_info, edit_log, service_keys_to_access_keys ):
+    def _UpdateServerServices( self, admin_service_key, original_services_info, edit_log, service_keys_to_access_keys ):
         
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
         
-        admin_service_id = self._GetServiceId( c, admin_service_key )
+        admin_service_id = self._GetServiceId( admin_service_key )
         
-        admin_service = self._GetService( c, admin_service_id )
+        admin_service = self._GetService( admin_service_id )
         
         admin_info = admin_service.GetInfo()
         
@@ -4247,7 +4393,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         server_service_keys_to_client_service_info = {}
         
-        current_client_services_info = c.execute( 'SELECT service_key, service_type, info FROM services;' ).fetchall()
+        current_client_services_info = self._c.execute( 'SELECT service_key, service_type, info FROM services;' ).fetchall()
         
         for ( server_service_key, service_type, server_options ) in original_services_info:
             
@@ -4283,7 +4429,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 name = HC.service_string_lookup[ service_type ] + ' at ' + host + ':' + HC.u( info[ 'port' ] )
                 
-                self._AddService( c, service_key, service_type, name, info )
+                self._AddService( service_key, service_type, name, info )
                 
             elif action == HC.DELETE:
                 
@@ -4293,9 +4439,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     ( client_service_key, service_type, client_info ) = server_service_keys_to_client_service_info[ server_service_key ]
                     
-                    service_id = self._GetServiceId( c, client_service_key )
+                    service_id = self._GetServiceId( client_service_key )
                     
-                    c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                    self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                     
                     service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                     
@@ -4326,21 +4472,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     ( client_service_key, service_type, client_info ) = server_service_keys_to_client_service_info[ server_service_key ]
                     
-                    service_id = self._GetServiceId( c, client_service_key )
+                    service_id = self._GetServiceId( client_service_key )
                     
                     client_info[ 'port' ] = server_options[ 'port' ]
                     
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( client_info, service_id ) )
+                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( client_info, service_id ) )
                     
                 
             
         
-        if recalc_combined_mappings: self._RecalcCombinedMappings( c )
+        if recalc_combined_mappings: self._RecalcCombinedMappings()
         
         self.pub_after_commit( 'notify_new_pending' )
         
     
-    def _UpdateServices( self, c, edit_log ):
+    def _UpdateServices( self, edit_log ):
         
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
@@ -4358,15 +4504,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( service_key, service_type, name, info ) = entry.GetData()
                 
-                self._AddService( c, service_key, service_type, name, info )
+                self._AddService( service_key, service_type, name, info )
                 
             elif action == HC.DELETE:
                 
                 service_key = entry.GetIdentifier()
                 
-                service_id = self._GetServiceId( c, service_key )
+                service_id = self._GetServiceId( service_key )
                 
-                service = self._GetService( c, service_id )
+                service = self._GetService( service_id )
                 
                 if service.GetServiceType() == HC.TAG_REPOSITORY:
                     
@@ -4380,7 +4526,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                     
                 
-                c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
                 service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                 
@@ -4406,9 +4552,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( service_key, service_type, new_name, info_update ) = entry.GetData()
                 
-                service_id = self._GetServiceId( c, service_key )
+                service_id = self._GetServiceId( service_key )
                 
-                c.execute( 'UPDATE services SET name = ? WHERE service_id = ?;', ( new_name, service_id ) )
+                self._c.execute( 'UPDATE services SET name = ? WHERE service_id = ?;', ( new_name, service_id ) )
                 
                 if service_type in HC.RESTRICTED_SERVICES:
                     
@@ -4423,7 +4569,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if service_type in HC.TAG_SERVICES:
                     
-                    ( old_info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+                    ( old_info, ) = self._c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
                     
                     old_tag_archive_sync = old_info[ 'tag_archive_sync' ]
                     new_tag_archive_sync = info_update[ 'tag_archive_sync' ]
@@ -4441,11 +4587,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             if len( namespaces ) == 0: continue
                             
                         
-                        self._InitialiseTagArchiveSync( c, archive_name, namespaces, service_key )
+                        self._SyncToTagArchive( archive_name, namespaces, service_key )
                         
                     
                 
-                self._UpdateServiceInfo( c, service_id, info_update )
+                self._UpdateServiceInfo( service_id, info_update )
                 
                 if service_type == HC.LOCAL_BOORU:
                     
@@ -4459,7 +4605,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             message.SetInfo( 'text', 'updating services: recalculating combined tag data' )
             
-            self._RecalcCombinedMappings( c )
+            self._RecalcCombinedMappings()
             
             message.SetInfo( 'text', 'updating services: done!' )
             
@@ -4467,13 +4613,13 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_after_commit( 'notify_new_pending' )
         
     
-    def _UpdateServiceInfo( self, c, service_id, update ):
+    def _UpdateServiceInfo( self, service_id, update ):
         
-        ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        ( info, ) = self._c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
         for ( k, v ) in update.items(): info[ k ] = v
         
-        c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+        self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
         
     
 class DB( ServiceDB ):
@@ -4492,17 +4638,18 @@ class DB( ServiceDB ):
         
         self._currently_doing_job = False
         
+        if os.path.exists( self._db_path ):
+            
+            # open and close to clean up in case last session didn't close well
+            
+            db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+            
+            db.close()
+            
+        
         self._InitDB()
         
-        # clean up if last connection closed badly
-        ( db, c ) = self._GetDBCursor()
-        
-        db.close()
-        # ok should be fine
-        
-        ( db, c ) = self._GetDBCursor()
-        
-        ( version, ) = c.execute( 'SELECT version FROM version;' ).fetchone()
+        ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
         if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + HC.u( version ) + ' is too old for this version ' + HC.u( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + HC.u( version + 45 ) + ' or earlier first.' )
         
@@ -4512,26 +4659,26 @@ class DB( ServiceDB ):
             
             time.sleep( 2 )
             
-            try: c.execute( 'BEGIN IMMEDIATE' )
+            try: self._c.execute( 'BEGIN IMMEDIATE' )
             except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
             
             try:
                 
-                self._UpdateDB( c, version )
+                self._UpdateDB( version )
                 
-                c.execute( 'COMMIT' )
+                self._c.execute( 'COMMIT' )
                 
             except:
                 
-                c.execute( 'ROLLBACK' )
+                self._c.execute( 'ROLLBACK' )
                 
                 raise Exception( 'Updating the client db to version ' + HC.u( version ) + ' caused this error:' + os.linesep + traceback.format_exc() )
                 
             
-            ( version, ) = c.execute( 'SELECT version FROM version;' ).fetchone()
+            ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
             
         
-        try: c.execute( 'BEGIN IMMEDIATE' )
+        try: self._c.execute( 'BEGIN IMMEDIATE' )
         except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
         
         try:
@@ -4540,51 +4687,47 @@ class DB( ServiceDB ):
             
             # ###### ~~~~~~~~~~~~~~~~~~~~~~~~~~~ ######
             
-            c.execute( 'COMMIT' )
+            self._c.execute( 'COMMIT' )
             
         except:
             
             HC.ShowText( 'Database commit error:' + os.linesep + traceback.format_exc() )
             
-            c.execute( 'ROLLBACK' )
+            self._c.execute( 'ROLLBACK' )
             
             raise
             
         
-        self._local_file_service_id = self._GetServiceId( c, HC.LOCAL_FILE_SERVICE_KEY )
-        self._local_tag_service_id = self._GetServiceId( c, HC.LOCAL_TAG_SERVICE_KEY )
-        self._combined_file_service_id = self._GetServiceId( c, HC.COMBINED_FILE_SERVICE_KEY )
-        self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_KEY )
+        self._local_file_service_id = self._GetServiceId( HC.LOCAL_FILE_SERVICE_KEY )
+        self._local_tag_service_id = self._GetServiceId( HC.LOCAL_TAG_SERVICE_KEY )
+        self._combined_file_service_id = self._GetServiceId( HC.COMBINED_FILE_SERVICE_KEY )
+        self._combined_tag_service_id = self._GetServiceId( HC.COMBINED_TAG_SERVICE_KEY )
         
-        options = self._GetOptions( c )
+        options = self._GetOptions()
         
         HC.options = options
         
-    
-    def _GetDBCursor( self ):
-        
-        db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-        
-        db.create_function( 'hydrus_hamming', 2, HydrusImageHandling.GetHammingDistance )
-        
-        c = db.cursor()
-        
-        c.execute( 'PRAGMA cache_size = 10000;' )
-        c.execute( 'PRAGMA foreign_keys = ON;' )
-        c.execute( 'PRAGMA recursive_triggers = ON;' )
-        
-        return ( db, c )
+        self._CloseDBCursor()
         
     
-    def _GetOptions( self, c ):
+    def _CloseDBCursor( self ):
         
-        result = c.execute( 'SELECT options FROM options;' ).fetchone()
+        self._c.close()
+        self._db.close()
+        
+        del self._db
+        del self._c
+        
+    
+    def _GetOptions( self ):
+        
+        result = self._c.execute( 'SELECT options FROM options;' ).fetchone()
         
         if result is None:
             
             options = CC.CLIENT_DEFAULT_OPTIONS
             
-            c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( options, ) )
+            self._c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( options, ) )
             
         else:
             
@@ -4599,23 +4742,23 @@ class DB( ServiceDB ):
         return options
         
     
-    def _GetRowCount( self, c ):
+    def _GetRowCount( self ):
         
-        row_count = c.rowcount
+        row_count = self._c.rowcount
         
         if row_count == -1: return 0
         else: return row_count
         
     
-    def _GetSiteId( self, c, name ):
+    def _GetSiteId( self, name ):
         
-        result = c.execute( 'SELECT site_id FROM imageboard_sites WHERE name = ?;', ( name, ) ).fetchone()
+        result = self._c.execute( 'SELECT site_id FROM imageboard_sites WHERE name = ?;', ( name, ) ).fetchone()
         
         if result is None:
             
-            c.execute( 'INSERT INTO imageboard_sites ( name ) VALUES ( ? );', ( name, ) )
+            self._c.execute( 'INSERT INTO imageboard_sites ( name ) VALUES ( ? );', ( name, ) )
             
-            site_id = c.lastrowid
+            site_id = self._c.lastrowid
             
         else: ( site_id, ) = result
         
@@ -4649,7 +4792,12 @@ class DB( ServiceDB ):
     
     def _InitDB( self ):
         
-        if not os.path.exists( self._db_path ):
+        if not os.path.exists( self._db_path ): create_db = True
+        else: create_db = False
+        
+        self._InitDBCursor()
+        
+        if create_db:
             
             HC.is_first_start = True
             
@@ -4671,148 +4819,146 @@ class DB( ServiceDB ):
                 if not os.path.exists( dir ): os.mkdir( dir )
                 
             
-            ( db, c ) = self._GetDBCursor()
+            self._c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
+            self._c.execute( 'PRAGMA journal_mode=WAL;' )
             
-            c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-            c.execute( 'PRAGMA journal_mode=WAL;' )
-            
-            try: c.execute( 'BEGIN IMMEDIATE' )
+            try: self._c.execute( 'BEGIN IMMEDIATE' )
             except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
             
-            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
-            c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
+            self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
+            self._c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
             
             #
             
-            c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
-            c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
+            self._c.execute( 'CREATE TABLE autocomplete_tags_cache ( file_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, tag_service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, current_count INTEGER, pending_count INTEGER, PRIMARY KEY ( file_service_id, tag_service_id, namespace_id, tag_id ) );' )
+            self._c.execute( 'CREATE INDEX autocomplete_tags_cache_tag_service_id_namespace_id_tag_id_index ON autocomplete_tags_cache ( tag_service_id, namespace_id, tag_id );' )
             
-            c.execute( 'CREATE TABLE contacts ( contact_id INTEGER PRIMARY KEY, contact_key BLOB_BYTES, public_key TEXT, name TEXT, host TEXT, port INTEGER );' )
-            c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
-            c.execute( 'CREATE UNIQUE INDEX contacts_name_index ON contacts ( name );' )
+            self._c.execute( 'CREATE TABLE contacts ( contact_id INTEGER PRIMARY KEY, contact_key BLOB_BYTES, public_key TEXT, name TEXT, host TEXT, port INTEGER );' )
+            self._c.execute( 'CREATE UNIQUE INDEX contacts_contact_key_index ON contacts ( contact_key );' )
+            self._c.execute( 'CREATE UNIQUE INDEX contacts_name_index ON contacts ( name );' )
             
-            c.execute( 'CREATE VIRTUAL TABLE conversation_subjects USING fts4( subject );' )
+            self._c.execute( 'CREATE VIRTUAL TABLE conversation_subjects USING fts4( subject );' )
             
-            c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE TABLE deleted_files ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
             
-            c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
-            c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
+            self._c.execute( 'CREATE TABLE existing_tags ( namespace_id INTEGER, tag_id INTEGER, PRIMARY KEY( namespace_id, tag_id ) );' )
+            self._c.execute( 'CREATE INDEX existing_tags_tag_id_index ON existing_tags ( tag_id );' )
             
-            c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
+            self._c.execute( 'CREATE TABLE file_inbox ( hash_id INTEGER PRIMARY KEY );' )
             
-            c.execute( 'CREATE TABLE files_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, size INTEGER, mime INTEGER, timestamp INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-            c.execute( 'CREATE INDEX files_info_hash_id ON files_info ( hash_id );' )
+            self._c.execute( 'CREATE TABLE files_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, size INTEGER, mime INTEGER, timestamp INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, num_words INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE INDEX files_info_hash_id ON files_info ( hash_id );' )
             
-            c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
-            c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
+            self._c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE INDEX file_transfers_hash_id ON file_transfers ( hash_id );' )
             
-            c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ), FOREIGN KEY( service_id, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
-            c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
+            self._c.execute( 'CREATE TABLE file_petitions ( service_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, hash_id, reason_id ), FOREIGN KEY( service_id, hash_id ) REFERENCES files_info ON DELETE CASCADE );' )
+            self._c.execute( 'CREATE INDEX file_petitions_hash_id_index ON file_petitions ( hash_id );' )
             
-            c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
-            c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
+            self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
+            self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
             
-            c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
+            self._c.execute( 'CREATE TABLE hydrus_sessions ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, expiry INTEGER );' )
             
-            c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-            c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
-            c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
-            c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
+            self._c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
+            self._c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
+            self._c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
+            self._c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
             
-            c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, rating REAL, PRIMARY KEY( service_id, hash_id ) );' )
-            c.execute( 'CREATE INDEX local_ratings_hash_id_index ON local_ratings ( hash_id );' )
-            c.execute( 'CREATE INDEX local_ratings_rating_index ON local_ratings ( rating );' )
+            self._c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, rating REAL, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE INDEX local_ratings_hash_id_index ON local_ratings ( hash_id );' )
+            self._c.execute( 'CREATE INDEX local_ratings_rating_index ON local_ratings ( rating );' )
             
-            c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
-            c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
-            c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
-            c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
-            c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
+            self._c.execute( 'CREATE TABLE mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+            self._c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
+            self._c.execute( 'CREATE INDEX mappings_service_id_tag_id_index ON mappings ( service_id, tag_id );' )
+            self._c.execute( 'CREATE INDEX mappings_service_id_hash_id_index ON mappings ( service_id, hash_id );' )
+            self._c.execute( 'CREATE INDEX mappings_service_id_status_index ON mappings ( service_id, status );' )
             
-            c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, reason_id ) );' )
-            c.execute( 'CREATE INDEX mapping_petitions_hash_id_index ON mapping_petitions ( hash_id );' )
+            self._c.execute( 'CREATE TABLE mapping_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, reason_id ) );' )
+            self._c.execute( 'CREATE INDEX mapping_petitions_hash_id_index ON mapping_petitions ( hash_id );' )
             
-            c.execute( 'CREATE TABLE message_attachments ( message_id INTEGER PRIMARY KEY REFERENCES message_keys ON DELETE CASCADE, hash_id INTEGER );' )
+            self._c.execute( 'CREATE TABLE message_attachments ( message_id INTEGER PRIMARY KEY REFERENCES message_keys ON DELETE CASCADE, hash_id INTEGER );' )
             
-            c.execute( 'CREATE TABLE message_depots ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, contact_id INTEGER, last_check INTEGER, check_period INTEGER, private_key TEXT, receive_anon INTEGER_BOOLEAN );' )
-            c.execute( 'CREATE UNIQUE INDEX message_depots_contact_id_index ON message_depots ( contact_id );' )
+            self._c.execute( 'CREATE TABLE message_depots ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, contact_id INTEGER, last_check INTEGER, check_period INTEGER, private_key TEXT, receive_anon INTEGER_BOOLEAN );' )
+            self._c.execute( 'CREATE UNIQUE INDEX message_depots_contact_id_index ON message_depots ( contact_id );' )
             
-            c.execute( 'CREATE TABLE message_destination_map ( message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, contact_id_to INTEGER, status_id INTEGER, PRIMARY KEY ( message_id, contact_id_to ) );' )
-            c.execute( 'CREATE INDEX message_destination_map_contact_id_to_index ON message_destination_map ( contact_id_to );' )
-            c.execute( 'CREATE INDEX message_destination_map_status_id_index ON message_destination_map ( status_id );' )
+            self._c.execute( 'CREATE TABLE message_destination_map ( message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, contact_id_to INTEGER, status_id INTEGER, PRIMARY KEY ( message_id, contact_id_to ) );' )
+            self._c.execute( 'CREATE INDEX message_destination_map_contact_id_to_index ON message_destination_map ( contact_id_to );' )
+            self._c.execute( 'CREATE INDEX message_destination_map_status_id_index ON message_destination_map ( status_id );' )
             
-            c.execute( 'CREATE TABLE message_downloads ( service_id INTEGER REFERENCES services ON DELETE CASCADE, message_id INTEGER REFERENCES message_keys ON DELETE CASCADE );' )
-            c.execute( 'CREATE INDEX message_downloads_service_id_index ON message_downloads ( service_id );' )
+            self._c.execute( 'CREATE TABLE message_downloads ( service_id INTEGER REFERENCES services ON DELETE CASCADE, message_id INTEGER REFERENCES message_keys ON DELETE CASCADE );' )
+            self._c.execute( 'CREATE INDEX message_downloads_service_id_index ON message_downloads ( service_id );' )
             
-            c.execute( 'CREATE TABLE message_drafts ( message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, recipients_visible INTEGER_BOOLEAN );' )
+            self._c.execute( 'CREATE TABLE message_drafts ( message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, recipients_visible INTEGER_BOOLEAN );' )
             
-            c.execute( 'CREATE TABLE message_inbox ( message_id INTEGER PRIMARY KEY REFERENCES message_keys ON DELETE CASCADE );' )
+            self._c.execute( 'CREATE TABLE message_inbox ( message_id INTEGER PRIMARY KEY REFERENCES message_keys ON DELETE CASCADE );' )
             
-            c.execute( 'CREATE TABLE message_keys ( message_id INTEGER PRIMARY KEY, message_key BLOB_BYTES );' )
-            c.execute( 'CREATE INDEX message_keys_message_key_index ON message_keys ( message_key );' )
+            self._c.execute( 'CREATE TABLE message_keys ( message_id INTEGER PRIMARY KEY, message_key BLOB_BYTES );' )
+            self._c.execute( 'CREATE INDEX message_keys_message_key_index ON message_keys ( message_key );' )
             
-            c.execute( 'CREATE VIRTUAL TABLE message_bodies USING fts4( body );' )
+            self._c.execute( 'CREATE VIRTUAL TABLE message_bodies USING fts4( body );' )
             
-            c.execute( 'CREATE TABLE incoming_message_statuses ( message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, contact_key BLOB_BYTES, status_id INTEGER, PRIMARY KEY ( message_id, contact_key ) );' )
+            self._c.execute( 'CREATE TABLE incoming_message_statuses ( message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, contact_key BLOB_BYTES, status_id INTEGER, PRIMARY KEY ( message_id, contact_key ) );' )
             
-            c.execute( 'CREATE TABLE messages ( conversation_id INTEGER REFERENCES message_keys ( message_id ) ON DELETE CASCADE, message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, contact_id_from INTEGER, timestamp INTEGER, PRIMARY KEY( conversation_id, message_id ) );' )
-            c.execute( 'CREATE UNIQUE INDEX messages_message_id_index ON messages ( message_id );' )
-            c.execute( 'CREATE INDEX messages_contact_id_from_index ON messages ( contact_id_from );' )
-            c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
+            self._c.execute( 'CREATE TABLE messages ( conversation_id INTEGER REFERENCES message_keys ( message_id ) ON DELETE CASCADE, message_id INTEGER REFERENCES message_keys ON DELETE CASCADE, contact_id_from INTEGER, timestamp INTEGER, PRIMARY KEY( conversation_id, message_id ) );' )
+            self._c.execute( 'CREATE UNIQUE INDEX messages_message_id_index ON messages ( message_id );' )
+            self._c.execute( 'CREATE INDEX messages_contact_id_from_index ON messages ( contact_id_from );' )
+            self._c.execute( 'CREATE INDEX messages_timestamp_index ON messages ( timestamp );' )
             
-            c.execute( 'CREATE TABLE namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT );' )
-            c.execute( 'CREATE UNIQUE INDEX namespaces_namespace_index ON namespaces ( namespace );' )
+            self._c.execute( 'CREATE TABLE namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT );' )
+            self._c.execute( 'CREATE UNIQUE INDEX namespaces_namespace_index ON namespaces ( namespace );' )
             
-            c.execute( 'CREATE TABLE news ( service_id INTEGER REFERENCES services ON DELETE CASCADE, post TEXT, timestamp INTEGER );' )
+            self._c.execute( 'CREATE TABLE news ( service_id INTEGER REFERENCES services ON DELETE CASCADE, post TEXT, timestamp INTEGER );' )
             
-            c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
+            self._c.execute( 'CREATE TABLE options ( options TEXT_YAML );', )
             
-            c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
+            self._c.execute( 'CREATE TABLE perceptual_hashes ( hash_id INTEGER PRIMARY KEY, phash BLOB_BYTES );' )
             
-            c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE TABLE ratings_filter ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, min REAL, max REAL, PRIMARY KEY( service_id, hash_id ) );' )
             
-            c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
-            c.execute( 'CREATE UNIQUE INDEX reasons_reason_index ON reasons ( reason );' )
+            self._c.execute( 'CREATE TABLE reasons ( reason_id INTEGER PRIMARY KEY, reason TEXT );' )
+            self._c.execute( 'CREATE UNIQUE INDEX reasons_reason_index ON reasons ( reason );' )
             
-            c.execute( 'CREATE TABLE remote_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, count INTEGER, rating REAL, score REAL, PRIMARY KEY( service_id, hash_id ) );' )
-            c.execute( 'CREATE INDEX remote_ratings_hash_id_index ON remote_ratings ( hash_id );' )
-            c.execute( 'CREATE INDEX remote_ratings_rating_index ON remote_ratings ( rating );' )
-            c.execute( 'CREATE INDEX remote_ratings_score_index ON remote_ratings ( score );' )
+            self._c.execute( 'CREATE TABLE remote_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, count INTEGER, rating REAL, score REAL, PRIMARY KEY( service_id, hash_id ) );' )
+            self._c.execute( 'CREATE INDEX remote_ratings_hash_id_index ON remote_ratings ( hash_id );' )
+            self._c.execute( 'CREATE INDEX remote_ratings_rating_index ON remote_ratings ( rating );' )
+            self._c.execute( 'CREATE INDEX remote_ratings_score_index ON remote_ratings ( score );' )
             
-            c.execute( 'CREATE TABLE service_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
+            self._c.execute( 'CREATE TABLE service_info ( service_id INTEGER REFERENCES services ON DELETE CASCADE, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
             
-            c.execute( 'CREATE TABLE shutdown_timestamps ( shutdown_type INTEGER PRIMARY KEY, timestamp INTEGER );' )
+            self._c.execute( 'CREATE TABLE shutdown_timestamps ( shutdown_type INTEGER PRIMARY KEY, timestamp INTEGER );' )
             
-            c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT );' )
-            c.execute( 'CREATE UNIQUE INDEX statuses_status_index ON statuses ( status );' )
+            self._c.execute( 'CREATE TABLE statuses ( status_id INTEGER PRIMARY KEY, status TEXT );' )
+            self._c.execute( 'CREATE UNIQUE INDEX statuses_status_index ON statuses ( status );' )
             
-            c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
+            self._c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
             
-            c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
-            c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
-            c.execute( 'CREATE INDEX tag_parents_status_index ON tag_parents ( status );' )
+            self._c.execute( 'CREATE TABLE tag_parents ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+            self._c.execute( 'CREATE INDEX tag_parents_service_id_status_index ON tag_parents ( service_id, status );' )
+            self._c.execute( 'CREATE INDEX tag_parents_status_index ON tag_parents ( status );' )
             
-            c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
+            self._c.execute( 'CREATE TABLE tag_parent_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, child_namespace_id INTEGER, child_tag_id INTEGER, parent_namespace_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, status ) );' )
             
-            c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
-            c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
-            c.execute( 'CREATE INDEX tag_siblings_status_index ON tag_siblings ( status );' )
+            self._c.execute( 'CREATE TABLE tag_siblings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+            self._c.execute( 'CREATE INDEX tag_siblings_service_id_status_index ON tag_siblings ( service_id, status );' )
+            self._c.execute( 'CREATE INDEX tag_siblings_status_index ON tag_siblings ( status );' )
             
-            c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
+            self._c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, old_namespace_id INTEGER, old_tag_id INTEGER, new_namespace_id INTEGER, new_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, old_namespace_id, old_tag_id, status ) );' )
             
-            c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
-            c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
+            self._c.execute( 'CREATE TABLE tags ( tag_id INTEGER PRIMARY KEY, tag TEXT );' )
+            self._c.execute( 'CREATE UNIQUE INDEX tags_tag_index ON tags ( tag );' )
             
-            c.execute( 'CREATE VIRTUAL TABLE tags_fts4 USING fts4( tag );' )
+            self._c.execute( 'CREATE VIRTUAL TABLE tags_fts4 USING fts4( tag );' )
             
-            c.execute( 'CREATE TABLE urls ( url TEXT PRIMARY KEY, hash_id INTEGER );' )
-            c.execute( 'CREATE INDEX urls_hash_id ON urls ( hash_id );' )
+            self._c.execute( 'CREATE TABLE urls ( url TEXT PRIMARY KEY, hash_id INTEGER );' )
+            self._c.execute( 'CREATE INDEX urls_hash_id ON urls ( hash_id );' )
             
-            c.execute( 'CREATE TABLE version ( version INTEGER );' )
+            self._c.execute( 'CREATE TABLE version ( version INTEGER );' )
             
-            c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
+            self._c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
             
-            c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+            self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
             
             # inserts
             
@@ -4828,16 +4974,16 @@ class DB( ServiceDB ):
                 
                 info = {}
                 
-                self._AddService( c, service_key, service_type, name, info )
+                self._AddService( service_key, service_type, name, info )
                 
             
-            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
+            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
             
-            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in CC.DEFAULT_IMAGEBOARDS ) )
+            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in CC.DEFAULT_IMAGEBOARDS ) )
             
-            c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
+            self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
             
-            c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
+            self._c.execute( 'INSERT INTO contacts ( contact_id, contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ?, ? );', ( 1, None, None, 'Anonymous', 'internet', 0 ) )
             
             with open( HC.STATIC_DIR + os.sep + 'contact - hydrus admin.yaml', 'rb' ) as f: hydrus_admin = yaml.safe_load( f.read() )
             
@@ -4845,29 +4991,43 @@ class DB( ServiceDB ):
             
             contact_key = hydrus_admin.GetContactKey()
             
-            c.execute( 'INSERT OR IGNORE INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( sqlite3.Binary( contact_key ), public_key, name, host, port ) )
+            self._c.execute( 'INSERT OR IGNORE INTO contacts ( contact_key, public_key, name, host, port ) VALUES ( ?, ?, ?, ?, ? );', ( sqlite3.Binary( contact_key ), public_key, name, host, port ) )
             
-            c.execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
+            self._c.execute( 'INSERT INTO version ( version ) VALUES ( ? );', ( HC.SOFTWARE_VERSION, ) )
             
-            c.execute( 'COMMIT' )
+            self._c.execute( 'COMMIT' )
             
         
     
-    def _SaveOptions( self, c ):
+    def _InitDBCursor( self ):
         
-        ( old_options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+        self._db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
+        
+        self._db.create_function( 'hydrus_hamming', 2, HydrusImageHandling.GetHammingDistance )
+        
+        self._c = self._db.cursor()
+        
+        self._c.execute( 'PRAGMA cache_size = 10000;' )
+        self._c.execute( 'PRAGMA foreign_keys = ON;' )
+        
+    
+    def _SaveOptions( self ):
+        
+        ( old_options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
         
         ( old_width, old_height ) = old_options[ 'thumbnail_dimensions' ]
         
         ( new_width, new_height ) = HC.options[ 'thumbnail_dimensions' ]
         
-        c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+        self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
         
         resize_thumbs = new_width != old_width or new_height != old_height
         
         if resize_thumbs:
             
-            message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'deleting old thumbnails: initialising' } )
+            prefix = 'deleting old resized thumbnails: '
+            
+            message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : prefix + 'initialising' } )
             
             HC.pubsub.pub( 'message', message )
             
@@ -4877,27 +5037,27 @@ class DB( ServiceDB ):
                 
                 os.remove( path )
                 
-                if i % 100 == 0: message.SetInfo( 'text', 'deleting old thumbnails: done ' + HC.ConvertIntToPrettyString( i ) )
+                if i % 100 == 0: message.SetInfo( 'text', prefix + 'done ' + HC.ConvertIntToPrettyString( i ) )
                 
             
             self.pub_after_commit( 'thumbnail_resize' )
             
-            message.SetInfo( 'text', 'deleting old thumbnails: done' )
+            message.SetInfo( 'text', prefix + 'done!' )
             
         
         self.pub_after_commit( 'notify_new_options' )
         
     
-    def _SetPassword( self, c, password ):
+    def _SetPassword( self, password ):
         
         if password is not None: password = hashlib.sha256( password ).digest()
         
         HC.options[ 'password' ] = password
         
-        self._SaveOptions( c )
+        self._SaveOptions()
         
     
-    def _UpdateImageboards( self, c, site_edit_log ):
+    def _UpdateImageboards( self, site_edit_log ):
         
         for ( site_action, site_data ) in site_edit_log:
             
@@ -4905,22 +5065,22 @@ class DB( ServiceDB ):
                 
                 site_name = site_data
                 
-                self._GetSiteId( c, site_name )
+                self._GetSiteId( site_name )
                 
             elif site_action == HC.DELETE:
                 
                 site_name = site_data
                 
-                site_id = self._GetSiteId( c, site_name )
+                site_id = self._GetSiteId( site_name )
                 
-                c.execute( 'DELETE FROM imageboard_sites WHERE site_id = ?;', ( site_id, ) )
-                c.execute( 'DELETE FROM imageboards WHERE site_id = ?;', ( site_id, ) )
+                self._c.execute( 'DELETE FROM imageboard_sites WHERE site_id = ?;', ( site_id, ) )
+                self._c.execute( 'DELETE FROM imageboards WHERE site_id = ?;', ( site_id, ) )
                 
             elif site_action == HC.EDIT:
                 
                 ( site_name, edit_log ) = site_data
                 
-                site_id = self._GetSiteId( c, site_name )
+                site_id = self._GetSiteId( site_name )
                 
                 for ( action, data ) in edit_log:
                     
@@ -4930,13 +5090,13 @@ class DB( ServiceDB ):
                         
                         imageboard = CC.Imageboard( name, '', 60, [], {} )
                         
-                        c.execute( 'INSERT INTO imageboards ( site_id, name, imageboard ) VALUES ( ?, ?, ? );', ( site_id, name, imageboard ) )
+                        self._c.execute( 'INSERT INTO imageboards ( site_id, name, imageboard ) VALUES ( ?, ?, ? );', ( site_id, name, imageboard ) )
                         
                     elif action == HC.DELETE:
                         
                         name = data
                         
-                        c.execute( 'DELETE FROM imageboards WHERE site_id = ? AND name = ?;', ( site_id, name ) )
+                        self._c.execute( 'DELETE FROM imageboards WHERE site_id = ? AND name = ?;', ( site_id, name ) )
                         
                     elif action == HC.EDIT:
                         
@@ -4944,23 +5104,18 @@ class DB( ServiceDB ):
                         
                         name = imageboard.GetName()
                         
-                        c.execute( 'UPDATE imageboards SET imageboard = ? WHERE site_id = ? AND name = ?;', ( imageboard, site_id, name ) )
+                        self._c.execute( 'UPDATE imageboards SET imageboard = ? WHERE site_id = ? AND name = ?;', ( imageboard, site_id, name ) )
                         
                     
                 
             
         
     
-    def _UpdateDB( self, c, version ):
-        
-        if version == 87:
-            
-            c.execute( 'CREATE TABLE namespace_blacklists ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, namespaces TEXT_YAML );' )
-            
+    def _UpdateDB( self, version ):
         
         if version == 90:
             
-            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
             
             shortcuts = HC.options[ 'shortcuts' ]
             
@@ -4969,21 +5124,21 @@ class DB( ServiceDB ):
             
             HC.options[ 'shortcuts' ] = shortcuts
             
-            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version == 91:
             
-            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
             
             HC.options[ 'num_autocomplete_chars' ] = 2
             
-            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version == 93:
             
-            c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
+            self._c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
             
         
         if version == 94:
@@ -4992,33 +5147,33 @@ class DB( ServiceDB ):
             
             unknown_account = HC.GetUnknownAccount()
             
-            c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
+            self._c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
             
-            for ( name, info ) in c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall():
+            for ( name, info ) in self._c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall():
                 
                 for ( page_name, c_text, args, kwargs ) in info:
                     
                     if 'do_query' in kwargs: del kwargs[ 'do_query' ]
                     
                 
-                c.execute( 'UPDATE gui_sessions SET info = ? WHERE name = ?;', ( info, name ) )
+                self._c.execute( 'UPDATE gui_sessions SET info = ? WHERE name = ?;', ( info, name ) )
                 
             
         
         if version == 95:
             
-            c.execute( 'COMMIT' )
+            self._c.execute( 'COMMIT' )
             
-            c.execute( 'PRAGMA foreign_keys = OFF;' )
+            self._c.execute( 'PRAGMA foreign_keys = OFF;' )
             
-            c.execute( 'BEGIN IMMEDIATE' )
+            self._c.execute( 'BEGIN IMMEDIATE' )
             
-            service_basic_info = c.execute( 'SELECT service_id, service_key, type, name FROM services;' ).fetchall()
-            service_address_info = c.execute( 'SELECT service_id, host, port, last_error FROM addresses;' ).fetchall()
-            service_account_info = c.execute( 'SELECT service_id, access_key, account FROM accounts;' ).fetchall()
-            service_repository_info = c.execute( 'SELECT service_id, first_begin, next_begin FROM repositories;' ).fetchall()
-            service_ratings_like_info = c.execute( 'SELECT service_id, like, dislike FROM ratings_like;' ).fetchall()
-            service_ratings_numerical_info = c.execute( 'SELECT service_id, lower, upper FROM ratings_numerical;' ).fetchall()
+            service_basic_info = self._c.execute( 'SELECT service_id, service_key, type, name FROM services;' ).fetchall()
+            service_address_info = self._c.execute( 'SELECT service_id, host, port, last_error FROM addresses;' ).fetchall()
+            service_account_info = self._c.execute( 'SELECT service_id, access_key, account FROM accounts;' ).fetchall()
+            service_repository_info = self._c.execute( 'SELECT service_id, first_begin, next_begin FROM repositories;' ).fetchall()
+            service_ratings_like_info = self._c.execute( 'SELECT service_id, like, dislike FROM ratings_like;' ).fetchall()
+            service_ratings_numerical_info = self._c.execute( 'SELECT service_id, lower, upper FROM ratings_numerical;' ).fetchall()
             
             service_address_info = { service_id : ( host, port, last_error ) for ( service_id, host, port, last_error ) in service_address_info }
             service_account_info = { service_id : ( access_key, account ) for ( service_id, access_key, account ) in service_account_info }
@@ -5026,15 +5181,15 @@ class DB( ServiceDB ):
             service_ratings_like_info = { service_id : ( like, dislike ) for ( service_id, like, dislike ) in service_ratings_like_info }
             service_ratings_numerical_info = { service_id : ( lower, upper ) for ( service_id, lower, upper ) in service_ratings_numerical_info }
             
-            c.execute( 'DROP TABLE services;' )
-            c.execute( 'DROP TABLE addresses;' )
-            c.execute( 'DROP TABLE accounts;' )
-            c.execute( 'DROP TABLE repositories;' )
-            c.execute( 'DROP TABLE ratings_like;' )
-            c.execute( 'DROP TABLE ratings_numerical;' )
+            self._c.execute( 'DROP TABLE services;' )
+            self._c.execute( 'DROP TABLE addresses;' )
+            self._c.execute( 'DROP TABLE accounts;' )
+            self._c.execute( 'DROP TABLE repositories;' )
+            self._c.execute( 'DROP TABLE ratings_like;' )
+            self._c.execute( 'DROP TABLE ratings_numerical;' )
             
-            c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
-            c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
+            self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
+            self._c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
             
             services = []
             
@@ -5083,60 +5238,60 @@ class DB( ServiceDB ):
                     info[ 'upper' ] = upper
                     
                 
-                c.execute( 'INSERT INTO services ( service_id, service_key, service_type, name, info ) VALUES ( ?, ?, ?, ?, ? );',  ( service_id, sqlite3.Binary( service_key ), service_type, name, info ) )
+                self._c.execute( 'INSERT INTO services ( service_id, service_key, service_type, name, info ) VALUES ( ?, ?, ?, ?, ? );',  ( service_id, sqlite3.Binary( service_key ), service_type, name, info ) )
                 
             
-            c.execute( 'COMMIT' )
+            self._c.execute( 'COMMIT' )
             
-            c.execute( 'PRAGMA foreign_keys = ON;' )
+            self._c.execute( 'PRAGMA foreign_keys = ON;' )
             
-            c.execute( 'BEGIN IMMEDIATE' )
+            self._c.execute( 'BEGIN IMMEDIATE' )
             
         
         if version == 95:
             
-            for ( service_id, info ) in c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
+            for ( service_id, info ) in self._c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
                 
                 if 'account' in info:
                     
                     info[ 'account' ].MakeStale()
                     
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                     
                 
             
         
         if version == 101:
             
-            c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
+            self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
             
             inserts = []
             
             # singles
             
-            data = c.execute( 'SELECT token, pin, timeout FROM fourchan_pass;' ).fetchone()
+            data = self._c.execute( 'SELECT token, pin, timeout FROM fourchan_pass;' ).fetchone()
             
             if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, '4chan_pass', data ) )
             
-            data = c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
+            data = self._c.execute( 'SELECT pixiv_id, password FROM pixiv_account;' ).fetchone()
             
             if data is not None: inserts.append( ( YAML_DUMP_ID_SINGLE, 'pixiv_account', data ) )
             
             # boorus
             
-            data = c.execute( 'SELECT name, booru FROM boorus;' ).fetchall()
+            data = self._c.execute( 'SELECT name, booru FROM boorus;' ).fetchall()
             
             inserts.extend( ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in data ) )
             
             # favourite custom filter actions
             
-            data = c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' )
+            data = self._c.execute( 'SELECT name, actions FROM favourite_custom_filter_actions;' )
             
             inserts.extend( ( ( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, name, actions ) for ( name, actions ) in data ) )
             
             # gui sessions
             
-            data = c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
+            data = self._c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall()
             
             inserts.extend( ( ( YAML_DUMP_ID_GUI_SESSION, name, info ) for ( name, info ) in data ) )
             
@@ -5144,24 +5299,24 @@ class DB( ServiceDB ):
             
             all_imageboards = []
             
-            all_sites = c.execute( 'SELECT site_id, name FROM imageboard_sites;' ).fetchall()
+            all_sites = self._c.execute( 'SELECT site_id, name FROM imageboard_sites;' ).fetchall()
             
             for ( site_id, name ) in all_sites:
                 
-                imageboards = [ imageboard for ( imageboard, ) in c.execute( 'SELECT imageboard FROM imageboards WHERE site_id = ? ORDER BY name;', ( site_id, ) ) ]
+                imageboards = [ imageboard for ( imageboard, ) in self._c.execute( 'SELECT imageboard FROM imageboards WHERE site_id = ? ORDER BY name;', ( site_id, ) ) ]
                 
                 inserts.append( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) )
                 
             
             # import folders
             
-            data = c.execute( 'SELECT path, details FROM import_folders;' )
+            data = self._c.execute( 'SELECT path, details FROM import_folders;' )
             
             inserts.extend( ( ( YAML_DUMP_ID_IMPORT_FOLDER, path, details ) for ( path, details ) in data ) )
             
             # subs
             
-            subs = c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' )            
+            subs = self._c.execute( 'SELECT site_download_type, name, info FROM subscriptions;' )            
             
             names = set()
             
@@ -5191,25 +5346,25 @@ class DB( ServiceDB ):
             
             #
             
-            c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', inserts )
+            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', inserts )
             
             #
             
-            c.execute( 'DROP TABLE fourchan_pass;' )
-            c.execute( 'DROP TABLE pixiv_account;' )
-            c.execute( 'DROP TABLE boorus;' )
-            c.execute( 'DROP TABLE favourite_custom_filter_actions;' )
-            c.execute( 'DROP TABLE gui_sessions;' )
-            c.execute( 'DROP TABLE imageboard_sites;' )
-            c.execute( 'DROP TABLE imageboards;' )
-            c.execute( 'DROP TABLE subscriptions;' )
+            self._c.execute( 'DROP TABLE fourchan_pass;' )
+            self._c.execute( 'DROP TABLE pixiv_account;' )
+            self._c.execute( 'DROP TABLE boorus;' )
+            self._c.execute( 'DROP TABLE favourite_custom_filter_actions;' )
+            self._c.execute( 'DROP TABLE gui_sessions;' )
+            self._c.execute( 'DROP TABLE imageboard_sites;' )
+            self._c.execute( 'DROP TABLE imageboards;' )
+            self._c.execute( 'DROP TABLE subscriptions;' )
             
         
         if version == 105:
             
             if not os.path.exists( HC.CLIENT_UPDATES_DIR ): os.mkdir( HC.CLIENT_UPDATES_DIR )
             
-            result = c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.REPOSITORIES ) + ';' ).fetchall()
+            result = self._c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.REPOSITORIES ) + ';' ).fetchall()
             
             for ( service_id, info ) in result:
                 
@@ -5225,15 +5380,15 @@ class DB( ServiceDB ):
                 del info[ 'first_begin' ]
                 del info[ 'next_begin' ]
                 
-                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                 
             
         
         if version == 106:
             
-            c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
+            self._c.execute( 'CREATE TABLE tag_censorship ( service_id INTEGER PRIMARY KEY REFERENCES services ON DELETE CASCADE, blacklist INTEGER_BOOLEAN, tags TEXT_YAML );' )
             
-            result = c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall()
+            result = self._c.execute( 'SELECT service_id, blacklist, namespaces FROM namespace_blacklists;' ).fetchall()
             
             for ( service_id, blacklist, namespaces ) in result:
                 
@@ -5245,28 +5400,28 @@ class DB( ServiceDB ):
                     tags.append( '' )
                     
                 
-                c.execute( 'INSERT INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
+                self._c.execute( 'INSERT INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
                 
             
-            c.execute( 'DROP TABLE namespace_blacklists;' )
+            self._c.execute( 'DROP TABLE namespace_blacklists;' )
             
         
         if version == 108:
             
-            c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
-            c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
-            c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
-            c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
+            self._c.execute( 'CREATE TABLE processed_mappings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, namespace_id INTEGER, tag_id INTEGER, hash_id INTEGER, status INTEGER, PRIMARY KEY( service_id, namespace_id, tag_id, hash_id, status ) );' )
+            self._c.execute( 'CREATE INDEX processed_mappings_hash_id_index ON processed_mappings ( hash_id );' )
+            self._c.execute( 'CREATE INDEX processed_mappings_service_id_tag_id_index ON processed_mappings ( service_id, tag_id );' )
+            self._c.execute( 'CREATE INDEX processed_mappings_service_id_hash_id_index ON processed_mappings ( service_id, hash_id );' )
+            self._c.execute( 'CREATE INDEX processed_mappings_service_id_status_index ON processed_mappings ( service_id, status );' )
+            self._c.execute( 'CREATE INDEX processed_mappings_status_index ON processed_mappings ( status );' )
             
-            service_ids = [ service_id for ( service_id, ) in c.execute( 'SELECT service_id FROM services;' ) ]
+            service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services;' ) ]
             
             for ( i, service_id ) in enumerate( service_ids ):
                 
                 HC.pubsub.pub( 'set_splash_text', 'copying mappings ' + str( i ) + '/' + str( len( service_ids ) ) )
                 
-                c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
+                self._c.execute( 'INSERT INTO processed_mappings SELECT * FROM mappings WHERE service_id = ?;', ( service_id, ) )
                 
             
             current_updates = dircache.listdir( HC.CLIENT_UPDATES_DIR )
@@ -5305,16 +5460,16 @@ class DB( ServiceDB ):
         
         if version == 109:
             
-            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
             
-            c.execute( 'DROP TABLE processed_mappings;' )
+            self._c.execute( 'DROP TABLE processed_mappings;' )
             
-            c.execute( 'DROP INDEX mappings_status_index;' )
+            self._c.execute( 'DROP INDEX mappings_status_index;' )
             
         
         if version == 110:
             
-            all_services = c.execute( 'SELECT service_id, service_type, info FROM services;' ).fetchall()
+            all_services = self._c.execute( 'SELECT service_id, service_type, info FROM services;' ).fetchall()
             
             for ( service_id, service_type, info ) in all_services:
                 
@@ -5322,7 +5477,7 @@ class DB( ServiceDB ):
                     
                     info[ 'paused' ] = False
                     
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                     
                 
             
@@ -5334,9 +5489,9 @@ class DB( ServiceDB ):
             name  = HC.LOCAL_BOORU_SERVICE_KEY
             info = {}
             
-            self._AddService( c, service_key, service_type, name, info )
+            self._AddService( service_key, service_type, name, info )
             
-            c.execute( 'CREATE TABLE booru_shares ( service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, share_key BLOB_BYTES, share TEXT_YAML, expiry INTEGER, used_monthly_data INTEGER, max_monthly_data INTEGER, ip_restriction TEXT, notes TEXT, PRIMARY KEY( service_id, share_key ) );' )
+            self._c.execute( 'CREATE TABLE booru_shares ( service_id INTEGER REFERENCES services ( service_id ) ON DELETE CASCADE, share_key BLOB_BYTES, share TEXT_YAML, expiry INTEGER, used_monthly_data INTEGER, max_monthly_data INTEGER, ip_restriction TEXT, notes TEXT, PRIMARY KEY( service_id, share_key ) );' )
             
         
         if version == 115:
@@ -5364,7 +5519,7 @@ class DB( ServiceDB ):
         
         if version == 116:
             
-            c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
+            self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_THUMBNAILS, ) )
             
         
         if version == 117:
@@ -5383,9 +5538,9 @@ class DB( ServiceDB ):
                         
                         phash = HydrusImageHandling.GeneratePerceptualHash( path )
                         
-                        hash_id = self._GetHashId( c, hash )
+                        hash_id = self._GetHashId( hash )
                         
-                        c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                        self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
                         
                         i += 1
                         
@@ -5410,13 +5565,13 @@ class DB( ServiceDB ):
                     
                     hash = hash_encoded.decode( 'hex' )
                     
-                    hash_id = self._GetHashId( c, hash )
+                    hash_id = self._GetHashId( hash )
                     
                     if ext not in ( 'flv', 'mp4', 'wmv', 'mkv', 'webm' ): continue
                     
                     ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
                     
-                    c.execute( 'UPDATE files_info SET duration = ?, num_frames = ? WHERE hash_id = ?;', ( duration, num_frames, hash_id ) )
+                    self._c.execute( 'UPDATE files_info SET duration = ?, num_frames = ? WHERE hash_id = ?;', ( duration, num_frames, hash_id ) )
                     
                     thumbnail = HydrusFileHandling.GenerateThumbnail( path )
                     
@@ -5426,7 +5581,7 @@ class DB( ServiceDB ):
                     
                     phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
                     
-                    c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+                    self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
                     
                     i += 1
                     
@@ -5440,11 +5595,11 @@ class DB( ServiceDB ):
         
         if version == 121:
             
-            c.execute( 'DROP TABLE booru_shares;' )
+            self._c.execute( 'DROP TABLE booru_shares;' )
             
-            service_id = self._GetServiceId( c, HC.LOCAL_BOORU_SERVICE_KEY )
+            service_id = self._GetServiceId( HC.LOCAL_BOORU_SERVICE_KEY )
             
-            ( info, ) = c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            ( info, ) = self._c.execute( 'SELECT info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
             current_time_struct = time.gmtime()
             
@@ -5453,20 +5608,20 @@ class DB( ServiceDB ):
             info[ 'used_monthly_requests' ] = 0
             info[ 'current_data_month' ] = ( current_year, current_month )
             
-            c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+            self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
             
         
         if version == 125:
             
-            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
             
             HC.options[ 'default_tag_repository' ] = HC.options[ 'default_tag_repository' ].GetServiceKey()
             
-            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
             #
             
-            results = c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
+            results = self._c.execute( 'SELECT * FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_SUBSCRIPTION, ) ).fetchall()
             
             for ( dump_type, dump_name, dump ) in results:
                 
@@ -5481,33 +5636,33 @@ class DB( ServiceDB ):
                 
                 dump[ 'advanced_tag_options' ] = new_advanced_tag_options
                 
-                c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
+                self._c.execute( 'UPDATE yaml_dumps SET dump = ? WHERE dump_type = ? and dump_name = ?;', ( dump, dump_type, dump_name ) )
                 
             
         
         if version == 126:
             
-            c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( YAML_DUMP_ID_GUI_SESSION, ) )
             
         
         if version == 130:
             
-            c.execute( 'DROP TABLE tag_service_precedence;' )
+            self._c.execute( 'DROP TABLE tag_service_precedence;' )
             
             #
             
-            self._combined_tag_service_id = self._GetServiceId( c, HC.COMBINED_TAG_SERVICE_KEY ) # needed for recalccombinedmappings
+            self._combined_tag_service_id = self._GetServiceId( HC.COMBINED_TAG_SERVICE_KEY ) # needed for recalccombinedmappings
             
-            service_ids = self._GetServiceIds( c, ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
+            service_ids = self._GetServiceIds( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
             
-            for service_id in service_ids: c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
+            for service_id in service_ids: self._c.execute( 'DELETE FROM service_info WHERE service_id = ?;', ( service_id, ) )
             
-            self._RecalcCombinedMappings( c )
+            self._RecalcCombinedMappings()
             
         
         if version == 131:
             
-            service_info = c.execute( 'SELECT service_id, info FROM services;' ).fetchall()
+            service_info = self._c.execute( 'SELECT service_id, info FROM services;' ).fetchall()
             
             for ( service_id, info ) in service_info:
                 
@@ -5515,18 +5670,18 @@ class DB( ServiceDB ):
                     
                     info[ 'account' ] = HC.GetUnknownAccount()
                     
-                    c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                     
                 
             
         
         if version == 132:
             
-            c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_FILES, ) )
+            self._c.execute( 'DELETE FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_FILES, ) )
             
             #
             
-            ( HC.options, ) = c.execute( 'SELECT options FROM options;' ).fetchone()
+            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
             
             client_size = HC.options[ 'client_size' ]
             
@@ -5536,7 +5691,7 @@ class DB( ServiceDB ):
             
             del HC.options[ 'fullscreen_borderless' ]
             
-            c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         if version == 135:
@@ -5545,18 +5700,18 @@ class DB( ServiceDB ):
             
             #
             
-            extra_hashes_data = c.execute( 'SELECT * FROM local_hashes;' ).fetchall()
+            extra_hashes_data = self._c.execute( 'SELECT * FROM local_hashes;' ).fetchall()
             
-            c.execute( 'DROP TABLE local_hashes;' )
+            self._c.execute( 'DROP TABLE local_hashes;' )
             
-            c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-            c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
-            c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
-            c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
+            self._c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
+            self._c.execute( 'CREATE INDEX local_hashes_md5_index ON local_hashes ( md5 );' )
+            self._c.execute( 'CREATE INDEX local_hashes_sha1_index ON local_hashes ( sha1 );' )
+            self._c.execute( 'CREATE INDEX local_hashes_sha512_index ON local_hashes ( sha512 );' )
             
             for ( i, ( hash_id, md5, sha1 ) ) in enumerate( extra_hashes_data ):
                 
-                hash = self._GetHash( c, hash_id )
+                hash = self._GetHash( hash_id )
                 
                 try: path = CC.GetFilePath( hash )
                 except: continue
@@ -5570,24 +5725,40 @@ class DB( ServiceDB ):
                     sha512 = h_sha512.digest()
                     
                 
-                c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+                self._c.execute( 'INSERT INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
                 
                 if i % 100 == 0: HC.pubsub.pub( 'set_splash_text', 'generating sha512 hashes: ' + HC.ConvertIntToPrettyString( i ) )
                 
             
             #
             
-            tag_service_info = c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.TAG_SERVICES ) + ';' ).fetchall()
+            tag_service_info = self._c.execute( 'SELECT service_id, info FROM services WHERE service_type IN ' + HC.SplayListForDB( HC.TAG_SERVICES ) + ';' ).fetchall()
             
             for ( service_id, info ) in tag_service_info:
                 
                 info[ 'tag_archive_sync' ] = {}
                 
-                c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
+                self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
                 
             
         
-        c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
+        if version == 136:
+            
+            result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( '', ) ).fetchone()
+            
+            if result is not None:
+                
+                ( tag_id, ) = result
+                
+                self._c.execute( 'DELETE FROM mappings WHERE tag_id = ?;', ( tag_id, ) )
+                self._c.execute( 'DELETE FROM mapping_petitions WHERE tag_id = ?;', ( tag_id, ) )
+                self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_id = ?;', ( tag_id, ) )
+                self._c.execute( 'DELETE FROM existing_tags WHERE tag_id = ?;', ( tag_id, ) )
+                self._DeleteServiceInfo()
+                
+            
+        
+        self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True
         
@@ -5596,13 +5767,11 @@ class DB( ServiceDB ):
         
         HC.pubsub.pub( 'set_splash_text', 'vacuuming db' )
         
-        ( db, c ) = self._GetDBCursor()
+        self._c.execute( 'VACUUM' )
         
-        c.execute( 'VACUUM' )
+        self._c.execute( 'ANALYZE' )
         
-        c.execute( 'ANALYZE' )
-        
-        c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, HC.GetNow() ) )
+        self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, HC.GetNow() ) )
         
         HC.ShowText( 'Database maintenance: vacuumed successfully.' )
         
@@ -5625,59 +5794,59 @@ class DB( ServiceDB ):
     
     def MainLoop( self ):
         
-        def ProcessJob( c, job ):
+        def ProcessJob( job ):
             
             def ProcessRead( action, args, kwargs ):
                 
-                if action == '4chan_pass': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, '4chan_pass' )
-                elif action == 'tag_archive_info': result = self._GetTagArchiveInfo( c, *args, **kwargs )
-                elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( c, *args, **kwargs )
-                elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( c, *args, **kwargs )
-                elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( c, *args, **kwargs )
-                elif action == 'contact_names': result = self._GetContactNames( c, *args, **kwargs )
-                elif action == 'do_message_query': result = self._DoMessageQuery( c, *args, **kwargs )
-                elif action == 'downloads': result = self._GetDownloads( c, *args, **kwargs )
-                elif action == 'export_folders': result = self._GetYAMLDump( c, YAML_DUMP_ID_EXPORT_FOLDER )
-                elif action == 'favourite_custom_filter_actions': result = self._GetYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS )
-                elif action == 'file_query_ids': result = self._GetFileQueryIds( c, *args, **kwargs )
-                elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( c, *args, **kwargs )
-                elif action == 'gui_sessions': result = self._GetYAMLDump( c, YAML_DUMP_ID_GUI_SESSION )
-                elif action == 'hydrus_sessions': result = self._GetHydrusSessions( c, *args, **kwargs )
-                elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( c, *args, **kwargs )
-                elif action == 'identities': result = self._GetIdentities( c, *args, **kwargs )
-                elif action == 'imageboards': result = self._GetYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
-                elif action == 'import_folders': result = self._GetYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
-                elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( c, YAML_DUMP_ID_LOCAL_BOORU )
-                elif action == 'local_booru_share': result = self._GetYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-                elif action == 'local_booru_shares': result = self._GetYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU )
-                elif action == 'md5_status': result = self._GetMD5Status( c, *args, **kwargs )
-                elif action == 'media_results': result = self._GetMediaResultsFromHashes( c, *args, **kwargs )
-                elif action == 'media_results_from_ids': result = self._GetMediaResults( c, *args, **kwargs )
-                elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( c, *args, **kwargs )
-                elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( c, *args, **kwargs )
-                elif action == 'messages_to_send': result = self._GetMessagesToSend( c, *args, **kwargs )
-                elif action == 'news': result = self._GetNews( c, *args, **kwargs )
-                elif action == 'nums_pending': result = self._GetNumsPending( c, *args, **kwargs )
-                elif action == 'pending': result = self._GetPending( c, *args, **kwargs )
-                elif action == 'pixiv_account': result = self._GetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account' )
-                elif action == 'ratings_filter': result = self._GetRatingsFilter( c, *args, **kwargs )
-                elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( c, *args, **kwargs )
-                elif action == 'remote_booru': result = self._GetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
-                elif action == 'remote_boorus': result = self._GetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU )
-                elif action == 'service_info': result = self._GetServiceInfo( c, *args, **kwargs )
-                elif action == 'services': result = self._GetServices( c, *args, **kwargs )
-                elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( c, *args, **kwargs )
-                elif action == 'status_num_inbox': result = self._DoStatusNumInbox( c, *args, **kwargs )
-                elif action == 'subscription_names': result = self._GetYAMLDumpNames( c, YAML_DUMP_ID_SUBSCRIPTION )
-                elif action == 'subscription': result = self._GetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
-                elif action == 'tag_censorship': result = self._GetTagCensorship( c, *args, **kwargs )
-                elif action == 'tag_parents': result = self._GetTagParents( c, *args, **kwargs )
-                elif action == 'tag_siblings': result = self._GetTagSiblings( c, *args, **kwargs )
-                elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( c, *args, **kwargs )
-                elif action == 'transport_message': result = self._GetTransportMessage( c, *args, **kwargs )
-                elif action == 'transport_messages_from_draft': result = self._GetTransportMessagesFromDraft( c, *args, **kwargs )
-                elif action == 'url_status': result = self._GetURLStatus( c, *args, **kwargs )
-                elif action == 'web_sessions': result = self._GetWebSessions( c, *args, **kwargs )
+                if action == '4chan_pass': result = self._GetYAMLDump( YAML_DUMP_ID_SINGLE, '4chan_pass' )
+                elif action == 'tag_archive_info': result = self._GetTagArchiveInfo( *args, **kwargs )
+                elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( *args, **kwargs )
+                elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( *args, **kwargs )
+                elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( *args, **kwargs )
+                elif action == 'contact_names': result = self._GetContactNames( *args, **kwargs )
+                elif action == 'do_message_query': result = self._DoMessageQuery( *args, **kwargs )
+                elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
+                elif action == 'export_folders': result = self._GetYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER )
+                elif action == 'favourite_custom_filter_actions': result = self._GetYAMLDump( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS )
+                elif action == 'file_query_ids': result = self._GetFileQueryIds( *args, **kwargs )
+                elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
+                elif action == 'gui_sessions': result = self._GetYAMLDump( YAML_DUMP_ID_GUI_SESSION )
+                elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
+                elif action == 'identities_and_contacts': result = self._GetIdentitiesAndContacts( *args, **kwargs )
+                elif action == 'identities': result = self._GetIdentities( *args, **kwargs )
+                elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+                elif action == 'import_folders': result = self._GetYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+                elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
+                elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+                elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
+                elif action == 'md5_status': result = self._GetMD5Status( *args, **kwargs )
+                elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
+                elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
+                elif action == 'message_keys_to_download': result = self._GetMessageKeysToDownload( *args, **kwargs )
+                elif action == 'message_system_predicates': result = self._GetMessageSystemPredicates( *args, **kwargs )
+                elif action == 'messages_to_send': result = self._GetMessagesToSend( *args, **kwargs )
+                elif action == 'news': result = self._GetNews( *args, **kwargs )
+                elif action == 'nums_pending': result = self._GetNumsPending( *args, **kwargs )
+                elif action == 'pending': result = self._GetPending( *args, **kwargs )
+                elif action == 'pixiv_account': result = self._GetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account' )
+                elif action == 'ratings_filter': result = self._GetRatingsFilter( *args, **kwargs )
+                elif action == 'ratings_media_result': result = self._GetRatingsMediaResult( *args, **kwargs )
+                elif action == 'remote_booru': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
+                elif action == 'remote_boorus': result = self._GetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU )
+                elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
+                elif action == 'services': result = self._GetServices( *args, **kwargs )
+                elif action == 'shutdown_timestamps': result = self._GetShutdownTimestamps( *args, **kwargs )
+                elif action == 'status_num_inbox': result = self._DoStatusNumInbox( *args, **kwargs )
+                elif action == 'subscription_names': result = self._GetYAMLDumpNames( YAML_DUMP_ID_SUBSCRIPTION )
+                elif action == 'subscription': result = self._GetYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+                elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
+                elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
+                elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
+                elif action == 'thumbnail_hashes_i_should_have': result = self._GetThumbnailHashesIShouldHave( *args, **kwargs )
+                elif action == 'transport_message': result = self._GetTransportMessage( *args, **kwargs )
+                elif action == 'transport_messages_from_draft': result = self._GetTransportMessagesFromDraft( *args, **kwargs )
+                elif action == 'url_status': result = self._GetURLStatus( *args, **kwargs )
+                elif action == 'web_sessions': result = self._GetWebSessions( *args, **kwargs )
                 else: raise Exception( 'db received an unknown read command: ' + action )
                 
                 return result
@@ -5685,57 +5854,61 @@ class DB( ServiceDB ):
             
             def ProcessWrite( action, args, kwargs ):
                 
-                if action == '4chan_pass': result = self._SetYAMLDump( c, YAML_DUMP_ID_SINGLE, '4chan_pass', *args, **kwargs )
-                elif action == 'add_downloads': result = self._AddDownloads( c, *args, **kwargs )
-                elif action == 'add_uploads': result = self._AddUploads( c, *args, **kwargs )
-                elif action == 'archive_conversation': result = self._ArchiveConversation( c, *args, **kwargs )
-                elif action == 'backup': result = self._Backup( c, *args, **kwargs )
-                elif action == 'contact_associated': result = self._AssociateContact( c, *args, **kwargs )
-                elif action == 'content_updates': result = self._ProcessContentUpdates( c, *args, **kwargs )
-                elif action == 'copy_files': result = self._CopyFiles( c, *args, **kwargs )
-                elif action == 'delete_conversation': result = self._DeleteConversation( c, *args, **kwargs )
-                elif action == 'delete_draft': result = self._DeleteDraft( c, *args, **kwargs )
-                elif action == 'delete_export_folder': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
-                elif action == 'delete_favourite_custom_filter_actions': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
-                elif action == 'delete_gui_session': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
-                elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( c, *args, **kwargs )
-                elif action == 'delete_imageboard': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
-                elif action == 'delete_import_folder': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
-                elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-                elif action == 'delete_orphans': result = self._DeleteOrphans( c, *args, **kwargs )
-                elif action == 'delete_pending': result = self._DeletePending( c, *args, **kwargs )
-                elif action == 'delete_remote_booru': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
-                elif action == 'delete_subscription': result = self._DeleteYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
-                elif action == 'draft_message': result = self._DraftMessage( c, *args, **kwargs )
-                elif action == 'export_folder': result = self._SetYAMLDump( c, YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
-                elif action == 'fatten_autocomplete_cache': result = self._FattenAutocompleteCache( c, *args, **kwargs )
-                elif action == 'favourite_custom_filter_actions': result = self._SetYAMLDump( c, YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
-                elif action == 'flush_message_statuses': result = self._FlushMessageStatuses( c, *args, **kwargs )
-                elif action == 'generate_tag_ids': result = self._GenerateTagIdsEfficiently( c, *args, **kwargs )
-                elif action == 'gui_session': result = self._SetYAMLDump( c, YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
-                elif action == 'hydrus_session': result = self._AddHydrusSession( c, *args, **kwargs )
-                elif action == 'imageboard': result = self._SetYAMLDump( c, YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
-                elif action == 'import_file': result = self._ImportFile( c, *args, **kwargs )
-                elif action == 'import_folder': result = self._SetYAMLDump( c, YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
-                elif action == 'inbox_conversation': result = self._InboxConversation( c, *args, **kwargs )
-                elif action == 'local_booru_share': result = self._SetYAMLDump( c, YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-                elif action == 'message': result = self._AddMessage( c, *args, **kwargs )
-                elif action == 'message_info_since': result = self._AddMessageInfoSince( c, *args, **kwargs )
-                elif action == 'message_statuses': result = self._UpdateMessageStatuses( c, *args, **kwargs )
-                elif action == 'pixiv_account': result = self._SetYAMLDump( c, YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
-                elif action == 'remote_booru': result = self._SetYAMLDump( c, YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
-                elif action == 'reset_service': result = self._ResetService( c, *args, **kwargs )
-                elif action == 'save_options': result = self._SaveOptions( c, *args, **kwargs )
-                elif action == 'service_updates': result = self._ProcessServiceUpdates( c, *args, **kwargs )
-                elif action == 'set_password': result = self._SetPassword( c, *args, **kwargs )
-                elif action == 'subscription': result = self._SetYAMLDump( c, YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
-                elif action == 'tag_censorship': result = self._SetTagCensorship( c, *args, **kwargs )
-                elif action == 'thumbnails': result = self._AddThumbnails( c, *args, **kwargs )
-                elif action == 'update_contacts': result = self._UpdateContacts( c, *args, **kwargs )
-                elif action == 'update_server_services': result = self._UpdateServerServices( c, *args, **kwargs )
-                elif action == 'update_services': result = self._UpdateServices( c, *args, **kwargs )
+                if action == '4chan_pass': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, '4chan_pass', *args, **kwargs )
+                elif action == 'add_downloads': result = self._AddDownloads( *args, **kwargs )
+                elif action == 'add_uploads': result = self._AddUploads( *args, **kwargs )
+                elif action == 'archive_conversation': result = self._ArchiveConversation( *args, **kwargs )
+                elif action == 'backup': result = self._Backup( *args, **kwargs )
+                elif action == 'contact_associated': result = self._AssociateContact( *args, **kwargs )
+                elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
+                elif action == 'copy_files': result = self._CopyFiles( *args, **kwargs )
+                elif action == 'delete_conversation': result = self._DeleteConversation( *args, **kwargs )
+                elif action == 'delete_draft': result = self._DeleteDraft( *args, **kwargs )
+                elif action == 'delete_export_folder': result = self._DeleteYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
+                elif action == 'delete_favourite_custom_filter_actions': result = self._DeleteYAMLDump( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
+                elif action == 'delete_gui_session': result = self._DeleteYAMLDump( YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
+                elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
+                elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+                elif action == 'delete_import_folder': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+                elif action == 'delete_local_booru_share': result = self._DeleteYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+                elif action == 'delete_orphans': result = self._DeleteOrphans( *args, **kwargs )
+                elif action == 'delete_pending': result = self._DeletePending( *args, **kwargs )
+                elif action == 'delete_remote_booru': result = self._DeleteYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
+                elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
+                elif action == 'delete_subscription': result = self._DeleteYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+                elif action == 'draft_message': result = self._DraftMessage( *args, **kwargs )
+                elif action == 'export_folder': result = self._SetYAMLDump( YAML_DUMP_ID_EXPORT_FOLDER, *args, **kwargs )
+                elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
+                elif action == 'fatten_autocomplete_cache': result = self._FattenAutocompleteCache( *args, **kwargs )
+                elif action == 'favourite_custom_filter_actions': result = self._SetYAMLDump( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
+                elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
+                elif action == 'flush_message_statuses': result = self._FlushMessageStatuses( *args, **kwargs )
+                elif action == 'generate_tag_ids': result = self._GenerateTagIdsEfficiently( *args, **kwargs )
+                elif action == 'gui_session': result = self._SetYAMLDump( YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
+                elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )
+                elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+                elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
+                elif action == 'import_folder': result = self._SetYAMLDump( YAML_DUMP_ID_IMPORT_FOLDER, *args, **kwargs )
+                elif action == 'inbox_conversation': result = self._InboxConversation( *args, **kwargs )
+                elif action == 'local_booru_share': result = self._SetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
+                elif action == 'message': result = self._AddMessage( *args, **kwargs )
+                elif action == 'message_info_since': result = self._AddMessageInfoSince( *args, **kwargs )
+                elif action == 'message_statuses': result = self._UpdateMessageStatuses( *args, **kwargs )
+                elif action == 'pixiv_account': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
+                elif action == 'regenerate_combined_mappings': result = self._RecalcCombinedMappings()
+                elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
+                elif action == 'reset_service': result = self._ResetService( *args, **kwargs )
+                elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
+                elif action == 'service_updates': result = self._ProcessServiceUpdates( *args, **kwargs )
+                elif action == 'set_password': result = self._SetPassword( *args, **kwargs )
+                elif action == 'subscription': result = self._SetYAMLDump( YAML_DUMP_ID_SUBSCRIPTION, *args, **kwargs )
+                elif action == 'tag_censorship': result = self._SetTagCensorship( *args, **kwargs )
+                elif action == 'thumbnails': result = self._AddThumbnails( *args, **kwargs )
+                elif action == 'update_contacts': result = self._UpdateContacts( *args, **kwargs )
+                elif action == 'update_server_services': result = self._UpdateServerServices( *args, **kwargs )
+                elif action == 'update_services': result = self._UpdateServices( *args, **kwargs )
                 elif action == 'vacuum': result = self._Vacuum()
-                elif action == 'web_session': result = self._AddWebSession( c, *args, **kwargs )
+                elif action == 'web_session': result = self._AddWebSession( *args, **kwargs )
                 else: raise Exception( 'db received an unknown write command: ' + action )
                 
                 return result
@@ -5753,13 +5926,13 @@ class DB( ServiceDB ):
             
             try:
                 
-                if job_type == 'read': c.execute( 'BEGIN DEFERRED' )
-                elif job_type != 'write_special': c.execute( 'BEGIN IMMEDIATE' )
+                if job_type == 'read': self._c.execute( 'BEGIN DEFERRED' )
+                elif job_type != 'write_special': self._c.execute( 'BEGIN IMMEDIATE' )
                 
                 if job_type in ( 'read', 'read_write' ): result = ProcessRead( action, args, kwargs )
                 elif job_type in ( 'write', 'write_special' ): result = ProcessWrite( action, args, kwargs )
                 
-                if job_type != 'write_special': c.execute( 'COMMIT' )
+                if job_type != 'write_special': self._c.execute( 'COMMIT' )
                 
                 for ( topic, args, kwargs ) in self._pubsubs: HC.pubsub.pub( topic, *args, **kwargs )
                 
@@ -5767,7 +5940,7 @@ class DB( ServiceDB ):
                 
             except Exception as e:
                 
-                if job_type != 'write_special': c.execute( 'ROLLBACK' )
+                if job_type != 'write_special': self._c.execute( 'ROLLBACK' )
                 
                 if type( e ) == MemoryError: HC.ShowText( 'The client is running out of memory! Restart it ASAP!' )
                 
@@ -5784,9 +5957,9 @@ class DB( ServiceDB ):
             HC.pubsub.pub( 'db_locked_status', '' )
             
         
-        self._InitArchives()
+        self._InitDBCursor() # have to reinitialise because the thread id has changed
         
-        ( db, c ) = self._GetDBCursor()
+        self._InitArchives()
         
         while not ( ( self._local_shutdown or HC.shutdown ) and self._jobs.empty() ):
             
@@ -5798,7 +5971,7 @@ class DB( ServiceDB ):
                 
                 self._pubsubs = []
                 
-                try: ProcessJob( c, job )
+                try: ProcessJob( job )
                 except:
                     
                     self._jobs.put( ( priority, job ) ) # couldn't lock db; put job back on queue
@@ -5811,8 +5984,7 @@ class DB( ServiceDB ):
             except: pass # no jobs this second; let's see if we should shutdown
             
         
-        c.close()
-        db.close()
+        self._CloseDBCursor()
         
         self._loop_finished = True
         

@@ -34,7 +34,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -1141,7 +1141,7 @@ class DraftPanel( wx.Panel ):
             
             self._to_panel.AddF( self._recipients_list, FLAGS_EXPAND_PERPENDICULAR )
             self._to_panel.AddF( self._new_recipient, FLAGS_LONE_BUTTON )
-            self._to_panel.AddF( recipients_hbox, FLAGS_BUTTON_SIZERS )
+            self._to_panel.AddF( recipients_hbox, FLAGS_BUTTON_SIZER )
             
             self._subject_panel.AddF( self._subject, FLAGS_EXPAND_BOTH_WAYS )
             
@@ -1158,7 +1158,7 @@ class DraftPanel( wx.Panel ):
         button_hbox.AddF( self._delete_draft, FLAGS_MIXED )
         button_hbox.AddF( self._save_draft, FLAGS_MIXED )
         
-        vbox.AddF( button_hbox, FLAGS_BUTTON_SIZERS )
+        vbox.AddF( button_hbox, FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         

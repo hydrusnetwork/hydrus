@@ -65,7 +65,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 136
+SOFTWARE_VERSION = 137
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -666,11 +666,26 @@ def CalculateScoreFromRating( count, rating ):
     
     return score
     
+def CheckTagNotEmpty( tag ):
+    
+    empty_tag = False
+    
+    if tag == '': empty_tag = True
+    
+    if ':' in tag:
+        
+        ( namespace, subtag ) = tag.split( ':', 1 )
+        
+        if subtag == '': empty_tag = True
+        
+    
+    if empty_tag: raise Exception( 'Received a zero-length tag!' )
+    
 def CleanTag( tag ):
     
     tag = tag[:1024]
     
-    if tag == '': return ''
+    empty_tag = False
     
     tag = tag.lower()
     
@@ -686,6 +701,25 @@ def CleanTag( tag ):
         
     
     return tag
+    
+def CleanTags( tags ):
+    
+    clean_tags = set()
+    
+    for tag in tags:
+        
+        try:
+            
+            tag = CleanTag( tag )
+            
+            CheckTagNotEmpty( tag )
+            
+            clean_tags.add( tag )
+            
+        except: continue
+        
+    
+    return clean_tags
     
 def ConvertAbsPathToPortablePath( abs_path ):
     

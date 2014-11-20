@@ -49,7 +49,7 @@ FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
 FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
 FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_BUTTON_SIZERS = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
+FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
@@ -104,7 +104,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._status, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._reauthenticate, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -246,7 +246,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             h_b_box.AddF( self._delete, FLAGS_MIXED )
             
             self._account_types_panel.AddF( self._ctrl_account_types, FLAGS_EXPAND_BOTH_WAYS )
-            self._account_types_panel.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
+            self._account_types_panel.AddF( h_b_box, FLAGS_BUTTON_SIZER )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             b_box.AddF( self._apply, FLAGS_MIXED )
@@ -254,7 +254,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._account_types_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -451,7 +451,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._boorus, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -960,7 +960,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._contacts, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -1219,7 +1219,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
                         
                         message = 'There already exists a contact or identity with the name ' + name + '. Do you want to overwrite, or make a new contact?'
                         
-                        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'overwrite', no_label = 'make new' ) as dlg:
+                        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Please choose what to do.', yes_label = 'overwrite', no_label = 'make new' ) as dlg:
                             
                             if True:
                                 
@@ -1483,8 +1483,8 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
             vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._export_folders, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -1689,7 +1689,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             vbox.AddF( self._query_box, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._period_box, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._phrase_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -1815,7 +1815,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._sites, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2261,7 +2261,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     h_b_box.AddF( self._delete, FLAGS_MIXED )
                     
                     self._form_fields_panel.AddF( self._form_fields, FLAGS_EXPAND_BOTH_WAYS )
-                    self._form_fields_panel.AddF( h_b_box, FLAGS_BUTTON_SIZERS )
+                    self._form_fields_panel.AddF( h_b_box, FLAGS_BUTTON_SIZER )
                     
                     #
                     
@@ -2532,8 +2532,8 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
             vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._import_folders, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZERS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( file_buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2746,7 +2746,7 @@ synchronise - try to import all new files in folder'''
             vbox.AddF( self._type_box, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._period_box, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._local_tag_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3417,9 +3417,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._advanced_tag_options_add, FLAGS_BUTTON_SIZERS )
-            hbox.AddF( self._advanced_tag_options_edit, FLAGS_BUTTON_SIZERS )
-            hbox.AddF( self._advanced_tag_options_delete, FLAGS_BUTTON_SIZERS )
+            hbox.AddF( self._advanced_tag_options_add, FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._advanced_tag_options_edit, FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._advanced_tag_options_delete, FLAGS_BUTTON_SIZER )
             
             vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3484,9 +3484,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._shortcuts_add, FLAGS_BUTTON_SIZERS )
-            hbox.AddF( self._shortcuts_edit, FLAGS_BUTTON_SIZERS )
-            hbox.AddF( self._shortcuts_delete, FLAGS_BUTTON_SIZERS )
+            hbox.AddF( self._shortcuts_add, FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._shortcuts_edit, FLAGS_BUTTON_SIZER )
+            hbox.AddF( self._shortcuts_delete, FLAGS_BUTTON_SIZER )
             
             vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
@@ -3515,7 +3515,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._listbook, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3959,7 +3959,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._status, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._test, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4055,7 +4055,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             for panel in self._panels: vbox.AddF( panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4461,7 +4461,7 @@ class DialogManageServer( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._services_listbook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4829,7 +4829,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
             
             vbox.AddF( self._notebook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5390,7 +5390,7 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                     hbox.AddF( self._archive_sync_remove, FLAGS_MIXED )
                     
                     self._archive_panel.AddF( self._archive_sync, FLAGS_EXPAND_BOTH_WAYS )
-                    self._archive_panel.AddF( hbox, FLAGS_BUTTON_SIZERS )
+                    self._archive_panel.AddF( hbox, FLAGS_BUTTON_SIZER )
                     
                     vbox.AddF( self._archive_panel, FLAGS_EXPAND_PERPENDICULAR )
                     
@@ -5769,7 +5769,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             vbox.AddF( self._listbook, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( add_remove_hbox, FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( ok_hbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -6381,7 +6381,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             vbox.AddF( st, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._tag_services, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -6569,7 +6569,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -6742,7 +6742,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 message = pair_string + ' already exists.'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
                     
                     if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
@@ -6773,7 +6773,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 message = pair_string + ' is pending.'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
@@ -6788,7 +6788,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 message = pair_string + ' is petitioned.'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
@@ -7032,7 +7032,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -7213,7 +7213,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 message = pair_string + ' already exists.'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
                     
                     if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
@@ -7244,7 +7244,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 message = pair_string + ' is pending.'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
@@ -7259,7 +7259,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 message = pair_string + ' is petitioned.'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
@@ -7378,7 +7378,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     message = 'There already is a relationship set for ' + old + '! It goes to ' + new + '.'
                     
-                    with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I want to overwrite it', no_label = 'do nothing' ) as dlg:
+                    with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'I want to overwrite it', no_label = 'do nothing' ) as dlg:
                         
                         if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                             
@@ -7546,7 +7546,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -7688,8 +7688,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 vbox.AddF( self._tags_box_sorter, FLAGS_EXPAND_BOTH_WAYS )
                 vbox.AddF( self._add_tag_box, FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( copy_paste_hbox, FLAGS_BUTTON_SIZERS )
-                vbox.AddF( self._modify_mappers, FLAGS_BUTTON_SIZERS )
+                vbox.AddF( copy_paste_hbox, FLAGS_BUTTON_SIZER )
+                vbox.AddF( self._modify_mappers, FLAGS_BUTTON_SIZER )
                 
                 self.SetSizer( vbox )
                 
@@ -7813,22 +7813,14 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
         
         def EventCopyTags( self, event ):
+        
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( self._media, self._tag_service_key )
             
-            if wx.TheClipboard.Open():
-                
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( self._media, self._tag_service_key )
-                
-                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
-                
-                text = yaml.safe_dump( tags )
-                
-                data = wx.TextDataObject( text )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
+            
+            text = yaml.safe_dump( tags )
+            
+            HC.pubsub.pub( 'clipboard', 'text', text )
             
         
         def EventModify( self, event ):
@@ -7929,7 +7921,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._mappings_list_ctrl, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( edit_buttons, FLAGS_BUTTON_SIZERS )
+            vbox.AddF( edit_buttons, FLAGS_BUTTON_SIZER )
             vbox.AddF( self._ok, FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
