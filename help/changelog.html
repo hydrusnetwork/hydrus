@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 137</h3></li>
+				<ul>
+					<li>eliminated a loophole in the tag-pending process that allowed zero-length subtags through during archive sync</li>
+					<li>improved the way tags are cleaned and checked, no matter their source</li>
+					<li>added zero-length subtag (e.g. 'character:') checking and exclusion to the server</li>
+					<li>removed erroneously pending or current tags that have a zero-length subtag</li>
+					<li>added 'copy bitmap' option on still image right-click menu</li>
+					<li>harmonised a whole bunch of clipboard code</li>
+					<li>added a check file integrity db function, with quick filename existence and thorough content hashing modes</li>
+					<li>added clear service info cache debug function to database menu</li>
+					<li>added regenerate combined mappings debug function to database menu</li>
+					<li>added a primary key to the hydrus tag archive db to save some space on duplicate mappings</li>
+					<li>added AddMappings to the hydrus tag archive to make mass mapping-adding a bit more efficient</li>
+					<li>added DeleteTags to the hydrus tag archive</li>
+					<li>added Get/DeleteMappings convenience synonyms for Get/DeleteTags for the hydrus tag archive</li>
+					<li>added an 'export to hydrus tag archive' button in the advanced content update dialog</li>
+					<li>renamed the db tag archive sync methods to better reflect what they actually do</li>
+					<li>massively simplified how cursors are referenced inside the client and server databases</li>
+					<li>cleaned up some db cursor code</li>
+					<li>fixed a critical error in the database test code that was spawning a double db mainloop</li>
+					<li>improved error handling when regenerating thumbnails</li>
+					<li>fixed error handling when waterfalling thumbnails</li>
+					<li>fixed a typo in export tags process</li>
+					<li>improved the way the client flushes its buffered log data to disk</li>
+					<li>added log buffer flushing to the server</li>
+					<li>added a confirm dialog to advanced content update dialog's powerful 'go' button</li>
+					<li>added custom titles to many co-opted yes/no dialog boxes where the default 'Are you sure?' didn't make sense</li>
+					<li>cleaned up some misc code</li>
+					<li>cleaned up some misc bitmap language</li>
+				</ul>
 				<li><h3>version 136</h3></li>
 				<ul>
 					<li>added tag archives</li>
