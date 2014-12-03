@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 138</h3></li>
+				<ul>
+					<li>created new 'maintenance and memory' options page in the manage options dialog, and moved some things over from 'files and memory', which is now 'files and thumbnails'</li>
+					<li>added options for idle, vacuum, and delete orphans periods to the 'maintenance and memory' page in the manage options dialog</li>
+					<li>fixed the incredibly annoying animated scanbar delayed-frame bug, where a click on the scanbar would not draw the new frame until the old frame's expected delay was complete. scanbar scanning is a lot smoother all around, now</li>
+					<li>animations now show their current frame number in the animation scanbar</li>
+					<li>status bar now shows inbox/archived counts on any selection</li>
+					<li>reworked static image zoom code so they resize beautifully, without jaggies, at the cost of a bit of CPU and memory</li>
+					<li>created new flexible message pathway</li>
+					<li>moved most messages to new pathway</li>
+					<li>improved a bunch of message and job_key related code</li>
+					<li>btw: messages will no longer close themselves; their end state is now to report what happened until you dismiss them. if this turns out to be annoying, I'll change it</li>
+					<li>fixed the pending menu not updating its count when files imported and added tags via archive sync</li>
+					<li>improved the logic behind the 'computer just woke from sleep' calculation</li>
+					<li>improved the accuracy of the 'client is currently idle' calculation</li>
+					<li>improved database vacuum so the .db-wal file is flushed afterwards, for both client and server</li>
+					<li>because of better vacuuming, server db backup no longer needs to create a bloated .db-wal backup</li>
+					<li>removed a very common superfluous empty tag upload packet in normal tag uploads</li>
+				</ul>
 				<li><h3>version 137</h3></li>
 				<ul>
 					<li>eliminated a loophole in the tag-pending process that allowed zero-length subtags through during archive sync</li>
