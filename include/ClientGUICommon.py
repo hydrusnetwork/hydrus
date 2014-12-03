@@ -2424,6 +2424,327 @@ class PopupDismissAll( PopupWindow ):
     
     def SetNumMessages( self, num_messages_pending ): self._text.SetLabel( HC.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
     
+class PopupMessageNew( PopupWindow ):
+    
+    def __init__( self, parent, job_key ):
+        
+        PopupWindow.__init__( self, parent )
+        
+        self._job_key = job_key
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._title = FitResistantStaticText( self, style = wx.ALIGN_CENTER )
+        self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._title.Hide()
+        
+        self._text_1 = FitResistantStaticText( self )
+        self._text_1.Wrap( 380 )
+        self._text_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._text_1.Hide()
+        
+        self._gauge_1 = Gauge( self, size = ( 380, -1 ) )
+        self._gauge_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._gauge_1.Hide()
+        
+        self._text_2 = FitResistantStaticText( self )
+        self._text_2.Wrap( 380 )
+        self._text_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._text_2.Hide()
+        
+        self._gauge_2 = Gauge( self, size = ( 380, -1 ) )
+        self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._gauge_2.Hide()
+        
+        self._show_files_button = wx.Button( self )
+        self._show_files_button.Bind( wx.EVT_BUTTON, self.EventShowFilesButton )
+        self._show_files_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._show_files_button.Hide()
+        
+        self._error_text = FitResistantStaticText( self )
+        self._error_text.Wrap( 380 )
+        self._error_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._error_text.Hide()
+        
+        self._show_tb_button = wx.Button( self, label = 'show traceback' )
+        self._show_tb_button.Bind( wx.EVT_BUTTON, self.EventShowTBButton )
+        self._show_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._show_tb_button.Hide()
+        
+        self._tb_text = FitResistantStaticText( self )
+        self._tb_text.Wrap( 380 )
+        self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._tb_text.Hide()
+        
+        self._show_caller_tb_button = wx.Button( self, label = 'show caller traceback' )
+        self._show_caller_tb_button.Bind( wx.EVT_BUTTON, self.EventShowCallerTBButton )
+        self._show_caller_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._show_caller_tb_button.Hide()
+        
+        self._caller_tb_text = FitResistantStaticText( self )
+        self._caller_tb_text.Wrap( 380 )
+        self._caller_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._caller_tb_text.Hide()
+        
+        self._show_db_tb_button = wx.Button( self, label = 'show db traceback' )
+        self._show_db_tb_button.Bind( wx.EVT_BUTTON, self.EventShowDBTBButton )
+        self._show_db_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._show_db_tb_button.Hide()
+        
+        self._db_tb_text = FitResistantStaticText( self )
+        self._db_tb_text.Wrap( 380 )
+        self._db_tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._db_tb_text.Hide()
+        
+        self._copy_tb_button = wx.Button( self, label = 'copy traceback information' )
+        self._copy_tb_button.Bind( wx.EVT_BUTTON, self.EventCopyTBButton )
+        self._copy_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._copy_tb_button.Hide()
+        
+        self._pause_button = wx.Button( self, label = 'pause' )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPauseButton )
+        self._pause_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._pause_button.Hide()
+        
+        self._cancel_button = wx.Button( self, label = 'cancel' )
+        self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
+        self._cancel_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._cancel_button.Hide()
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._pause_button, FLAGS_MIXED )
+        hbox.AddF( self._cancel_button, FLAGS_MIXED )
+        
+        vbox.AddF( self._title, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._text_1, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._gauge_1, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._text_2, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._gauge_2, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_files_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._error_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_caller_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._caller_tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_db_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._db_tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._copy_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ProcessText( self, text ):
+        
+        if len( text ) > TEXT_CUTOFF:
+            
+            new_text = 'Some text arrived that is too long to display here. Here is the start of it (the rest is printed to the log):'
+            
+            new_text += os.linesep * 2
+            
+            new_text += text[:TEXT_CUTOFF]
+            
+            text = new_text
+            
+        
+        return text
+        
+    
+    def Dismiss( self ):
+        
+        if self._job_key.IsCancellable():
+            
+            import ClientGUIDialogs
+            
+            message = 'Do you want to continue in the background, or stop right now?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose if the job continues in the background.', yes_label = 'continue', no_label = 'stop' ) as dlg:
+                
+                result = dlg.ShowModal()
+                
+                if result == wx.ID_CANCEL: return
+                elif result == wx.ID_NO: self._job_key.Cancel()
+                
+            
+        
+        if self._job_key.IsPaused(): self._job_key.Cancel()
+        
+        PopupWindow.Dismiss( self )
+        
+    
+    def EventCancelButton( self, event ):
+        
+        self._job_key.Cancel()
+        
+        self._cancel_button.Disable()
+        
+    
+    def EventCopyTBButton( self, event ): HC.pubsub.pub( 'clipboard', 'text', self._tb_copy_text )
+    
+    def EventPauseButton( self, event ):
+        
+        if self._job_key.IsPaused():
+            
+            self._job_key.Resume()
+            
+            self._pause_button.SetLabel( 'pause' )
+            
+        else:
+            
+            self._job_key.Pause()
+            
+            self._pause_button.SetLabel( 'resume' )
+            
+        
+    
+    def EventShowCallerTBButton( self, event ):
+        
+        if self._caller_tb_text.IsShown():
+            
+            self._show_caller_tb_button.SetLabel( 'show caller traceback' )
+            
+            self._caller_tb_text.Hide()
+            
+        else:
+            
+            self._show_caller_tb_button.SetLabel( 'hide caller traceback' )
+            
+            self._caller_tb_text.Show()
+            
+        
+        self.GetParent().MakeSureEverythingFits()
+        
+    
+    def EventShowDBTBButton( self, event ):
+        
+        if self._db_tb_text.IsShown():
+            
+            self._show_db_tb_button.SetLabel( 'show db traceback' )
+            
+            self._db_tb_text.Hide()
+            
+        else:
+            
+            self._show_db_tb_button.SetLabel( 'hide db traceback' )
+            
+            self._db_tb_text.Show()
+            
+        
+        self.GetParent().MakeSureEverythingFits()
+        
+    
+    def EventShowFilesButton( self, event ):
+        
+        hashes = self._job_key.GetVariable( 'popup_message_files' )
+        
+        media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, hashes )
+        
+        HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+        
+    
+    def EventShowTBButton( self, event ):
+        
+        if self._tb_text.IsShown():
+            
+            self._show_tb_button.SetLabel( 'show traceback' )
+            
+            self._tb_text.Hide()
+            
+        else:
+            
+            self._show_tb_button.SetLabel( 'hide traceback' )
+            
+            self._tb_text.Show()
+            
+        
+        self.GetParent().MakeSureEverythingFits()
+        
+    
+    def Update( self ):
+        
+        if self._job_key.HasVariable( 'popup_message_title' ):
+            
+            text = self._job_key.GetVariable( 'popup_message_title' )
+            
+            if self._title.GetLabel() != text: self._title.SetLabel( text )
+            
+            self._title.Show()
+            
+        else: self._title.Hide()
+        
+        if self._job_key.HasVariable( 'popup_message_text_1' ):
+            
+            text = self._job_key.GetVariable( 'popup_message_text_1' )
+            
+            if self._text_1.GetLabel() != text: self._text_1.SetLabel( self._ProcessText( HC.u( text ) ) )
+            
+            self._text_1.Show()
+            
+        else: self._text_1.Hide()
+        
+        if self._job_key.HasVariable( 'popup_message_gauge_1' ):
+            
+            ( value, range ) = self._job_key.GetVariable( 'popup_message_gauge_1' )
+            
+            if range is None or value is None: self._gauge_1.Pulse()
+            else:
+                
+                self._gauge_1.SetRange( range )
+                self._gauge_1.SetValue( value )
+                
+            
+            self._gauge_1.Show()
+            
+        else: self._gauge_1.Hide()
+        
+        if self._job_key.HasVariable( 'popup_message_text_2' ):
+            
+            text = self._job_key.GetVariable( 'popup_message_text_2' )
+            
+            if self._text_2.GetLabel() != text: self._text_2.SetLabel( self._ProcessText( HC.u( text ) ) )
+            
+            self._text_2.Show()
+            
+        else: self._text_2.Hide()
+        
+        if self._job_key.HasVariable( 'popup_message_gauge_2' ):
+            
+            ( value, range ) = self._job_key.GetVariable( 'popup_message_gauge_2' )
+            
+            if range is None or value is None: self._gauge_2.Pulse()
+            else:
+                
+                self._gauge_2.SetRange( range )
+                self._gauge_2.SetValue( value )
+                
+            
+            self._gauge_2.Show()
+            
+        else: self._gauge_2.Hide()
+        
+        if self._job_key.HasVariable( 'popup_message_files' ):
+            
+            hashes = self._job_key.GetVariable( 'popup_message_files' )
+            
+            text = 'show ' + HC.ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            
+            if self._show_files_button.GetLabel() != text: self._show_files_button.SetLabel( text )
+            
+            self._show_files_button.Show()
+            
+        else: self._show_files_button.Hide()
+        
+        #vbox.AddF( self._error_text, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._show_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._show_caller_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._caller_tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._show_db_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._db_tb_text, FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( self._copy_tb_button, FLAGS_EXPAND_PERPENDICULAR )
+        # pause + cancel buttons
+    
 class PopupMessage( PopupWindow ):
     
     def __init__( self, parent, message ):
@@ -2432,8 +2753,6 @@ class PopupMessage( PopupWindow ):
         
         self._message = message
         
-    
-    def IsClosed( self ): return self._message.IsClosed()
     
     def Update( self ): pass
     
@@ -2681,7 +3000,7 @@ class PopupMessageGauge( PopupMessage ):
     
     def Dismiss( self ):
         
-        if not self._message.IsClosed() and self._message.GetInfo( 'mode' ) == 'cancelable gauge':
+        if self._message.GetInfo( 'mode' ) == 'cancelable gauge':
             
             import ClientGUIDialogs
             
@@ -2740,7 +3059,7 @@ class PopupMessageGauge( PopupMessage ):
         
         mode = self._message.GetInfo( 'mode' )
         text = self._message.GetInfo( 'text' )[:TEXT_CUTOFF]
-    
+        
         if self._job_key.IsPausable() and self._created - HC.GetNow() > 2: self._pause_button.Show()
         else: self._pause_button.Hide()
         
@@ -2774,7 +3093,7 @@ class PopupMessageGauge( PopupMessage ):
                 
                 range = self._message.GetInfo( 'range' )
                 value = self._message.GetInfo( 'value' )
-            
+                
                 if range is None or value is None: self._gauge.Pulse()
                 else:
                     
@@ -2857,7 +3176,6 @@ class PopupMessageManager( wx.Frame ):
         self._SizeAndPositionAndShow()
         
         HC.pubsub.sub( self, 'AddMessage', 'message' )
-        # maybe make a ding noise when a new message arrives
         
         self._old_excepthook = sys.excepthook
         self._old_show_exception = HC.ShowException
@@ -2901,15 +3219,19 @@ class PopupMessageManager( wx.Frame ):
     
     def _CreateMessageWindow( self, message ):
         
-        message_type = message.GetType()
-        
-        if message_type == HC.MESSAGE_TYPE_TEXT: c = PopupMessageText
-        elif message_type == HC.MESSAGE_TYPE_ERROR: c = PopupMessageError
-        elif message_type == HC.MESSAGE_TYPE_DB_ERROR: c = PopupMessageDBError
-        elif message_type == HC.MESSAGE_TYPE_FILES: c = PopupMessageFiles
-        elif message_type == HC.MESSAGE_TYPE_GAUGE: c = PopupMessageGauge
-        
-        window = c( self, message )
+        if type( message ) == HC.JobKey: window = PopupMessageNew( self, message )
+        else:
+            
+            message_type = message.GetType()
+            
+            if message_type == HC.MESSAGE_TYPE_TEXT: c = PopupMessageText
+            elif message_type == HC.MESSAGE_TYPE_ERROR: c = PopupMessageError
+            elif message_type == HC.MESSAGE_TYPE_DB_ERROR: c = PopupMessageDBError
+            elif message_type == HC.MESSAGE_TYPE_FILES: c = PopupMessageFiles
+            elif message_type == HC.MESSAGE_TYPE_GAUGE: c = PopupMessageGauge
+            
+            window = c( self, message )
+            
         
         window.Update()
         
@@ -2917,6 +3239,13 @@ class PopupMessageManager( wx.Frame ):
         
     
     def _PrintMessage( self, message ):
+        
+        if type( message ) == HC.JobKey:
+            
+            # if job_key hasvariable title, then print...
+            
+            return
+            
         
         message_type = message.GetType()
         
@@ -2943,6 +3272,13 @@ class PopupMessageManager( wx.Frame ):
         
     
     def _ShouldDisplayMessage( self, message ):
+        
+        if type( message ) == HC.JobKey:
+            
+            # do the same, but for job_key errors
+            
+            return True
+            
         
         message_type = message.GetType()
         
@@ -3013,12 +3349,7 @@ class PopupMessageManager( wx.Frame ):
                 self._CheckPending()
                 
             
-        except:
-            
-            traceback.print_stack()
-            
-            print( traceback.format_exc() )
-            
+        except: print( traceback.format_exc() )
         
     
     def CleanBeforeDestroy( self ):
@@ -3077,8 +3408,7 @@ class PopupMessageManager( wx.Frame ):
             
             message_window = sizer_item.GetWindow()
             
-            if message_window.IsClosed(): self.Dismiss( message_window )
-            else: message_window.Update()
+            message_window.Update()
             
         
         self.MakeSureEverythingFits()

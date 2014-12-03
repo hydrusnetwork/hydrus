@@ -1456,9 +1456,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         job_key = HC.JobKey( pausable = False, cancellable = False )
         
-        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
         
-        HC.pubsub.pub( 'message', message )
+        HC.pubsub.pub( 'message', job_key )
         
         info = self._c.execute( 'SELECT hash_id, mime FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ).fetchall()
         
@@ -1468,10 +1468,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if i % 100 == 0:
                 
-                message.SetInfo( 'range', len( info ) )
-                message.SetInfo( 'value', i )
-                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( info ) ) )
-                message.SetInfo( 'mode', 'gauge' )
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( info ) ) )
+                job_key.SetVariable( 'popup_message_gauge_1', ( i, len( info ) ) )
                 
             
             hash = self._GetHash( hash_id )
@@ -1492,12 +1490,17 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        message.SetInfo( 'text', prefix_string + 'deleting the incorrect records' )
-        message.SetInfo( 'mode', 'text' )
+        job_key.DeleteVariable( 'popup_message_gauge_1' )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'deleting the incorrect records' )
         
         self._DeleteFiles( self._local_file_service_id, deletee_hash_ids )
         
-        message.SetInfo( 'text', prefix_string + 'done! ' + HC.ConvertIntToPrettyString( len( deletee_hash_ids ) ) + ' files deleted!' )
+        text = prefix_string + 'done! '
+        
+        if len( deletee_hash_ids ) == 0: text += 'all files ok!'
+        else: text += HC.ConvertIntToPrettyString( len( deletee_hash_ids ) ) + ' files deleted!'
+        
+        job_key.SetVariable( 'popup_message_text_1', text )
         
     
     def _DeleteFiles( self, service_id, hash_ids ):
@@ -1643,7 +1646,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self.pub_service_updates_after_commit( { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
-    def _DeleteServiceInfo( self ): self._c.execute( 'DELETE FROM service_info;' )
+    def _DeleteServiceInfo( self ):
+        
+        self._c.execute( 'DELETE FROM service_info;' )
+        
+        self.pub_after_commit( 'notify_new_pending' )
+        
     
     def _DeleteYAMLDump( self, dump_type, dump_name = None ):
         
@@ -1675,9 +1683,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         job_key = HC.JobKey( pausable = False, cancellable = False )
         
-        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
         
-        HC.pubsub.pub( 'message', message )
+        HC.pubsub.pub( 'message', job_key )
         
         service_id = self._GetServiceId( service_key )
         
@@ -1698,10 +1706,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if i % 1000 == 0:
                 
-                message.SetInfo( 'range', len( hash_ids ) )
-                message.SetInfo( 'value', i )
-                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
-                message.SetInfo( 'mode', 'gauge' )
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
                 
             
             if hash_type == HydrusTagArchive.HASH_TYPE_SHA256: archive_hash = self._GetHash( hash_id )
@@ -1723,12 +1729,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             hta.AddMappings( archive_hash, tags )
             
         
-        message.SetInfo( 'text', prefix_string + 'commiting the change and vacuuming the archive' )
-        message.SetInfo( 'mode', 'text' )
+        job_key.DeleteVariable( 'popup_message_gauge_1' )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'committing the change and vacuuming the archive' )
         
         hta.CommitBigJob()
         
-        message.SetInfo( 'text', prefix_string + 'done!' )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'done!' )
         
     
     def _FattenAutocompleteCache( self ):
@@ -1927,6 +1933,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
     
     def _GetFileQueryIds( self, search_context ):
+        
+        HC.app.ResetIdleTimer()
         
         system_predicates = search_context.GetSystemPredicates()
         
@@ -2714,21 +2722,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             pending = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
+            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
             petitioned = [ ( ( self._GetNamespaceTag( old_namespace_id, old_tag_id ), self._GetNamespaceTag( new_namespace_id, new_tag_id ) ), self._GetReason( reason_id ) ) for ( old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id ) in self._c.execute( 'SELECT old_namespace_id, old_tag_id, new_namespace_id, new_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
-            content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            if len( petitioned ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_SIBLINGS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
             # tag parents
             
             pending = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PENDING ) ).fetchall() ]
             
-            content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
+            if len( pending ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PENDING ] = pending
             
             petitioned = [ ( ( self._GetNamespaceTag( child_namespace_id, child_tag_id ), self._GetNamespaceTag( parent_namespace_id, parent_tag_id ) ), self._GetReason( reason_id ) ) for ( child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id ) in self._c.execute( 'SELECT child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.PETITIONED ) ).fetchall() ]
             
-            content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
+            if len( petitioned ) > 0: content_data[ HC.CONTENT_DATA_TYPE_TAG_PARENTS ][ HC.CONTENT_UPDATE_PETITION ] = petitioned
             
             if len( content_data ) > 0:
                 
@@ -3865,7 +3873,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             text = name + ' at ' + time.ctime( timestamp ) + ':' + os.linesep * 2 + post
                             
-                            self.pub_after_commit( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
+                            job_key = HC.JobKey( pausable = False, cancellable = False )
+                            
+                            job_key.SetVariable( 'popup_message_text_1', text )
+                            
+                            self.pub_after_commit( 'message', job_key )
                             
                         
                     
@@ -4023,7 +4035,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
-    def _SyncFileToTagArchive( self, hash_id, archive_name, namespaces, service_key ):
+    def _SyncFileToTagArchive( self, hash_id, archive_name, namespaces, service_key, pub_immediate = False ):
         
         hta = self._tag_archives[ archive_name ]
         
@@ -4056,7 +4068,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             service_keys_to_content_updates = { service_key : content_updates }
             
-            self._ProcessContentUpdates( service_keys_to_content_updates, pub_immediate = True )
+            self._ProcessContentUpdates( service_keys_to_content_updates, pub_immediate = pub_immediate )
             
         
     
@@ -4066,28 +4078,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         job_key = HC.JobKey( pausable = False, cancellable = False )
         
-        message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, prefix_string + 'preparing', job_key )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
         
-        HC.pubsub.pub( 'message', message )
+        HC.pubsub.pub( 'message', job_key )
         
         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE service_id = ?;', ( self._local_file_service_id, ) ) ]
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
-            try: self._SyncFileToTagArchive( hash_id, archive_name, namespaces, service_key )
+            try: self._SyncFileToTagArchive( hash_id, archive_name, namespaces, service_key, pub_immediate = True )
             except: pass
             
             if i % 100 == 0:
                 
-                message.SetInfo( 'range', len( hash_ids ) )
-                message.SetInfo( 'value', i )
-                message.SetInfo( 'text', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
-                message.SetInfo( 'mode', 'gauge' )
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
+                job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
                 
             
         
-        message.SetInfo( 'text', prefix_string + 'done!' )
-        message.SetInfo( 'mode', 'text' )
+        job_key.DeleteVariable( 'popup_message_gauge_1' )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + 'done!' )
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -4520,9 +4530,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     if message is None:
                         
-                        message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : 'updating services: deleting tag data' } )
+                        job_key = HC.JobKey( pausable = False, cancellable = False )
+                    
+                        job_key.SetVariable( 'popup_message_text_1', 'updating services: deleting tag data' )
                         
-                        HC.pubsub.pub( 'message', message )
+                        HC.pubsub.pub( 'message', job_key )
                         
                     
                 
@@ -4603,11 +4615,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if recalc_combined_mappings:
             
-            message.SetInfo( 'text', 'updating services: recalculating combined tag data' )
+            job_key.SetVariable( 'popup_message_text_1', 'updating services: recalculating combined tag data' )
             
             self._RecalcCombinedMappings()
             
-            message.SetInfo( 'text', 'updating services: done!' )
+            job_key.SetVariable( 'popup_message_text_1', 'updating services: done!' )
             
         
         self.pub_after_commit( 'notify_new_pending' )
@@ -5027,9 +5039,11 @@ class DB( ServiceDB ):
             
             prefix = 'deleting old resized thumbnails: '
             
-            message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : prefix + 'initialising' } )
+            job_key = HC.JobKey( pausable = False, cancellable = False )
             
-            HC.pubsub.pub( 'message', message )
+            job_key.SetVariable( 'popup_message_text_1', prefix + 'initialising' )
+            
+            HC.pubsub.pub( 'message', job_key )
             
             thumbnail_paths = ( path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
             
@@ -5037,12 +5051,12 @@ class DB( ServiceDB ):
                 
                 os.remove( path )
                 
-                if i % 100 == 0: message.SetInfo( 'text', prefix + 'done ' + HC.ConvertIntToPrettyString( i ) )
+                if i % 100 == 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done ' + HC.ConvertIntToPrettyString( i ) )
                 
             
             self.pub_after_commit( 'thumbnail_resize' )
             
-            message.SetInfo( 'text', prefix + 'done!' )
+            job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
             
         
         self.pub_after_commit( 'notify_new_options' )
@@ -5773,6 +5787,11 @@ class DB( ServiceDB ):
         
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_VACUUM, HC.GetNow() ) )
         
+        self._c.close()
+        self._db.close()
+        
+        self._InitDBCursor()
+        
         HC.ShowText( 'Database maintenance: vacuumed successfully.' )
         
     
@@ -6262,7 +6281,12 @@ def DAEMONCheckImportFolders():
                         
                         text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
                         
-                        HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_FILES, { 'text' : text, 'hashes' : successful_hashes } ) )
+                        job_key = HC.JobKey( pausable = False, cancellable = False )
+                        
+                        job_key.SetVariable( 'popup_message_text_1', text )
+                        job_key.SetVariable( 'popup_message_files', successful_hashes )
+                        
+                        HC.pubsub.pub( 'message', job_key )
                         
                     
                     details[ 'last_checked' ] = now
@@ -6975,11 +6999,11 @@ def DAEMONSynchroniseSubscriptions():
                 
                 try:
                     
-                    job_key = HC.JobKey( pausable = True, cancellable = False )
+                    job_key = HC.JobKey( pausable = True, cancellable = True )
                     
-                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' subscription', job_key )
+                    job_key.SetVariable( 'popup_message_text_1', 'checking ' + name + ' subscription' )
                     
-                    HC.pubsub.pub( 'message', message )
+                    HC.pubsub.pub( 'message', job_key )
                     
                     do_tags = len( advanced_tag_options ) > 0
                     
@@ -7045,28 +7069,38 @@ def DAEMONSynchroniseSubscriptions():
                         
                         while job_key.IsPaused():
                             
-                            message.SetInfo( 'text', 'paused' )
+                            job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
                             time.sleep( 1 )
                             
                             if HC.shutdown: return
                             
-                            if message.IsClosed(): return
+                            if job_key.IsCancelled():
+                                
+                                job_key.SetVariable( 'popup_message_text_1', name + ' check was cancelled' )
+                                
+                                return
+                                
                             
                         
                         while HC.options[ 'pause_subs_sync' ]:
                             
-                            message.SetInfo( 'text', 'subscriptions paused' )
+                            job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
                             
                             time.sleep( 5 )
                             
                             if HC.shutdown: return
                             
-                            if message.IsClosed(): return
+                            if job_key.IsCancelled():
+                                
+                                job_key.SetVariable( 'popup_message_text_1', name + ' check was cancelled' )
+                                
+                                return
+                                
                             
                             if HC.subs_changed:
                                 
-                                message.Close()
+                                job_key.SetVariable( 'popup_message_text_1', 'subscriptions were changed during processing; this job was abandoned' )
                                 
                                 HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
@@ -7092,7 +7126,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 all_url_args.extend( fresh_url_args )
                                 
-                                message.SetInfo( 'text', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
+                                job_key.SetVariable( 'popup_message_text_1', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
                                 
                             
                         
@@ -7101,32 +7135,28 @@ def DAEMONSynchroniseSubscriptions():
                         if len( downloaders ) == 0: break
                         
                     
-                    message.SetInfo( 'range', len( all_url_args ) )
-                    message.SetInfo( 'value', 0 )
-                    message.SetInfo( 'mode', 'gauge' )
-                    
                     all_url_args.reverse() # to do oldest first, which means we can save incrementally
-                    
-                    i = 1
                     
                     num_new = 0
                     
                     successful_hashes = set()
                     
-                    for url_args in all_url_args:
+                    for ( i, url_args ) in enumerate( all_url_args ):
                         
                         while HC.options[ 'pause_subs_sync' ]:
                             
-                            message.SetInfo( 'text', 'subscriptions paused' )
+                            job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
                             
                             time.sleep( 5 )
                             
                             if HC.shutdown: return
                             
+                            if job_key.IsCancelled(): return
+                            
                             if HC.subs_changed:
                                 
-                                message.Close()
-                                
+                                job_key.SetVariable( 'popup_message_text_1', 'subscriptions were changed during processing; this job was abandoned' )
+                
                                 HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
@@ -7143,8 +7173,8 @@ def DAEMONSynchroniseSubscriptions():
                             
                             x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
                             
-                            message.SetInfo( 'value', i )
-                            message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : checking url status' )
+                            job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : checking url status' )
+                            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_url_args ) ) )
                             
                             ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
                             
@@ -7156,7 +7186,7 @@ def DAEMONSynchroniseSubscriptions():
                                     
                                     try:
                                         
-                                        message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                        job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
                                         
                                         tags = downloader.GetTags( *url_args )
                                         
@@ -7173,7 +7203,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 num_new += 1
                                 
-                                message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : downloading file' )
+                                job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : downloading file' )
                                 
                                 if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
                                 else:
@@ -7185,7 +7215,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 service_keys_to_tags = HydrusDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options )
                                 
-                                message.SetInfo( 'text', name + ': ' + x_out_of_y + ' : importing file' )
+                                job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : importing file' )
                                 
                                 ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_keys_to_tags = service_keys_to_tags, url = url )
                                 
@@ -7201,8 +7231,6 @@ def DAEMONSynchroniseSubscriptions():
                             
                             HC.ShowException( e )
                             
-                        
-                        i += 1
                         
                         if i % 20 == 0:
                             
@@ -7223,23 +7251,24 @@ def DAEMONSynchroniseSubscriptions():
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
                     
+                    job_key.DeleteVariable( 'popup_message_gauge_1' )
+                    
                     if len( successful_hashes ) > 0:
                         
-                        text = HC.u( len( successful_hashes ) ) + ' files imported from ' + name
+                        job_key.SetVariable( 'popup_message_text_1', HC.u( len( successful_hashes ) ) + ' files imported from ' + name )
+                        job_key.SetVariable( 'popup_message_files', successful_hashes )
                         
-                        message.SetInfo( 'text', text )
-                        message.SetInfo( 'hashes', successful_hashes )
-                        message.SetInfo( 'mode', 'files' )
+                    else:
                         
-                        job_key.SetPausable( False )
+                        job_key.SetVariable( 'popup_message_text_1', name + 'subscription checked, but no new files' )
                         
-                    else: message.Close()
+                    
+                    job_key.SetPausable( False )
+                    job_key.SetCancellable( False )
                     
                     last_checked = now
                     
                 except Exception as e:
-                    
-                    if 'message' in locals(): message.Close()
                     
                     last_checked = now + HC.UPDATE_DURATION
                     

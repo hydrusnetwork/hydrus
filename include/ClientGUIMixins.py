@@ -565,9 +565,11 @@ class MediaCollection( MediaList, Media ):
     
     def GetNumFiles( self ): return len( self._hashes )
     
-    def GetNumFrames( self ): return sum( [ media.GetNumFrames() for media in self._sorted_media ] )
+    def GetNumInbox( self ): return sum( ( media.GetNumInbox() for media in self._sorted_media ) )
     
-    def GetNumWords( self ): return sum( [ media.GetNumWords() for media in self._sorted_media ] )
+    def GetNumFrames( self ): return sum( ( media.GetNumFrames() for media in self._sorted_media ) )
+    
+    def GetNumWords( self ): return sum( ( media.GetNumWords() for media in self._sorted_media ) )
     
     def GetPrettyAge( self ): return 'imported ' + HC.ConvertTimestampToPrettyAgo( self._timestamp )
     
@@ -680,6 +682,11 @@ class MediaSingleton( Media ):
     def GetNumFiles( self ): return 1
     
     def GetNumFrames( self ): return self._media_result.GetNumFrames()
+    
+    def GetNumInbox( self ):
+        
+        if self.HasInbox(): return 1
+        else: return 0
     
     def GetNumWords( self ): return self._media_result.GetNumWords()
     

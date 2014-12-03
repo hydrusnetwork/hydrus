@@ -35,6 +35,15 @@ MAINTENANCE_PERIOD = 5 * 60
 
 class Controller( wx.App ):
     
+    def _CheckIfJustWokeFromSleep( self ):
+        
+        last_maintenance_time = self._timestamps[ 'last_maintenance_time' ]
+        
+        # this tests if we probably just woke up from a sleep
+        if HC.GetNow() - last_maintenance_time > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
+        else: self._just_woke_from_sleep = False
+        
+    
     def _Read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
     
     def _Write( self, action, priority, synchronous, *args, **kwargs ): return self._db.Write( action, priority, synchronous, *args, **kwargs )
@@ -155,7 +164,12 @@ class Controller( wx.App ):
             
         
     
-    def CurrentlyIdle( self ): return HC.GetNow() - self._timestamps[ 'last_user_action' ] > 30 * 60 # 30 mins since last canvas media swap
+    def CurrentlyIdle( self ):
+        
+        if HC.options[ 'idle_period' ] == 0: return False
+        
+        return HC.GetNow() - self._timestamps[ 'last_user_action' ] > HC.options[ 'idle_period' ]
+        
     
     def EventPubSub( self, event ):
         
@@ -292,7 +306,12 @@ class Controller( wx.App ):
         self._db.StartDaemons()
         
     
-    def JustWokeFromSleep( self ): return self._just_woke_from_sleep
+    def JustWokeFromSleep( self ):
+        
+        if not self._just_woke_from_sleep: self._CheckIfJustWokeFromSleep()
+        
+        return self._just_woke_from_sleep
+        
     
     def MaintainDB( self ):
         
@@ -302,8 +321,15 @@ class Controller( wx.App ):
         
         shutdown_timestamps = self.Read( 'shutdown_timestamps' )
         
-        if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > 86400 * 5: self.Write( 'vacuum' )
-        if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > 86400 * 3: self.Write( 'delete_orphans' )
+        if HC.options[ 'maintenance_vacuum_period' ] != 0:
+            
+            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_VACUUM ] > HC.options[ 'maintenance_vacuum_period' ]: self.Write( 'vacuum' )
+            
+        
+        if HC.options[ 'maintenance_delete_orphans_period' ] != 0:
+            
+            if now - shutdown_timestamps[ CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS ] > HC.options[ 'maintenance_delete_orphans_period' ]: self.Write( 'delete_orphans' )
+            
         
         if now - self._timestamps[ 'last_service_info_cache_fatten' ] > 60 * 20:
             
@@ -592,13 +618,9 @@ class Controller( wx.App ):
         sys.stdout.flush()
         sys.stderr.flush()
         
-        last_time_this_ran = self._timestamps[ 'last_check_idle_time' ]
+        self._CheckIfJustWokeFromSleep()
         
-        self._timestamps[ 'last_check_idle_time' ] = HC.GetNow()
-        
-        # this tests if we probably just woke up from a sleep
-        if HC.GetNow() - last_time_this_ran > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
-        else: self._just_woke_from_sleep = False
+        self._timestamps[ 'last_maintenance_time' ] = HC.GetNow()
         
         if not self._just_woke_from_sleep and self.CurrentlyIdle(): self.MaintainDB()
         

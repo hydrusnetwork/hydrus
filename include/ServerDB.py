@@ -2193,10 +2193,14 @@ class DB( ServiceDB ):
         
         self._c.execute( 'ANALYZE' )
         
+        self._c.close()
+        self._db.close()
+        
+        self._InitDBCursor()
+        
         self._c.execute( 'BEGIN IMMEDIATE' )
         
         shutil.copy( self._db_path, self._db_path + '.backup' )
-        if os.path.exists( self._db_path + '-wal' ): shutil.copy( self._db_path + '-wal', self._db_path + '-wal.backup' )
         
         shutil.rmtree( HC.SERVER_FILES_DIR + '_backup', ignore_errors = True )
         shutil.rmtree( HC.SERVER_THUMBNAILS_DIR + '_backup', ignore_errors = True )

@@ -117,6 +117,8 @@ class Dialog( wx.Dialog ):
         
         if position == 'center': wx.CallAfter( self.Center )
         
+        HC.app.ResetIdleTimer()
+        
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
     
@@ -5122,11 +5124,9 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 job_key = HC.JobKey( pausable = False, cancellable = False )
                 
-                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string, job_key )
+                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, job_key, url, url_string )
                 
-                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, message, url, url_string )
-                
-                HC.pubsub.pub( 'message', message )
+                HC.pubsub.pub( 'message', job_key )
                 
             
         

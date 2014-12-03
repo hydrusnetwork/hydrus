@@ -193,6 +193,9 @@ CLIENT_DEFAULT_OPTIONS[ 'gui_capitalisation' ] = False
 CLIENT_DEFAULT_OPTIONS[ 'default_gui_session' ] = 'just a blank page'
 CLIENT_DEFAULT_OPTIONS[ 'ac_timings' ] = ( 3, 500, 250 )
 CLIENT_DEFAULT_OPTIONS[ 'thread_checker_timings' ] = ( 3, 1200 )
+CLIENT_DEFAULT_OPTIONS[ 'idle_period' ] = 60 * 30
+CLIENT_DEFAULT_OPTIONS[ 'maintenance_delete_orphans_period' ] = 86400 * 3
+CLIENT_DEFAULT_OPTIONS[ 'maintenance_vacuum_period' ] = 86400 * 5
 
 system_predicates = {}
 
@@ -328,7 +331,9 @@ def CatchExceptionClient( etype, value, tb ):
             info[ 'caller_traceback' ] = caller_traceback
             info[ 'db_traceback' ] = db_traceback
             
-            message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, info )
+            job_key = HC.JobKey( pausable = False, cancellable = False )
+            
+            message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, job_key, info )
             
         else:
             
@@ -336,7 +341,9 @@ def CatchExceptionClient( etype, value, tb ):
             
             trace = ''.join( trace_list )
             
-            message = HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } )
+            job_key = HC.JobKey( pausable = False, cancellable = False )
+            
+            message = HC.Message( HC.MESSAGE_TYPE_ERROR, job_key, { 'error' : ( etype, value, trace ) } )
             
         
         HC.pubsub.pub( 'message', message )
@@ -789,7 +796,9 @@ def ShowExceptionClient( e ):
         info[ 'caller_traceback' ] = caller_traceback
         info[ 'db_traceback' ] = db_traceback
         
-        message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, info )
+        job_key = HC.JobKey( pausable = False, cancellable = False )
+        
+        message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, job_key, info )
         
     else:
         
@@ -804,13 +813,21 @@ def ShowExceptionClient( e ):
             
         else: trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
-        message = HC.Message( HC.MESSAGE_TYPE_ERROR, { 'error' : ( etype, value, trace ) } )
+        job_key = HC.JobKey( pausable = False, cancellable = False )
+        
+        message = HC.Message( HC.MESSAGE_TYPE_ERROR, job_key, { 'error' : ( etype, value, trace ) } )
         
     
     HC.pubsub.pub( 'message', message )
     
-def ShowTextClient( text ): HC.pubsub.pub( 'message', HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : text } ) )
-
+def ShowTextClient( text ):
+    
+    job_key = HC.JobKey( pausable = False, cancellable = False )
+    
+    job_key.SetVariable( 'popup_message_text_1', text )
+    
+    HC.pubsub.pub( 'message', job_key )
+    
 class AutocompleteMatches( object ):
     
     def __init__( self, matches ):

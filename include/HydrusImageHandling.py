@@ -550,6 +550,23 @@ class HydrusBitmap( object ):
         else: return wx.BitmapFromBufferRGBA( width, height, lz4.loads( self._data ) )
         
     
+    def GetWxImage( self ):
+        
+        ( width, height ) = self._size
+        
+        if self._format == wx.BitmapBufferFormat_RGB: return wx.ImageFromBuffer( width, height, lz4.loads( self._data ) )
+        else:
+            
+            bitmap = wx.BitmapFromBufferRGBA( width, height, lz4.loads( self._data ) )
+            
+            image = wx.ImageFromBitmap( bitmap )
+            
+            wx.CallAfter( bitmap.Destroy )
+            
+            return image
+            
+        
+    
     def GetEstimatedMemoryFootprint( self ): return len( self._data )
     
     def GetSize( self ): return self._size

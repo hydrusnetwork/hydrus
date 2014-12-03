@@ -146,9 +146,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             job_key = HC.JobKey( pausable = False, cancellable = False )
             
-            message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'gathering pending and petitioned', job_key )
+            job_key.SetVariable( 'popup_message_text_1', 'gathering pending and petitioned' )
             
-            HC.pubsub.pub( 'message', message )
+            HC.pubsub.pub( 'message', job_key )
             
             result = HC.app.Read( 'pending', service_key )
             
@@ -163,30 +163,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
                 
-                num_uploads = len( media_results )
-                
-                num_other_messages = 1
-                
-                if not update.IsEmpty(): num_other_messages += 1
-                
-                gauge_range = num_uploads + num_other_messages
-                
-                i = 1
-                
-                message.SetInfo( 'range', gauge_range )
-                message.SetInfo( 'value', i )
-                message.SetInfo( 'text', 'connecting to repository' )
-                message.SetInfo( 'mode', 'cancelable gauge' )
+                job_key.SetVariable( 'popup_message_text_1', 'connecting to repository' )
                 
                 good_hashes = []
                 
                 error_messages = set()
                 
-                for media_result in media_results:
+                for ( i, media_result ) in enumerate( media_results ):
                     
                     if job_key.IsCancelled():
                         
-                        message.Close()
+                        job_key.SetVariable( 'popup_message_text_1', 'upload cancelled' )
                         
                         return
                         
@@ -196,8 +183,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     hash = media_result.GetHash()
                     mime = media_result.GetMime()
                     
-                    message.SetInfo( 'value', i )
-                    message.SetInfo( 'text', 'Uploading file ' + HC.ConvertIntToPrettyString( i ) + ' of ' + HC.ConvertIntToPrettyString( num_uploads ) )
+                    job_key.SetVariable( 'popup_message_text_1', 'Uploading file ' + HC.ConvertIntToPrettyString( i + 1 ) + ' of ' + HC.ConvertIntToPrettyString( len( media_results ) ) )
+                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( media_results ) ) )
                     
                     try:
                         
@@ -233,8 +220,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     i += 1
                     
-                    message.SetInfo( 'value', i )
-                    message.SetInfo( 'text', 'uploading petitions' )
+                    job_key.SetVariable( 'popup_message_text_1', 'uploading petitions' )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
@@ -247,32 +233,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 updates = result
                 
-                num_updates = len( updates )
+                job_key.SetVariable( 'popup_message_text_1', 'connecting to repository' )
                 
-                num_other_messages = 1
-                
-                gauge_range = num_updates + num_other_messages + 1
-                
-                i = 1
-                
-                message.SetInfo( 'range', gauge_range )
-                message.SetInfo( 'value', i )
-                message.SetInfo( 'text', 'connecting to repository' )
-                message.SetInfo( 'mode', 'cancelable gauge' )
-                
-                for update in updates:
+                for ( i, update ) in enumerate( updates ):
                     
                     if job_key.IsCancelled():
                         
-                        message.Close()
+                        job_key.SetVariable( 'popup_message_text_1', 'upload cancelled' )
                         
                         return
                         
                     
-                    i += 1
-                    
-                    message.SetInfo( 'value', i )
-                    message.SetInfo( 'text', 'posting update' )
+                    job_key.SetVariable( 'popup_message_text_1', 'posting update: ' + HC.ConvertIntToPrettyString( i + 1 ) + '/' + HC.ConvertIntToPrettyString( len( updates ) ) )
+                    job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
@@ -285,11 +258,12 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     HC.app.WaitUntilGoodTimeToUseGUIThread()
                     
                 
+                
             
         except Exception as e: HC.ShowException( e )
         
-        message.SetInfo( 'text', 'upload done' )
-        message.SetInfo( 'mode', 'text' )
+        job_key.DeleteVariable( 'popup_message_gauge_1' )
+        job_key.SetVariable( 'popup_message_text_1', 'upload done!' )
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -1474,9 +1448,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     prefix = 'regenerating thumbnails: '
                     
-                    message = HC.Message( HC.MESSAGE_TYPE_TEXT, { 'text' : prefix + 'creating directories' } )
+                    job_key = HC.JobKey( pausable = False, cancellable = False )
                     
-                    HC.pubsub.pub( 'message', message )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'creating directories' )
+                    
+                    HC.pubsub.pub( 'message', job_key )
                     
                     if not os.path.exists( HC.CLIENT_THUMBNAILS_DIR ): os.mkdir( HC.CLIENT_THUMBNAILS_DIR )
                     
@@ -1499,7 +1475,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                if i % 100 == 0: message.SetInfo( 'text', prefix + HC.ConvertIntToPrettyString( i ) + ' done' )
+                                if i % 100 == 0: job_key.SetVariable( 'popup_message_text_1', prefix + HC.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 ( base, filename ) = os.path.split( path )
                                 
@@ -1531,8 +1507,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                             
                         
                     
-                    if num_broken > 0: message.SetInfo( 'text', prefix + 'done! ' + HC.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
-                    else: message.SetInfo( 'text', prefix + 'done!' )
+                    if num_broken > 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done! ' + HC.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
+                    else: job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
                     
                 
                 HydrusThreading.CallToThread( THREADRegenerateThumbnails )
@@ -1646,11 +1622,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 job_key = HC.JobKey( pausable = False, cancellable = False )
                 
-                message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, url_string, job_key )
+                HC.pubsub.pub( 'message', job_key )
                 
-                HC.pubsub.pub( 'message', message )
-                
-                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, message, url, url_string )
+                HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, job_key, url, url_string )
                 
             
         

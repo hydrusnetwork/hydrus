@@ -65,7 +65,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 137
+SOFTWARE_VERSION = 138
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1962,7 +1962,10 @@ class JobKey( object ):
     
     def DeleteVariable( self, name ):
         
-        with self._variable_lock: del self._variables[ name ]
+        with self._variable_lock:
+            
+            if name in self._variables: del self._variables[ name ]
+            
         
     
     def Finish( self ): self._done.set()
@@ -2076,9 +2079,10 @@ class JobNetwork( object ):
     
 class Message( object ):
     
-    def __init__( self, message_type, info ):
+    def __init__( self, message_type, job_key, info ):
         
         self._message_type = message_type
+        self._job_key = job_key
         self._info = info
         
         self._closed = False
@@ -2111,7 +2115,7 @@ class MessageGauge( Message ):
     
     def __init__( self, message_type, text, job_key ):
         
-        Message.__init__( self, message_type, {} )
+        Message.__init__( self, message_type, job_key, {} )
         
         self._info[ 'mode' ] = 'text'
         self._info[ 'text' ] = text

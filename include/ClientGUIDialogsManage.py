@@ -2787,7 +2787,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._listbook = ClientGUICommon.ListBook( self )
             
-            # files and memory
+            # files and thumbnails
             
             self._file_page = wx.Panel( self._listbook )
             self._file_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
@@ -2796,40 +2796,51 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._exclude_deleted_files = wx.CheckBox( self._file_page, label = '' )
             
-            self._thumbnail_cache_size = wx.SpinCtrl( self._file_page, min = 10, max = 3000 )
-            self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
-            
-            self._estimated_number_thumbnails = wx.StaticText( self._file_page, label = '' )
-            
-            self._preview_cache_size = wx.SpinCtrl( self._file_page, min = 20, max = 3000 )
-            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
-            
-            self._estimated_number_previews = wx.StaticText( self._file_page, label = '' )
-            
-            self._fullscreen_cache_size = wx.SpinCtrl( self._file_page, min = 100, max = 3000 )
-            self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
-            
-            self._estimated_number_fullscreens = wx.StaticText( self._file_page, label = '' )
-            
             self._thumbnail_width = wx.SpinCtrl( self._file_page, min=20, max=200 )
             self._thumbnail_width.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
             self._thumbnail_height = wx.SpinCtrl( self._file_page, min=20, max=200 )
             self._thumbnail_height.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
             
-            self._num_autocomplete_chars = wx.SpinCtrl( self._file_page, min = 1, max = 100 )
+            self._listbook.AddPage( self._file_page, 'files and thumbnails' )
+            
+            # maintenance and memory
+            
+            self._maintenance_page = wx.Panel( self._listbook )
+            self._maintenance_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._thumbnail_cache_size = wx.SpinCtrl( self._maintenance_page, min = 10, max = 3000 )
+            self._thumbnail_cache_size.Bind( wx.EVT_SPINCTRL, self.EventThumbnailsUpdate )
+            
+            self._estimated_number_thumbnails = wx.StaticText( self._maintenance_page, label = '' )
+            
+            self._preview_cache_size = wx.SpinCtrl( self._maintenance_page, min = 20, max = 3000 )
+            self._preview_cache_size.Bind( wx.EVT_SPINCTRL, self.EventPreviewsUpdate )
+            
+            self._estimated_number_previews = wx.StaticText( self._maintenance_page, label = '' )
+            
+            self._fullscreen_cache_size = wx.SpinCtrl( self._maintenance_page, min = 100, max = 3000 )
+            self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
+            
+            self._estimated_number_fullscreens = wx.StaticText( self._maintenance_page, label = '' )
+            
+            self._maintenance_idle_period = wx.SpinCtrl( self._maintenance_page, min = 0, max = 1000 )
+            self._maintenance_vacuum_period = wx.SpinCtrl( self._maintenance_page, min = 0, max = 365 )
+            self._maintenance_delete_orphans_period = wx.SpinCtrl( self._maintenance_page, min = 0, max = 365 )
+            
+            self._num_autocomplete_chars = wx.SpinCtrl( self._maintenance_page, min = 1, max = 100 )
             self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db' + os.linesep + 'increase this if you find autocomplete results are slow' )
             
-            self._autocomplete_long_wait = wx.SpinCtrl( self._file_page, min = 0, max = 10000 )
+            self._autocomplete_long_wait = wx.SpinCtrl( self._maintenance_page, min = 0, max = 10000 )
             self._autocomplete_long_wait.SetToolTipString( 'how long the gui will wait, after you enter a character, before it queries the db with what you have entered so far' )
             
-            self._autocomplete_short_wait_chars = wx.SpinCtrl( self._file_page, min = 1, max = 100 )
+            self._autocomplete_short_wait_chars = wx.SpinCtrl( self._maintenance_page, min = 1, max = 100 )
             self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
             
-            self._autocomplete_short_wait = wx.SpinCtrl( self._file_page, min = 0, max = 10000 )
+            self._autocomplete_short_wait = wx.SpinCtrl( self._maintenance_page, min = 0, max = 10000 )
             self._autocomplete_short_wait.SetToolTipString( 'how long the gui will wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
             
-            self._listbook.AddPage( self._file_page, 'files and memory' )
+            self._listbook.AddPage( self._maintenance_page, 'maintenance and memory' )
             
             # gui
             
@@ -3038,19 +3049,25 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
             
-            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
-            
-            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
-            
-            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
-            
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
             self._thumbnail_width.SetValue( thumbnail_width )
             
             self._thumbnail_height.SetValue( thumbnail_height )
             
+            #
+            
+            self._thumbnail_cache_size.SetValue( int( HC.options[ 'thumbnail_cache_size' ] / 1048576 ) )
+            
+            self._preview_cache_size.SetValue( int( HC.options[ 'preview_cache_size' ] / 1048576 ) )
+            
+            self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
+            
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
+            
+            self._maintenance_idle_period.SetValue( HC.options[ 'idle_period' ] / 60 )
+            self._maintenance_vacuum_period.SetValue( HC.options[ 'maintenance_vacuum_period' ] / 86400 )
+            self._maintenance_delete_orphans_period.SetValue( HC.options[ 'maintenance_delete_orphans_period' ] / 86400 )
             
             ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
             
@@ -3217,6 +3234,26 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         
         def ArrangeControls():
             
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Default export directory: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._export_location, FLAGS_EXPAND_BOTH_WAYS )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Exclude deleted files from new imports and remote searches: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._exclude_deleted_files, FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail width: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._thumbnail_width, FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail height: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._thumbnail_height, FLAGS_MIXED )
+            
+            self._file_page.SetSizer( gridbox )
+            
+            #
+            
             thumbnails_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
             thumbnails_sizer.AddF( self._thumbnail_cache_size, FLAGS_MIXED )
@@ -3236,40 +3273,37 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Default export directory: ' ), FLAGS_MIXED )
-            gridbox.AddF( self._export_location, FLAGS_EXPAND_BOTH_WAYS )
-            
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Exclude deleted files from new imports and remote searches: ' ), FLAGS_MIXED )
-            gridbox.AddF( self._exclude_deleted_files, FLAGS_MIXED )
-            
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'MB memory reserved for thumbnail cache: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'MB memory reserved for thumbnail cache: ' ), FLAGS_MIXED )
             gridbox.AddF( thumbnails_sizer, FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'MB memory reserved for preview cache: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'MB memory reserved for preview cache: ' ), FLAGS_MIXED )
             gridbox.AddF( previews_sizer, FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'MB memory reserved for fullscreen cache: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'MB memory reserved for fullscreen cache: ' ), FLAGS_MIXED )
             gridbox.AddF( fullscreens_sizer, FLAGS_NONE )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail width: ' ), FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_width, FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Minutes of inactivity until client is considered idle (0 for never): ' ), FLAGS_MIXED )
+            gridbox.AddF( self._maintenance_idle_period, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Thumbnail height: ' ), FLAGS_MIXED )
-            gridbox.AddF( self._thumbnail_height, FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Number of days to wait between vacuums (0 for never): ' ), FLAGS_MIXED )
+            gridbox.AddF( self._maintenance_vacuum_period, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete character threshold: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Number of days to wait between orphan deletions (0 for never): ' ), FLAGS_MIXED )
+            gridbox.AddF( self._maintenance_delete_orphans_period, FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete character threshold: ' ), FLAGS_MIXED )
             gridbox.AddF( self._num_autocomplete_chars, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete long wait (ms): ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete long wait (ms): ' ), FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_long_wait, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete short wait threshold: ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete short wait threshold: ' ), FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_short_wait_chars, FLAGS_MIXED )
             
-            gridbox.AddF( wx.StaticText( self._file_page, label = 'Autocomplete short wait (ms): ' ), FLAGS_MIXED )
+            gridbox.AddF( wx.StaticText( self._maintenance_page, label = 'Autocomplete short wait (ms): ' ), FLAGS_MIXED )
             gridbox.AddF( self._autocomplete_short_wait, FLAGS_MIXED )
             
-            self._file_page.SetSizer( gridbox )
+            self._maintenance_page.SetSizer( gridbox )
             
             #
             
@@ -3539,7 +3573,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         self.EventPreviewsUpdate( None )
         self.EventThumbnailsUpdate( None )
         
-        wx.CallAfter( self._file_page.Layout ) # draws the static texts correctly
+        wx.CallAfter( self._maintenance_page.Layout ) # draws the static texts correctly
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -3758,6 +3792,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
         HC.options[ 'preview_cache_size' ] = self._preview_cache_size.GetValue() * 1048576
         HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+        
+        HC.options[ 'idle_period' ] = 60 * self._maintenance_idle_period.GetValue()
+        HC.options[ 'maintenance_delete_orphans_period' ] = 86400 * self._maintenance_delete_orphans_period.GetValue()
+        HC.options[ 'maintenance_vacuum_period' ] = 86400 * self._maintenance_vacuum_period.GetValue()
         
         new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
         

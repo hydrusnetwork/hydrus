@@ -281,7 +281,16 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             else: s = HC.ConvertIntToPrettyString( num_files ) + ' files'
             
         elif num_selected == 1: s = '1 of ' + HC.ConvertIntToPrettyString( num_files ) + ' files selected, ' + pretty_total_size
-        else: s = HC.ConvertIntToPrettyString( num_selected ) + ' of ' + HC.ConvertIntToPrettyString( num_files ) + ' files selected, totalling ' + pretty_total_size
+        else:
+            
+            num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
+            
+            if num_inbox == num_selected: inbox_phrase = 'all in inbox, '
+            elif num_inbox == 0: inbox_phrase = 'all archived, '
+            else: inbox_phrase = HC.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HC.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
+            
+            s = HC.ConvertIntToPrettyString( num_selected ) + ' of ' + HC.ConvertIntToPrettyString( num_files ) + ' files selected, ' + inbox_phrase + 'totalling ' + pretty_total_size
+            
         
         return s
         

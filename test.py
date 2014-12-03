@@ -131,6 +131,8 @@ class App( wx.App ):
     
     def ReadDaemon( self, name, *args, **kwargs ): return self.Read( name )
     
+    def ResetIdleTimer( self ): pass
+    
     def SetRead( self, name, value ): self._reads[ name ] = value
     
     def SetWebCookies( self, name, value ): self._cookies[ name ] = value

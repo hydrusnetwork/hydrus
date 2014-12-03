@@ -219,6 +219,9 @@ class Animation( wx.Window ):
                 if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
                 else: self._DrawWhite()
                 
+                self._timer_video.Start( 0, wx.TIMER_ONE_SHOT )
+                
+                
             
         
     
@@ -228,15 +231,26 @@ class Animation( wx.Window ):
             
             self._current_frame_index = frame_index
             
+            self._video_container.SetFramePosition( self._current_frame_index )
+            
+            self._current_frame_drawn_at = 0.0
             self._current_frame_drawn = False
             
-            self._video_container.SetFramePosition( self._current_frame_index )
+            if self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
+            else: self._DrawWhite()
+            
+            self._timer_video.Start( 0, wx.TIMER_ONE_SHOT )
             
         
         self._paused = True
         
     
-    def Play( self ): self._paused = False
+    def Play( self ):
+        
+        self._paused = False
+        
+        self._timer_video.Start( 0, wx.TIMER_ONE_SHOT )
+        
     
     def SetAnimationBar( self, animation_bar ): self._animation_bar = animation_bar
     
@@ -266,11 +280,14 @@ class Animation( wx.Window ):
             
             if not self._current_frame_drawn and self._video_container.HasFrame( self._current_frame_index ): self._DrawFrame()
             
-            ms_since_current_frame_drawn = int( 1000.0 * ( HC.GetNowPrecise() - self._current_frame_drawn_at ) )
-            
-            ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
-            
-            self._timer_video.Start( ms_until_next_frame, wx.TIMER_ONE_SHOT )
+            if not self._current_frame_drawn or not self._paused:
+                
+                ms_since_current_frame_drawn = int( 1000.0 * ( HC.GetNowPrecise() - self._current_frame_drawn_at ) )
+                
+                ms_until_next_frame = max( MIN_TIMER_TIME, self._video_container.GetDuration( self._current_frame_index ) - ms_since_current_frame_drawn )
+                
+                self._timer_video.Start( ms_until_next_frame, wx.TIMER_ONE_SHOT )
+                
             
         
     
@@ -316,9 +333,23 @@ class AnimationBar( wx.Window ):
         
         dc.DrawRectangle( 0, 0, my_width, ANIMATED_SCANBAR_HEIGHT )
         
+        #
+        
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_SCROLLBAR ) ) )
         
         dc.DrawRectangle( int( float( my_width - ANIMATED_SCANBAR_CARET_WIDTH ) * float( self._current_frame_index ) / float( self._num_frames - 1 ) ), 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
+        
+        #
+        
+        dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+        
+        dc.SetTextForeground( wx.BLACK )
+        
+        s = HC.ConvertIntToPrettyString( self._current_frame_index + 1 ) + '/' + HC.ConvertIntToPrettyString( self._num_frames )
+        
+        ( x, y ) = dc.GetTextExtent( s )
+        
+        dc.DrawText( s, my_width - x - 3, 3 )
         
     
     def EventMouse( self, event ):
@@ -4031,18 +4062,19 @@ class StaticImage( wx.Window ):
             
             ( frame_width, frame_height ) = hydrus_bitmap.GetSize()
             
-            x_scale = my_width / float( frame_width )
-            y_scale = my_height / float( frame_height )
-            
-            dc.SetUserScale( x_scale, y_scale )
-            
-            wx_bitmap = hydrus_bitmap.GetWxBitmap()
+            if frame_height != my_height:
+                
+                image = hydrus_bitmap.GetWxImage()
+                
+                image = image.Scale( my_width, my_height, wx.IMAGE_QUALITY_HIGH )
+                
+                wx_bitmap = wx.BitmapFromImage( image )
+                
+            else: wx_bitmap = hydrus_bitmap.GetWxBitmap()
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
             wx.CallAfter( wx_bitmap.Destroy )
-            
-            dc.SetUserScale( 1.0, 1.0 )
             
             self._timer_render_wait.Stop()
             

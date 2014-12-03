@@ -1786,7 +1786,7 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
         finally: self._job_key.Finish()
         
     
-def THREADDownloadURL( message, url, url_string ):
+def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
@@ -1795,42 +1795,28 @@ def THREADDownloadURL( message, url, url_string ):
             if range is None: text = url_string + ' - ' + HC.ConvertIntToBytes( value )
             else: text = url_string + ' - ' + HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
             
-            message.SetInfo( 'range', range )
-            message.SetInfo( 'value', value )
-            message.SetInfo( 'text', text )
+            job_key.SetVariable( 'popup_message_text_1', text )
+            job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
             
-        
-        message.SetInfo( 'range', None )
-        message.SetInfo( 'value', None )
-        message.SetInfo( 'mode', 'gauge' )
         
         temp_path = HC.http.Request( HC.GET, url, response_to_path = True, report_hooks = [ hook ] )
         
-        message.SetInfo( 'range', None )
-        message.SetInfo( 'value', None )
-        message.SetInfo( 'text', 'importing ' + url_string )
-        message.SetInfo( 'mode', 'gauge' )
+        job_key.DeleteVariable( 'popup_message_gauge_1' )
+        job_key.SetVariable( 'popup_message_text_1', 'importing ' + url_string )
         
         ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
         
         if result in ( 'successful', 'redundant' ):
             
-            message.SetInfo( 'text', url_string )
-            message.SetInfo( 'hashes', { hash } )
-            message.SetInfo( 'mode', 'files' )
+            job_key.SetVariable( 'popup_message_text_1', url_string )
+            job_key.SetVariable( 'popup_message_files', { hash } )
             
         elif result == 'deleted':
             
-            message.SetInfo( 'text', 'File was already deleted!' )
-            message.SetInfo( 'mode', 'text' )
+            job_key.SetVariable( 'popup_message_text_1', url_string + ' was already deleted!' )
             
         
-    except Exception as e:
-        
-        message.Close()
-        
-        HC.ShowException( e )
-        
+    except Exception as e: HC.ShowException( e )
     
 def Parse4chanPostScreen( html ):
     
