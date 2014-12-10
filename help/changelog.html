@@ -10,6 +10,39 @@
 			<ul>
 				<li><h3>version 138</h3></li>
 				<ul>
+					<li>cleaned up all the old popup message code, and fully integrated the new</li>
+					<li>moved repo sync to the new popup messaging system</li>
+					<li>moved normal errors and db errors to the new popup messaging system</li>
+					<li>improved some error handling code</li>
+					<li>reintroduced message printing</li>
+					<li>improved subscriptions messaging</li>
+					<li>added cancel button to:</li>
+					<ul>
+						<li>check file integrity</li>
+						<li>export to tag archive</li>
+					</ul>
+					<li>added pause and cancel buttons to:</li>
+					<ul>
+						<li>repository sync</li>
+						<li>subscription sync</li>
+						<li>pending upload</li>
+						<li>regenerate thumbnails</li>
+					</ul>
+					<li>improved how jobs' pausability and cancelability are spawned</li>
+					<li>improved and harmonised a lot of pause and cancel and general shutdown-job-interaction logic</li>
+					<li>pausable and cancellable popups can only be dimissed with right click once they are done or cancelled</li>
+					<li>improved some more pause logic in the subscription and repository sync daemons</li>
+					<li>improved popup pause responsivity</li>
+					<li>added comprehensive cancelled/finished log statements for the newly pausable and cancellable operations</li>
+					<li>'just woke from sleep' calculation will no longer evaluate to true on application start</li>
+					<li>deleted the old broken message log page, which I had forgotten even existed!</li>
+					<li>fixed a bug stopping adding tag repositories in the manage services dialog</li>
+					<li>fixed a bug that was hiding the 'name and credentials' panel in the manage services dialog</li>
+					<li>improved some kinds of thumbnail error reporting</li>
+					<li>sped up client boot by one second</li>
+				</ul>
+				<li><h3>version 138</h3></li>
+				<ul>
 					<li>created new 'maintenance and memory' options page in the manage options dialog, and moved some things over from 'files and memory', which is now 'files and thumbnails'</li>
 					<li>added options for idle, vacuum, and delete orphans periods to the 'maintenance and memory' page in the manage options dialog</li>
 					<li>fixed the incredibly annoying animated scanbar delayed-frame bug, where a click on the scanbar would not draw the new frame until the old frame's expected delay was complete. scanbar scanning is a lot smoother all around, now</li>
