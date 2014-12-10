@@ -142,20 +142,22 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _THREADUploadPending( self, service_key ):
         
+        service = HC.app.GetManager( 'services' ).GetService( service_key )
+        
+        service_name = service.GetName()
+        service_type = service.GetServiceType()
+        
         try:
             
-            job_key = HC.JobKey( pausable = False, cancellable = False )
+            prefix = 'uploading pending to ' + service_name + ': '
             
-            job_key.SetVariable( 'popup_message_text_1', 'gathering pending and petitioned' )
+            job_key = HC.JobKey( pausable = True, cancellable = True )
+            
+            job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering pending content' )
             
             HC.pubsub.pub( 'message', job_key )
             
             result = HC.app.Read( 'pending', service_key )
-            
-            service = HC.app.GetManager( 'services' ).GetService( service_key )
-            
-            service_key = service.GetServiceKey()
-            service_type = service.GetServiceType()
             
             if service_type == HC.FILE_REPOSITORY:
                 
@@ -163,7 +165,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 media_results = HC.app.Read( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, upload_hashes )
                 
-                job_key.SetVariable( 'popup_message_text_1', 'connecting to repository' )
+                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
                 
                 good_hashes = []
                 
@@ -171,11 +173,22 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 for ( i, media_result ) in enumerate( media_results ):
                     
-                    if job_key.IsCancelled():
+                    while job_key.IsPaused() or job_key.IsCancelled() or HC.shutdown:
                         
-                        job_key.SetVariable( 'popup_message_text_1', 'upload cancelled' )
+                        time.sleep( 0.1 )
                         
-                        return
+                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                        
+                        if job_key.IsCancelled():
+                            
+                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                            
+                            print( HC.ConvertJobKeyToString( job_key ) )
+                            
+                            return
+                            
+                        
+                        if HC.shutdown: return
                         
                     
                     i += 1
@@ -183,7 +196,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     hash = media_result.GetHash()
                     mime = media_result.GetMime()
                     
-                    job_key.SetVariable( 'popup_message_text_1', 'Uploading file ' + HC.ConvertIntToPrettyString( i + 1 ) + ' of ' + HC.ConvertIntToPrettyString( len( media_results ) ) )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading file ' + HC.ConvertIntToPrettyString( i + 1 ) + ' of ' + HC.ConvertIntToPrettyString( len( media_results ) ) )
                     job_key.SetVariable( 'popup_message_gauge_1', ( i, len( media_results ) ) )
                     
                     try:
@@ -208,7 +221,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         HC.ShowException( e )
                         
-                        time.sleep( 1 )
+                        time.sleep( 2 )
                         
                     
                     time.sleep( 0.1 )
@@ -220,7 +233,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     i += 1
                     
-                    job_key.SetVariable( 'popup_message_text_1', 'uploading petitions' )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading petitions' )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
                     
@@ -233,18 +246,29 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 updates = result
                 
-                job_key.SetVariable( 'popup_message_text_1', 'connecting to repository' )
+                job_key.SetVariable( 'popup_message_text_1', prefix + 'connecting to repository' )
                 
                 for ( i, update ) in enumerate( updates ):
                     
-                    if job_key.IsCancelled():
+                    while job_key.IsPaused() or job_key.IsCancelled() or HC.shutdown:
                         
-                        job_key.SetVariable( 'popup_message_text_1', 'upload cancelled' )
+                        time.sleep( 0.1 )
                         
-                        return
+                        if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                        
+                        if job_key.IsCancelled():
+                            
+                            job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                            
+                            print( HC.ConvertJobKeyToString( job_key ) )
+                            
+                            return
+                            
+                        
+                        if HC.shutdown: return
                         
                     
-                    job_key.SetVariable( 'popup_message_text_1', 'posting update: ' + HC.ConvertIntToPrettyString( i + 1 ) + '/' + HC.ConvertIntToPrettyString( len( updates ) ) )
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'posting update: ' + HC.ConvertIntToPrettyString( i + 1 ) + '/' + HC.ConvertIntToPrettyString( len( updates ) ) )
                     job_key.SetVariable( 'popup_message_gauge_1', ( i, len( updates ) ) )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )
@@ -260,10 +284,19 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 
             
-        except Exception as e: HC.ShowException( e )
+        except Exception as e:
+            
+            job_key.Cancel()
+            
+            raise
+            
         
         job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', 'upload done!' )
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'upload done!' )
+        
+        print( HC.ConvertJobKeyToString( job_key ) )
+        
+        job_key.Finish()
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -341,9 +374,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             HC.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
             
         
-        message = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
+        text = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES: HydrusThreading.CallToThread( do_it )
             
@@ -491,9 +524,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             HC.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
         
-        message = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
+        text = 'This will attempt to start the server in the same install directory as this client, initialise it, and store the resultant admin accounts in the client.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES: HydrusThreading.CallToThread( do_it )
             
@@ -581,9 +614,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _DeleteOrphans( self ):
         
-        message = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will appear when it is done.'
+        text = 'This will iterate through the client\'s file store, deleting anything that is no longer needed. It happens automatically every few days, but you can force it here. If you have a lot of files, it will take a few minutes. A popup message will appear when it is done.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'delete_orphans' )
             
@@ -631,11 +664,11 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
                 
-                message = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
+                text = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
                 
-                print( message )
+                print( text )
                 
-                wx.MessageBox( message + os.linesep + 'This has been written to the log.' )
+                wx.MessageBox( text + os.linesep + 'This has been written to the log.' )
                 
             
         
@@ -787,8 +820,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_url' ), p( '&New URL Download Page' ), p( 'Open a new tab to download files from galleries or threads.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_booru' ), p( '&New Booru Download Page' ), p( 'Open a new tab to download files from a booru.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_import_thread_watcher' ), p( '&New Thread Watcher Page' ), p( 'Open a new tab to watch a thread.' ) )
-            menu.AppendSeparator()
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_log_page' ), p( '&New Log Page' ), p( 'Open a new tab to show recently logged events.' ) )
             
             return ( menu, p( '&View' ), True )
             
@@ -1309,15 +1340,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         new_page.SetSearchFocus()
         
     
-    def _NewPageLog( self ):
-        
-        new_page = ClientGUIPages.PageLog( self._notebook )
-        
-        self._notebook.AddPage( new_page, 'log', select = True )
-        
-        self._notebook.SetSelection( self._notebook.GetPageCount() - 1 )
-        
-    
     def _NewPagePetitions( self, service_key = None ):
         
         if service_key is None: service_key = ClientGUIDialogs.SelectServiceKey( service_types = HC.REPOSITORIES, permission = HC.RESOLVE_PETITIONS )
@@ -1438,9 +1460,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
     
     def _RegenerateThumbnails( self ):
         
-        message = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
+        text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
@@ -1448,7 +1470,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     prefix = 'regenerating thumbnails: '
                     
-                    job_key = HC.JobKey( pausable = False, cancellable = False )
+                    job_key = HC.JobKey( pausable = True, cancellable = True )
                     
                     job_key.SetVariable( 'popup_message_text_1', prefix + 'creating directories' )
                     
@@ -1471,11 +1493,29 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                         
                         try:
                             
+                            while job_key.IsPaused() or job_key.IsCancelled() or HC.shutdown:
+                                
+                                time.sleep( 0.1 )
+                                
+                                if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', prefix + 'paused' )
+                                
+                                if job_key.IsCancelled():
+                                    
+                                    job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                                    
+                                    print( HC.ConvertJobKeyToString( job_key ) )
+                                    
+                                    return
+                                    
+                                
+                                if HC.shutdown: return
+                                
+                            
                             mime = HydrusFileHandling.GetMime( path )
                             
                             if mime in HC.MIMES_WITH_THUMBNAILS:
                                 
-                                if i % 100 == 0: job_key.SetVariable( 'popup_message_text_1', prefix + HC.ConvertIntToPrettyString( i ) + ' done' )
+                                job_key.SetVariable( 'popup_message_text_1', prefix + HC.ConvertIntToPrettyString( i ) + ' done' )
                                 
                                 ( base, filename ) = os.path.split( path )
                                 
@@ -1496,8 +1536,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
                                 
                             
-                            if HC.shutdown: return
-                            
                         except:
                             
                             print( path )
@@ -1509,6 +1547,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     if num_broken > 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done! ' + HC.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
                     else: job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+                    
+                    print( HC.ConvertJobKeyToString( job_key ) )
+                    
+                    job_key.Finish()
                     
                 
                 HydrusThreading.CallToThread( THREADRegenerateThumbnails )
@@ -1620,7 +1662,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url_string = url
                 
-                job_key = HC.JobKey( pausable = False, cancellable = False )
+                job_key = HC.JobKey()
                 
                 HC.pubsub.pub( 'message', job_key )
                 
@@ -1679,9 +1721,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _VacuumDatabase( self ):
         
-        message = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will appear when it is done.'
+        text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes. A popup message will appear when it is done.'
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'vacuum' )
             
@@ -1717,9 +1759,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if HC.options[ 'confirm_client_exit' ]:
             
-            message = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
+            text = 'Are you sure you want to exit the client? (Will auto-yes in 15 seconds)'
             
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                 
                 call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
                 
@@ -1843,7 +1885,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'new_import_booru': self._NewPageImportBooru()
             elif command == 'new_import_thread_watcher': self._NewPageImportThreadWatcher()
             elif command == 'new_import_url': self._NewPageImportURL()
-            elif command == 'new_log_page': self._NewPageLog()
             elif command == 'new_page':
                 
                 with ClientGUIDialogs.DialogPageChooser( self ) as dlg: dlg.ShowModal()
@@ -2999,8 +3040,6 @@ class FrameSplash( ClientGUICommon.Frame ):
             wx.CallAfter( self.SetText, 'booting gui' )
             
             wx.CallAfter( HC.app.InitGUI )
-            
-            time.sleep( 1 )
             
         except sqlite3.OperationalError as e:
             

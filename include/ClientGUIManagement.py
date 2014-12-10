@@ -1784,7 +1784,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 is_4chan = '4chan.org' in host
                 is_8chan = '8chan.co' in host
                 
-                if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan right now!' )
+                if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan and 8chan right now!' )
                 
                 try:
                     
@@ -2068,7 +2068,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, page_key, file_service_key, starting_from_session = starting_from_session )
         
-        self._query_key = HC.JobKey()
+        self._query_key = HC.JobKey( cancellable = True )
         self._synchronised = True
         self._include_current_tags = True
         self._include_pending_tags = True
@@ -2301,7 +2301,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
         self._identity = identity
         self._starting_from_session = starting_from_session
         
-        self._query_key = HC.JobKey()
+        self._query_key = HC.JobKey( cancellable = True )
         
         # sort out push-refresh later
         #self._refresh_inbox = wx.Button( self, label = 'refresh inbox' )
@@ -2358,7 +2358,7 @@ class ManagementPanelMessages( wx.ScrolledWindow ):
                 
                 self._query_key.Cancel()
                 
-                self._query_key = HC.JobKey()
+                self._query_key = HC.JobKey( cancellable = True )
                 
                 if len( current_predicates ) > 0:
                     

@@ -39,6 +39,8 @@ class Controller( wx.App ):
         
         last_maintenance_time = self._timestamps[ 'last_maintenance_time' ]
         
+        if last_maintenance_time == 0: return False
+        
         # this tests if we probably just woke up from a sleep
         if HC.GetNow() - last_maintenance_time > MAINTENANCE_PERIOD + ( 5 * 60 ): self._just_woke_from_sleep = True
         else: self._just_woke_from_sleep = False
@@ -56,13 +58,13 @@ class Controller( wx.App ):
                 
                 path = dlg.GetPath()
                 
-                message = 'Are you sure "' + path + '" is the correct directory?'
-                message += os.linesep * 2
-                message += 'Everything already in that directory will be deleted before the backup starts.'
-                message += os.linesep * 2
-                message += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
+                text = 'Are you sure "' + path + '" is the correct directory?'
+                text += os.linesep * 2
+                text += 'Everything already in that directory will be deleted before the backup starts.'
+                text += os.linesep * 2
+                text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
                 
-                with ClientGUIDialogs.DialogYesNo( self._gui, message ) as dlg_yn:
+                with ClientGUIDialogs.DialogYesNo( self._gui, text ) as dlg_yn:
                     
                     if dlg_yn.ShowModal() == wx.ID_YES:
                         
@@ -185,8 +187,6 @@ class Controller( wx.App ):
     
     def GetGUI( self ): return self._gui
     
-    def GetLog( self ): return self._log
-    
     def GetManager( self, manager_type ): return self._managers[ manager_type ]
     
     def GetPreviewImageCache( self ): return self._preview_image_cache
@@ -209,8 +209,6 @@ class Controller( wx.App ):
         
     
     def InitDB( self ):
-        
-        self._log = CC.Log()
         
         try:
             
@@ -531,13 +529,13 @@ class Controller( wx.App ):
                 
                 path = dlg.GetPath()
                 
-                message = 'Are you sure you want to restore a backup from "' + path + '"?'
-                message += os.linesep * 2
-                message += 'Everything in your current database will be deleted!'
-                message += os.linesep * 2
-                message += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
+                text = 'Are you sure you want to restore a backup from "' + path + '"?'
+                text += os.linesep * 2
+                text += 'Everything in your current database will be deleted!'
+                text += os.linesep * 2
+                text += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
                 
-                with ClientGUIDialogs.DialogYesNo( self._gui, message ) as dlg_yn:
+                with ClientGUIDialogs.DialogYesNo( self._gui, text ) as dlg_yn:
                     
                     if dlg_yn.ShowModal() == wx.ID_YES:
                         

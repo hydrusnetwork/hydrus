@@ -1454,7 +1454,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         prefix_string = 'checking file integrity: '
         
-        job_key = HC.JobKey( pausable = False, cancellable = False )
+        job_key = HC.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
         
@@ -1466,11 +1466,19 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( i, ( hash_id, mime ) ) in enumerate( info ):
             
-            if i % 100 == 0:
+            if job_key.IsCancelled():
                 
-                job_key.SetVariable( 'popup_message_text_1', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( info ) ) )
-                job_key.SetVariable( 'popup_message_gauge_1', ( i, len( info ) ) )
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + 'cancelled' )
                 
+                print( HC.ConvertJobKeyToString( job_key ) )
+                
+                return
+                
+            
+            if HC.shutdown: return
+            
+            job_key.SetVariable( 'popup_message_text_1', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( info ) ) )
+            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( info ) ) )
             
             hash = self._GetHash( hash_id )
             
@@ -1495,12 +1503,16 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._DeleteFiles( self._local_file_service_id, deletee_hash_ids )
         
-        text = prefix_string + 'done! '
+        final_text = 'done! '
         
-        if len( deletee_hash_ids ) == 0: text += 'all files ok!'
-        else: text += HC.ConvertIntToPrettyString( len( deletee_hash_ids ) ) + ' files deleted!'
+        if len( deletee_hash_ids ) == 0: final_text += 'all files ok!'
+        else: final_text += HC.ConvertIntToPrettyString( len( deletee_hash_ids ) ) + ' files deleted!'
         
-        job_key.SetVariable( 'popup_message_text_1', text )
+        job_key.SetVariable( 'popup_message_text_1', prefix_string + final_text )
+        
+        print( HC.ConvertJobKeyToString( job_key ) )
+        
+        job_key.Finish()
         
     
     def _DeleteFiles( self, service_id, hash_ids ):
@@ -1553,6 +1565,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         HC.pubsub.pub( 'set_splash_text', 'deleting orphan files' )
         
+        prefix = 'database maintenance - delete orphans: '
+        
+        job_key = HC.JobKey()
+        
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering file information' )
+        
+        HC.pubsub.pub( 'message', job_key )
+        
         # careful of the .encode( 'hex' ) business here!
         
         # files
@@ -1569,6 +1589,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         local_files_hashes = CC.GetAllFileHashes()
         
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting orphan files' )
+        
         for hash in local_files_hashes & deletee_hashes:
             
             try:
@@ -1584,6 +1606,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         # perceptual_hashes and thumbs
         
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting internal orphan information' )
+        
         perceptual_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM perceptual_hashes;' ) }
         
         hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info;' ) }
@@ -1592,13 +1616,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._c.execute( 'DELETE FROM perceptual_hashes WHERE hash_id IN ' + HC.SplayListForDB( perceptual_deletees ) + ';' )
         
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering thumbnail information' )
+        
         local_thumbnail_hashes = CC.GetAllThumbnailHashes()
         
         hashes = set( self._GetHashes( hash_ids ) )
         
-        thumbnail_deletees = local_thumbnail_hashes - hashes
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting orphan thumbnails' )
         
-        for hash in thumbnail_deletees:
+        for hash in local_thumbnail_hashes - hashes:
             
             path = CC.GetExpectedThumbnailPath( hash, True )
             resized_path = CC.GetExpectedThumbnailPath( hash, False )
@@ -1609,7 +1635,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
         
-        HC.ShowText( 'Database maintenance: orphaned files successfully deleted.' )
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+        
+        print( HC.ConvertJobKeyToString( job_key ) )
         
     
     def _DeletePending( self, service_key ):
@@ -1681,7 +1709,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         prefix_string = 'exporting to tag archive: '
         
-        job_key = HC.JobKey( pausable = False, cancellable = False )
+        job_key = HC.JobKey( cancellable = True )
         
         job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
         
@@ -1704,7 +1732,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
-            if i % 1000 == 0:
+            if job_key.IsCancelled():
+                
+                job_key.SetVariable( 'popup_message_text_1', prefix_string + 'cancelled' )
+                
+                print( HC.ConvertJobKeyToString( job_key ) )
+                
+                return
+                
+            
+            if HC.shutdown: return
+            
+            if i % 100 == 0:
                 
                 job_key.SetVariable( 'popup_message_text_1', prefix_string + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( hash_ids ) ) )
                 job_key.SetVariable( 'popup_message_gauge_1', ( i, len( hash_ids ) ) )
@@ -1735,6 +1774,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         hta.CommitBigJob()
         
         job_key.SetVariable( 'popup_message_text_1', prefix_string + 'done!' )
+        
+        print( HC.ConvertJobKeyToString( job_key ) )
+        
+        job_key.Finish()
         
     
     def _FattenAutocompleteCache( self ):
@@ -3873,7 +3916,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                             text = name + ' at ' + time.ctime( timestamp ) + ':' + os.linesep * 2 + post
                             
-                            job_key = HC.JobKey( pausable = False, cancellable = False )
+                            job_key = HC.JobKey()
                             
                             job_key.SetVariable( 'popup_message_text_1', text )
                             
@@ -4076,7 +4119,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         prefix_string = 'syncing to tag archive ' + archive_name + ': '
         
-        job_key = HC.JobKey( pausable = False, cancellable = False )
+        job_key = HC.JobKey()
         
         job_key.SetVariable( 'popup_message_text_1', prefix_string + 'preparing' )
         
@@ -4530,7 +4573,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     if message is None:
                         
-                        job_key = HC.JobKey( pausable = False, cancellable = False )
+                        job_key = HC.JobKey()
                     
                         job_key.SetVariable( 'popup_message_text_1', 'updating services: deleting tag data' )
                         
@@ -5039,7 +5082,7 @@ class DB( ServiceDB ):
             
             prefix = 'deleting old resized thumbnails: '
             
-            job_key = HC.JobKey( pausable = False, cancellable = False )
+            job_key = HC.JobKey()
             
             job_key.SetVariable( 'popup_message_text_1', prefix + 'initialising' )
             
@@ -5051,7 +5094,7 @@ class DB( ServiceDB ):
                 
                 os.remove( path )
                 
-                if i % 100 == 0: job_key.SetVariable( 'popup_message_text_1', prefix + 'done ' + HC.ConvertIntToPrettyString( i ) )
+                job_key.SetVariable( 'popup_message_text_1', prefix + 'done ' + HC.ConvertIntToPrettyString( i ) )
                 
             
             self.pub_after_commit( 'thumbnail_resize' )
@@ -5781,7 +5824,17 @@ class DB( ServiceDB ):
         
         HC.pubsub.pub( 'set_splash_text', 'vacuuming db' )
         
+        prefix = 'database maintenance - vacuum: '
+        
+        job_key = HC.JobKey()
+        
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'vacuuming' )
+        
+        HC.pubsub.pub( 'message', job_key )
+        
         self._c.execute( 'VACUUM' )
+        
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'cleaning up' )
         
         self._c.execute( 'ANALYZE' )
         
@@ -5792,7 +5845,9 @@ class DB( ServiceDB ):
         
         self._InitDBCursor()
         
-        HC.ShowText( 'Database maintenance: vacuumed successfully.' )
+        job_key.SetVariable( 'popup_message_text_1', prefix + 'done!' )
+        
+        print( HC.ConvertJobKeyToString( job_key ) )
         
     
     def pub_after_commit( self, topic, *args, **kwargs ): self._pubsubs.append( ( topic, args, kwargs ) )
@@ -6281,8 +6336,9 @@ def DAEMONCheckImportFolders():
                         
                         text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
                         
-                        job_key = HC.JobKey( pausable = False, cancellable = False )
+                        job_key = HC.JobKey()
                         
+                        job_key.SetVariable( 'popup_message_title', 'import folder' )
                         job_key.SetVariable( 'popup_message_text_1', text )
                         job_key.SetVariable( 'popup_message_files', successful_hashes )
                         
@@ -6693,54 +6749,59 @@ def DAEMONSynchroniseRepositories():
             
             if HC.shutdown: raise Exception( 'Application shutting down!' )
             
+            ( service_key, service_type, name, info ) = service.ToTuple()
+            
+            if info[ 'paused' ]: continue
+            
+            if not service.CanDownloadUpdate() and not service.CanProcessUpdate(): continue
+            
             try:
                 
-                ( service_key, service_type, name, info ) = service.ToTuple()
+                job_key = HC.JobKey( pausable = True, cancellable = True )
                 
-                if info[ 'paused' ]: continue
+                job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name )
+                
+                HC.pubsub.pub( 'message', job_key )
+                
+                num_updates_downloaded = 0
                 
                 if service.CanDownloadUpdate():
                     
-                    job_key = HC.JobKey( pausable = True, cancellable = False )
-                    
-                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'checking ' + name + ' repository', job_key )
-                    
-                    HC.pubsub.pub( 'message', message )
+                    job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - downloading' )
+                    job_key.SetVariable( 'popup_message_text_1', 'checking' )
                     
                     while service.CanDownloadUpdate():
                         
-                        while job_key.IsPaused():
+                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
                             
-                            message.SetInfo( 'text', 'paused' )
+                            time.sleep( 0.1 )
                             
-                            time.sleep( 1 )
+                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if message.IsClosed(): return
-                            
-                        
-                        while HC.options[ 'pause_repo_sync' ]:
-                            
-                            message.SetInfo( 'text', 'repository synchronisation paused' )
-                            
-                            time.sleep( 5 )
+                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
                             
                             if HC.shutdown: raise Exception( 'application shutting down!' )
                             
-                            if message.IsClosed(): return
+                            if job_key.IsCancelled():
+                                
+                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
+                                return
+                                
                             
                             if HC.repos_changed:
                                 
-                                message.Close()
+                                job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
                                 
                                 HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
                                 
                                 return
                                 
                             
-                        
-                        if HC.shutdown: raise Exception( 'application shutting down!' )
                         
                         now = HC.GetNow()
                         
@@ -6751,26 +6812,24 @@ def DAEMONSynchroniseRepositories():
                             range = None
                             value = 0
                             
-                            update_index_string = 'initial update'
+                            update_index_string = 'initial update: '
                             
                         else:
                             
                             range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                             value = ( ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                             
-                            update_index_string = 'update ' + HC.u( value )
+                            update_index_string = 'update ' + HC.ConvertIntToPrettyString( value ) + '/' + HC.ConvertIntToPrettyString( range ) + ': '
                             
                         
-                        prefix_string = name + ' ' + update_index_string + ': '
-                        
-                        message.SetInfo( 'range', range )
-                        message.SetInfo( 'value', value )
-                        message.SetInfo( 'text', prefix_string + 'downloading' )
-                        message.SetInfo( 'mode', 'gauge' )
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'downloading and parsing' )
+                        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
                         
                         update = service.Request( HC.GET, 'update', { 'begin' : next_download_timestamp } )
                         
                         ( begin, end ) = update.GetBeginEnd()
+                        
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'saving to disk' )
                         
                         update_path = CC.GetUpdatePath( service_key, begin )
                         
@@ -6789,54 +6848,51 @@ def DAEMONSynchroniseRepositories():
                         # this waits for pubsubs to flush, so service updates are processed
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
+                        num_updates_downloaded += 1
+                        
                     
-                    message.Close()
-                    
+                
+                num_updates_processed = 0
+                total_content_weight_processed = 0
                 
                 if service.CanProcessUpdate():
                     
-                    job_key = HC.JobKey( pausable = True, cancellable = False )
+                    job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - processing' )
                     
-                    message = HC.MessageGauge( HC.MESSAGE_TYPE_GAUGE, 'processing ' + name + ' repository', job_key )
-                    
-                    HC.pubsub.pub( 'message', message )
-                
                     WEIGHT_THRESHOLD = 50
                     
                     while service.CanProcessUpdate():
                         
-                        while job_key.IsPaused():
+                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
                             
-                            message.SetInfo( 'text', 'paused' )
+                            time.sleep( 0.1 )
                             
-                            time.sleep( 1 )
+                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if message.IsClosed(): return
-                            
-                        
-                        while HC.options[ 'pause_repo_sync' ]:
-                            
-                            message.SetInfo( 'text', 'repository synchronisation paused' )
-                            
-                            time.sleep( 5 )
+                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
                             
                             if HC.shutdown: raise Exception( 'application shutting down!' )
                             
-                            if message.IsClosed(): return
+                            if job_key.IsCancelled():
+                                
+                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
+                                return
+                                
                             
                             if HC.repos_changed:
                                 
-                                message.Close()
+                                job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
                                 
                                 HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
                                 
                                 return
                                 
                             
-                        
-                        if HC.shutdown: raise Exception( 'application shutting down!' )
                         
                         now = HC.GetNow()
                         
@@ -6847,62 +6903,76 @@ def DAEMONSynchroniseRepositories():
                         if next_processing_timestamp == 0: value = 0
                         else: value = ( ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
                         
-                        update_index_string = 'update ' + HC.u( value )
+                        update_index_string = 'update ' + HC.ConvertIntToPrettyString( value ) + '/' + HC.ConvertIntToPrettyString( range ) + ': '
                         
-                        prefix_string = name + ' ' + update_index_string + ': '
-                        
-                        message.SetInfo( 'range', range )
-                        message.SetInfo( 'value', value )
-                        message.SetInfo( 'text', prefix_string + 'processing' )
-                        message.SetInfo( 'mode', 'gauge' )
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'loading from disk' )
+                        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
                         
                         update_path = CC.GetUpdatePath( service_key, next_processing_timestamp )
                         
                         with open( update_path, 'rb' ) as f: update_yaml = f.read()
                         
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'parsing' )
+                        
                         update = yaml.safe_load( update_yaml )
                         
                         if service_type == HC.TAG_REPOSITORY:
                             
-                            message.SetInfo( 'text', prefix_string + 'generating tags' )
+                            job_key.SetVariable( 'popup_message_text_1', update_index_string + 'pre-processing tags' )
                             
                             HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
                             
                         
-                        i = 0
+                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'processing' )
+                        
                         num_content_updates = update.GetNumContentUpdates()
                         content_updates = []
                         current_weight = 0
                         
-                        for content_update in update.IterateContentUpdates():
+                        for ( i, content_update ) in enumerate( update.IterateContentUpdates() ):
+                            
+                            while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
+                                
+                                time.sleep( 0.1 )
+                                
+                                if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_2', 'paused' )
+                                
+                                if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_2', 'repository synchronisation paused' )
+                                
+                                if HC.shutdown: raise Exception( 'application shutting down!' )
+                                
+                                if job_key.IsCancelled():
+                                    
+                                    job_key.SetVariable( 'popup_message_text_2', 'cancelled' )
+                                    
+                                    print( HC.ConvertJobKeyToString( job_key ) )
+                                    
+                                    return
+                                    
+                                
+                                if HC.repos_changed:
+                                    
+                                    job_key.SetVariable( 'popup_message_text_2', 'repositories were changed during processing; this job was abandoned' )
+                                    
+                                    print( HC.ConvertJobKeyToString( job_key ) )
+                                    
+                                    HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                    
+                                    return
+                                    
+                                
+                            
+                            content_update_index_string = 'content part ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) + ': '
+                            
+                            job_key.SetVariable( 'popup_message_gauge_2', ( i, num_content_updates ) )
                             
                             content_updates.append( content_update )
                             
                             current_weight += len( content_update.GetHashes() )
                             
-                            i += 1
-                            
                             if current_weight > WEIGHT_THRESHOLD:
                                 
-                                while HC.options[ 'pause_repo_sync' ]:
-                                    
-                                    message.SetInfo( 'text', 'Repository synchronisation paused' )
-                                    
-                                    time.sleep( 5 )
-                                    
-                                    if HC.shutdown: raise Exception( 'Application shutting down!' )
-                                    
-                                    if HC.repos_changed:
-                                        
-                                        message.Close()
-                                        
-                                        HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                                        
-                                        return
-                                        
-                                    
-                                
-                                message.SetInfo( 'text', prefix_string + 'processing content ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) )
+                                job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
                                 
                                 HC.app.WaitUntilGoodTimeToUseGUIThread()
                                 
@@ -6917,14 +6987,23 @@ def DAEMONSynchroniseRepositories():
                                 if after_precise - before_precise > 1.00: WEIGHT_THRESHOLD /= 1.1
                                 elif after_precise - before_precise < 0.75: WEIGHT_THRESHOLD *= 1.1
                                 
+                                total_content_weight_processed += current_weight
+                                
                                 content_updates = []
                                 current_weight = 0
                                 
                             
                         
-                        if len( content_updates ) > 0: HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                        if len( content_updates ) > 0:
+                            
+                            job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
+                            
+                            HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                            
+                            total_content_weight_processed += current_weight
+                            
                         
-                        message.SetInfo( 'text', prefix_string + 'processing service info' )
+                        job_key.SetVariable( 'popup_message_text_2', 'committing service updates' )
                         
                         service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
                         
@@ -6945,15 +7024,32 @@ def DAEMONSynchroniseRepositories():
                         # this waits for pubsubs to flush, so service updates are processed
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
+                        num_updates_processed += 1
+                        
                     
-                    message.Close()
-                    
+                
+                job_key.DeleteVariable( 'popup_message_gauge_1' )
+                job_key.DeleteVariable( 'popup_message_text_2' )
+                job_key.DeleteVariable( 'popup_message_gauge_2' )
+                
+                job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - finished' )
+                
+                updates_text = HC.ConvertIntToPrettyString( num_updates_downloaded ) + ' updates downloaded, ' + HC.ConvertIntToPrettyString( num_updates_processed ) + ' updates processed'
+                
+                if service_type == HC.TAG_REPOSITORY: content_text = HC.ConvertIntToPrettyString( total_content_weight_processed ) + ' mappings added'
+                elif service_type == HC.FILE_REPOSITORY: content_text = HC.ConvertIntToPrettyString( total_content_weight_processed ) + ' files added'
+                
+                job_key.SetVariable( 'popup_message_text_1', updates_text + ', and ' + content_text )
+                
+                print( HC.ConvertJobKeyToString( job_key ) )
+                
+                job_key.Finish()
                 
             except Exception as e:
                 
-                print( traceback.format_exc() )
+                job_key.Cancel()
                 
-                if 'message' in locals(): message.Close()
+                print( traceback.format_exc() )
                 
                 HC.ShowText( 'Failed to update ' + name + ':' )
                 
@@ -7001,7 +7097,8 @@ def DAEMONSynchroniseSubscriptions():
                     
                     job_key = HC.JobKey( pausable = True, cancellable = True )
                     
-                    job_key.SetVariable( 'popup_message_text_1', 'checking ' + name + ' subscription' )
+                    job_key.SetVariable( 'popup_message_title', 'subscriptions - ' + name )
+                    job_key.SetVariable( 'popup_message_text_1', 'checking' )
                     
                     HC.pubsub.pub( 'message', job_key )
                     
@@ -7067,33 +7164,21 @@ def DAEMONSynchroniseSubscriptions():
                     
                     while True:
                         
-                        while job_key.IsPaused():
+                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_subs_sync' ] or HC.shutdown:
                             
-                            job_key.SetVariable( 'popup_message_text_1', 'paused' )
+                            time.sleep( 0.1 )
                             
-                            time.sleep( 1 )
+                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.shutdown: return
+                            if HC.options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
                             
-                            if job_key.IsCancelled():
-                                
-                                job_key.SetVariable( 'popup_message_text_1', name + ' check was cancelled' )
-                                
-                                return
-                                
-                            
-                        
-                        while HC.options[ 'pause_subs_sync' ]:
-                            
-                            job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
-                            
-                            time.sleep( 5 )
-                            
-                            if HC.shutdown: return
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
                             
                             if job_key.IsCancelled():
                                 
-                                job_key.SetVariable( 'popup_message_text_1', name + ' check was cancelled' )
+                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
                                 
                                 return
                                 
@@ -7102,13 +7187,13 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 job_key.SetVariable( 'popup_message_text_1', 'subscriptions were changed during processing; this job was abandoned' )
                                 
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
                                 HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
                                 
                             
-                        
-                        if HC.shutdown: return
                         
                         downloaders_to_remove = []
                         
@@ -7126,7 +7211,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 all_url_args.extend( fresh_url_args )
                                 
-                                job_key.SetVariable( 'popup_message_text_1', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files for ' + name )
+                                job_key.SetVariable( 'popup_message_text_1', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files' )
                                 
                             
                         
@@ -7143,27 +7228,36 @@ def DAEMONSynchroniseSubscriptions():
                     
                     for ( i, url_args ) in enumerate( all_url_args ):
                         
-                        while HC.options[ 'pause_subs_sync' ]:
+                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_subs_sync' ] or HC.shutdown:
                             
-                            job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
+                            time.sleep( 0.1 )
                             
-                            time.sleep( 5 )
+                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
                             
-                            if HC.shutdown: return
+                            if HC.options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
                             
-                            if job_key.IsCancelled(): return
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
+                            
+                            if job_key.IsCancelled():
+                                
+                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
+                                return
+                                
                             
                             if HC.subs_changed:
                                 
                                 job_key.SetVariable( 'popup_message_text_1', 'subscriptions were changed during processing; this job was abandoned' )
-                
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
                                 HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
                                 
                                 return
                                 
                             
-                        
-                        if HC.shutdown: return
                         
                         try:
                             
@@ -7171,9 +7265,9 @@ def DAEMONSynchroniseSubscriptions():
                             
                             url_cache.add( url )
                             
-                            x_out_of_y = HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) )
+                            x_out_of_y = 'file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ': '
                             
-                            job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : checking url status' )
+                            job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'checking url status' )
                             job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_url_args ) ) )
                             
                             ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
@@ -7186,7 +7280,7 @@ def DAEMONSynchroniseSubscriptions():
                                     
                                     try:
                                         
-                                        job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : found file in db, fetching tags' )
+                                        job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'found file in db, fetching tags' )
                                         
                                         tags = downloader.GetTags( *url_args )
                                         
@@ -7203,7 +7297,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 num_new += 1
                                 
-                                job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : downloading file' )
+                                job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'downloading file' )
                                 
                                 if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
                                 else:
@@ -7215,7 +7309,7 @@ def DAEMONSynchroniseSubscriptions():
                                 
                                 service_keys_to_tags = HydrusDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options )
                                 
-                                job_key.SetVariable( 'popup_message_text_1', name + ': ' + x_out_of_y + ' : importing file' )
+                                job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'importing file' )
                                 
                                 ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_keys_to_tags = service_keys_to_tags, url = url )
                                 
@@ -7255,20 +7349,20 @@ def DAEMONSynchroniseSubscriptions():
                     
                     if len( successful_hashes ) > 0:
                         
-                        job_key.SetVariable( 'popup_message_text_1', HC.u( len( successful_hashes ) ) + ' files imported from ' + name )
+                        job_key.SetVariable( 'popup_message_text_1', HC.u( len( successful_hashes ) ) + ' files imported' )
                         job_key.SetVariable( 'popup_message_files', successful_hashes )
                         
-                    else:
-                        
-                        job_key.SetVariable( 'popup_message_text_1', name + 'subscription checked, but no new files' )
-                        
+                    else: job_key.SetVariable( 'popup_message_text_1', 'no new files' )
                     
-                    job_key.SetPausable( False )
-                    job_key.SetCancellable( False )
+                    print( HC.ConvertJobKeyToString( job_key ) )
+                    
+                    job_key.Finish()
                     
                     last_checked = now
                     
                 except Exception as e:
+                    
+                    job_key.Cancel()
                     
                     last_checked = now + HC.UPDATE_DURATION
                     

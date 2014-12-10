@@ -65,7 +65,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 138
+SOFTWARE_VERSION = 139
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -128,12 +128,6 @@ content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
 
 IMPORT_FOLDER_TYPE_DELETE = 0
 IMPORT_FOLDER_TYPE_SYNCHRONISE = 1
-
-MESSAGE_TYPE_TEXT = 0
-MESSAGE_TYPE_ERROR = 1
-MESSAGE_TYPE_FILES = 2
-MESSAGE_TYPE_GAUGE = 3
-MESSAGE_TYPE_DB_ERROR = 4
 
 GET_DATA = 0
 POST_DATA = 1
@@ -751,6 +745,26 @@ def ConvertIntToBytes( size ):
     
 def ConvertIntToPrettyString( num ): return u( locale.format( "%d", num, grouping = True ) )
 
+def ConvertJobKeyToString( job_key ):
+    
+    stuff_to_print = []
+    
+    if job_key.HasVariable( 'popup_message_title' ): stuff_to_print.append( job_key.GetVariable( 'popup_message_title' ) )
+    
+    if job_key.HasVariable( 'popup_message_text_1' ): stuff_to_print.append( job_key.GetVariable( 'popup_message_text_1' ) )
+    
+    if job_key.HasVariable( 'popup_message_text_2' ): stuff_to_print.append( job_key.GetVariable( 'popup_message_text_2' ) )
+    
+    if job_key.HasVariable( 'popup_message_traceback' ): stuff_to_print.append( job_key.GetVariable( 'popup_message_traceback' ) )
+    
+    if job_key.HasVariable( 'popup_message_caller_traceback' ): stuff_to_print.append( job_key.GetVariable( 'popup_message_caller_traceback' ) )
+    
+    if job_key.HasVariable( 'popup_message_db_traceback' ): stuff_to_print.append( job_key.GetVariable( 'popup_message_db_traceback' ) )
+    
+    sep = os.linesep
+    
+    return sep.join( stuff_to_print )
+    
 def ConvertMillisecondsToPrettyTime( ms ):
     
     hours = ms / 3600000
@@ -1929,7 +1943,7 @@ class JobDatabase( object ):
     
 class JobKey( object ):
     
-    def __init__( self, pausable = True, cancellable = True ):
+    def __init__( self, pausable = False, cancellable = False ):
         
         self._key = os.urandom( 32 )
         
@@ -1984,13 +1998,13 @@ class JobKey( object ):
     
     def IsBegun( self ): return self._begun.is_set()
     
-    def IsCancellable( self ): return self._cancellable
+    def IsCancellable( self ): return self._cancellable and not self.IsDone()
     
     def IsCancelled( self ): return shutdown or self._cancelled.is_set()
     
     def IsDone( self ): return shutdown or self._done.is_set()
     
-    def IsPausable( self ): return self._pausable
+    def IsPausable( self ): return self._pausable and not self.IsDone()
     
     def IsPaused( self ): return self._paused.is_set()
     
@@ -2076,54 +2090,6 @@ class JobNetwork( object ):
         
         self._result_ready.set()
         
-    
-class Message( object ):
-    
-    def __init__( self, message_type, job_key, info ):
-        
-        self._message_type = message_type
-        self._job_key = job_key
-        self._info = info
-        
-        self._closed = False
-        
-        self._lock = threading.Lock()
-        
-    
-    def Close( self ): self._closed = True
-    
-    def GetInfo( self, name ):
-        
-        with self._lock: return self._info[ name ]
-        
-    
-    def GetType( self ): return self._message_type
-    
-    def HasInfo( self, name ):
-        
-        with self._lock: return name in self._info
-        
-    
-    def IsClosed( self ): return self._closed
-    
-    def SetInfo( self, name, value ):
-        
-        with self._lock: self._info[ name ] = value
-        
-    
-class MessageGauge( Message ):
-    
-    def __init__( self, message_type, text, job_key ):
-        
-        Message.__init__( self, message_type, job_key, {} )
-        
-        self._info[ 'mode' ] = 'text'
-        self._info[ 'text' ] = text
-        
-        self._job_key = job_key
-        
-    
-    def GetJobKey( self ): return self._job_key
     
 class Predicate( HydrusYAMLBase ):
     

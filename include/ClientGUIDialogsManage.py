@@ -4981,6 +4981,8 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                         
                         if service_type in HC.REPOSITORIES: info[ 'paused' ] = False
                         
+                        if service_type == HC.TAG_REPOSITORY: info[ 'tag_archive_sync' ] = {}
+                        
                         if service_type == HC.LOCAL_RATING_LIKE:
                             
                             info[ 'like' ] = 'like'
@@ -5359,15 +5361,12 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 if service_type not in HC.NONEDITABLE_SERVICES:
                     
-                    self._credentials_panel.Hide()
-                    
                     gridbox = wx.FlexGridSizer( 0, 2 )
                     
                     gridbox.AddGrowableCol( 1, 1 )
                     
                     gridbox.AddF( wx.StaticText( self._credentials_panel, label = 'name' ), FLAGS_MIXED )
                     gridbox.AddF( self._service_name, FLAGS_EXPAND_BOTH_WAYS )
-                    
                     
                     if service_type in HC.REMOTE_SERVICES:
                         

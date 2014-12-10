@@ -5122,7 +5122,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 url_string = title + ' ' + resolution + ' ' + extension
                 
-                job_key = HC.JobKey( pausable = False, cancellable = False )
+                job_key = HC.JobKey()
                 
                 HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, job_key, url, url_string )
                 

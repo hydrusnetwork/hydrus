@@ -1331,7 +1331,7 @@ class ImportController( object ):
     
     def _GetNewJobKey( self, job_type ):
         
-        job_key = HC.JobKey()
+        job_key = HC.JobKey( pausable = True, cancellable = True )
         
         if job_type == 'controller':
             

@@ -321,19 +321,16 @@ def CatchExceptionClient( etype, value, tb ):
     
     try:
         
+        job_key = HC.JobKey()
+        
         if etype == HydrusExceptions.DBException:
             
             ( text, caller_traceback, db_traceback ) = value
             
-            info = {}
-            
-            info[ 'text' ] = text
-            info[ 'caller_traceback' ] = caller_traceback
-            info[ 'db_traceback' ] = db_traceback
-            
-            job_key = HC.JobKey( pausable = False, cancellable = False )
-            
-            message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, job_key, info )
+            job_key.SetVariable( 'popup_message_title', 'Database Error!' )
+            job_key.SetVariable( 'popup_message_text_1', text )
+            job_key.SetVariable( 'popup_message_caller_traceback', caller_traceback )
+            job_key.SetVariable( 'popup_message_db_traceback', db_traceback )
             
         else:
             
@@ -341,13 +338,22 @@ def CatchExceptionClient( etype, value, tb ):
             
             trace = ''.join( trace_list )
             
-            job_key = HC.JobKey( pausable = False, cancellable = False )
+            if etype == wx.PyDeadObjectError:
+                
+                print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
+                print( HC.u( value ) )
+                print( trace )
+                
+                return
+                
             
-            message = HC.Message( HC.MESSAGE_TYPE_ERROR, job_key, { 'error' : ( etype, value, trace ) } )
+            try: job_key.SetVariable( 'popup_message_title', HC.u( etype.__name__ ) )
+            except: job_key.SetVariable( 'popup_message_title', HC.u( etype ) )
+            job_key.SetVariable( 'popup_message_text_1', HC.u( value ) )
+            job_key.SetVariable( 'popup_message_traceback', trace )
             
         
-        HC.pubsub.pub( 'message', message )
-        
+        HC.pubsub.pub( 'message', job_key )
         
     except:
         
@@ -786,19 +792,16 @@ def ParseExportPhrase( phrase ):
     
 def ShowExceptionClient( e ):
     
+    job_key = HC.JobKey()
+    
     if isinstance( e, HydrusExceptions.DBException ):
         
         ( text, caller_traceback, db_traceback ) = e.args
         
-        info = {}
-        
-        info[ 'text' ] = text
-        info[ 'caller_traceback' ] = caller_traceback
-        info[ 'db_traceback' ] = db_traceback
-        
-        job_key = HC.JobKey( pausable = False, cancellable = False )
-        
-        message = HC.Message( HC.MESSAGE_TYPE_DB_ERROR, job_key, info )
+        job_key.SetVariable( 'popup_message_title', 'Database Error!' )
+        job_key.SetVariable( 'popup_message_text_1', text )
+        job_key.SetVariable( 'popup_message_caller_traceback', caller_traceback )
+        job_key.SetVariable( 'popup_message_db_traceback', db_traceback )
         
     else:
         
@@ -813,16 +816,26 @@ def ShowExceptionClient( e ):
             
         else: trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
-        job_key = HC.JobKey( pausable = False, cancellable = False )
+        if etype == wx.PyDeadObjectError:
+            
+            print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
+            print( HC.u( value ) )
+            print( trace )
+            
+            return
+            
         
-        message = HC.Message( HC.MESSAGE_TYPE_ERROR, job_key, { 'error' : ( etype, value, trace ) } )
+        try: job_key.SetVariable( 'popup_message_title', HC.u( etype.__name__ ) )
+        except: job_key.SetVariable( 'popup_message_title', HC.u( etype ) )
+        job_key.SetVariable( 'popup_message_text_1', HC.u( value ) )
+        job_key.SetVariable( 'popup_message_traceback', trace )
         
     
-    HC.pubsub.pub( 'message', message )
+    HC.pubsub.pub( 'message', job_key )
     
 def ShowTextClient( text ):
     
-    job_key = HC.JobKey( pausable = False, cancellable = False )
+    job_key = HC.JobKey()
     
     job_key.SetVariable( 'popup_message_text_1', text )
     
@@ -1351,12 +1364,7 @@ class DataCache( object ):
         
         with self._lock:
             
-            if key not in self._keys_to_data:
-                
-                message = 'Cache error! Looking for ' + HC.u( key ) + ', but it was missing.'
-                
-                raise Exception( message )
-                
+            if key not in self._keys_to_data: raise Exception( 'Cache error! Looking for ' + HC.u( key ) + ', but it was missing.' )
             
             i = 0
             
@@ -2110,19 +2118,6 @@ class LocationsManager( object ):
         self._petitioned.discard( service_key )
         
     
-class Log( object ):
-    
-    def __init__( self ):
-        
-        self._entries = []
-        
-        HC.pubsub.sub( self, 'AddMessage', 'message' )
-        
-    
-    def __iter__( self ): return self._entries.__iter__()
-    
-    def AddMessage( self, message ): self._entries.append( ( message, HC.GetNow() ) )
-
 class MediaResult( object ):
     
     def __init__( self, tuple ):
@@ -2698,9 +2693,10 @@ class ThumbnailCache( object ):
         
         while not HC.shutdown:
             
+            try: ( page_key, medias ) = self._queue.get( timeout = 1 )
+            except: continue
+            
             try:
-                
-                ( page_key, medias ) = self._queue.get( timeout = 1 )
                 
                 random.shuffle( medias )
                 
@@ -2718,7 +2714,7 @@ class ThumbnailCache( object ):
                         
                     
                 
-            except: pass
+            except Exception as e: HC.ShowException( e )
             
         
     
