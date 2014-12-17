@@ -8,7 +8,24 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
-				<li><h3>version 138</h3></li>
+				<li><h3>version 140</h3></li>
+				<ul>
+					<li>if a repository or subscription popup message has nothing to report, it will dismiss itself</li>
+					<li>fixed handling of text popup display when the object passed was not text</li>
+					<li>delete orphans is now cancellable</li>
+					<li>vacuum, deleted orphans, and upload pending popup messages will dismiss themselves an hour after they are done</li>
+					<li>tightened the subscription final state popup message to just a title and a button</li>
+					<li>removed much of the very expensive autocomplete tag cache maintenance code, which seems not to be worth the effort</li>
+					<li>culled the autocomplete tag cache in prep for new maintenance cycle</li>
+					<li>fixed a resize timing bug that was causing large images to scale in an ugly way when the media viewer was launched in a borderless state</li>
+					<li>'open selection in new page' will no longer default focus on the sort dropdown; it'll go to the media panel (this was causing scrolling confusion)</li>
+					<li>fixed a non-updating display bug when resizing frames/dialogs with auto-resizing listctrls on linux</li>
+					<li>cleaned up a wall-of-text error when closing the client immediately after deleting a tag service</li>
+					<li>filled a gap in static text image object cleanup</li>
+					<li>cleaned up some thumbnail waterfall/fade code</li>
+					<li>filled several gaps in thumbnail object cleanup</li>
+				</ul>
+				<li><h3>version 139</h3></li>
 				<ul>
 					<li>cleaned up all the old popup message code, and fully integrated the new</li>
 					<li>moved repo sync to the new popup messaging system</li>
