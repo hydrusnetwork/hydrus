@@ -80,7 +80,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self.SetBackgroundColour( wx.WHITE )
         
-        self.SetDoubleBuffered( True )
+        #self.SetDoubleBuffered( True )
         
         self.SetScrollRate( 0, 50 )
         
@@ -1087,7 +1087,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if hash in self._thumbnails_being_faded_in:
                 
-                ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
+                ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
             
                 current_row = i / self._num_columns
                 
@@ -1096,7 +1096,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 x = current_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
                 y = current_row * thumbnail_span_height + CC.THUMBNAIL_MARGIN
                 
-                self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered )
+                self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, x, y, num_frames_rendered )
                 
             else:
                 
@@ -1228,35 +1228,21 @@ class MediaPanelThumbnails( MediaPanel ):
         if ( x, y ) != ( -1, -1 ):
             
             bmp = thumbnail.GetBmp()
+        
+            image = bmp.ConvertToImage()
+            
+            try: image.InitAlpha()
+            except: pass
+            
+            image = image.AdjustChannels( 1, 1, 1, 0.25 )
+            
+            alpha_bmp = wx.BitmapFromImage( image, 32 )
+            
+            wx.CallAfter( image.Destroy )
             
             hash = thumbnail.GetDisplayMedia().GetHash()
             
-            canvas_bmp = None
-            '''
-            ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
-            
-            canvas_bmp = wx.EmptyBitmap( thumbnail_span_width, thumbnail_span_height, 24 )
-            
-            canvas_bmp_dc = wx.MemoryDC( canvas_bmp )
-            
-            index = self._sorted_media.index( thumbnail )
-            
-            ( from_index, to_index ) = self._drawn_index_bounds
-            
-            if from_index <= index and index <= to_index:
-                
-                big_canvas_bmp_dc = wx.MemoryDC( self._canvas_bmp )
-                
-                canvas_bmp_dc.Blit( 0, 0, thumbnail_span_width, thumbnail_span_height, big_canvas_bmp_dc, x, y )
-                
-            else:
-                
-                canvas_bmp_dc.SetBrush( wx.WHITE_BRUSH )
-                
-                canvas_bmp_dc.Clear()
-                
-            '''
-            self._thumbnails_being_faded_in[ hash ] = ( bmp, None, canvas_bmp, x, y, 0 )
+            self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, x, y, 0 )
             
             if not self._timer_animation.IsRunning(): self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
             
@@ -1377,6 +1363,12 @@ class MediaPanelThumbnails( MediaPanel ):
     def _RedrawCanvas( self ):
         
         self._drawn_index_bounds = None
+        
+        for ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) in self._thumbnails_being_faded_in.values():
+            
+            wx.CallAfter( original_bmp.Destroy )
+            wx.CallAfter( alpha_bmp.Destroy )
+            
         
         self._thumbnails_being_faded_in = {}
         
@@ -2161,37 +2153,22 @@ class MediaPanelThumbnails( MediaPanel ):
         
         all_info = self._thumbnails_being_faded_in.items()
         
-        for ( hash, ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered ) ) in all_info:
-            
-            if num_frames_rendered == 0:
-                
-                image = original_bmp.ConvertToImage()
-                
-                try: image.InitAlpha()
-                except: pass
-                
-                image = image.AdjustChannels( 1, 1, 1, 0.25 )
-                
-                alpha_bmp = wx.BitmapFromImage( image, 32 )
-                
+        for ( hash, ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) ) in all_info:
             
             num_frames_rendered += 1
             
-            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, canvas_bmp, x, y, num_frames_rendered )
+            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, x, y, num_frames_rendered )
             
-            if y < min_y or y > max_y or num_frames_rendered == 9:
+            if y < min_y or y > max_y or num_frames_rendered >= 9:
                 
                 bmp_to_use = original_bmp
                 
                 del self._thumbnails_being_faded_in[ hash ]
                 
+                wx.CallAfter( original_bmp.Destroy )
+                wx.CallAfter( alpha_bmp.Destroy )
+                
             else:
-                
-                #canvas_dc = wx.MemoryDC( canvas_bmp )
-                
-                #canvas_dc.DrawBitmap( alpha_bmp, 0, 0, True )
-                
-                #del canvas_dc
                 
                 bmp_to_use = alpha_bmp
                 

@@ -837,7 +837,7 @@ def ShowTextClient( text ):
     
     job_key = HC.JobKey()
     
-    job_key.SetVariable( 'popup_message_text_1', text )
+    job_key.SetVariable( 'popup_message_text_1', HC.u( text ) )
     
     HC.pubsub.pub( 'message', job_key )
     
@@ -1340,7 +1340,7 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                while self._total_estimated_memory_footprint > HC.options[ self._cache_size_key ] or ( random.randint( 0, 2 ) == 0 and len( self._keys_to_data ) > 0 ):
+                while self._total_estimated_memory_footprint > HC.options[ self._cache_size_key ]:
                     
                     ( deletee_key, last_access_time ) = self._keys_fifo.pop( 0 )
                     

@@ -335,7 +335,11 @@ class Controller( wx.App ):
             
             services = self.GetManager( 'services' ).GetServices()
             
-            for service in services: self.Read( 'service_info', service.GetServiceKey() )
+            for service in services:
+                
+                try: self.Read( 'service_info', service.GetServiceKey() )
+                except: pass # sometimes this breaks when a service has just been removed and the client is closing, so ignore the error
+                
             
             self._timestamps[ 'last_service_info_cache_fatten' ] = HC.GetNow()
             

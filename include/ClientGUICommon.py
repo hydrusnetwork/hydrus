@@ -1365,7 +1365,7 @@ class FrameThatResizes( Frame ):
         
         if client_size[ self._resize_option_prefix + 'maximised' ]: self.Maximize()
         
-        if client_size[ self._resize_option_prefix + 'fullscreen' ]: wx.CallAfter( self.ShowFullScreen, True, wx.FULLSCREEN_ALL )
+        if client_size[ self._resize_option_prefix + 'fullscreen' ]: self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
         
     
     def _RecordSizeAndPosition( self ):
@@ -2641,6 +2641,13 @@ class PopupMessage( PopupWindow ):
     
     def Update( self ):
         
+        if self._job_key.IsDeleted():
+            
+            self.TryToDismiss()
+            
+            return
+            
+        
         if self._job_key.HasVariable( 'popup_message_title' ):
             
             text = self._job_key.GetVariable( 'popup_message_title' )
@@ -3102,8 +3109,6 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         wx.ListCtrl.__init__( self, parent, style = wx.LC_REPORT )
         ListCtrlAutoWidthMixin.__init__( self )
         ColumnSorterMixin.__init__( self, num_columns )
-        
-        self.GetTopLevelParent().SetDoubleBuffered( False ) # windows double buffer makes listctrls refresh and bug out
         
         self.itemDataMap = {}
         self._next_data_index = 0

@@ -107,6 +107,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         HC.pubsub.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         HC.pubsub.sub( self, 'SetDownloadsStatus', 'downloads_status' )
         HC.pubsub.sub( self, 'SetInboxStatus', 'inbox_status' )
+        HC.pubsub.sub( self, 'SetMediaFocus', 'set_media_focus' )
         
         self._menus = {}
         
@@ -297,6 +298,8 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         print( HC.ConvertJobKeyToString( job_key ) )
         
         job_key.Finish()
+        
+        wx.CallLater( 1000 * 3600, job_key.Delete )
         
         HC.pubsub.pub( 'notify_new_pending' )
         
@@ -1662,7 +1665,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 url_string = url
                 
-                job_key = HC.JobKey()
+                job_key = HC.JobKey( pausable = True, cancellable = True )
                 
                 HC.pubsub.pub( 'message', job_key )
                 
@@ -2116,6 +2119,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._RefreshStatusBar()
             
         
+    
+    def SetMediaFocus( self ): self._SetMediaFocus()
     
     def SetInboxStatus( self, status ):
         

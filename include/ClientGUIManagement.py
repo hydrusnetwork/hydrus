@@ -2265,7 +2265,7 @@ class ManagementPanelQuery( ManagementPanel ):
         if page_key == self._page_key:
             
             try: self._searchbox.SetFocus() # there's a chance this doesn't exist!
-            except: pass
+            except: HC.pubsub.pub( 'set_media_focus' )
             
         
     

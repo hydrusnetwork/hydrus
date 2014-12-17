@@ -65,7 +65,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 139
+SOFTWARE_VERSION = 140
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1321,7 +1321,7 @@ def ShowTextDefault( text ):
     
 ShowText = ShowTextDefault
 
-def SplayListForDB( xs ): return '(' + ','.join( [ '"' + u( x ) + '"' for x in xs ] ) + ')'
+def SplayListForDB( xs ): return '(' + ','.join( ( '"' + u( x ) + '"' for x in xs ) ) + ')'
 
 def SplayTupleListForDB( first_column_name, second_column_name, xys ): return ' OR '.join( [ '( ' + first_column_name + '=' + u( x ) + ' AND ' + second_column_name + ' IN ' + SplayListForDB( ys ) + ' )' for ( x, ys ) in xys ] )
 
@@ -1950,6 +1950,7 @@ class JobKey( object ):
         self._pausable = pausable
         self._cancellable = cancellable
         
+        self._deleted = threading.Event()
         self._begun = threading.Event()
         self._done = threading.Event()
         self._cancelled = threading.Event()
@@ -1972,6 +1973,13 @@ class JobKey( object ):
         self._cancelled.set()
         
         self.Finish()
+        
+    
+    def Delete( self ):
+        
+        self.Finish()
+        
+        self._deleted.set()
         
     
     def DeleteVariable( self, name ):
@@ -2001,6 +2009,8 @@ class JobKey( object ):
     def IsCancellable( self ): return self._cancellable and not self.IsDone()
     
     def IsCancelled( self ): return shutdown or self._cancelled.is_set()
+    
+    def IsDeleted( self ): return shutdown or self._deleted.is_set()
     
     def IsDone( self ): return shutdown or self._done.is_set()
     
@@ -2514,13 +2524,13 @@ class ServerToClientPetition( HydrusYAMLBase ):
             
             ( old_tag, new_tag ) = self._petition_data
             
-            content_phrase = ' sibling ' + old_tag + '->' + new_tag
+            content_phrase = 'sibling ' + old_tag + '->' + new_tag
             
         elif self._petition_type == CONTENT_DATA_TYPE_TAG_PARENTS:
             
             ( old_tag, new_tag ) = self._petition_data
             
-            content_phrase = ' parent ' + old_tag + '->' + new_tag
+            content_phrase = 'parent ' + old_tag + '->' + new_tag
             
         
         return action_word + content_phrase + os.linesep * 2 + self._reason

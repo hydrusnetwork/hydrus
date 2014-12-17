@@ -297,7 +297,10 @@ class HTTPConnection( object ):
                 raise Exception( 'Response was longer than suggested!' )
                 
             
-            for hook in report_hooks: hook( content_length, len( data ) )
+            for hook in report_hooks:
+                
+                hook( content_length, len( data ) )
+                
             
         
         size_of_response = len( data )
@@ -369,7 +372,10 @@ class HTTPConnection( object ):
                 
                 f.write( block )
                 
-                for hook in report_hooks: hook( content_length, size_of_response )
+                for hook in report_hooks:
+                    
+                    hook( content_length, size_of_response )
+                    
                 
             
         

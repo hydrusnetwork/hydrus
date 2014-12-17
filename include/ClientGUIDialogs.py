@@ -107,7 +107,7 @@ class Dialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style, pos = pos )
         
-        self.SetDoubleBuffered( True )
+        #self.SetDoubleBuffered( True )
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
         
@@ -5122,7 +5122,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 url_string = title + ' ' + resolution + ' ' + extension
                 
-                job_key = HC.JobKey()
+                job_key = HC.JobKey( pausable = True, cancellable = True )
                 
                 HydrusThreading.CallToThread( HydrusDownloading.THREADDownloadURL, job_key, url, url_string )
                 

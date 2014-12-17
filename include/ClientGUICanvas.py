@@ -4070,6 +4070,8 @@ class StaticImage( wx.Window ):
                 
                 wx_bitmap = wx.BitmapFromImage( image )
                 
+                wx.CallAfter( image.Destroy )
+                
             else: wx_bitmap = hydrus_bitmap.GetWxBitmap()
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
