@@ -8,6 +8,29 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 141</h3></li>
+				<ul>
+					<li>combined mappings are no longer calculated and stored</li>
+					<li>recalculate combined mappings obviously removed from database menu</li>
+					<li>combined mappings no longer have to be recalculated on a service deletion; the accompanying 'this could take a long time' warning dialog is gone as well</li>
+					<li>combined mappings autocomplete counts are now calculated on-the-fly</li>
+					<li>combined mappings tag queries are now performed on-the-fly</li>
+					<li>combined mappings namespace queries are now performed on-the-fly</li>
+					<li>combined mappings zero/non-zero tag count queries are now performed on-the-fly</li>
+					<li>combined mappings regular tag count queries are now performed on-the-fly</li>
+					<li>corrected some logic with regular tag count queries, I think</li>
+					<li>autocomplete tag cache dirties and culls itself more efficiently on tag update</li>
+					<li>autocomplete tag cache dirties and culls itself more efficiently on file import/delete</li>
+					<li>removed a couple of non-useful AMP tests that were breaking due to a previous change in connection code</li>
+					<li>improved how popup messages give the gui permission to update; hopefully the gui will lock up less when big jobs with popups are happening</li>
+					<li>improved some misc timing logic</li>
+					<li>improved some repo sync timing logic</li>
+					<li>added simple emergency throttling to the repo sync daemon when the CPU/HDD is getting hammered</li>
+					<li>improved some repo sync text number-grammar and timing</li>
+					<li>added sankaku channel booru, including flash</li>
+					<li>the booru downloading code that discovers image urls is more flexible</li>
+					<li>improved my job pause/cancel logic so paused jobs, when cancelled/completed, will report themselves as no longer paused (this was affecting the downloader page, with paused jobs not dismissing themselves on a subsequent cancel)</li>
+				</ul>
 				<li><h3>version 140</h3></li>
 				<ul>
 					<li>if a repository or subscription popup message has nothing to report, it will dismiss itself</li>

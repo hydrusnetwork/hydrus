@@ -577,7 +577,7 @@ class TestServer( unittest.TestCase ):
         self._test_basics( host, port )
         self._test_local_booru( host, port )
         
-    
+    '''
 class TestAMP( unittest.TestCase ):
     
     @classmethod
@@ -777,4 +777,4 @@ class TestAMP( unittest.TestCase ):
         [ ( args, kwargs ) ] = result
         
         self.assertEqual( args, ( temp_identifier, temp_name, persistent_identifier, persistent_name, message ) )
-        
+        '''

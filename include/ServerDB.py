@@ -2215,16 +2215,6 @@ class DB( ServiceDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 90:
-            
-            for ( service_id, options ) in self._c.execute( 'SELECT service_id, options FROM services;' ).fetchall():
-                
-                options[ 'upnp' ] = None
-                
-                self._c.execute( 'UPDATE services SET options = ? WHERE service_id = ?;', ( options, service_id ) )
-                
-            
-        
         if version == 93:
             
             self._c.execute( 'CREATE TABLE messaging_sessions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, session_key BLOB_BYTES, account_id INTEGER, identifier BLOB_BYTES, name TEXT, expiry INTEGER );' )

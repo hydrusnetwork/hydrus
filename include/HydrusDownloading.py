@@ -8,6 +8,7 @@ import HydrusThreading
 import json
 import os
 import pafy
+import re
 import threading
 import time
 import traceback
@@ -198,6 +199,16 @@ class DownloaderBooru( Downloader ):
         
         thumbnails = soup.find_all( class_ = starts_with_classname )
         
+        # this is a sankaku thing
+        popular_thumbnail_parent = soup.find( id = 'popular-preview' )
+        
+        if popular_thumbnail_parent is not None:
+            
+            popular_thumbnails = popular_thumbnail_parent.find_all( class_ = starts_with_classname )
+            
+            thumbnails = thumbnails[ len( popular_thumbnails ) : ]
+            
+        
         if self._gallery_advance_num is None:
             
             if len( thumbnails ) == 0: self._we_are_done = True
@@ -241,15 +252,33 @@ class DownloaderBooru( Downloader ):
             
             image = soup.find( id = image_id )
             
-            image_url = image[ 'src' ]
-            
-            if 'sample/sample-' in image_url:
+            if image is None:
                 
-                # danbooru resized image
+                image_string = soup.find( text = re.compile( 'Save this file' ) )
                 
-                image = soup.find( id = 'image-resize-link' )
+                image = image_string.parent
                 
                 image_url = image[ 'href' ]
+                
+            else:
+                
+                if image.name == 'img':
+                    
+                    image_url = image[ 'src' ]
+                    
+                    if 'sample/sample-' in image_url:
+                        
+                        # danbooru resized image
+                        
+                        image = soup.find( id = 'image-resize-link' )
+                        
+                        image_url = image[ 'href' ]
+                        
+                    
+                elif image.name == 'a':
+                    
+                    image_url = image[ 'href' ]
+                    
                 
             
         
@@ -1436,14 +1465,18 @@ class ImportController( object ):
             
             while not self._controller_job_key.IsDone():
                 
-                if self._controller_job_key.IsPaused():
+                while self._controller_job_key.IsPaused():
+                    
+                    time.sleep( 0.1 )
                     
                     self._import_job_key.Pause()
                     self._import_queue_position_job_key.Pause()
                     self._import_queue_job_key.Pause()
                     
-                    self._controller_job_key.WaitOnPause()
+                    if HC.shutdown or self._controller_job_key.IsDone(): break
                     
+                
+                if HC.shutdown or self._controller_job_key.IsDone(): break
                 
                 with self._lock:
                     
@@ -1586,14 +1619,16 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
                 
                 for downloader in downloaders:
                     
-                    if self._job_key.IsPaused():
+                    while self._job_key.IsPaused():
+                        
+                        time.sleep( 0.1 )
                         
                         self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
                         
-                        self._job_key.WaitOnPause()
+                        if HC.shutdown or self._job_key.IsDone(): break
                         
                     
-                    if self._job_key.IsCancelled(): break
+                    if HC.shutdown or self._job_key.IsDone(): break
                     
                     self._job_key.SetVariable( 'status', 'found ' + HC.u( total_urls_found ) + ' urls' )
                     
@@ -1618,14 +1653,16 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
                 
                 if len( downloaders ) == 0: break
                 
-                if self._job_key.IsPaused():
+                while self._job_key.IsPaused():
+                    
+                    time.sleep( 0.1 )
                     
                     self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
                     
-                    self._job_key.WaitOnPause()
+                    if HC.shutdown or self._job_key.IsDone(): break
                     
                 
-                if self._job_key.IsCancelled(): break
+                if HC.shutdown or self._job_key.IsDone(): break
                 
             
             self._job_key.SetVariable( 'status', '' )
@@ -1705,14 +1742,16 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                         
                     
                 
-                if self._job_key.IsPaused():
+                while self._job_key.IsPaused():
+                    
+                    time.sleep( 0.1 )
                     
                     self._job_key.SetVariable( 'status', 'paused' )
                     
-                    self._job_key.WaitOnPause()
+                    if HC.shutdown or self._job_key.IsDone(): break
                     
                 
-                if self._job_key.IsCancelled(): break
+                if HC.shutdown or self._ob_key.IsDone(): break
                 
                 thread_time = self._job_key.GetVariable( 'thread_time' )
                 

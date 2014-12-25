@@ -5116,20 +5116,6 @@ class DialogManageServices( ClientGUIDialogs.Dialog ):
                 
                 ( service_key, service_type, name, info ) = service_panel.GetInfo()
                 
-                if service_type == HC.TAG_REPOSITORY:
-                    
-                    text = 'Deleting a tag service is a potentially very expensive operation.'
-                    text += os.linesep * 2
-                    text += 'If you have millions of tags, it could take twenty minutes or more, during which time your database will be locked.'
-                    text += os.linesep * 2
-                    text += 'Are you sure you want to delete ' + name + '?'
-                    
-                    with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                        
-                        if dlg.ShowModal() != wx.ID_YES: return
-                        
-                    
-                
                 self._edit_log.append( HC.EditLogActionDelete( service_key ) )
                 
                 services_listbook.DeleteCurrentPage()

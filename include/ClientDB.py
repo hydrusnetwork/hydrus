@@ -1515,6 +1515,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         job_key.Finish()
         
     
+    def _ClearCombinedAutocompleteTags( self ): self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
+    
     def _DeleteFiles( self, service_id, hash_ids ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
@@ -1827,17 +1829,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tag_service_id = self._GetServiceId( tag_service_key )
         file_service_id = self._GetServiceId( file_service_key )
         
-        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY:
-            
-            current_tables_phrase = 'mappings WHERE service_id = ' + HC.u( tag_service_id ) + ' AND status = ' + HC.u( HC.CURRENT ) + ' AND '
-            pending_tables_phrase = 'mappings WHERE service_id = ' + HC.u( tag_service_id ) + ' AND status = ' + HC.u( HC.PENDING ) + ' AND '
-            
-        else:
-            
-            current_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + HC.u( tag_service_id ) + ' AND mappings.status = ' + HC.u( HC.CURRENT ) + ' AND files_info.service_id = ' + HC.u( file_service_id ) + ' AND '
-            pending_tables_phrase = 'mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ' + HC.u( tag_service_id ) + ' AND mappings.status = ' + HC.u( HC.PENDING ) + ' AND files_info.service_id = ' + HC.u( file_service_id ) + ' AND '
-            
-        
         # precache search
         
         there_was_a_namespace = False
@@ -1951,27 +1942,49 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         zero = lambda: 0
         
+        predicates = [ 'status = ?', 'namespace_id = ?']
+        
+        if tag_service_key == HC.COMBINED_TAG_SERVICE_KEY:
+            
+            count_phrase = 'SELECT tag_id, COUNT( DISTINCT hash_id ) FROM '
+            
+        else:
+            
+            count_phrase = 'SELECT tag_id, COUNT( * ) FROM '
+            
+            predicates.append( 'mappings.service_id = ' + HC.u( tag_service_id ) )
+            
+        
+        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY:
+            
+            table_phrase = 'mappings '
+            
+        else:
+            
+            table_phrase = 'mappings, files_info USING ( hash_id ) '
+            
+            predicates.append( 'files_info.service_id = ' + HC.u( file_service_id ) )
+            
+        
+        predicates_phrase = 'WHERE ' + ' AND '.join( predicates ) + ' AND '
+        
         for ( namespace_id, tag_ids ) in HC.BuildKeyToListDict( results_missed ).items():
             
             current_counts = collections.defaultdict( zero )
             pending_counts = collections.defaultdict( zero )
             
-            current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( 'SELECT tag_id, COUNT( * ) FROM ' + current_tables_phrase + 'namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( namespace_id, ) ) } )
-            pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( 'SELECT tag_id, COUNT( * ) FROM ' + pending_tables_phrase + 'namespace_id = ? AND tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( namespace_id, ) ) } )
+            current_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( HC.CURRENT, namespace_id ) ) } )
+            pending_counts.update( { tag_id : count for ( tag_id, count ) in self._c.execute( count_phrase + table_phrase + predicates_phrase + 'tag_id IN ' + HC.SplayListForDB( tag_ids ) + ' GROUP BY tag_id;', ( HC.PENDING, namespace_id ) ) } )
             
             self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
             
             cache_results.extend( [ ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
             
         
-        ids = set()
-        
         current_ids_to_count = collections.Counter()
         pending_ids_to_count = collections.Counter()
         
         for ( namespace_id, tag_id, current_count, pending_count ) in cache_results:
-            
-            ids.add( ( namespace_id, tag_id ) )
             
             current_ids_to_count[ ( namespace_id, tag_id ) ] += current_count
             pending_ids_to_count[ ( namespace_id, tag_id ) ] += pending_count
@@ -2182,7 +2195,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if num_tags_zero or num_tags_nonzero:
             
-            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ';', ( tag_service_id, ) ) }
+            if tag_service_key == HC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
+            else: service_phrase = 'service_id = ' + HC.u( tag_service_id ) + ' AND '
+            
+            nonzero_tag_query_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT DISTINCT hash_id FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ';' ) }
             
             if num_tags_zero: query_hash_ids.difference_update( nonzero_tag_query_hash_ids )
             elif num_tags_nonzero: query_hash_ids = nonzero_tag_query_hash_ids
@@ -2190,7 +2206,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( tag_predicates ) > 0:
             
-            query_hash_ids = { id for ( id, count ) in self._c.execute( 'SELECT hash_id, COUNT( * ) as num_tags FROM mappings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ' GROUP BY hash_id;', ( tag_service_id, ) ) if False not in ( pred( count ) for pred in tag_predicates ) }
+            if tag_service_key == HC.COMBINED_TAG_SERVICE_KEY: service_phrase = ''
+            else: service_phrase = 'service_id = ' + HC.u( tag_service_id ) + ' AND '
+            
+            query_hash_ids = { id for ( id, count ) in self._c.execute( 'SELECT hash_id, COUNT( DISTINCT tag_id ) FROM mappings WHERE ' + service_phrase + 'hash_id IN ' + HC.SplayListForDB( query_hash_ids ) + ' AND status IN ' + HC.SplayListForDB( statuses ) + namespace_predicate + ' GROUP BY hash_id;' ) if False not in ( pred( count ) for pred in tag_predicates ) }
             
         
         #
@@ -2392,17 +2411,38 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if include_current_tags: statuses.append( HC.CURRENT )
         if include_pending_tags: statuses.append( HC.PENDING )
         
-        if len( statuses ) > 0: status_phrase = 'mappings.status IN ' + HC.SplayListForDB( statuses ) + ' AND '
-        else: status_phrase = ''
-        
-        tag_service_id = self._GetServiceId( tag_service_key )
-        
-        file_service_id = self._GetServiceId( file_service_key )
+        if len( statuses ) == 0: return {}
         
         namespace_id = self._GetNamespaceId( namespace )
         
-        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'namespace_id = ?;', ( tag_service_id, namespace_id ) ) }
-        else: hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'namespace_id = ?;', ( tag_service_id, file_service_id, namespace_id ) ) }
+        predicates = []
+        
+        if len( statuses ) > 0: predicates.append( 'mappings.status IN ' + HC.SplayListForDB( statuses ) )
+        
+        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY:
+            
+            table_phrase = 'mappings'
+            
+        else:
+            
+            table_phrase = 'mappings, files_info USING ( hash_id )'
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            predicates.append( 'files_info.service_id = ' + HC.u( file_service_id ) )
+            
+        
+        if tag_service_key != HC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_id = self._GetServiceId( tag_service_key )
+            
+            predicates.append( 'mappings.service_id = ' + HC.u( tag_service_id ) )
+            
+        
+        if len( predicates ) > 0: predicates_phrase = ' AND '.join( predicates ) + ' AND '
+        else: predicates_phrase = ''
+        
+        hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'namespace_id = ?;', ( namespace_id, ) ) }
         
         return hash_ids
         
@@ -2416,12 +2456,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         if include_current_tags: statuses.append( HC.CURRENT )
         if include_pending_tags: statuses.append( HC.PENDING )
         
-        if len( statuses ) > 0: status_phrase = 'mappings.status IN ' + HC.SplayListForDB( statuses ) + ' AND '
-        else: status_phrase = ''
-        
-        tag_service_id = self._GetServiceId( tag_service_key )
-        
-        file_service_id = self._GetServiceId( file_service_key )
+        if len( statuses ) == 0: return {}
         
         siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
@@ -2433,6 +2468,33 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         hash_ids = set()
         
+        predicates = []
+        
+        if len( statuses ) > 0: predicates.append( 'mappings.status IN ' + HC.SplayListForDB( statuses ) )
+        
+        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY:
+            
+            table_phrase = 'mappings'
+            
+        else:
+            
+            table_phrase = 'mappings, files_info USING ( hash_id )'
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            predicates.append( 'files_info.service_id = ' + HC.u( file_service_id ) )
+            
+        
+        if tag_service_key != HC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_id = self._GetServiceId( tag_service_key )
+            
+            predicates.append( 'mappings.service_id = ' + HC.u( tag_service_id ) )
+            
+        
+        if len( predicates ) > 0: predicates_phrase = ' AND '.join( predicates ) + ' AND '
+        else: predicates_phrase = ''
+        
         for tag in tags:
             
             try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
@@ -2440,13 +2502,11 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             if ':' in tag:
                 
-                if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'namespace_id = ? AND tag_id = ?;', ( tag_service_id, namespace_id, tag_id ) ) ) )
-                else: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'namespace_id = ? AND tag_id = ?;', ( tag_service_id, file_service_id, namespace_id, tag_id ) ) ) )
+                hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ) ) )
                 
             else:
                 
-                if file_service_key == HC.COMBINED_FILE_SERVICE_KEY: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND ' + status_phrase + 'tag_id = ?;', ( tag_service_id, tag_id ) ) ) )
-                else: hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM mappings, files_info USING ( hash_id ) WHERE mappings.service_id = ? AND files_info.service_id = ? AND ' + status_phrase + 'tag_id = ?;', ( tag_service_id, file_service_id, tag_id ) ) ) )
+                hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'tag_id = ?;', ( tag_id, ) ) ) )
                 
             
         
@@ -4056,7 +4116,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
-        if service_type == HC.TAG_REPOSITORY: self._RecalcCombinedMappings()
+        if service_type == HC.TAG_REPOSITORY: self._ClearCombinedAutocompleteTags()
         
         if service_type in HC.REPOSITORIES:
             
@@ -4191,6 +4251,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         self._c.executemany( 'UPDATE autocomplete_tags_cache SET current_count = current_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags ] )
         self._c.executemany( 'UPDATE autocomplete_tags_cache SET pending_count = pending_count + ? WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in pending_tags ] )
         
+        dirty_tags = { ( namespace_id, tag_id ) for ( tag_service_id, namespace_id, tag_id, count ) in current_tags + pending_tags }
+        
+        self._c.executemany( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', ( ( self._combined_tag_service_id, namespace_id, tag_id ) for ( namespace_id, tag_id ) in dirty_tags ) )
+        
     
     def _UpdateMappings( self, tag_service_id, mappings_ids = [], deleted_mappings_ids = [], pending_mappings_ids = [], pending_rescinded_mappings_ids = [], petitioned_mappings_ids = [], petitioned_rescinded_mappings_ids = [] ):
         
@@ -4221,57 +4285,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             num_old_made_new = self._GetRowCount()
             
-            if old_status != HC.PENDING and new_status == HC.PENDING:
-                
-                UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, pertinent_hash_ids, HC.PENDING, 1 )
-                
-                UpdateCombinedMappings( namespace_id, tag_id, pertinent_hash_ids, HC.PENDING, 1 )
-                
-            
-            if old_status == HC.PENDING and new_status != HC.PENDING:
-                
-                UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, pertinent_hash_ids, HC.PENDING, -1 )
-                
-                UpdateCombinedMappings( namespace_id, tag_id, pertinent_hash_ids, HC.PENDING, -1 )
-                
-            
-            if old_status != HC.CURRENT and new_status == HC.CURRENT:
-                
-                UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, pertinent_hash_ids, HC.CURRENT, 1 )
-                
-                UpdateCombinedMappings( namespace_id, tag_id, pertinent_hash_ids, HC.CURRENT, 1 )
-                
-            
-            if old_status == HC.CURRENT and new_status != HC.CURRENT:
-                
-                UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, pertinent_hash_ids, HC.CURRENT, -1 )
-                
-                UpdateCombinedMappings( namespace_id, tag_id, pertinent_hash_ids, HC.CURRENT, -1 )
-                
+            ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id )
             
             return ( num_old_deleted + num_old_made_new, num_old_made_new )
-            
-        
-        def UpdateCombinedMappings( namespace_id, tag_id, hash_ids, status, direction ):
-            
-            if direction == -1:
-                
-                existing_other_service_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id IN ' + splayed_other_service_ids + ' AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( namespace_id, tag_id, status ) ) }
-                
-                pertinent_hash_ids = set( hash_ids ).difference( existing_other_service_hash_ids )
-                
-                self._c.execute( 'DELETE FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( pertinent_hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, status ) )
-                
-            elif direction == 1:
-                
-                existing_combined_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM mappings WHERE service_id = ? AND namespace_id = ? AND tag_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' AND status = ?;', ( self._combined_tag_service_id, namespace_id, tag_id, status ) ) }
-                
-                pertinent_hash_ids = set( hash_ids ).difference( existing_combined_hash_ids )
-                
-                self._c.executemany( 'INSERT OR IGNORE INTO mappings VALUES ( ?, ?, ?, ?, ? );', [ ( self._combined_tag_service_id, namespace_id, tag_id, hash_id, status ) for hash_id in pertinent_hash_ids ] )
-                
-            
-            if len( pertinent_hash_ids ) > 0: UpdateAutocompleteTagCache( self._combined_tag_service_id, namespace_id, tag_id, pertinent_hash_ids, status, direction )
             
         
         def DeletePending( namespace_id, tag_id, hash_ids ):
@@ -4280,9 +4296,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             num_deleted = self._GetRowCount()
             
-            UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, hash_ids, HC.PENDING, -1 )
-            
-            UpdateCombinedMappings( namespace_id, tag_id, hash_ids, HC.PENDING, -1 )
+            ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id )
             
             return num_deleted
             
@@ -4307,18 +4321,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             num_rows_added = self._GetRowCount()
             
-            if status == HC.CURRENT:
-                
-                UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, new_hash_ids, HC.CURRENT, 1 )
-                
-                UpdateCombinedMappings( namespace_id, tag_id, new_hash_ids, HC.CURRENT, 1 )
-                
-            elif status == HC.PENDING:
-                
-                UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, new_hash_ids, HC.PENDING, 1 )
-                
-                UpdateCombinedMappings( namespace_id, tag_id, new_hash_ids, HC.PENDING, 1 )
-                
+            ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id )
             
             return num_rows_added
             
@@ -4332,18 +4335,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             return num_rows_added
             
         
-        def UpdateAutocompleteTagCache( tag_service_id, namespace_id, tag_id, hash_ids, status, direction ):
+        def ClearAutocompleteTagCache( tag_service_id, namespace_id, tag_id ):
             
-            #file_service_info = self._c.execute( 'SELECT service_id, COUNT( * ) FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ' GROUP BY service_id;' ).fetchall()
-            
-            #file_service_info.append( ( self._combined_file_service_id, len( hash_ids ) ) )
-            
-            #if status == HC.CURRENT: critical_phrase = 'current_count = current_count + ?'
-            #elif status == HC.PENDING: critical_phrase = 'pending_count = pending_count + ?'
-            
-            #self._c.executemany( 'UPDATE autocomplete_tags_cache SET ' + critical_phrase + ' WHERE file_service_id = ? AND tag_service_id = ? AND namespace_id = ? AND tag_id = ?;', [ ( count * direction, file_service_id, tag_service_id, namespace_id, tag_id ) for ( file_service_id, count ) in file_service_info ] )
-            
-            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) )
+            self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id IN ( ?, ? ) AND namespace_id = ? AND tag_id = ?;', ( tag_service_id, self._combined_tag_service_id, namespace_id, tag_id ) )
             
         
         change_in_num_mappings = 0
@@ -4500,7 +4494,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         #
         
-        recalc_combined_mappings = False
+        clear_combined_autocomplete = False
         
         for ( action, data ) in edit_log:
             
@@ -4548,7 +4542,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             
                         
                     
-                    if service_type == HC.TAG_REPOSITORY: recalc_combined_mappings = True
+                    if service_type == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
                     
                 
             elif action == HC.EDIT:
@@ -4568,7 +4562,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if recalc_combined_mappings: self._RecalcCombinedMappings()
+        if clear_combined_autocomplete: self._ClearCombinedAutocompleteTags()
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -4580,8 +4574,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         HC.repos_changed = True
         
-        recalc_combined_mappings = False
-        message = None
+        clear_combined_autocomplete = False
         
         for entry in edit_log:
             
@@ -4601,19 +4594,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 service = self._GetService( service_id )
                 
-                if service.GetServiceType() == HC.TAG_REPOSITORY:
-                    
-                    recalc_combined_mappings = True
-                    
-                    if message is None:
-                        
-                        job_key = HC.JobKey()
-                    
-                        job_key.SetVariable( 'popup_message_text_1', 'updating services: deleting tag data' )
-                        
-                        HC.pubsub.pub( 'message', job_key )
-                        
-                    
+                if service.GetServiceType() == HC.TAG_REPOSITORY: clear_combined_autocomplete = True
                 
                 self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
@@ -4634,8 +4615,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         os.remove( HC.CLIENT_UPDATES_DIR + os.path.sep + filename )
                         
                     
-                
-                if service.GetServiceType() == HC.TAG_REPOSITORY: recalc_combined_mappings = True
                 
             elif action == HC.EDIT:
                 
@@ -4690,14 +4669,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
             
         
-        if recalc_combined_mappings:
-            
-            job_key.SetVariable( 'popup_message_text_1', 'updating services: recalculating combined tag data' )
-            
-            self._RecalcCombinedMappings()
-            
-            job_key.SetVariable( 'popup_message_text_1', 'updating services: done!' )
-            
+        if clear_combined_autocomplete: self._ClearCombinedAutocompleteTags()
         
         self.pub_after_commit( 'notify_new_pending' )
         
@@ -4791,6 +4763,8 @@ class DB( ServiceDB ):
         self._local_tag_service_id = self._GetServiceId( HC.LOCAL_TAG_SERVICE_KEY )
         self._combined_file_service_id = self._GetServiceId( HC.COMBINED_FILE_SERVICE_KEY )
         self._combined_tag_service_id = self._GetServiceId( HC.COMBINED_TAG_SERVICE_KEY )
+        
+        self._null_namespace_id = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) )
         
         options = self._GetOptions()
         
@@ -5203,20 +5177,6 @@ class DB( ServiceDB ):
         
     
     def _UpdateDB( self, version ):
-        
-        if version == 90:
-            
-            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
-            
-            shortcuts = HC.options[ 'shortcuts' ]
-            
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'Z' ) ] = 'undo'
-            shortcuts[ wx.ACCEL_CTRL ][ ord( 'Y' ) ] = 'redo'
-            
-            HC.options[ 'shortcuts' ] = shortcuts
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
-            
         
         if version == 91:
             
@@ -5859,6 +5819,17 @@ class DB( ServiceDB ):
             self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE current_count < ?;', ( 5, ) )
             
         
+        if version == 140:
+            
+            self._combined_tag_service_id = self._GetServiceId( HC.COMBINED_TAG_SERVICE_KEY )
+            
+            self._c.execute( 'DELETE FROM mappings WHERE service_id = ?;', ( self._combined_tag_service_id, ) )
+            
+            #
+            
+            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'sankaku chan', CC.DEFAULT_BOORUS[ 'sankaku chan' ] ) )
+            
+        
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True
@@ -6015,7 +5986,6 @@ class DB( ServiceDB ):
                 elif action == 'message_info_since': result = self._AddMessageInfoSince( *args, **kwargs )
                 elif action == 'message_statuses': result = self._UpdateMessageStatuses( *args, **kwargs )
                 elif action == 'pixiv_account': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, 'pixiv_account', *args, **kwargs )
-                elif action == 'regenerate_combined_mappings': result = self._RecalcCombinedMappings()
                 elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
                 elif action == 'reset_service': result = self._ResetService( *args, **kwargs )
                 elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
@@ -6178,7 +6148,7 @@ class DB( ServiceDB ):
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
             elif self._jobs.empty() and not self._currently_doing_job: return
-            else: time.sleep( 0.0001 )
+            else: time.sleep( 0.00001 )
             
         
     
@@ -6889,8 +6859,6 @@ def DAEMONSynchroniseRepositories():
                         
                         HC.app.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
                         
-                        time.sleep( 0.10 )
-                        
                         # this waits for pubsubs to flush, so service updates are processed
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
                         
@@ -7022,8 +6990,6 @@ def DAEMONSynchroniseRepositories():
                                 
                                 HC.app.WaitUntilGoodTimeToUseGUIThread()
                                 
-                                time.sleep( 0.0001 )
-                                
                                 before_precise = HC.GetNowPrecise()
                                 
                                 HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
@@ -7039,8 +7005,19 @@ def DAEMONSynchroniseRepositories():
                                 current_weight = 0
                                 
                             
+                            if WEIGHT_THRESHOLD < 1:
+                                
+                                job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
+                                
+                                time.sleep( 5 )
+                                
+                                WEIGHT_THRESHOLD = 1
+                                
+                            
                         
                         if len( content_updates ) > 0:
+                            
+                            content_update_index_string = 'content part ' + HC.ConvertIntToPrettyString( num_content_updates ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) + ': '
                             
                             job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
                             
@@ -7065,10 +7042,11 @@ def DAEMONSynchroniseRepositories():
                         
                         HC.pubsub.pub( 'notify_new_pending' )
                         
-                        time.sleep( 0.10 )
-                        
                         # this waits for pubsubs to flush, so service updates are processed
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
+                        
+                        job_key.SetVariable( 'popup_message_gauge_2', ( 0, 1 ) )
+                        job_key.SetVariable( 'popup_message_text_2', '' )
                         
                         num_updates_processed += 1
                         

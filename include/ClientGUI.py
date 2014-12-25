@@ -845,7 +845,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'vacuum_db' ), p( '&Vacuum' ), p( 'Rebuild the Database.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_orphans' ), p( '&Delete Orphan Files' ), p( 'Go through the client\'s file store, deleting any files that are no longer needed.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete_service_info' ), p( '&Clear Service Info Cache' ), p( 'Delete all cache service info, in case it has become desynchronised.' ) )
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_combined_mappings' ), p( '&Regenerate Combined Mappings' ), p( 'Delete and rebuild the combined cache of all your services\' mappings.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'regenerate_thumbnails' ), p( '&Regenerate All Thumbnails' ), p( 'Delete all thumbnails and regenerate from original files.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'file_integrity' ), p( '&Check File Integrity' ), p( 'Review and fix all local file records.' ) )
             menu.AppendSeparator()
@@ -1453,14 +1452,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         self._statusbar.SetStatusText( self._statusbar_db_locked, number = 3 )
         
     
-    def _RegenerateCombinedMappings( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to regenerate the combined mappings? This can take a long time.' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'regenerate_combined_mappings' )
-            
-        
-    
     def _RegenerateThumbnails( self ):
         
         text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
@@ -1909,7 +1900,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None: page.RefreshQuery()
                 
-            elif command == 'regenerate_combined_mappings': self._RegenerateCombinedMappings()
             elif command == 'regenerate_thumbnails': self._RegenerateThumbnails()
             elif command == 'restore_database': HC.app.RestoreDatabase()
             elif command == 'review_services': self._ReviewServices()

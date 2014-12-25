@@ -142,6 +142,56 @@ class TestDownloaders( unittest.TestCase ):
         self.assertEqual( info, expected_info )
         
     
+    def test_sankaku( self ):
+        
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_gallery.html' ) as f: sankaku_gallery = f.read()
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_page.html' ) as f: sankaku_page = f.read()
+        
+        HC.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/?tags=animal_ears&page=1', sankaku_gallery )
+        HC.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4324703', sankaku_page )
+        
+        #
+        
+        downloader = HydrusDownloading.DownloaderBooru( CC.DEFAULT_BOORUS[ 'sankaku chan' ], [ 'animal_ears' ] )
+        
+        #
+        
+        gallery_urls = downloader.GetAnotherPage()
+        
+        expected_gallery_urls = [(u'https://chan.sankakucomplex.com/post/show/4324703',), (u'https://chan.sankakucomplex.com/post/show/4324435',), (u'https://chan.sankakucomplex.com/post/show/4324426',), (u'https://chan.sankakucomplex.com/post/show/4324365',), (u'https://chan.sankakucomplex.com/post/show/4324343',), (u'https://chan.sankakucomplex.com/post/show/4324309',), (u'https://chan.sankakucomplex.com/post/show/4324134',), (u'https://chan.sankakucomplex.com/post/show/4324107',), (u'https://chan.sankakucomplex.com/post/show/4324095',), (u'https://chan.sankakucomplex.com/post/show/4324086',), (u'https://chan.sankakucomplex.com/post/show/4323969',), (u'https://chan.sankakucomplex.com/post/show/4323967',), (u'https://chan.sankakucomplex.com/post/show/4323665',), (u'https://chan.sankakucomplex.com/post/show/4323620',), (u'https://chan.sankakucomplex.com/post/show/4323586',), (u'https://chan.sankakucomplex.com/post/show/4323581',), (u'https://chan.sankakucomplex.com/post/show/4323580',), (u'https://chan.sankakucomplex.com/post/show/4323520',), (u'https://chan.sankakucomplex.com/post/show/4323512',), (u'https://chan.sankakucomplex.com/post/show/4323498',)]
+        
+        self.assertEqual( gallery_urls, expected_gallery_urls )
+        
+        #
+        
+        HC.http.SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/c5/c3/c5c3c91ca68bd7662f546cc44fe0d378.jpg?4324703', 'image file' )
+        
+        info = downloader.GetFileAndTags( 'https://chan.sankakucomplex.com/post/show/4324703' )
+        
+        ( temp_path, tags ) = info
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        info = ( data, tags )
+        
+        expected_info = ('image file', [u'character:heinrike prinzessin zu sayn-wittgenstein', u'character:rosalie de hemricourt de grunne', u'2girls', u'alternative costume', u'anal beads', u'animal ears', u'anus', u'ass', u'ass cutout', u'backless panties', u'blonde', u'blue eyes', u'blush', u'braid', u'butt plug', u'butt plug tail', u'cameltoe', u'cat tail', u'cheerleader', u'dildo', u'fake animal ears', u'fang', u'green eyes', u'hands', u'happy', u'heart cutout', u'kneepits', u'long hair', u'looking at viewer', u'multiple girls', u'nekomimi', u'open mouth', u'pantsu', u'spread anus', u'sweat', u'tail', u'tape', u'underwear', u'white panties', u'creator:null (nyanpyoun)', u'series:strike witches'])
+        
+        self.assertEqual( info, expected_info )
+        
+        # flash is tricky for sankaku
+        
+        with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'sankaku_flash.html' ) as f: sankaku_flash = f.read()
+        
+        HC.http.SetResponse( HC.GET, 'https://chan.sankakucomplex.com/post/show/4318061', sankaku_flash )
+        HC.http.SetResponse( HC.GET, 'https://cs.sankakucomplex.com/data/48/ce/48cecd707d8a562d47db74d934505f51.swf?4318061', 'swf file' )
+        
+        temp_path = downloader.GetFile( 'https://chan.sankakucomplex.com/post/show/4318061' )
+        
+        with open( temp_path, 'rb' ) as f: data = f.read()
+        
+        self.assertEqual( data, 'swf file' )
+        
+    
     def test_booru_e621( self ):
         
         with open( HC.STATIC_DIR + os.path.sep + 'testing' + os.path.sep + 'e621_gallery.html' ) as f: e621_gallery = f.read()

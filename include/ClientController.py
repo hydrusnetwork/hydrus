@@ -633,7 +633,7 @@ class Controller( wx.App ):
             
             if HC.shutdown: raise Exception( 'Client shutting down!' )
             elif HC.pubsub.NoJobsQueued() and not HC.currently_doing_pubsub: return
-            else: time.sleep( 0.0001 )
+            else: time.sleep( 0.00001 )
             
         
     

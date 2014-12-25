@@ -1051,6 +1051,17 @@ tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' :
 
 DEFAULT_BOORUS[ 'tbib' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
 
+name = 'sankaku chan'
+search_url = 'https://chan.sankakucomplex.com/?tags=%tags%&page=%index%'
+search_separator = '+'
+advance_by_page_num = True
+thumb_classname = 'thumb'
+image_id = 'highres'
+image_data = None
+tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator' }
+
+DEFAULT_BOORUS[ 'sankaku chan' ] = Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+
 class LocalBooruCache( object ):
     
     def __init__( self ):
@@ -2708,7 +2719,7 @@ class ThumbnailCache( object ):
                     
                     if HC.GetNowPrecise() - last_paused > 0.005:
                         
-                        time.sleep( 0.0001 )
+                        time.sleep( 0.00001 )
                         
                         last_paused = HC.GetNowPrecise()
                         

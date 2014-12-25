@@ -65,7 +65,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 140
+SOFTWARE_VERSION = 141
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1989,6 +1989,8 @@ class JobKey( object ):
             if name in self._variables: del self._variables[ name ]
             
         
+        time.sleep( 0.00001 )
+        
     
     def Finish( self ): self._done.set()
     
@@ -2016,7 +2018,7 @@ class JobKey( object ):
     
     def IsPausable( self ): return self._pausable and not self.IsDone()
     
-    def IsPaused( self ): return self._paused.is_set()
+    def IsPaused( self ): return self._paused.is_set() and not self.IsDone()
     
     def IsWorking( self ): return self.IsBegun() and not self.IsDone()
     
@@ -2037,6 +2039,8 @@ class JobKey( object ):
     def SetVariable( self, name, value ):
         
         with self._variable_lock: self._variables[ name ] = value
+        
+        time.sleep( 0.00001 )
         
     
     def WaitOnPause( self ):
