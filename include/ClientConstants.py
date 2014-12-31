@@ -1571,6 +1571,19 @@ class FileSearchContext( object ):
             elif operator == '-': self._namespaces_to_exclude.append( namespace )
             
         
+        wildcard_predicates =  [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_WILDCARD ]
+        
+        self._wildcards_to_include = []
+        self._wildcards_to_exclude = []
+        
+        for predicate in wildcard_predicates:
+            
+            ( operator, wildcard ) = predicate.GetValue()
+            
+            if operator == '+': self._wildcards_to_include.append( wildcard )
+            elif operator == '-': self._wildcards_to_exclude.append( wildcard )
+            
+        
     
     def GetFileServiceKey( self ): return self._file_service_key
     def GetNamespacesToExclude( self ): return self._namespaces_to_exclude
@@ -1580,6 +1593,8 @@ class FileSearchContext( object ):
     def GetTagServiceKey( self ): return self._tag_service_key
     def GetTagsToExclude( self ): return self._tags_to_exclude
     def GetTagsToInclude( self ): return self._tags_to_include
+    def GetWildcardsToExclude( self ): return self._wildcards_to_exclude
+    def GetWildcardsToInclude( self ): return self._wildcards_to_include
     def IncludeCurrentTags( self ): return self._include_current_tags
     def IncludePendingTags( self ): return self._include_pending_tags
 

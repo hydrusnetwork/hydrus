@@ -625,6 +625,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             must_do_a_search = False
             
+            if '*' in search_text: must_do_a_search = True
+            
             if ':' in search_text:
                 
                 ( namespace, half_complete_tag ) = search_text.split( ':' )
@@ -652,7 +654,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     media = self._media_callable()
                     
-                    # if synchro not on, then can't rely on current media as being accurate for current preds, so search db normally
                     if media is not None and self._synchronised.IsOn(): fetch_from_db = False
                     
                 
@@ -662,18 +663,18 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                         
-                        matches = results.GetMatches( half_complete_tag )
+                        matches = results.GetMatches( search_text )
                         
                     else:
                         
-                        if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
+                        if must_do_a_search or self._first_letters == '' or not search_text.startswith( self._first_letters ):
                             
-                            self._first_letters = half_complete_tag
+                            self._first_letters = search_text
                             
                             self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
                             
                         
-                        matches = self._cached_results.GetMatches( half_complete_tag )
+                        matches = self._cached_results.GetMatches( search_text )
                         
                     
                 else:
@@ -695,14 +696,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     current_tags_flat_iterable = itertools.chain.from_iterable( lists_of_current_tags )
                     pending_tags_flat_iterable = itertools.chain.from_iterable( lists_of_pending_tags )
                     
-                    current_tags_flat = [ tag for tag in current_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
-                    pending_tags_flat = [ tag for tag in pending_tags_flat_iterable if HC.SearchEntryMatchesTag( half_complete_tag, tag ) ]
-                    
-                    if self._current_namespace != '':
-                        
-                        current_tags_flat = [ tag for tag in current_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
-                        pending_tags_flat = [ tag for tag in pending_tags_flat if tag.startswith( self._current_namespace + ':' ) ]
-                        
+                    current_tags_flat = [ tag for tag in current_tags_flat_iterable if HC.SearchEntryMatchesTag( search_text, tag ) ]
+                    pending_tags_flat = [ tag for tag in pending_tags_flat_iterable if HC.SearchEntryMatchesTag( search_text, tag ) ]
                     
                     current_tags_to_count = collections.Counter( current_tags_flat )
                     pending_tags_to_count = collections.Counter( pending_tags_flat )
@@ -714,11 +709,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     results = CC.AutocompleteMatchesPredicates( self._tag_service_key, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
                     
-                    matches = results.GetMatches( half_complete_tag )
+                    matches = results.GetMatches( search_text )
                     
                 
             
             if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ) ) )
+            if '*' in search_text: matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, ( operator, search_text ) ) )
             
             entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, search_text ) )
             

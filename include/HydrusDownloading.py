@@ -256,13 +256,15 @@ class DownloaderBooru( Downloader ):
                 
                 image_string = soup.find( text = re.compile( 'Save this file' ) )
                 
+                if image_string is None: image_string = soup.find( text = re.compile( 'Save this video' ) )
+                
                 image = image_string.parent
                 
                 image_url = image[ 'href' ]
                 
             else:
                 
-                if image.name == 'img':
+                if image.name in ( 'img', 'video' ):
                     
                     image_url = image[ 'src' ]
                     
@@ -1648,6 +1650,8 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
                         self._job_key.SetVariable( 'queue', queue )
                         
                     
+                    time.sleep( 5 )
+                    
                 
                 for downloader in downloaders_to_remove: downloaders.remove( downloader )
                 
@@ -1751,7 +1755,7 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                     if HC.shutdown or self._job_key.IsDone(): break
                     
                 
-                if HC.shutdown or self._ob_key.IsDone(): break
+                if HC.shutdown or self._job_key.IsDone(): break
                 
                 thread_time = self._job_key.GetVariable( 'thread_time' )
                 

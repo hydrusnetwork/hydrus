@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 142</h3></li>
+				<ul>
+					<li>added wildcards to autocomplete results and file queries</li>
+					<li>autocomplete results will match your wildcard _exactly_</li>
+					<li>a new predicate type will appear at the top of wildcard queries; selecting it will search files with that wildcard</li>
+					<li>the new wildcard predicate can be prepended with a minus sign to exclude from results just like normal tag and namespace queries</li>
+					<li>in wildcard predicates, namespace and/or tag can contain wildcard characters</li>
+					<li>added some wildcard help</li>
+					<li>putting in '***' as an autocomplete query is now a pretty bad idea!</li>
+					<li>fixed some logic in how tags are matched against unusual search input in the db</li>
+					<li>sped up and cleaned how tags are matched against search input</li>
+					<li>fixed some namespace logic in how tags are matched against search input</li>
+					<li>below-character-threshold autocomplete queries will now return all applicable namespace results (e.g. putting in '1' will return [ 1, page:1, chapter:1, volume:1 ], not just [ 1 ])</li>
+					<li>added 'open externally' to launch the file in default external program to thumbnail and media viewer menu</li>
+					<li>added a five second delay between gallery-page fetches in the downloader to reduce chance of 429 errors (this was affecting big sankaku searches)</li>
+					<li>added danbooru webm downloading</li>
+					<li>fixed a typo in the thread watcher</li>
+					<li>fixed a bit-rot bug that was stopping the 'like' ratings filter from launching</li>
+					<li>fixed right click menu in custom filter</li>
+				</ul>
 				<li><h3>version 141</h3></li>
 				<ul>
 					<li>combined mappings are no longer calculated and stored</li>

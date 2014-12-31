@@ -1835,7 +1835,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         if len( half_complete_tag ) > 0:
             
-            normal_characters = 'abcdefghijklmnopqrstuvwxyz0123456789'
+            normal_characters = set( 'abcdefghijklmnopqrstuvwxyz0123456789' )
             
             half_complete_tag_can_be_matched = True
             
@@ -1855,8 +1855,21 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 # a search for '[s' actually only does 's'
                 # so, let's do the old and slower LIKE instead of MATCH in weird cases
                 
+                # note that queries with '*' are passed to LIKE, because MATCH only supports appended wildcards 'gun*', and not complex stuff like '*gun*'
+                
                 if half_complete_tag_can_be_matched: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
-                else: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( '%' + half_complete_tag + '%', ) ) ]
+                else:
+                    
+                    possible_tag_ids_half_complete_tag = half_complete_tag
+                    
+                    if '*' in possible_tag_ids_half_complete_tag:
+                        
+                        possible_tag_ids_half_complete_tag = possible_tag_ids_half_complete_tag.replace( '*', '%' )
+                        
+                    else: possible_tag_ids_half_complete_tag += '%'
+                    
+                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? OR tag LIKE ?;', ( possible_tag_ids_half_complete_tag, ' ' + possible_tag_ids_half_complete_tag ) ) ]
+                    
                 
             
             if ':' in half_complete_tag:
@@ -1894,7 +1907,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
                 
-                predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id = ' + HC.u( tag_id )
+                if ':' in tag: predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id = ' + HC.u( tag_id )
+                else: predicates_phrase = 'tag_id = ' + HC.u( tag_id )
                 
             except: predicates_phrase = '1 = 1'
             
@@ -2044,6 +2058,9 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         namespaces_to_include = search_context.GetNamespacesToInclude()
         namespaces_to_exclude = search_context.GetNamespacesToExclude()
         
+        wildcards_to_include = search_context.GetWildcardsToInclude()
+        wildcards_to_exclude = search_context.GetWildcardsToExclude()
+        
         include_current_tags = search_context.IncludeCurrentTags()
         include_pending_tags = search_context.IncludePendingTags()
         
@@ -2120,7 +2137,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             else: sql_predicates.append( '( duration < ' + HC.u( max_duration ) + ' OR duration IS NULL )' )
             
         
-        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0:
+        if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
             
             query_hash_ids = None
             
@@ -2132,6 +2149,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
                 else: query_hash_ids.intersection_update( namespace_query_hash_ids )
+                
+            
+            if len( wildcards_to_include ) > 0:
+                
+                wildcard_query_hash_ids = HC.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
+                
+                if query_hash_ids is None: query_hash_ids = wildcard_query_hash_ids
+                else: query_hash_ids.intersection_update( wildcard_query_hash_ids )
                 
             
             if len( sql_predicates ) > 1: query_hash_ids.intersection_update( [ id for ( id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( sql_predicates ) + ';' ) ] )
@@ -2228,6 +2253,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
         
         for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
+        
+        for wildcard in wildcards_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
         
         if file_service_type == HC.FILE_REPOSITORY and HC.options[ 'exclude_deleted_files' ]: exclude_query_hash_ids.update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM deleted_files WHERE service_id = ?;', ( self._local_file_service_id, ) ) ] )
         
@@ -2508,6 +2535,93 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 hash_ids.update( ( id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'tag_id = ?;', ( tag_id, ) ) ) )
                 
+            
+        
+        return hash_ids
+        
+    
+    def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ):
+        
+        statuses = []
+        
+        if include_current_tags: statuses.append( HC.CURRENT )
+        if include_pending_tags: statuses.append( HC.PENDING )
+        
+        if len( statuses ) == 0: return {}
+        
+        predicates = []
+        
+        if len( statuses ) > 0: predicates.append( 'mappings.status IN ' + HC.SplayListForDB( statuses ) )
+        
+        if file_service_key == HC.COMBINED_FILE_SERVICE_KEY:
+            
+            table_phrase = 'mappings'
+            
+        else:
+            
+            table_phrase = 'mappings, files_info USING ( hash_id )'
+            
+            file_service_id = self._GetServiceId( file_service_key )
+            
+            predicates.append( 'files_info.service_id = ' + HC.u( file_service_id ) )
+            
+        
+        if tag_service_key != HC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_id = self._GetServiceId( tag_service_key )
+            
+            predicates.append( 'mappings.service_id = ' + HC.u( tag_service_id ) )
+            
+        
+        if len( predicates ) > 0: predicates_phrase = ' AND '.join( predicates ) + ' AND '
+        else: predicates_phrase = ''
+        
+        def GetNamespaceIdsFromWildcard( w ):
+            
+            if '*' in w:
+                
+                w = w.replace( '*', '%' )
+                
+                return { namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( w, ) ) }
+                
+            else:
+                
+                namespace_id = self._GetNamespaceId( w )
+                
+                return [ namespace_id ]
+                
+            
+        
+        def GetTagIdsFromWildcard( w ):
+            
+            if '*' in w:
+                
+                w = w.replace( '*', '%' )
+                
+                return { tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( w, ) ) }
+                
+            else:
+                
+                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( w )
+                
+                return [ tag_id ]
+                
+            
+        
+        if ':' in wildcard:
+            
+            ( namespace_wildcard, tag_wildcard ) = wildcard.split( ':', 1 )
+            
+            possible_namespace_ids = GetNamespaceIdsFromWildcard( namespace_wildcard )
+            possible_tag_ids = GetTagIdsFromWildcard( tag_wildcard )
+            
+            hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'namespace_id IN ' + HC.SplayListForDB( possible_namespace_ids ) + ' AND tag_id IN ' + HC.SplayListForDB( possible_tag_ids ) + ';' ) }
+            
+        else:
+            
+            possible_tag_ids = GetTagIdsFromWildcard( wildcard )
+            
+            hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM ' + table_phrase + ' WHERE ' + predicates_phrase + 'tag_id IN ' + HC.SplayListForDB( possible_tag_ids ) + ';' ) }
             
         
         return hash_ids
@@ -5177,15 +5291,6 @@ class DB( ServiceDB ):
         
     
     def _UpdateDB( self, version ):
-        
-        if version == 91:
-            
-            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
-            
-            HC.options[ 'num_autocomplete_chars' ] = 2
-            
-            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
-            
         
         if version == 93:
             

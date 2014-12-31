@@ -10,6 +10,7 @@ import HydrusThreading
 import itertools
 import os
 import random
+import subprocess
 import threading
 import time
 import traceback
@@ -464,6 +465,16 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         hashes = [ h for h in itertools.chain( *args ) ]
         
         if len( hashes ) > 0: HC.pubsub.pub( 'new_thread_dumper', hashes )
+        
+    
+    def _OpenExternally( self ):
+        
+        hash = self._focussed_media.GetHash()
+        mime = self._focussed_media.GetMime()
+        
+        path = CC.GetFilePath( hash, mime )
+        
+        subprocess.call( 'start "" "' + path + '"', shell = True )
         
     
     def _PetitionFiles( self, file_service_key ):
@@ -1551,6 +1562,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'manage_tags': self._ManageTags()
             elif command == 'modify_account': self._ModifyUploaders( data )
             elif command == 'new_thread_dumper': self._NewThreadDumper()
+            elif command == 'open_externally': self._OpenExternally()
             elif command == 'petition': self._PetitionFiles( data )
             elif command == 'ratings_filter': self._RatingsFilter( data )
             elif command == 'remove': self._Remove()
@@ -1930,6 +1942,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
                 # share
+                
+                menu.AppendSeparator()
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
                 
                 share_menu = wx.Menu()
                 

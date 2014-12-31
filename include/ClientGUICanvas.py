@@ -703,6 +703,16 @@ class Canvas( object ):
             
         
     
+    def _OpenExternally( self ):
+        
+        hash = self._current_display_media.GetHash()
+        mime = self._current_display_media.GetMime()
+        
+        path = CC.GetFilePath( hash, mime )
+        
+        subprocess.call( 'start "" "' + path + '"', shell = True )
+        
+    
     def _PrefetchImages( self ): pass
     
     def _RecalcZoom( self ):
@@ -1523,6 +1533,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
                 elif command == 'manage_tags': self._ManageTags()
+                elif command == 'open_externally': self._OpenExternally()
                 elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                     
                     distance = 20
@@ -1616,6 +1627,10 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
         if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        
+        menu.AppendSeparator()
+        
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
         
         share_menu = wx.Menu()
         
@@ -1907,6 +1922,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
                 elif command == 'inbox': self._Inbox()
                 elif command == 'manage_ratings': self._ManageRatings()
                 elif command == 'manage_tags': self._ManageTags()
+                elif command == 'open_externally': self._OpenExternally()
                 elif command == 'remove': self._Remove()
                 elif command == 'slideshow': self._StartSlideshow( data )
                 elif command == 'slideshow_pause_play': self._PausePlaySlideshow()
@@ -1937,6 +1953,14 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         
     
     def EventShowMenu( self, event ):
+        
+        services = HC.app.GetManager( 'services' ).GetServices()
+        
+        local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
+        
+        i_can_post_ratings = len( local_ratings_services ) > 0
+        
+        #
         
         self._last_drag_coordinates = None # to stop successive right-click drag warp bug
         
@@ -1987,6 +2011,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         menu.AppendSeparator()
+        
+        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
         
         share_menu = wx.Menu()
         
@@ -2651,7 +2677,7 @@ class RatingsFilterFrameLike( CanvasFullscreenMediaListFilter ):
     
     def __init__( self, my_parent, page_key, service_key, media_results ):
         
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_KEY, [], media_results )
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, HC.LOCAL_FILE_SERVICE_KEY, media_results )
         
         self._rating_service_key = service_key
         self._service = HC.app.GetManager( 'services' ).GetService( service_key )
