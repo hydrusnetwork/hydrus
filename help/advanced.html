@@ -6,6 +6,16 @@
 	</head>
 	<body>
 		<div class="content">
+			<h3>searching with wildcards</h3>
+			<p>The autocomplete tag dropdown supports wildcard searching with '*'.</p>
+			<p><img src="wildcard_gelion.png"/></p>
+			<p>The '*' will match <i>any</i> number of characters. Every normal search has a secret '*' on the end that you don't see, which is how full words get matched from you only typing in a few letters.</p>
+			<p>This is useful when you can only remember part of a word, or can't spell its first half. You can put the '*' anywhere, but you may want to experiment to get used to the exact way these searches work. Some results can be surprising!</p>
+			<p><img src="wildcard_vage.png"/></p>
+			<p>You can select the special predicate inserted at the top of your autocomplete results (the highlighted '*vagelion' and '*va*ge*' above), and it will work like any other predicate. <b>It will return all files that match that wildcard,</b> i.e. every file for every other tag in the current dropdown list.</p>
+			<p>This is particularly useful if you have a number of files with commonly structured over-informationed tags, like this:</p>
+			<p><img src="wildcard_cool_pic.png"/></p>
+			<p>In this case, selecting the 'title:cool pic*' predicate will return all three images in the same search, where you can conveniently give them some more-easily searched tags like 'series:cool pic' and 'page:1', 'page:2', 'page:3'.</p>
 			<h3>using flash in fullscreen view</h3>
 			<p>Flash files are sometimes interested in inputs (like spacebar or mouse-scrollwheel) that mean something to hydrus's fullscreen view, and the libraries I have to use to show flash don't handle these events like normal windows. I now have it set so if your mouse is inside the flash window, the input will go to the flash, and if it is outside, it goes to the fullscreen window.</p>
 			<p>So, if you want to play a flash game in fullscreen, keep your mouse inside the window.</p>
