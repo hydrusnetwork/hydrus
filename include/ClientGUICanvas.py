@@ -710,7 +710,7 @@ class Canvas( object ):
         
         path = CC.GetFilePath( hash, mime )
         
-        subprocess.call( 'start "" "' + path + '"', shell = True )
+        HC.LaunchFile( path )
         
     
     def _PrefetchImages( self ): pass
@@ -3972,7 +3972,7 @@ class EmbedWindowAudio( wx.Window ):
         
         path = CC.GetFilePath( self._hash, self._mime )
         
-        subprocess.call( 'start "" "' + path + '"', shell = True )
+        HC.LaunchFile( path )
         
     
 class EmbedWindowVideo( wx.Window ):
@@ -4019,8 +4019,7 @@ class EmbedWindowVideo( wx.Window ):
         
         path = CC.GetFilePath( self._hash, self._mime )
         
-        # os.system( 'start ' + path )
-        subprocess.call( 'start "" "' + path + '"', shell = True )
+        HC.LaunchFile( path )
         
     
 class PDFButton( wx.Button ):
@@ -4040,8 +4039,7 @@ class PDFButton( wx.Button ):
         
         path = CC.GetFilePath( self._hash, HC.APPLICATION_PDF )
         
-        # os.system( 'start ' + path )
-        subprocess.call( 'start "" "' + path + '"', shell = True )
+        HC.LaunchFile( path )
         
     
 class StaticImage( wx.Window ):

@@ -2154,7 +2154,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             if predicate is not None:
                 
-                ( predicate_type, value ) = predicate.GetInfo()
+                ( predicate_type, value, inclusive ) = predicate.GetInfo()
                 
                 if predicate_type == HC.PREDICATE_TYPE_SYSTEM:
                     

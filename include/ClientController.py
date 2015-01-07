@@ -557,7 +557,7 @@ class Controller( wx.App ):
                         
                         call_stuff.extend( sys.argv )
                         
-                        subprocess.call( call_stuff, shell = True )
+                        subprocess.Popen( call_stuff, shell = True )
                         
                     
                 

@@ -95,6 +95,8 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         wx.TextCtrl.__init__( self, parent, style=wx.TE_PROCESS_ENTER )
         
+        self.SetBackgroundColour( CC.COLOUR_LIGHT_SELECTED )
+        
         #self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
         #self._dropdown_window = wx.PopupTransientWindow( self, style = wx.BORDER_RAISED )
         #self._dropdown_window = wx.Window( self, style = wx.BORDER_RAISED )
@@ -598,13 +600,13 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if raw_entry.startswith( '-' ):
             
-            operator = '-'
+            inclusive = False
             
             search_text = raw_entry[1:]
             
         else:
             
-            operator = '+'
+            inclusive = True
             
             search_text = raw_entry
             
@@ -707,16 +709,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    results = CC.AutocompleteMatchesPredicates( self._tag_service_key, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ), { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
+                    results = CC.AutocompleteMatchesPredicates( self._tag_service_key, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
                     
                     matches = results.GetMatches( search_text )
                     
                 
             
-            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ) ) )
-            if '*' in search_text: matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, ( operator, search_text ) ) )
+            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) )
+            if '*' in search_text: matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
             
-            entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, search_text ) )
+            entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
             
             try:
                 
@@ -733,7 +735,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         for match in matches:
             
-            if match.GetPredicateType() == HC.PREDICATE_TYPE_TAG: match.SetOperator( operator )
+            if match.GetPredicateType() == HC.PREDICATE_TYPE_TAG: match.SetInclusive( inclusive )
             
         
         return matches
@@ -790,7 +792,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         if predicate is None: self._chosen_tag_callable( None )
         else:
             
-            ( operator, tag ) = predicate.GetValue()
+            tag = predicate.GetValue()
             
             tag_censorship_manager = HC.app.GetManager( 'tag_censorship' )
             
@@ -871,13 +873,13 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             top_predicates = []
             
-            top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', search_text ) ) )
+            top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, search_text ) )
             
             siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( search_text )
             
-            if sibling is not None: top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', sibling ) ) )
+            if sibling is not None: top_predicates.append( HC.Predicate( HC.PREDICATE_TYPE_TAG, sibling ) )
             
             for predicate in top_predicates:
                 
@@ -904,7 +906,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                     
                     if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG:
                         
-                        tag = predicate.GetTag()
+                        tag = predicate.GetValue()
                         
                         parents_manager = HC.app.GetManager( 'tag_parents' )
                         
@@ -1314,6 +1316,16 @@ class Frame( wx.Frame ):
         self.SetIcon( wx.Icon( HC.STATIC_DIR + os.path.sep + 'hydrus.ico', wx.BITMAP_TYPE_ICO ) )
         
     
+    def SetInitialSize( self, ( width, height ) ):
+        
+        wx.Frame.SetInitialSize( self, ( width, height ) )
+        
+        min_width = min( 240, width )
+        min_height = min( 180, height )
+        
+        self.SetMinSize( ( min_width, min_height ) )
+        
+    
 class FrameThatResizes( Frame ):
     
     def __init__( self, *args, **kwargs ):
@@ -1335,8 +1347,6 @@ class FrameThatResizes( Frame ):
         client_size = HC.options[ 'client_size' ]
         
         self.SetInitialSize( client_size[ self._resize_option_prefix + 'restored_size' ] )
-        
-        self.SetMinSize( ( 480, 360 ) )
         
         position = client_size[ self._resize_option_prefix + 'restored_position' ]
         
@@ -3981,7 +3991,7 @@ class TagsBox( ListBox ):
                 
                 term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
                 
-                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ) ) ] )
+                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, term ) ] )
                 
             elif command in ( 'parent', 'sibling' ):
                 
@@ -4475,7 +4485,7 @@ class TagsBoxCPP( TagsBoxCounts ):
     
     def _Activate( self, s, term ):
         
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', term ) )
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
         
         HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
         

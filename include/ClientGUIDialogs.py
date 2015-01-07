@@ -122,6 +122,16 @@ class Dialog( wx.Dialog ):
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
     
+    def SetInitialSize( self, ( width, height ) ):
+        
+        wx.Dialog.SetInitialSize( self, ( width, height ) )
+        
+        min_width = min( 240, width )
+        min_height = min( 180, height )
+        
+        self.SetMinSize( ( min_width, min_height ) )
+        
+    
 class DialogAdvancedContentUpdate( Dialog ):
     
     COPY = 0
@@ -2334,9 +2344,7 @@ class DialogInputLocalFiles( Dialog ):
         
         def InitialiseControls():
             
-            self._paths_list = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ] )
-            
-            self._paths_list.SetMinSize( ( 780, 360 ) )
+            self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ] )
             
             self._gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -2405,8 +2413,8 @@ class DialogInputLocalFiles( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._paths_list, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( file_buttons, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( self._paths_list, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( file_buttons, FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._delete_after_success, FLAGS_LONE_BUTTON )
             vbox.AddF( ( 0, 5 ), FLAGS_NONE )
@@ -2415,6 +2423,9 @@ class DialogInputLocalFiles( Dialog ):
             self.SetSizer( vbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
+            
+            if x < 780: x = 780
+            if y < 480: y = 480
             
             self.SetInitialSize( ( x, y ) )
             
@@ -4034,7 +4045,7 @@ class DialogPageChooser( Dialog ):
             entries.extend( [ ( 'page_import_gallery', ( 'tumblr', None ) ) ] )
             
         elif menu_keyword == 'hentai foundry': entries = [ ( 'page_import_gallery', ( 'hentai foundry', 'artist' ) ), ( 'page_import_gallery', ( 'hentai foundry', 'tags' ) ) ]
-        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
+        elif menu_keyword == 'pixiv': entries = [ ( 'page_import_gallery', ( 'pixiv', 'artist_id' ) ), ( 'page_import_gallery', ( 'pixiv', 'tag' ) ) ]
         elif menu_keyword == 'petitions': entries = [ ( 'page_petitions', service_key ) for service_key in self._petition_service_keys ]
         
         if len( entries ) <= 4:
@@ -5139,9 +5150,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         def InitialiseControls():
             
-            self._actions = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ] )
-            
-            self._actions.SetMinSize( ( 780, 360 ) )
+            self._actions = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ] )
             
             self._favourites = wx.ListBox( self )
             self._favourites.Bind( wx.EVT_LISTBOX, self.EventSelectFavourite )
@@ -5212,7 +5221,7 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._actions, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._actions, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( action_buttons, FLAGS_BUTTON_SIZER )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
@@ -5229,12 +5238,15 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( f_vbox, FLAGS_EXPAND_PERPENDICULAR )
-            hbox.AddF( vbox, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( f_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            hbox.AddF( vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
+            
+            if x < 780: x = 780
+            if y < 480: y = 480
             
             self.SetInitialSize( ( x, y ) )
             
@@ -5470,10 +5482,9 @@ class DialogSetupExport( Dialog ):
             
             self._tags_box.SetMinSize( ( 220, 300 ) )
             
-            self._paths = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ] )
+            self._paths = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ] )
             self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
             self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
-            self._paths.SetMinSize( ( 740, 360 ) )
             
             self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
             
@@ -5575,6 +5586,9 @@ class DialogSetupExport( Dialog ):
             self.SetSizer( vbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
+            
+            if x < 780: x = 780
+            if y < 480: y = 480
             
             self.SetInitialSize( ( x, y ) )
             
@@ -5722,8 +5736,7 @@ class DialogSetupExport( Dialog ):
             
             try:
                 
-                if 'Windows' in os.environ.get( 'os' ): subprocess.Popen( [ 'explorer', directory ] )
-                else: subprocess.Popen( [ 'explorer', directory ] )
+                HC.LaunchDirectory( directory )
                 
             except: wx.MessageBox( 'Could not open that location!' )
         

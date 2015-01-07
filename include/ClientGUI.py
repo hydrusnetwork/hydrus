@@ -372,7 +372,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             edit_log.append( HC.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
             
-            HC.app.Write( 'update_services', edit_log )
+            HC.app.WriteSynchronous( 'update_services', edit_log )
             
             HC.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
             
@@ -421,12 +421,17 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     my_scriptname = sys.argv[0]
                     
-                    if my_scriptname.endswith( 'pyw' ): subprocess.Popen( [ 'pythonw', HC.BASE_DIR + os.path.sep + 'server.pyw' ] )
+                    if my_scriptname.endswith( 'pyw' ):
+                        
+                        if HC.PLATFORM_WINDOWS or HC.PLATFORM_OSX: python_bin = 'pythonw'
+                        else: python_bin = 'python'
+                        
+                        subprocess.Popen( python_bin + ' "' + HC.BASE_DIR + os.path.sep + 'server.pyw"', shell = True )
+                        
                     else:
                         
-                        # The problem here is that, for mystical reasons, a PyInstaller exe can't launch another using subprocess, so we do it via explorer.
-                        
-                        subprocess.Popen( [ 'explorer', HC.BASE_DIR + os.path.sep + 'server.exe' ] )
+                        if HC.PLATFORM_WINDOWS: subprocess.Popen( '"' + HC.BASE_DIR + os.path.sep + 'server.exe"', shell = True )
+                        else: subprocess.Popen( '"./' + HC.BASE_DIR + os.path.sep + 'server"', shell = True )
                         
                     
                     time.sleep( 10 ) # give it time to init its db
@@ -441,8 +446,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             HC.ShowText( u'Creating admin service\u2026' )
             
-            edit_log = []
-            
             admin_service_key = os.urandom( 32 )
             service_type = HC.SERVER_ADMIN
             name = 'local server admin'
@@ -451,55 +454,26 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             info[ 'host' ] = host
             info[ 'port' ] = port
-            info[ 'access_key' ] = ''
             
-            edit_log.append( HC.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) )
-            
-            HC.app.Write( 'update_services', edit_log )
-            
-            time.sleep( 5 )
-            
-            i = 0
-            
-            while True:
-                
-                time.sleep( i + 1 )
-                
-                try:
-                    
-                    service = HC.app.GetManager( 'services' ).GetService( admin_service_key )
-                    
-                    break
-                    
-                except: pass
-                
-                i += 1
-                
-                if i > 5:
-                    
-                    HC.ShowText( 'For some reason, I could not add the new server to the db! Perhaps it is very busy. Please email the hydrus developer, or sort it out yourself!' )
-                    
-                    return
-                    
-                
-            
-            #
+            service = CC.Service( admin_service_key, service_type, name, info )
             
             response = service.Request( HC.GET, 'init' )
             
             access_key = response[ 'access_key' ]
             
-            info_update = { 'access_key' : access_key }
+            #
             
-            edit_log = [ HC.EditLogActionEdit( admin_service_key, ( admin_service_key, service_type, name, info_update ) ) ]
+            info[ 'access_key' ] = access_key
             
-            HC.app.Write( 'update_services', edit_log )
+            edit_log = [ HC.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) ]
+            
+            HC.app.WriteSynchronous( 'update_services', edit_log )
+            
+            time.sleep( 2 )
             
             HC.ShowText( 'Admin service initialised.' )
             
             wx.CallAfter( ClientGUICommon.ShowKeys, 'access', ( access_key, ) )
-            
-            time.sleep( 5 )
             
             admin_service = HC.app.GetManager( 'services' ).GetService( admin_service_key )
             
@@ -522,7 +496,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
             
-            HC.app.Write( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
+            HC.app.WriteSynchronous( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
             
             HC.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
@@ -934,11 +908,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
             menu.AppendSeparator()
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_KEY ), p( 'Manage Local UPnP' ) )
-            menu.AppendSeparator()
-            submenu = wx.Menu()
-            for service in tag_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
-            for service in file_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
-            menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
+            
+            if len( tag_services ) + len( file_services ) > 0:
+                
+                menu.AppendSeparator()
+                submenu = wx.Menu()
+                for service in tag_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+                for service in file_services: submenu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
+                menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
+                
             
             return ( menu, p( '&Services' ), True )
             
@@ -1386,8 +1364,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             export_path = os.path.normpath( export_path ) # windows complains about those forward slashes when launching from the command line
             
-            if 'Windows' in os.environ.get( 'os' ): subprocess.Popen( [ 'explorer', export_path ] )
-            else: subprocess.Popen( [ 'explorer', export_path ] )
+            HC.LaunchDirectory( export_path )
             
         
     
@@ -2975,13 +2952,16 @@ class FrameReviewServices( ClientGUICommon.Frame ):
     
 class FrameSplash( ClientGUICommon.Frame ):
     
+    WIDTH = 254
+    HEIGHT = 220
+    
     def __init__( self, action ):
         
         wx.Frame.__init__( self, None, style = wx.FRAME_NO_TASKBAR, title = 'hydrus client' )
         
-        self._bmp = wx.EmptyBitmap( 154, 220, 24 )
+        self._bmp = wx.EmptyBitmap( self.WIDTH, self.HEIGHT, 24 )
         
-        self.SetSize( ( 154, 220 ) )
+        self.SetSize( ( self.WIDTH, self.HEIGHT ) )
         
         self.Center()
         
@@ -3155,13 +3135,15 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         dc.Clear()
         
-        dc.DrawBitmap( self._hydrus, 15, 15 )
+        x = ( self.WIDTH - 124 ) / 2
+        
+        dc.DrawBitmap( self._hydrus, x, 15 )
         
         dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
         
         ( width, height ) = dc.GetTextExtent( text )
         
-        x = ( 154 - width ) / 2
+        x = ( self.WIDTH - width ) / 2
         
         dc.DrawText( text, x, 200 )
         

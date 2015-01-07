@@ -886,7 +886,7 @@ class DownloaderPixiv( Downloader ):
     
     def _GetNextGalleryPageURL( self ):
         
-        if self._query_type == 'artist':
+        if self._query_type == 'artist_id':
             
             artist_id = self._query
             
@@ -1634,6 +1634,8 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
                     
                     self._job_key.SetVariable( 'status', 'found ' + HC.u( total_urls_found ) + ' urls' )
                     
+                    time.sleep( 5 )
+                    
                     page_of_url_args = downloader.GetAnotherPage()
                     
                     total_urls_found += len( page_of_url_args )
@@ -1649,8 +1651,6 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
                         
                         self._job_key.SetVariable( 'queue', queue )
                         
-                    
-                    time.sleep( 5 )
                     
                 
                 for downloader in downloaders_to_remove: downloaders.remove( downloader )
@@ -1668,6 +1668,10 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
                 
                 if HC.shutdown or self._job_key.IsDone(): break
                 
+            
+            self._job_key.SetVariable( 'status', 'finished. found ' + HC.u( total_urls_found ) + ' urls' )
+            
+            time.sleep( 5 )
             
             self._job_key.SetVariable( 'status', '' )
             

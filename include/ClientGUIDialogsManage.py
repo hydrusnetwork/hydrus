@@ -118,7 +118,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         PopulateControls()
         
         ArrangeControls()
-    
+        
         ( x, y ) = self.GetEffectiveMinSize()
         
         x = max( x, 240 )
@@ -1427,9 +1427,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._export_folders = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ] )
-            
-            self._export_folders.SetMinSize( ( 780, 360 ) )
+            self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ] )
             
             self._add_button = wx.Button( self, label = 'add' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1482,7 +1480,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             intro = 'Here you can set the client to regularly export a certain query to a particular location.'
             
             vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._export_folders, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._export_folders, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( file_buttons, FLAGS_BUTTON_SIZER )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
@@ -1498,6 +1496,9 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         ArrangeControls()
         
         ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 780: x = 780
+        if y < 480: y = 480
         
         self.SetInitialSize( ( x, y ) )
         
@@ -2476,9 +2477,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._import_folders = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'path', -1 ), ( 'type', 120 ), ( 'check period', 120 ), ( 'local tag', 120 ) ] )
-            
-            self._import_folders.SetMinSize( ( 780, 360 ) )
+            self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'check period', 120 ), ( 'local tag', 120 ) ] )
             
             self._add_button = wx.Button( self, label = 'add' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2531,7 +2530,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             intro = 'Here you can set the client to regularly check certain folders for new files to import.'
             
             vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._import_folders, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._import_folders, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( file_buttons, FLAGS_BUTTON_SIZER )
             vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
             
@@ -2549,6 +2548,9 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         self.SetDropTarget( ClientGUICommon.FileDropTarget( self._AddFolders ) )
     
         ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 780: x = 780
+        if y < 480: y = 480
         
         self.SetInitialSize( ( x, y ) )
         
@@ -6034,6 +6036,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
                 
                 self._query_type = ClientGUICommon.BetterChoice( self._query_panel )
                 self._query_type.Append( 'artist', 'artist' )
+                self._query_type.Append( 'artist id', 'artist_id' )
                 self._query_type.Append( 'tags', 'tags' )
                 
                 self._frequency = wx.SpinCtrl( self._query_panel, min = 1, max = 9999 )
@@ -6141,7 +6144,9 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
             
             self.SetScrollRate( 0, 20 )
             
-            self.SetMinSize( ( 540, 620 ) )
+            ( x, y ) = self.GetEffectiveMinSize()
+            
+            self.SetInitialSize( ( x, y ) )
             
         
         def _ConfigureAdvancedTagOptions( self ):

@@ -31,6 +31,7 @@ ID_NULL = wx.NewId()
 CAN_HIDE_MOUSE = True
 
 # Hue is generally 200, Sat and Lum changes based on need
+COLOUR_LIGHT_SELECTED = wx.Colour( 235, 248, 255 )
 COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
 COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
 COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
@@ -1552,10 +1553,10 @@ class FileSearchContext( object ):
         
         for predicate in tag_predicates:
             
-            ( operator, tag ) = predicate.GetValue()
+            tag = predicate.GetValue()
             
-            if operator == '+': self._tags_to_include.append( tag )
-            elif operator == '-': self._tags_to_exclude.append( tag )
+            if predicate.GetInclusive(): self._tags_to_include.append( tag )
+            else: self._tags_to_exclude.append( tag )
             
         
         namespace_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_NAMESPACE ]
@@ -1565,10 +1566,10 @@ class FileSearchContext( object ):
         
         for predicate in namespace_predicates:
             
-            ( operator, namespace ) = predicate.GetValue()
+            namespace = predicate.GetValue()
             
-            if operator == '+': self._namespaces_to_include.append( namespace )
-            elif operator == '-': self._namespaces_to_exclude.append( namespace )
+            if predicate.GetInclusive(): self._namespaces_to_include.append( namespace )
+            else: self._namespaces_to_exclude.append( namespace )
             
         
         wildcard_predicates =  [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_WILDCARD ]
@@ -1578,10 +1579,10 @@ class FileSearchContext( object ):
         
         for predicate in wildcard_predicates:
             
-            ( operator, wildcard ) = predicate.GetValue()
+            wildcard = predicate.GetValue()
             
-            if operator == '+': self._wildcards_to_include.append( wildcard )
-            elif operator == '-': self._wildcards_to_exclude.append( wildcard )
+            if predicate.GetInclusive(): self._wildcards_to_include.append( wildcard )
+            else: self._wildcards_to_exclude.append( wildcard )
             
         
     

@@ -1995,20 +1995,54 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             cache_results.extend( [ ( namespace_id, tag_id, current_counts[ tag_id ], pending_counts[ tag_id ] ) for tag_id in tag_ids ] )
             
         
+        #
+        
         current_ids_to_count = collections.Counter()
         pending_ids_to_count = collections.Counter()
+        
+        if collapse and not there_was_a_namespace:
+            
+            added_namespaceless_current_ids_to_count = collections.Counter()
+            added_namespaceless_pending_ids_to_count = collections.Counter()
+            tag_ids_to_incidence_count = collections.Counter()
+            
         
         for ( namespace_id, tag_id, current_count, pending_count ) in cache_results:
             
             current_ids_to_count[ ( namespace_id, tag_id ) ] += current_count
             pending_ids_to_count[ ( namespace_id, tag_id ) ] += pending_count
             
-            if namespace_id != 1 and collapse and not there_was_a_namespace:
+            # prepare to add any namespaced counts to the namespaceless count
+            
+            if collapse and not there_was_a_namespace and ( current_count > 0 or pending_count > 0 ):
                 
-                current_ids_to_count[ ( 1, tag_id ) ] += current_count
-                pending_ids_to_count[ ( 1, tag_id ) ] += pending_count
+                tag_ids_to_incidence_count[ tag_id ] += 1
+                
+                if namespace_id != 1:
+                    
+                    added_namespaceless_current_ids_to_count[ tag_id ] += current_count
+                    added_namespaceless_pending_ids_to_count[ tag_id ] += pending_count
+                    
                 
             
+        
+        # any instances of namespaceless counts that are just copies of a single namespaced count are not useful
+        # e.g. 'series:evangelion (300)' is not benefitted by adding 'evangelion (300)'
+        # so do not add them
+        
+        if collapse and not there_was_a_namespace:
+            
+            for ( tag_id, incidence ) in tag_ids_to_incidence_count.items():
+                
+                if incidence > 1:
+                    
+                    current_ids_to_count[ ( 1, tag_id ) ] += added_namespaceless_current_ids_to_count[ tag_id ]
+                    pending_ids_to_count[ ( 1, tag_id ) ] += added_namespaceless_pending_ids_to_count[ tag_id ]
+                    
+                
+            
+        
+        #
         
         ids_to_do = set()
         
@@ -2025,7 +2059,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         filtered_tags = tag_censorship_manager.FilterTags( tag_service_key, tags_to_do )
         
-        predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', tag ), { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
+        predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, counts = { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
         
         matches = CC.AutocompleteMatchesPredicates( tag_service_key, predicates, collapse = collapse )
         
@@ -2379,7 +2413,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             num_everything = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), { HC.CURRENT : num_everything } ) )
+            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : num_everything } ) )
             
             predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_HASH ] ] )
             
@@ -2411,18 +2445,18 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 num_archive = num_local - num_inbox
                 
             
-            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), { HC.CURRENT : num_everything } ) )
+            predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : num_everything } ) )
             
             if num_inbox > 0:
                 
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), { HC.CURRENT : num_inbox } ) )
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), { HC.CURRENT : num_archive } ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : num_inbox } ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : num_archive } ) )
                 
             
             if service_type == HC.FILE_REPOSITORY:
                 
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), { HC.CURRENT : num_local } ) )
-                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), { HC.CURRENT : num_not_local } ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), counts = { HC.CURRENT : num_local } ) )
+                predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : num_not_local } ) )
                 
             
             predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
@@ -5292,11 +5326,6 @@ class DB( ServiceDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 93:
-            
-            self._c.execute( 'CREATE TABLE gui_sessions ( name TEXT, info TEXT_YAML );' )
-            
-        
         if version == 94:
             
             # I changed a variable name in account, so old yaml dumps need to be refreshed
@@ -6978,7 +7007,7 @@ def DAEMONSynchroniseRepositories():
                     
                     job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - processing' )
                     
-                    WEIGHT_THRESHOLD = 50
+                    WEIGHT_THRESHOLD = 50.0
                     
                     while service.CanProcessUpdate():
                         
@@ -7101,22 +7130,22 @@ def DAEMONSynchroniseRepositories():
                                 
                                 after_precise = HC.GetNowPrecise()
                                 
-                                if after_precise - before_precise > 1.00: WEIGHT_THRESHOLD /= 1.1
-                                elif after_precise - before_precise < 0.75: WEIGHT_THRESHOLD *= 1.1
+                                if after_precise - before_precise > 0.75: WEIGHT_THRESHOLD /= 1.5
+                                elif after_precise - before_precise < 0.5: WEIGHT_THRESHOLD *= 1.05
+                                
+                                if after_precise - before_precise > 10.0 or WEIGHT_THRESHOLD < 1.0:
+                                    
+                                    job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
+                                    
+                                    time.sleep( 10 )
+                                    
+                                    WEIGHT_THRESHOLD = 1.0
+                                    
                                 
                                 total_content_weight_processed += current_weight
                                 
                                 content_updates = []
                                 current_weight = 0
-                                
-                            
-                            if WEIGHT_THRESHOLD < 1:
-                                
-                                job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
-                                
-                                time.sleep( 5 )
-                                
-                                WEIGHT_THRESHOLD = 1
                                 
                             
                         

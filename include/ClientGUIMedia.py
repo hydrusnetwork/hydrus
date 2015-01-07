@@ -474,7 +474,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         path = CC.GetFilePath( hash, mime )
         
-        subprocess.call( 'start "" "' + path + '"', shell = True )
+        HC.LaunchFile( path )
         
     
     def _PetitionFiles( self, file_service_key ):

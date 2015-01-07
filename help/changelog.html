@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 143</h3></li>
+				<ul>
+					<li>when making a READ autocomplete tag query, instances of tags that only have a count in a single namespaced domain will no longer accumulate helper results in the non-namespaced domain i.e. no more 'blah (1)' 'title:blah (1)' dupes</li>
+					<li>improved the way the above results are calculated</li>
+					<li>pixiv artist downloading now correctly asks for numerical artist id</li>
+					<li>reworded some of getting started with files help page to better explain multiple selection</li>
+					<li>widened the splash screen a bit so db update messages have more space</li>
+					<li>all frames and dialogs now have an explicit minimum size that is usually far smaller than their initial size</li>
+					<li>the dialogs with listctrls (import files, manage custom filter actions, and so on) now start a little shorter in height</li>
+					<li>fixed some bad sizer flags in dialogs with listctrls</li>
+					<li>rebalanced content update throttling for quicker correction under heavy load</li>
+					<li>moved the new 5 second break in the gallery parser to a position for quicker status updates</li>
+					<li>the gallery parser will report total urls found when it is finished (even if that is zero) and wait a bit to let you read that</li>
+					<li>fixed services->news to hide if you aren't connected to any repositories</li>
+					<li>autocomplete boxes are now a very slight shade of blue, see if you like it</li>
+					<li>fixed 'launch file externally' for linux and os x</li>
+					<li>fixed 'launch directory externally' for linux and os x</li>
+					<li>fixed 'set up server for me' for linux and os x, I think</li>
+					<li>improved some general external-process-launching code</li>
+					<li>cleaned and improved some of the predicate code</li>
+				</ul>
 				<li><h3>version 142</h3></li>
 				<ul>
 					<li>added wildcards to autocomplete results and file queries</li>

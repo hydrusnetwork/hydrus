@@ -637,7 +637,7 @@ class TagParentsManager( object ):
                 
                 if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG:
                     
-                    tag = predicate.GetTag()
+                    tag = predicate.GetValue()
                     
                     parents = self._service_keys_to_children_to_parents[ service_key ][ tag ]
                     
@@ -796,7 +796,7 @@ class TagSiblingsManager( object ):
             
             tag_predicates = [ predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG ]
             
-            tags_to_predicates = { predicate.GetTag() : predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG }
+            tags_to_predicates = { predicate.GetValue() : predicate for predicate in predicates if predicate.GetPredicateType() == HC.PREDICATE_TYPE_TAG }
             
             tags = tags_to_predicates.keys()
             
@@ -813,9 +813,9 @@ class TagSiblingsManager( object ):
                     
                     if new_tag not in tags_to_predicates:
                         
-                        ( old_operator, old_tag ) = old_predicate.GetValue()
+                        ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
                         
-                        new_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( old_operator, new_tag ) )
+                        new_predicate = HC.Predicate( old_pred_type, old_value, inclusive = old_inclusive )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         

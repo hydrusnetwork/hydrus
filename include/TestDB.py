@@ -129,9 +129,8 @@ class TestClientDB( unittest.TestCase ):
         
         preds = set()
         
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'cars' ), { HC.CURRENT : 1 } ) )
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'car' ), { HC.CURRENT : 1 } ) )
-        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'series:cars' ), { HC.CURRENT : 1 } ) )
+        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
+        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
         
         read_preds = result.GetMatches( 'c' )
         
@@ -153,7 +152,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_tags', half_complete_tag = 'series:c' )
         
-        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'series:cars' ), { HC.CURRENT : 1 } )
+        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
         
         ( read_pred, ) = result.GetMatches( 'series:c' )
         
@@ -165,7 +164,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'autocomplete_tags', tag = 'car' )
         
-        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'car' ), { HC.CURRENT : 1 } )
+        pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
         
         ( read_pred, ) = result.GetMatches( 'car' )
         
@@ -294,9 +293,9 @@ class TestClientDB( unittest.TestCase ):
         
         def run_namespace_predicate_tests( tests ):
             
-            for ( operator, namespace, result ) in tests:
+            for ( inclusive, namespace, result ) in tests:
                 
-                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, ( operator, namespace ) ) ]
+                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) ]
                 
                 search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -322,9 +321,9 @@ class TestClientDB( unittest.TestCase ):
         
         def run_tag_predicate_tests( tests ):
             
-            for ( operator, tag, result ) in tests:
+            for ( inclusive, tag, result ) in tests:
                 
-                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( operator, tag ) ) ]
+                predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive ) ]
                 
                 search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
@@ -500,10 +499,10 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( '+', 'car', 1 ) )
-        tests.append( ( '-', 'car', 0 ) )
-        tests.append( ( '+', 'bus', 0 ) )
-        tests.append( ( '-', 'bus', 1 ) )
+        tests.append( ( True, 'car', 1 ) )
+        tests.append( ( False, 'car', 0 ) )
+        tests.append( ( True, 'bus', 0 ) )
+        tests.append( ( False, 'bus', 1 ) )
         
         run_tag_predicate_tests( tests )
         
@@ -511,8 +510,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( '+', 'series', 0 ) )
-        tests.append( ( '-', 'series', 1 ) )
+        tests.append( ( True, 'series', 0 ) )
+        tests.append( ( False, 'series', 1 ) )
         
         run_namespace_predicate_tests( tests )
         
@@ -533,8 +532,10 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( '+', 'maker:ford', 1 ) )
-        tests.append( ( '+', 'ford', 1 ) )
+        tests.append( ( True, 'maker:ford', 1 ) )
+        tests.append( ( True, 'ford', 1 ) )
+        tests.append( ( False, 'maker:ford', 0 ) )
+        tests.append( ( False, 'ford', 0 ) )
         
         run_tag_predicate_tests( tests )
         
@@ -542,8 +543,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( '+', 'series', 1 ) )
-        tests.append( ( '-', 'series', 0 ) )
+        tests.append( ( True, 'series', 1 ) )
+        tests.append( ( False, 'series', 0 ) )
         
         run_namespace_predicate_tests( tests )
         
@@ -588,9 +589,9 @@ class TestClientDB( unittest.TestCase ):
         
         predicates = []
         
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), { HC.CURRENT : 1 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), { HC.CURRENT : 1 } ) )
-        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), { HC.CURRENT : 0 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 1 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1 } ) )
+        predicates.append( HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 0 } ) )
         predicates.extend( [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( system_predicate_type, None ) ) for system_predicate_type in [ HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, HC.SYSTEM_PREDICATE_TYPE_LIMIT, HC.SYSTEM_PREDICATE_TYPE_SIZE, HC.SYSTEM_PREDICATE_TYPE_AGE, HC.SYSTEM_PREDICATE_TYPE_HASH, HC.SYSTEM_PREDICATE_TYPE_WIDTH, HC.SYSTEM_PREDICATE_TYPE_HEIGHT, HC.SYSTEM_PREDICATE_TYPE_RATIO, HC.SYSTEM_PREDICATE_TYPE_DURATION, HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, HC.SYSTEM_PREDICATE_TYPE_MIME, HC.SYSTEM_PREDICATE_TYPE_RATING, HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE ] ] )
         
         self.assertEqual( result, predicates )
@@ -604,7 +605,7 @@ class TestClientDB( unittest.TestCase ):
         
         info.append( ( 'blank', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [], 'initial_media_results' : [], 'initial_predicates' : [] } ) )
         info.append( ( 'system', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 8 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.SYSTEM_PREDICATE_ARCHIVE ] } ) )
-        info.append( ( 'tags', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.Predicate( HC.PREDICATE_TYPE_TAG, ( '+', 'tag' ), counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
+        info.append( ( 'tags', 'class_text', ( HC.LOCAL_FILE_SERVICE_KEY, ), { 'initial_hashes' : [ os.urandom( 32 ) for i in range( 4 ) ], 'initial_media_results' : [], 'initial_predicates' : [ HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 3 } ) ] } ) )
         
         self._write( 'gui_session', 'normal', info )
         

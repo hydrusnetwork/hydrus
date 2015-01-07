@@ -414,11 +414,11 @@ class PageImportGallery( PageImport ):
             
         elif self._gallery_name == 'pixiv':
             
-            if self._gallery_type == 'artist':
+            if self._gallery_type in ( 'artist', 'artist_id' ):
                 
-                def downloaders_factory( artist ):
+                def downloaders_factory( artist_id ):
                     
-                    return ( HydrusDownloading.DownloaderPixiv( 'artist', artist ), )
+                    return ( HydrusDownloading.DownloaderPixiv( 'artist_id', artist_id ), )
                     
                 
             elif self._gallery_type == 'tag':
@@ -499,7 +499,7 @@ class PageImportGallery( PageImport ):
                 name = 'pixiv'
                 namespaces = [ 'creator', 'title', '' ]
                 
-                if self._gallery_type == 'artist': initial_search_value = 'artist username'
+                if self._gallery_type in ( 'artist', 'artist_id' ): initial_search_value = 'numerical artist id'
                 elif self._gallery_type == 'tag': initial_search_value = 'search tag'
                 
                 ato = HC.GetDefaultAdvancedTagOptions( HC.SITE_TYPE_PIXIV )

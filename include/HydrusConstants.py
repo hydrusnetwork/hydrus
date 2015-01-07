@@ -55,6 +55,7 @@ import locale
 import Queue
 import re
 import sqlite3
+import subprocess
 import threading
 import time
 import traceback
@@ -65,7 +66,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 142
+SOFTWARE_VERSION = 143
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1238,6 +1239,24 @@ def IsCollection( mime ): return mime in ( APPLICATION_HYDRUS_CLIENT_COLLECTION,
 
 def IsImage( mime ): return mime in ( IMAGE_JPEG, IMAGE_GIF, IMAGE_PNG, IMAGE_BMP )
 
+def LaunchFile( path ):
+    
+    # Don't even think about omitting the double quotes on start
+    
+    if PLATFORM_WINDOWS: launch_phrase = 'start "" '
+    elif PLATFORM_OSX: launch_phrase = 'open '
+    elif PLATFORM_LINUX: launch_phrase = 'xdg-open '
+    
+    subprocess.Popen( launch_phrase + '"' + path + '"', shell = True )
+    
+def LaunchDirectory( path ):
+    
+    if PLATFORM_WINDOWS: launch_phrase = 'explorer '
+    elif PLATFORM_OSX: launch_phrase = 'open '
+    elif PLATFORM_LINUX: launch_phrase = 'xdg-open '
+    
+    subprocess.Popen( launch_phrase + '"' + path + '"', shell = True )
+    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )
@@ -1262,14 +1281,9 @@ def ReadFileLikeAsBlocks( f, block_size ):
     
 def SearchEntryMatchesPredicate( search_entry, predicate ):
     
-    ( predicate_type, info ) = predicate.GetInfo()
+    ( predicate_type, value, inclusive ) = predicate.GetInfo()
     
-    if predicate_type == PREDICATE_TYPE_TAG:
-        
-        ( operator, value ) = info
-        
-        return SearchEntryMatchesTag( search_entry, value )
-        
+    if predicate_type == PREDICATE_TYPE_TAG: return SearchEntryMatchesTag( search_entry, value )
     else: return False
     
 def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
@@ -2140,11 +2154,12 @@ class Predicate( HydrusYAMLBase ):
     
     yaml_tag = u'!Predicate'
     
-    def __init__( self, predicate_type, value, counts = {} ):
+    def __init__( self, predicate_type, value, inclusive = True, counts = {} ):
         
         self._predicate_type = predicate_type
         self._value = value
         
+        self._inclusive = inclusive
         self._counts = {}
         
         self._counts[ CURRENT ] = 0
@@ -2163,9 +2178,9 @@ class Predicate( HydrusYAMLBase ):
     
     def AddToCount( self, current_or_pending, count ): self._counts[ current_or_pending ] += count
     
-    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._counts )
+    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._counts )
     
-    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value )
+    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive )
     
     def GetCount( self, current_or_pending = None ):
         
@@ -2173,7 +2188,9 @@ class Predicate( HydrusYAMLBase ):
         else: return self._counts[ current_or_pending ]
         
     
-    def GetInfo( self ): return ( self._predicate_type, self._value )
+    def GetInclusive( self ): return self._inclusive
+    
+    def GetInfo( self ): return ( self._predicate_type, self._value, self._inclusive )
     
     def GetPredicateType( self ): return self._predicate_type
     
@@ -2330,10 +2347,10 @@ class Predicate( HydrusYAMLBase ):
             
         elif self._predicate_type == PREDICATE_TYPE_TAG:
             
-            ( operator, tag ) = self._value
+            tag = self._value
             
-            if operator == '-': base = u'-'
-            elif operator == '+': base = u''
+            if not self._inclusive: base = u'-'
+            else: base = u''
             
             base += tag
             
@@ -2357,10 +2374,10 @@ class Predicate( HydrusYAMLBase ):
             
         elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
             
-            ( operator, namespace ) = self._value
+            namespace = self._value
             
-            if operator == '-': base = u'-'
-            elif operator == '+': base = u''
+            if not self._inclusive == '-': base = u'-'
+            else: base = u''
             
             base += namespace + u':*'
             
@@ -2368,8 +2385,8 @@ class Predicate( HydrusYAMLBase ):
             
             ( operator, wildcard ) = self._value
             
-            if operator == '-': base = u'-'
-            elif operator == '+': base = u''
+            if not self._inclusive: base = u'-'
+            else: base = u''
             
             base += wildcard
             
@@ -2377,28 +2394,9 @@ class Predicate( HydrusYAMLBase ):
         return base
         
     
-    def GetTag( self ):
-        
-        if self._predicate_type == PREDICATE_TYPE_TAG:
-            
-            ( operator, tag ) = self._value
-            
-            return tag
-            
-        else: return 'no tag'
-        
-    
     def GetValue( self ): return self._value
     
-    def SetOperator( self, operator ):
-        
-        if self._predicate_type == PREDICATE_TYPE_TAG:
-            
-            ( old_operator, tag ) = self._value
-            
-            self._value = ( operator, tag )
-            
-        
+    def SetInclusive( self, inclusive ): self._inclusive = inclusive
     
 SYSTEM_PREDICATE_INBOX = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_INBOX, None ) )
 SYSTEM_PREDICATE_ARCHIVE = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICATE_TYPE_ARCHIVE, None ) )
