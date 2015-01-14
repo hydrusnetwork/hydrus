@@ -3364,17 +3364,19 @@ class CollapsiblePanel( wx.Panel ):
         
         parent_of_container = self.GetParent().GetParent()
         
+        old_height = self.GetMinHeight()
+        
         parent_of_container.Layout()
+        
+        new_height = self.GetMinHeight()
+        
+        height_difference = new_height - old_height
         
         if isinstance( parent_of_container, wx.ScrolledWindow ):
             
             # fitinside is like fit, but it does the virtual size!
             parent_of_container.FitInside()
             
-        
-        tlp = self.GetTopLevelParent()
-        
-        if issubclass( type( tlp ), wx.Dialog ): tlp.Fit()
         
     
     def ExpandCollapse( self ): self._Change()

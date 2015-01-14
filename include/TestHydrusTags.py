@@ -388,6 +388,153 @@ class TestTagsManager( unittest.TestCase ):
         self.assertEqual( self._other_tags_manager.GetPetitioned( self._reset_service_key ), set() )
         
     
+class TestTagObjects( unittest.TestCase ):
+    
+    def test_predicates( self ):
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag' )
+        
+        self.assertEqual( p.GetUnicode(), u'tag' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        
+        self.assertEqual( p.GetUnicode( with_count = False ), u'tag' )
+        self.assertEqual( p.GetUnicode( with_count = True ), u'tag (1) (+2)' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False )
+        
+        self.assertEqual( p.GetUnicode(), u'-tag' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', inclusive = False, counts = { HC.CURRENT : 1, HC.PENDING : 2 } )
+        
+        self.assertEqual( p.GetUnicode( with_count = False ), u'-tag' )
+        self.assertEqual( p.GetUnicode( with_count = True ), u'-tag (1) (+2)' )
+        
+        #
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '<', 1, 2, 3, 4 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:age < 1y2m3d4h' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( u'\u2248', 1, 2, 3, 4 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:age ' + u'\u2248' + ' 1y2m3d4h' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_AGE, ( '>', 1, 2, 3, 4 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:age > 1y2m3d4h' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_ARCHIVE, None ), counts = { HC.CURRENT : 1000 } )
+        
+        self.assertEqual( p.GetUnicode(), u'system:archive (1,000)' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_DURATION, ( '<', 1000 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:duration < 1,000' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_EVERYTHING, None ), counts = { HC.CURRENT : 2000 } )
+        
+        self.assertEqual( p.GetUnicode(), u'system:everything (2,000)' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( True, HC.CURRENT, HC.LOCAL_FILE_SERVICE_KEY ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:is currently in local files' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_FILE_SERVICE, ( False, HC.PENDING, HC.LOCAL_FILE_SERVICE_KEY ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:is not pending to local files' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HASH, 'abcd'.decode( 'hex' ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:hash is abcd' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_HEIGHT, ( '<', 2000 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:height < 2,000' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_INBOX, None ), counts = { HC.CURRENT : 1000 } )
+        
+        self.assertEqual( p.GetUnicode(), u'system:inbox (1,000)' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LIMIT, 2000 ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:limit is 2,000' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_LOCAL, None ), counts = { HC.CURRENT : 100 } )
+        
+        self.assertEqual( p.GetUnicode(), u'system:local (100)' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.IMAGES ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:mime is image' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_MIME, HC.VIDEO_WEBM ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:mime is video/webm' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NOT_LOCAL, None ), counts = { HC.CURRENT : 100 } )
+        
+        self.assertEqual( p.GetUnicode(), u'system:not local (100)' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_TAGS, ( '<', 2 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:number of tags < 2' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_NUM_WORDS, ( '<', 5000 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:number of words < 5,000' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATING, ( HC.LOCAL_FILE_SERVICE_KEY, '>', 0.2 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:rating for local files > 0.2' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_RATIO, ( '=', 16, 9 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:ratio = 16:9' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIMILAR_TO, ( 'abcd'.decode( 'hex' ), 5 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:similar to abcd using max hamming of 5' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_SIZE, ( '>', 5, 1048576 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:size > 5MB' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_UNTAGGED, HC.IMAGES ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:untagged' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( HC.SYSTEM_PREDICATE_TYPE_WIDTH, ( '=', 1920 ) ) )
+        
+        self.assertEqual( p.GetUnicode(), u'system:width = 1,920' )
+        
+        #
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, 'series' )
+        
+        self.assertEqual( p.GetUnicode(), u'series:*' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series', inclusive = False )
+        
+        self.assertEqual( p.GetUnicode(), u'-series' )
+        
+        #
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, 'a*i:o*' )
+        
+        self.assertEqual( p.GetUnicode(), u'a*i:o*' )
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'a*i:o*', inclusive = False )
+        
+        self.assertEqual( p.GetUnicode(), u'-a*i:o*' )
+        
+        #
+        
+        p = HC.Predicate( HC.PREDICATE_TYPE_PARENT, 'series:game of thrones' )
+        
+        self.assertEqual( p.GetUnicode(), u'    series:game of thrones' )
+        
+    
 class TestTagParents( unittest.TestCase ):
     
     @classmethod

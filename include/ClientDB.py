@@ -1849,7 +1849,14 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                 
             
-            def GetPossibleTagIds():
+            def GetPossibleWildcardNamespaceIds( wildcard_namespace ):
+                
+                wildcard_namespace = wildcard_namespace.replace( '*', '%' )
+                
+                return [ namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( wildcard_namespace, ) ) ]
+                
+            
+            def GetPossibleTagIds( h_c_t ):
                 
                 # the issue is that the tokenizer for fts4 doesn't like weird characters
                 # a search for '[s' actually only does 's'
@@ -1857,10 +1864,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 # note that queries with '*' are passed to LIKE, because MATCH only supports appended wildcards 'gun*', and not complex stuff like '*gun*'
                 
-                if half_complete_tag_can_be_matched: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
+                if half_complete_tag_can_be_matched: return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + h_c_t + '*"', ) ) ]
                 else:
                     
-                    possible_tag_ids_half_complete_tag = half_complete_tag
+                    possible_tag_ids_half_complete_tag = h_c_t
                     
                     if '*' in possible_tag_ids_half_complete_tag:
                         
@@ -1868,7 +1875,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                     else: possible_tag_ids_half_complete_tag += '%'
                     
-                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? OR tag LIKE ?;', ( possible_tag_ids_half_complete_tag, ' ' + possible_tag_ids_half_complete_tag ) ) ]
+                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? OR tag LIKE ?;', ( possible_tag_ids_half_complete_tag, '% ' + possible_tag_ids_half_complete_tag ) ) ]
                     
                 
             
@@ -1881,22 +1888,34 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 if half_complete_tag == '': return CC.AutocompleteMatchesCounted( {} )
                 else:
                     
-                    result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
-                    
-                    if result is None: return CC.AutocompleteMatchesCounted( {} )
+                    if '*' in namespace:
+                        
+                        possible_namespace_ids = GetPossibleWildcardNamespaceIds( namespace )
+                        
+                        predicates_phrase_1 = 'namespace_id IN ' + HC.SplayListForDB( possible_namespace_ids )
+                        
                     else:
                         
-                        ( namespace_id, ) = result
                         
-                        possible_tag_ids = GetPossibleTagIds()
+                        result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
                         
-                        predicates_phrase = 'namespace_id = ' + HC.u( namespace_id ) + ' AND tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
+                        if result is None: return CC.AutocompleteMatchesCounted( {} )
+                        else:
+                            
+                            ( namespace_id, ) = result
+                            
+                            predicates_phrase_1 = 'namespace_id = ' + HC.u( namespace_id )
+                            
                         
+                    
+                    possible_tag_ids = GetPossibleTagIds( half_complete_tag )
+                    
+                    predicates_phrase = predicates_phrase_1 + ' AND tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
                     
                 
             else:
                 
-                possible_tag_ids = GetPossibleTagIds()
+                possible_tag_ids = GetPossibleTagIds( half_complete_tag )
                 
                 predicates_phrase = 'tag_id IN ' + HC.SplayListForDB( possible_tag_ids )
                 
@@ -2632,7 +2651,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 w = w.replace( '*', '%' )
                 
-                return { tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( w, ) ) }
+                return { tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? or tag LIKE ?;', ( w, '% ' + w ) ) }
                 
             else:
                 
@@ -5326,25 +5345,6 @@ class DB( ServiceDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 94:
-            
-            # I changed a variable name in account, so old yaml dumps need to be refreshed
-            
-            unknown_account = HC.GetUnknownAccount()
-            
-            self._c.execute( 'UPDATE accounts SET account = ?;', ( unknown_account, ) )
-            
-            for ( name, info ) in self._c.execute( 'SELECT name, info FROM gui_sessions;' ).fetchall():
-                
-                for ( page_name, c_text, args, kwargs ) in info:
-                    
-                    if 'do_query' in kwargs: del kwargs[ 'do_query' ]
-                    
-                
-                self._c.execute( 'UPDATE gui_sessions SET info = ? WHERE name = ?;', ( info, name ) )
-                
-            
-        
         if version == 95:
             
             self._c.execute( 'COMMIT' )
@@ -5962,6 +5962,15 @@ class DB( ServiceDB ):
             #
             
             self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'sankaku chan', CC.DEFAULT_BOORUS[ 'sankaku chan' ] ) )
+            
+        
+        if version == 143:
+            
+            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            HC.options[ 'shortcuts' ][ wx.ACCEL_CTRL ][ ord( 'E' ) ] = 'open_externally'
+            
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -7223,7 +7232,7 @@ def DAEMONSynchroniseRepositories():
     
 def DAEMONSynchroniseSubscriptions():
     
-    HC.repos_changed = False
+    HC.subs_changed = False
     
     if not HC.options[ 'pause_subs_sync' ]:
         
@@ -7373,6 +7382,8 @@ def DAEMONSynchroniseSubscriptions():
                                 job_key.SetVariable( 'popup_message_text_1', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files' )
                                 
                             
+                            time.sleep( 5 )
+                            
                         
                         for downloader in downloaders_to_remove: downloaders.remove( downloader )
                         
@@ -7502,6 +7513,8 @@ def DAEMONSynchroniseSubscriptions():
                             
                         
                         HC.app.WaitUntilGoodTimeToUseGUIThread()
+                        
+                        time.sleep( 3 )
                         
                     
                     job_key.DeleteVariable( 'popup_message_gauge_1' )

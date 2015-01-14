@@ -469,12 +469,15 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def _OpenExternally( self ):
         
-        hash = self._focussed_media.GetHash()
-        mime = self._focussed_media.GetMime()
-        
-        path = CC.GetFilePath( hash, mime )
-        
-        HC.LaunchFile( path )
+        if self._focussed_media is not None:
+            
+            hash = self._focussed_media.GetHash()
+            mime = self._focussed_media.GetMime()
+            
+            path = CC.GetFilePath( hash, mime )
+            
+            HC.LaunchFile( path )
+            
         
     
     def _PetitionFiles( self, file_service_key ):

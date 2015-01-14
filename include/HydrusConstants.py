@@ -66,7 +66,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 143
+SOFTWARE_VERSION = 144
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -2228,7 +2228,7 @@ class Predicate( HydrusYAMLBase ):
                     
                     ( operator, value ) = info
                     
-                    base += u' ' + operator + u' ' + u( value )
+                    base += u' ' + operator + u' ' + ConvertIntToPrettyString( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_RATIO:
@@ -2261,7 +2261,7 @@ class Predicate( HydrusYAMLBase ):
                     
                     value = info
                     
-                    base += u' is ' + u( value )
+                    base += u' is ' + ConvertIntToPrettyString( value )
                     
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_AGE:
@@ -2312,7 +2312,7 @@ class Predicate( HydrusYAMLBase ):
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_SIMILAR_TO:
                 
-                base = u'system:similar to '
+                base = u'system:similar to'
                 
                 if info is not None:
                     
@@ -2323,16 +2323,14 @@ class Predicate( HydrusYAMLBase ):
                 
             elif system_predicate_type == SYSTEM_PREDICATE_TYPE_FILE_SERVICE:
                 
-                base = u'system:file service'
+                base = u'system:'
                 
                 if info is not None:
                     
                     ( operator, current_or_pending, service_key ) = info
                     
-                    base += u':'
-                    
-                    if operator == True: base += u' is'
-                    else: base += u' is not'
+                    if operator == True: base += u'is'
+                    else: base += u'is not'
                     
                     if current_or_pending == PENDING: base += u' pending to '
                     else: base += u' currently in '
@@ -2376,14 +2374,14 @@ class Predicate( HydrusYAMLBase ):
             
             namespace = self._value
             
-            if not self._inclusive == '-': base = u'-'
+            if not self._inclusive: base = u'-'
             else: base = u''
             
             base += namespace + u':*'
             
         elif self._predicate_type == PREDICATE_TYPE_WILDCARD:
             
-            ( operator, wildcard ) = self._value
+            wildcard = self._value
             
             if not self._inclusive: base = u'-'
             else: base = u''

@@ -7703,7 +7703,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 if self._i_am_local_tag_service: self._modify_mappers.Hide()
                 else:
                     
-                    if not ( self._account.HasPermission( HC.POST_DATA ) or self._account.IsUnknownAccount() ): self._add_tag_box.Hide()
                     if not self._account.HasPermission( HC.MANAGE_USERS ): self._modify_mappers.Hide()
                     
                 
@@ -7737,7 +7736,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 service = HC.app.GetManager( 'services' ).GetService( tag_service_key )
                 
-                self._account = service.GetInfo( 'account' )
+                try: self._account = service.GetInfo( 'account' )
+                except: self._account = HC.GetUnknownAccount()
                 
             
             hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )
@@ -7899,7 +7899,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         def SetTagBoxFocus( self ):
             
-            if self._i_am_local_tag_service or self._account.HasPermission( HC.POST_DATA ) or self._account.IsUnknownAccount(): self._add_tag_box.SetFocus()
+            self._add_tag_box.SetFocus()
             
         
     

@@ -359,6 +359,7 @@ class DownloaderDeviantArt( Downloader ):
     def __init__( self, artist ):
         
         self._gallery_url = 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset='
+        self._artist = artist
         
         Downloader.__init__( self )
         
@@ -383,38 +384,18 @@ class DownloaderDeviantArt( Downloader ):
                 
                 page_url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
                 
-                raw_title = link[ 'title' ] # sweet dolls by ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
+                raw_title = link[ 'title' ] # sweet dolls by AngeniaC, date, blah blah blah
                 
-                raw_title_reversed = raw_title[::-1] # yrleweJ ;tg& serutainiM ;tg& stfarC nasitrA ni 2102 ,92 beF ,CainegnA~ yb sllod teews
+                raw_title_reversed = raw_title[::-1] # trAtnaiveD no CainegnA yb sllod teews
                 
-                ( creator_and_date_and_tags_reversed, title_reversed ) = raw_title_reversed.split( ' yb ', 1 )
-                
-                creator_and_date_and_tags = creator_and_date_and_tags_reversed[::-1] # ~AngeniaC, Feb 29, 2012 in Artisan Crafts &gt; Miniatures &gt; Jewelry
-                
-                ( creator_with_username_char, date_and_tags ) = creator_and_date_and_tags.split( ',', 1 )
-                
-                creator = creator_with_username_char[1:] # AngeniaC
+                ( creator_and_gumpf_reversed, title_reversed ) = raw_title_reversed.split( ' yb ', 1 )
                 
                 title = title_reversed[::-1] # sweet dolls
-                
-                try:
-                    
-                    ( date_gumpf, raw_category_tags ) = date_and_tags.split( ' in ', 1 )
-                    
-                    category_tags = raw_category_tags.split( ' > ' )
-                    
-                except Exception as e:
-                    
-                    HC.ShowException( e )
-                    
-                    category_tags = []
-                    
                 
                 tags = []
                 
                 tags.append( 'title:' + title )
-                tags.append( 'creator:' + creator )
-                tags.extend( category_tags )
+                tags.append( 'creator:' + self._artist )
                 
                 results.append( ( page_url, tags ) )
                 
@@ -1153,6 +1134,8 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
         
         service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
+        time.sleep( 3 )
+        
         return ( url, temp_path, service_keys_to_tags, url )
         
     
@@ -1185,6 +1168,8 @@ class ImportArgsGeneratorGallery( ImportArgsGenerator ):
                 service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
                 
                 HC.app.Write( 'content_updates', service_keys_to_content_updates )
+                
+                time.sleep( 3 )
                 
             
             return ( status, media_result )
@@ -1280,6 +1265,8 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         
         service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
         
+        time.sleep( 3 )
+        
         return ( image_url, temp_path, service_keys_to_tags, image_url )
         
     
@@ -1296,6 +1283,21 @@ class ImportArgsGeneratorThread( ImportArgsGenerator ):
         if status == 'redundant':
             
             ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.LOCAL_FILE_SERVICE_KEY, ( hash, ) )
+            
+            do_tags = len( self._advanced_tag_options ) > 0
+            
+            if do_tags:
+                
+                tags = [ 'filename:' + filename ]
+                
+                service_keys_to_tags = ConvertTagsToServiceKeysToTags( tags, self._advanced_tag_options )
+                
+                service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
+                
+                HC.app.Write( 'content_updates', service_keys_to_content_updates )
+                
+                time.sleep( 3 )
+                
             
             return ( status, media_result )
             
@@ -1344,17 +1346,17 @@ class ImportArgsGeneratorURLs( ImportArgsGenerator ):
     
 class ImportController( object ):
     
-    def __init__( self, import_args_generator_factory, import_queue_generator_factory, page_key = None ):
+    def __init__( self, import_args_generator_factory, import_queue_builder_factory, page_key = None ):
         
         self._controller_job_key = self._GetNewJobKey( 'controller' )
         
         self._import_args_generator_factory = import_args_generator_factory
-        self._import_queue_generator_factory = import_queue_generator_factory
+        self._import_queue_builder_factory = import_queue_builder_factory
         self._page_key = page_key
         
         self._import_job_key = self._GetNewJobKey( 'import' )
-        self._import_queue_position_job_key = self._GetNewJobKey( 'import_queue_position' )
         self._import_queue_job_key = self._GetNewJobKey( 'import_queue' )
+        self._import_queue_builder_job_key = self._GetNewJobKey( 'import_queue_builder' )
         self._pending_import_queue_jobs = []
         
         self._lock = threading.Lock()
@@ -1381,11 +1383,11 @@ class ImportController( object ):
                 job_key.SetVariable( 'range', 1 )
                 job_key.SetVariable( 'value', 0 )
                 
-            elif job_type == 'import_queue_position':
+            elif job_type == 'import_queue':
                 
                 job_key.SetVariable( 'queue_position', 0 )
                 
-            elif job_type == 'import_queue':
+            elif job_type == 'import_queue_builder':
                 
                 job_key.SetVariable( 'queue', [] )
                 
@@ -1402,22 +1404,22 @@ class ImportController( object ):
             
             if job_type == 'controller': return self._controller_job_key
             elif job_type == 'import': return self._import_job_key
-            elif job_type == 'import_queue_position': return self._import_queue_position_job_key
             elif job_type == 'import_queue': return self._import_queue_job_key
+            elif job_type == 'import_queue_builder': return self._import_queue_builder_job_key
             
         
     
-    def GetPendingImportQueues( self ):
+    def GetPendingImportQueueJobs( self ):
         
         with self._lock: return self._pending_import_queue_jobs
         
     
-    def PendImportQueue( self, job ):
+    def PendImportQueueJob( self, job ):
         
         with self._lock: self._pending_import_queue_jobs.append( job )
         
     
-    def RemovePendingImportQueue( self, job ):
+    def RemovePendingImportQueueJob( self, job ):
         
         with self._lock:
             
@@ -1425,7 +1427,7 @@ class ImportController( object ):
             
         
     
-    def MovePendingImportQueueUp( self, job ):
+    def MovePendingImportQueueJobUp( self, job ):
         
         with self._lock:
             
@@ -1443,7 +1445,7 @@ class ImportController( object ):
             
         
     
-    def MovePendingImportQueueDown( self, job ):
+    def MovePendingImportQueueJobDown( self, job ):
         
         with self._lock:
             
@@ -1472,8 +1474,8 @@ class ImportController( object ):
                     time.sleep( 0.1 )
                     
                     self._import_job_key.Pause()
-                    self._import_queue_position_job_key.Pause()
                     self._import_queue_job_key.Pause()
+                    self._import_queue_builder_job_key.Pause()
                     
                     if HC.shutdown or self._controller_job_key.IsDone(): break
                     
@@ -1482,8 +1484,8 @@ class ImportController( object ):
                 
                 with self._lock:
                     
-                    queue_position = self._import_queue_position_job_key.GetVariable( 'queue_position' )
-                    queue = self._import_queue_job_key.GetVariable( 'queue' )
+                    queue_position = self._import_queue_job_key.GetVariable( 'queue_position' )
+                    queue = self._import_queue_builder_job_key.GetVariable( 'queue' )
             
                     if self._import_job_key.IsDone():
                         
@@ -1499,23 +1501,23 @@ class ImportController( object ):
                         
                         queue_position += 1
                         
-                        self._import_queue_position_job_key.SetVariable( 'queue_position', queue_position )
+                        self._import_queue_job_key.SetVariable( 'queue_position', queue_position )
                         
                     
                     position_string = HC.u( queue_position + 1 ) + '/' + HC.u( len( queue ) )
                     
-                    if self._import_queue_position_job_key.IsPaused(): self._import_queue_position_job_key.SetVariable( 'status', 'paused at ' + position_string )
-                    elif self._import_queue_position_job_key.IsWorking():
+                    if self._import_queue_job_key.IsPaused(): self._import_queue_job_key.SetVariable( 'status', 'paused at ' + position_string )
+                    elif self._import_queue_job_key.IsWorking():
                         
                         if self._import_job_key.IsWorking():
                             
-                            self._import_queue_position_job_key.SetVariable( 'status', 'processing ' + position_string )
+                            self._import_queue_job_key.SetVariable( 'status', 'processing ' + position_string )
                             
                         else:
                             
                             if queue_position < len( queue ):
                                 
-                                self._import_queue_position_job_key.SetVariable( 'status', 'preparing ' + position_string )
+                                self._import_queue_job_key.SetVariable( 'status', 'preparing ' + position_string )
                                 
                                 self._import_job_key.Begin()
                                 
@@ -1527,38 +1529,38 @@ class ImportController( object ):
                                 
                             else:
                                 
-                                if self._import_queue_job_key.IsWorking(): self._import_queue_position_job_key.SetVariable( 'status', 'waiting for more items' )
-                                else: self._import_queue_position_job_key.Finish()
+                                if self._import_queue_builder_job_key.IsWorking(): self._import_queue_job_key.SetVariable( 'status', 'waiting for more items' )
+                                else: self._import_queue_job_key.Finish()
                                 
                             
                         
                     else:
                         
-                        if self._import_queue_position_job_key.IsDone():
+                        if self._import_queue_job_key.IsDone():
                             
-                            if self._import_queue_position_job_key.IsCancelled(): status = 'cancelled at ' + position_string
+                            if self._import_queue_job_key.IsCancelled(): status = 'cancelled at ' + position_string
                             else: status = 'done'
-                            
-                            self._import_queue_position_job_key = self._GetNewJobKey( 'import_queue_position' )
                             
                             self._import_queue_job_key = self._GetNewJobKey( 'import_queue' )
                             
+                            self._import_queue_builder_job_key = self._GetNewJobKey( 'import_queue_builder' )
+                            
                         else: status = ''
                         
-                        self._import_queue_position_job_key.SetVariable( 'status', status )
+                        self._import_queue_job_key.SetVariable( 'status', status )
                         
                         if len( self._pending_import_queue_jobs ) > 0:
                             
-                            self._import_queue_position_job_key.Begin()
-                            
                             self._import_queue_job_key.Begin()
+                            
+                            self._import_queue_builder_job_key.Begin()
                             
                             item = self._pending_import_queue_jobs.pop( 0 )
                             
-                            queue_generator = self._import_queue_generator_factory( self._import_queue_job_key, item )
+                            queue_builder = self._import_queue_builder_factory( self._import_queue_builder_job_key, item )
                             
                             # make it a daemon, not a thread job, as it has a loop!
-                            threading.Thread( target = queue_generator ).start()
+                            threading.Thread( target = queue_builder ).start()
                             
                         
                     
@@ -1570,14 +1572,14 @@ class ImportController( object ):
         finally:
             
             self._import_job_key.Cancel()
-            self._import_queue_position_job_key.Cancel()
             self._import_queue_job_key.Cancel()
+            self._import_queue_builder_job_key.Cancel()
             
         
     
     def StartDaemon( self ): threading.Thread( target = self.MainLoop ).start()
     
-class ImportQueueGenerator( object ):
+class ImportQueueBuilder( object ):
     
     def __init__( self, job_key, item ):
         
@@ -1594,11 +1596,11 @@ class ImportQueueGenerator( object ):
         self._job_key.Finish()
         
     
-class ImportQueueGeneratorGallery( ImportQueueGenerator ):
+class ImportQueueBuilderGallery( ImportQueueBuilder ):
     
     def __init__( self, job_key, item, downloaders_factory ):
         
-        ImportQueueGenerator.__init__( self, job_key, item )
+        ImportQueueBuilder.__init__( self, job_key, item )
         
         self._downloaders_factory = downloaders_factory
         
@@ -1686,7 +1688,7 @@ class ImportQueueGeneratorGallery( ImportQueueGenerator ):
         finally: self._job_key.Finish()
         
     
-class ImportQueueGeneratorURLs( ImportQueueGenerator ):
+class ImportQueueBuilderURLs( ImportQueueBuilder ):
     
     def __call__( self ):
         
@@ -1719,7 +1721,7 @@ class ImportQueueGeneratorURLs( ImportQueueGenerator ):
         finally: self._job_key.Finish()
         
     
-class ImportQueueGeneratorThread( ImportQueueGenerator ):
+class ImportQueueBuilderThread( ImportQueueBuilder ):
     
     def __call__( self ):
         
@@ -1731,6 +1733,7 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
             image_infos_already_added = set()
             
             first_run = True
+            manual_refresh = False
             
             while True:
                 
@@ -1767,7 +1770,11 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                 
                 next_thread_check = last_thread_check + thread_time
                 
-                if next_thread_check < HC.GetNow():
+                manual_refresh = self._job_key.GetVariable( 'manual_refresh' )
+                
+                not_too_soon_for_manual_refresh = HC.GetNow() - last_thread_check > 10
+                
+                if ( manual_refresh and not_too_soon_for_manual_refresh ) or next_thread_check < HC.GetNow():
                     
                     self._job_key.SetVariable( 'status', 'checking thread' )
                     
@@ -1812,6 +1819,7 @@ class ImportQueueGeneratorThread( ImportQueueGenerator ):
                     last_thread_check = HC.GetNow()
                     
                     if first_run: first_run = False
+                    elif manual_refresh: self._job_key.SetVariable( 'manual_refresh', False )
                     else:
                         
                         if thread_times_to_check > 0: self._job_key.SetVariable( 'thread_times_to_check', thread_times_to_check - 1 )

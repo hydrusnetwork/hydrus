@@ -705,12 +705,15 @@ class Canvas( object ):
     
     def _OpenExternally( self ):
         
-        hash = self._current_display_media.GetHash()
-        mime = self._current_display_media.GetMime()
-        
-        path = CC.GetFilePath( hash, mime )
-        
-        HC.LaunchFile( path )
+        if self._current_display_media is not None:
+            
+            hash = self._current_display_media.GetHash()
+            mime = self._current_display_media.GetMime()
+            
+            path = CC.GetFilePath( hash, mime )
+            
+            HC.LaunchFile( path )
+            
         
     
     def _PrefetchImages( self ): pass

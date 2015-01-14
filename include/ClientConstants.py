@@ -262,6 +262,7 @@ shortcuts[ wx.ACCEL_CTRL ][ ord( 'M' ) ] = 'set_media_focus'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'I' ) ] = 'synchronised_wait_switch'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'Z' ) ] = 'undo'
 shortcuts[ wx.ACCEL_CTRL ][ ord( 'Y' ) ] = 'redo'
+shortcuts[ wx.ACCEL_CTRL ][ ord( 'E' ) ] = 'open_externally'
 
 shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_UP ] = 'previous'
 shortcuts[ wx.ACCEL_NORMAL ][ wx.WXK_LEFT ] = 'previous'

@@ -1222,8 +1222,8 @@ class ManagementPanelImport( ManagementPanel ):
         
         import_controller_job_key = self._import_controller.GetJobKey( 'controller' )
         import_job_key = self._import_controller.GetJobKey( 'import' )
-        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
         import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
         # info
         
@@ -1247,13 +1247,13 @@ class ManagementPanelImport( ManagementPanel ):
         
         if import_status != self._import_current_info.GetLabel(): self._import_current_info.SetLabel( import_status )
         
-        import_queue_status = import_queue_position_job_key.GetVariable( 'status' )
+        import_queue_status = import_queue_job_key.GetVariable( 'status' )
         
         if import_queue_status != self._import_queue_info.GetLabel(): self._import_queue_info.SetLabel( import_queue_status )
         
         # buttons
         
-        if import_queue_position_job_key.IsPaused():
+        if import_queue_job_key.IsPaused():
             
             if self._import_pause_button.GetLabel() != 'resume':
                 
@@ -1270,7 +1270,7 @@ class ManagementPanelImport( ManagementPanel ):
                 
             
         
-        if import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsCancelled():
+        if import_queue_job_key.IsWorking() and not import_queue_job_key.IsCancelled():
             
             self._import_pause_button.Enable()
             self._import_cancel_button.Enable()
@@ -1294,11 +1294,11 @@ class ManagementPanelImport( ManagementPanel ):
             self._import_gauge.SetValue( value )
             
         
-        queue = import_queue_job_key.GetVariable( 'queue' )
+        queue = import_queue_builder_job_key.GetVariable( 'queue' )
         
         if len( queue ) == 0:
             
-            if import_queue_job_key.IsWorking(): self._import_queue_gauge.Pulse()
+            if import_queue_builder_job_key.IsWorking(): self._import_queue_gauge.Pulse()
             else:
                 
                 self._import_queue_gauge.SetRange( 1 )
@@ -1307,7 +1307,7 @@ class ManagementPanelImport( ManagementPanel ):
             
         else:
             
-            queue_position = import_queue_position_job_key.GetVariable( 'queue_position' )
+            queue_position = import_queue_job_key.GetVariable( 'queue_position' )
             
             self._import_queue_gauge.SetRange( len( queue ) )
             self._import_queue_gauge.SetValue( queue_position )
@@ -1316,20 +1316,20 @@ class ManagementPanelImport( ManagementPanel ):
     
     def EventCancelImportQueue( self, event ):
         
-        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
         import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
-        import_queue_position_job_key.Cancel()
         import_queue_job_key.Cancel()
+        import_queue_builder_job_key.Cancel()
         
         self._UpdateGUI()
         
     
     def EventPauseImportQueue( self, event ):
         
-        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )    
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )    
         
-        import_queue_position_job_key.PauseResume()
+        import_queue_job_key.PauseResume()
         
         self._UpdateGUI()
         
@@ -1340,9 +1340,9 @@ class ManagementPanelImport( ManagementPanel ):
     
     def TestAbleToClose( self ):
         
-        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
+        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
         
-        if import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsPaused():
+        if import_queue_job_key.IsWorking() and not import_queue_job_key.IsPaused():
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
@@ -1364,11 +1364,11 @@ class ManagementPanelImports( ManagementPanelImport ):
         self._building_import_queue_info = wx.StaticText( self._building_import_queue_panel )
         
         self._building_import_queue_pause_button = wx.Button( self._building_import_queue_panel, label = 'pause' )
-        self._building_import_queue_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseBuildImportQueue )
+        self._building_import_queue_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueueBuilder )
         self._building_import_queue_pause_button.Disable()
         
         self._building_import_queue_cancel_button = wx.Button( self._building_import_queue_panel, label = 'that\'s enough' )
-        self._building_import_queue_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelBuildImportQueue )
+        self._building_import_queue_cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelImportQueueBuilder )
         self._building_import_queue_cancel_button.SetForegroundColour( ( 128, 0, 0 ) )
         self._building_import_queue_cancel_button.Disable()
         
@@ -1424,20 +1424,20 @@ class ManagementPanelImports( ManagementPanelImport ):
         ManagementPanelImport._UpdateGUI( self )
         
         import_job_key = self._import_controller.GetJobKey( 'import' )
-        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue_position' )
         import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
         # info
         
-        extend_import_queue_status = import_queue_job_key.GetVariable( 'status' )
+        import_queue_builder_status = import_queue_builder_job_key.GetVariable( 'status' )
         
-        if extend_import_queue_status != self._building_import_queue_info.GetLabel(): self._building_import_queue_info.SetLabel( extend_import_queue_status )
+        if import_queue_builder_status != self._building_import_queue_info.GetLabel(): self._building_import_queue_info.SetLabel( import_queue_builder_status )
         
         # buttons
         
         #
         
-        if import_queue_job_key.IsPaused():
+        if import_queue_builder_job_key.IsPaused():
             
             if self._building_import_queue_pause_button.GetLabel() != 'resume':
                 
@@ -1454,7 +1454,7 @@ class ManagementPanelImports( ManagementPanelImport ):
                 
             
         
-        if import_queue_job_key.IsWorking() and not import_queue_job_key.IsCancelled():
+        if import_queue_builder_job_key.IsWorking() and not import_queue_job_key.IsCancelled():
             
             self._building_import_queue_pause_button.Enable()
             self._building_import_queue_cancel_button.Enable()
@@ -1480,19 +1480,19 @@ class ManagementPanelImports( ManagementPanelImport ):
         
         # pending import queues
         
-        import_queues = self._import_controller.GetPendingImportQueues()
+        pending_import_queue_jobs = self._import_controller.GetPendingImportQueueJobs()
         
-        if import_queues != self._pending_import_queues_listbox.GetItems():
+        if pending_import_queue_jobs != self._pending_import_queues_listbox.GetItems():
             
-            self._pending_import_queues_listbox.SetItems( import_queues )
+            self._pending_import_queues_listbox.SetItems( pending_import_queue_jobs )
             
         
     
-    def EventCancelBuildImportQueue( self, event ):
+    def EventCancelImportQueueBuilder( self, event ):
         
-        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
-        import_queue_job_key.Cancel()
+        import_queue_builder_job_key.Cancel()
         
         self._UpdateGUI()
         
@@ -1505,7 +1505,7 @@ class ManagementPanelImports( ManagementPanelImport ):
             
             if s != '':
                 
-                self._import_controller.PendImportQueue( s )
+                self._import_controller.PendImportQueueJob( s )
                 
                 self._UpdateGUI()
                 
@@ -1515,11 +1515,11 @@ class ManagementPanelImports( ManagementPanelImport ):
         else: event.Skip()
         
     
-    def EventPauseBuildImportQueue( self, event ):
+    def EventPauseImportQueueBuilder( self, event ):
         
-        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
-        import_queue_job_key.PauseResume()
+        import_queue_builder_job_key.PauseResume()
         
         self._UpdateGUI()
         
@@ -1534,7 +1534,7 @@ class ManagementPanelImports( ManagementPanelImport ):
                 
                 s = self._pending_import_queues_listbox.GetString( selection )
                 
-                self._import_controller.MovePendingImportQueueUp( s )
+                self._import_controller.MovePendingImportQueueJobUp( s )
                 
                 self._UpdateGUI()
                 
@@ -1551,7 +1551,7 @@ class ManagementPanelImports( ManagementPanelImport ):
             
             s = self._pending_import_queues_listbox.GetString( selection )
             
-            self._import_controller.RemovePendingImportQueue( s )
+            self._import_controller.RemovePendingImportQueueJob( s )
             
             self._UpdateGUI()
             
@@ -1567,7 +1567,7 @@ class ManagementPanelImports( ManagementPanelImport ):
                 
                 s = self._pending_import_queues_listbox.GetString( selection )
                 
-                self._import_controller.MovePendingImportQueueDown( s )
+                self._import_controller.MovePendingImportQueueJobDown( s )
                 
                 self._UpdateGUI()
                 
@@ -1679,7 +1679,10 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         self._thread_pause_button = wx.Button( self._thread_panel, label = 'pause' )
-        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseBuildImportQueue )
+        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseImportQueueBuilder )
+        
+        self._thread_manual_refresh_button = wx.Button( self._thread_panel, label = 'check now' )
+        self._thread_manual_refresh_button.Bind( wx.EVT_BUTTON, self.EventManualRefresh )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1689,10 +1692,15 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         hbox.AddF( self._thread_check_period, FLAGS_MIXED )
         hbox.AddF( wx.StaticText( self._thread_panel, label = ' seconds' ), FLAGS_MIXED )
         
+        button_box = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_box.AddF( self._thread_pause_button, FLAGS_EXPAND_BOTH_WAYS )
+        button_box.AddF( self._thread_manual_refresh_button, FLAGS_EXPAND_BOTH_WAYS )
+        
         self._thread_panel.AddF( self._thread_info, FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( self._thread_input, FLAGS_EXPAND_PERPENDICULAR )
         self._thread_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._thread_panel.AddF( self._thread_pause_button, FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_panel.AddF( button_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         vbox.AddF( self._thread_panel, FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1705,13 +1713,14 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
     def _SetThreadVariables( self ):
         
-        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
         thread_time = self._thread_check_period.GetValue()
         thread_times_to_check = self._thread_times_to_check.GetValue()
         
-        import_queue_job_key.SetVariable( 'thread_time', thread_time )
-        import_queue_job_key.SetVariable( 'thread_times_to_check', thread_times_to_check )
+        import_queue_builder_job_key.SetVariable( 'manual_refresh', False )
+        import_queue_builder_job_key.SetVariable( 'thread_time', thread_time )
+        import_queue_builder_job_key.SetVariable( 'thread_times_to_check', thread_times_to_check )
         
     
     def _UpdateGUI( self ):
@@ -1719,21 +1728,21 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         ManagementPanelImport._UpdateGUI( self )
         
         import_job_key = self._import_controller.GetJobKey( 'import' )
-        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
         # thread_info
         
-        status = import_queue_job_key.GetVariable( 'status' )
+        status = import_queue_builder_job_key.GetVariable( 'status' )
         
         if status != self._thread_info.GetLabel(): self._thread_info.SetLabel( status )
         
         # button
         
-        if import_queue_job_key.IsWorking():
+        if import_queue_builder_job_key.IsWorking():
             
             self._thread_pause_button.Enable()
             
-            if import_queue_job_key.IsPaused():
+            if import_queue_builder_job_key.IsPaused():
                 
                 self._thread_pause_button.SetLabel( 'resume' )
                 self._thread_pause_button.SetForegroundColour( ( 0, 128, 0 ) )
@@ -1750,9 +1759,18 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
         
         try:
             
-            thread_times_to_check = import_queue_job_key.GetVariable( 'thread_times_to_check' )
+            thread_times_to_check = import_queue_builder_job_key.GetVariable( 'thread_times_to_check' )
             
             self._thread_times_to_check.SetValue( thread_times_to_check )
+            
+        except: self._SetThreadVariables()
+        
+        try:
+            
+            manual_refresh = import_queue_builder_job_key.GetVariable( 'manual_refresh' )
+            
+            if not import_queue_builder_job_key.IsWorking() or manual_refresh: self._thread_manual_refresh_button.Disable()
+            else: self._thread_manual_refresh_button.Enable()
             
         except: self._SetThreadVariables()
         
@@ -1782,7 +1800,7 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                 except: raise Exception ( 'Could not understand that url!' )
                 
                 is_4chan = '4chan.org' in host
-                is_8chan = '8chan.co' in host
+                is_8chan = '8chan.co' in host or '8ch.net' in host
                 
                 if not ( is_4chan or is_8chan ): raise Exception( 'This only works for 4chan and 8chan right now!' )
                 
@@ -1813,16 +1831,16 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
                         ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
                         
                         json_url = url[:-4] + 'json'
-                        image_base = 'http://8chan.co/' + board + '/src/'
+                        image_base = 'http://8ch.net/' + board + '/src/'
                         
                     
                 except: raise Exception( 'Could not understand the board or thread id!' )
                 
             except Exception as e:
                 
-                import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+                import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
                 
-                import_queue_job_key.SetVariable( 'status', HC.u( e ) )
+                import_queue_builder_job_key.SetVariable( 'status', HC.u( e ) )
                 
                 HC.ShowException( e )
                 
@@ -1833,16 +1851,25 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
             
             self._SetThreadVariables()
             
-            self._import_controller.PendImportQueue( ( json_url, image_base ) )
+            self._import_controller.PendImportQueueJob( ( json_url, image_base ) )
             
         else: event.Skip()
         
     
-    def EventPauseBuildImportQueue( self, event ):
+    def EventManualRefresh( self, event ):
         
-        import_queue_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
-        import_queue_job_key.PauseResume()
+        import_queue_builder_job_key.SetVariable( 'manual_refresh', True )
+        
+        self._thread_manual_refresh_button.Disable()
+        
+    
+    def EventPauseImportQueueBuilder( self, event ):
+        
+        import_queue_builder_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
+        
+        import_queue_builder_job_key.PauseResume()
         
         self._UpdateGUI()
         
@@ -1858,9 +1885,9 @@ class ManagementPanelImportThreadWatcher( ManagementPanelImport ):
     
     def TestAbleToClose( self ):
         
-        import_queue_position_job_key = self._import_controller.GetJobKey( 'import_queue' )
+        import_queue_builder_position_job_key = self._import_controller.GetJobKey( 'import_queue_builder' )
         
-        if self._thread_times_to_check.GetValue() > 0 and import_queue_position_job_key.IsWorking() and not import_queue_position_job_key.IsPaused():
+        if self._thread_times_to_check.GetValue() > 0 and import_queue_builder_position_job_key.IsWorking() and not import_queue_builder_position_job_key.IsPaused():
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 

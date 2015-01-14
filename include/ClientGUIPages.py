@@ -260,11 +260,11 @@ class PageImport( PageWithMedia ):
         return factory
         
     
-    def _GenerateImportQueueGeneratorFactory( self ):
+    def _GenerateImportQueueBuilderFactory( self ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportQueueGenerator( job_key, item )
+            return HydrusDownloading.ImportQueueBuilder( job_key, item )
             
         
         return factory
@@ -275,9 +275,9 @@ class PageImport( PageWithMedia ):
     def _InitControllers( self ):
         
         import_args_generator_factory = self._GenerateImportArgsGeneratorFactory()
-        import_queue_generator_factory = self._GenerateImportQueueGeneratorFactory()
+        import_queue_builder_factory = self._GenerateImportQueueBuilderFactory()
         
-        self._import_controller = HydrusDownloading.ImportController( import_args_generator_factory, import_queue_generator_factory, page_key = self._page_key )
+        self._import_controller = HydrusDownloading.ImportController( import_args_generator_factory, import_queue_builder_factory, page_key = self._page_key )
         
         self._import_controller.StartDaemon()
         
@@ -338,13 +338,13 @@ class PageImportGallery( PageImport ):
         return factory
         
     
-    def _GenerateImportQueueGeneratorFactory( self ):
+    def _GenerateImportQueueBuilderFactory( self ):
         
         def factory( job_key, item ):
             
             downloaders_factory = self._GetDownloadersFactory()
             
-            return HydrusDownloading.ImportQueueGeneratorGallery( job_key, item, downloaders_factory )
+            return HydrusDownloading.ImportQueueBuilderGallery( job_key, item, downloaders_factory )
             
         
         return factory
@@ -471,7 +471,7 @@ class PageImportGallery( PageImport ):
                 if self._gallery_type == 'artist':
                     
                     name = 'deviant art'
-                    namespaces = [ 'creator', 'title', '' ]
+                    namespaces = [ 'creator', 'title' ]
                     initial_search_value = 'artist username'
                     
                 
@@ -538,7 +538,7 @@ class PageImportHDD( PageImport ):
         
         PageImport.__init__( self, parent, initial_hashes = initial_hashes, starting_from_session = starting_from_session )
         
-        self._import_controller.PendImportQueue( self._paths_info )
+        self._import_controller.PendImportQueueJob( self._paths_info )
         
     
     def _GenerateImportArgsGeneratorFactory( self ):
@@ -582,11 +582,11 @@ class PageImportThreadWatcher( PageImport ):
         return factory
         
     
-    def _GenerateImportQueueGeneratorFactory( self ):
+    def _GenerateImportQueueBuilderFactory( self ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportQueueGeneratorThread( job_key, item )
+            return HydrusDownloading.ImportQueueBuilderThread( job_key, item )
             
         
         return factory
@@ -608,11 +608,11 @@ class PageImportURL( PageImport ):
         return factory
         
     
-    def _GenerateImportQueueGeneratorFactory( self ):
+    def _GenerateImportQueueBuilderFactory( self ):
         
         def factory( job_key, item ):
             
-            return HydrusDownloading.ImportQueueGeneratorURLs( job_key, item )
+            return HydrusDownloading.ImportQueueBuilderURLs( job_key, item )
             
         
         return factory

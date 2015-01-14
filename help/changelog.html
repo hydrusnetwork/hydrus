@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 144</h3></li>
+				<ul>
+					<li>files named 'Thumbs.db' will now be skipped in the import files dialog</li>
+					<li>fixed wildcard searches, which last week's predicate rewrite broke</li>
+					<li>fixed a typo that was showing namespace predicates as exclusive (-series:*) when they were actually inclusive (series:*) and vice versa</li>
+					<li>added wildcard namespace searching for database autocomplete queries</li>
+					<li>fixed database wildcard autocomplete searching when wildcard match is not the first word in a tag</li>
+					<li>fixed database file searching when wildcard match is not the first word in a tag</li>
+					<li>added a comprehensive suite of predicate-unicode conversion tests</li>
+					<li>cleaned and improved some of the downloader code</li>
+					<li>added five second per-gallery-page delay to subscription daemon</li>
+					<li>added three second per-file-delay for regular gallery downloads and subscriptions, just to be polite to those web services</li>
+					<li>added three second per-file-delay to the thread watcher for the same reason</li>
+					<li>added a 'check now' button to the thread watcher</li>
+					<li>fixed a problem that was sometimes causing subscriptions, when paused, to continually restart</li>
+					<li>removed unnamespaced tag parsing from deviant art</li>
+					<li>fixed creator parsing for deviant art, which was formerly cutting off the first character</li>
+					<li>patched an account sync problem in the manage tags dialog</li>
+					<li>in add tags by path dialog, tags are now sorted before being added to the file list</li>
+					<li>in add tags by path dialog, the regex sections now generate tags for every match in the string, not just the first</li>
+					<li>stopped collapsible panels resizing dialogs to minsize on collapse or expand</li>
+					<li>added shortcut for 'open externally', default Ctrl+E</li>
+					<li>moved 8chan to new 8ch.net domain (old domain still works)</li>
+				</ul>
 				<li><h3>version 143</h3></li>
 				<ul>
 					<li>when making a READ autocomplete tag query, instances of tags that only have a count in a single namespaced domain will no longer accumulate helper results in the non-namespaced domain i.e. no more 'blah (1)' 'title:blah (1)' dupes</li>
