@@ -8,6 +8,21 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 145</h3></li>
+				<ul>
+					<li>added custom gui colours for thumbnail backgrounds and borders, the autocomplete background, and media background and text</li>
+					<li>added <- and -> arrows to manage tags dialog launched from navigable media viewer</li>
+					<li>on empty input in the manage tags dialog, page up and page down work as shortcuts for the new <- and -> buttons</li>
+					<li>fixed the media height calculation for animations, so when they are vertically scaled, the total height including scanbar won't overflow off screen</li>
+					<li>allowed non-integer page, chapter, volume tags in display and sort calculations</li>
+					<li>semi-integer tags will sort along with integer tags and string tags like so: 0 < 0a < 0b < 1 < 2 < 22</li>
+					<li>improved the old tag/media sorting code</li>
+					<li>removed loli and shota from hentai foundry filter options</li>
+					<li>patched old db-stored predicates to attempt to convert to the new format when queried for _inclusive</li>
+					<li>this _should_ have fixed the recent export folder problems</li>
+					<li>created an 8chan board, and updated my various links, including in the client, to migrate from my old forum to this</li>
+					<li>misc code improvements</li>
+				</ul>
 				<li><h3>version 144</h3></li>
 				<ul>
 					<li>files named 'Thumbs.db' will now be skipped in the import files dialog</li>
