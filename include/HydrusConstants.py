@@ -66,7 +66,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 144
+SOFTWARE_VERSION = 145
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -2188,7 +2188,24 @@ class Predicate( HydrusYAMLBase ):
         else: return self._counts[ current_or_pending ]
         
     
-    def GetInclusive( self ): return self._inclusive
+    def GetInclusive( self ):
+        
+        # patch from an upgrade mess-up ~v144
+        if not hasattr( self, '_inclusive' ):
+            
+            if self._predicate_type != PREDICATE_TYPE_SYSTEM:
+                
+                ( operator, value ) = self._value
+                
+                self._value = value
+                
+                self._inclusive = operator == '+'
+                
+            else: self._inclusive = True
+            
+        
+        return self._inclusive
+        
     
     def GetInfo( self ): return ( self._predicate_type, self._value, self._inclusive )
     
@@ -2701,37 +2718,33 @@ class SortedList( object ):
         
         if sort_function is None: sort_function = lambda x: x
         
-        self._sorted_list = [ ( sort_function( item ), item ) for item in initial_items ]
+        self._sort_function = sort_function
+        
+        self._sorted_list = list( initial_items )
         
         self._items_to_indices = None
-        
-        self._sort_function = sort_function
         
         if do_sort: self.sort()
         
     
     def __contains__( self, item ): return self._items_to_indices.__contains__( item )
     
-    def __getitem__( self, value ):
-        
-        if type( value ) == int: return self._sorted_list.__getitem__( value )[1]
-        elif type( value ) == slice: return [ item for ( sort_item, item ) in self._sorted_list.__getitem__( value ) ]
-        
+    def __getitem__( self, value ): return self._sorted_list.__getitem__( value )
     
     def __iter__( self ):
         
-        for ( sorting_value, item ) in self._sorted_list: yield item
+        for item in self._sorted_list: yield item
         
     
     def __len__( self ): return self._sorted_list.__len__()
     
     def _DirtyIndices( self ): self._items_to_indices = None
     
-    def _RecalcIndices( self ): self._items_to_indices = { item : index for ( index, ( sort_item, item ) ) in enumerate( self._sorted_list ) }
+    def _RecalcIndices( self ): self._items_to_indices = { item : index for ( index, item ) in enumerate( self._sorted_list ) }
     
     def append_items( self, items ):
         
-        self._sorted_list.extend( [ ( self._sort_function( item ), item ) for item in items ] )
+        self._sorted_list.extend( items )
         
         self._DirtyIndices()
         
@@ -2745,9 +2758,9 @@ class SortedList( object ):
     
     def insert_items( self, items ):
         
-        for item in items: bisect.insort( self._sorted_list, ( self._sort_function( item ), item ) )
+        self.append_items( items )
         
-        self._DirtyIndices()
+        self.sort()
         
     
     def remove_items( self, items ):
@@ -2758,7 +2771,7 @@ class SortedList( object ):
         
         deletee_indices.reverse()
         
-        for index in deletee_indices: self._sorted_list.pop( index )
+        for index in deletee_indices: del self._sorted_list[ index ]
         
         self._DirtyIndices()
         
@@ -2767,9 +2780,7 @@ class SortedList( object ):
         
         if f is not None: self._sort_function = f
         
-        self._sorted_list = [ ( self._sort_function( item ), item ) for ( old_value, item ) in self._sorted_list ]
-        
-        self._sorted_list.sort()
+        self._sorted_list.sort( key = f )
         
         self._DirtyIndices()
         

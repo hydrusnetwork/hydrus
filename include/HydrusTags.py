@@ -241,6 +241,43 @@ def MergeTagsManagers( tags_managers ):
     
     return TagsManagerSimple( merged_service_keys_to_statuses_to_tags )
     
+def SortTags( tags ):
+
+    def tagkey( t ):
+        
+        if t[0].isdigit():
+            
+            # We want to maintain that:
+            # 0 < 0a < 0b < 1 ( lexicographic comparison )
+            # -and-
+            # 2 < 22 ( value comparison )
+            # So, if the first bit can be turned into an int, split it into ( int, extra )
+            
+            int_component = ''
+            
+            i = 0
+            
+            for character in t:
+                
+                if character.isdigit(): int_component += character
+                else: break
+                
+                i += 1
+                
+            
+            str_component = t[i:]
+            
+            return ( int( int_component ), str_component )
+            
+        else: return t
+        
+    
+    tags = list( tags )
+    
+    tags.sort( key = tagkey )
+    
+    return tags
+    
 class TagsManagerSimple( object ):
     
     def __init__( self, service_keys_to_statuses_to_tags ):
@@ -264,25 +301,6 @@ class TagsManagerSimple( object ):
             combined_pending = combined_statuses_to_tags[ HC.PENDING ]
             
             self._combined_namespaces_cache = HC.BuildKeyToSetDict( tag.split( ':', 1 ) for tag in combined_current.union( combined_pending ) if ':' in tag )
-            
-            only_int_allowed = ( 'volume', 'chapter', 'page' )
-            
-            for namespace in only_int_allowed:
-                
-                tags = self._combined_namespaces_cache[ namespace ]
-                
-                int_tags = set()
-                
-                for tag in tags:
-                    
-                    try: tag = int( tag )
-                    except: continue
-                    
-                    int_tags.add( tag )
-                    
-                
-                self._combined_namespaces_cache[ namespace ] = int_tags
-                
             
         
         result = { namespace : self._combined_namespaces_cache[ namespace ] for namespace in namespaces }
@@ -314,15 +332,7 @@ class TagsManagerSimple( object ):
             
             tags = [ tag.split( ':', 1 )[1] for tag in tags ]
             
-            def process_tag( t ):
-                
-                try: return int( t )
-                except: return t
-                
-            
-            tags = [ process_tag( tag ) for tag in tags ]
-            
-            tags.sort()
+            tags = SortTags( tags )
             
             tags = tuple( tags )
             

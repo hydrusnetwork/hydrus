@@ -2844,6 +2844,15 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._listbook.AddPage( self._maintenance_page, 'maintenance and memory' )
             
+            # media
+            
+            self._media_page = wx.Panel( self._listbook )
+            self._media_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._fit_to_canvas = wx.CheckBox( self._media_page, label = '' )
+            
+            self._listbook.AddPage( self._media_page, 'media' )
+            
             # gui
             
             self._gui_page = wx.Panel( self._listbook )
@@ -2963,6 +2972,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._colour_page = wx.Panel( self._listbook )
             self._colour_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
+            self._gui_colours = {}
+            
+            for ( name, rgb ) in HC.options[ 'gui_colours' ].items():
+                
+                ctrl = wx.ColourPickerCtrl( self._colour_page )
+                
+                ctrl.SetMaxSize( ( 20, -1 ) )
+                
+                self._gui_colours[ name ] = ctrl
+                
+            
             self._namespace_colours = ClientGUICommon.TagsBoxColourOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
             
             self._edit_namespace_colour = wx.Button( self._colour_page, label = 'edit selected' )
@@ -3081,6 +3101,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             #
             
+            self._fit_to_canvas.SetValue( HC.options[ 'fit_to_canvas' ] )
+            
+            #
+            
             gui_sessions = HC.app.Read( 'gui_sessions' )
             
             gui_session_names = gui_sessions.keys()
@@ -3186,6 +3210,10 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             self._file_system_predicate_num_words_sign.SetSelection( sign )
             self._file_system_predicate_num_words.SetValue( num_words )
+            
+            #
+            
+            for ( name, rgb ) in HC.options[ 'gui_colours' ].items(): self._gui_colours[ name ].SetColour( wx.Colour( *rgb ) )
             
             #
             
@@ -3306,6 +3334,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             gridbox.AddF( self._autocomplete_short_wait, FLAGS_MIXED )
             
             self._maintenance_page.SetSizer( gridbox )
+            
+            #
+            
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddGrowableCol( 1, 1 )
+            
+            gridbox.AddF( wx.StaticText( self._media_page, label = 'Zoom smaller images to fit media canvas: ' ), FLAGS_MIXED )
+            gridbox.AddF( self._fit_to_canvas, FLAGS_MIXED )
+            
+            self._media_page.SetSizer( gridbox )
             
             #
             
@@ -3486,6 +3525,43 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'thumbnail background (local: normal/selected, remote: normal/selected): ' ), FLAGS_MIXED )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._gui_colours[ 'thumb_background' ], FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background_selected' ], FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background_remote' ], FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_background_remote_selected' ], FLAGS_MIXED )
+            
+            gridbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'thumbnail border (local: normal/selected, remote: normal/selected): ' ), FLAGS_MIXED )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._gui_colours[ 'thumb_border' ], FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border_selected' ], FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border_remote' ], FLAGS_MIXED )
+            hbox.AddF( self._gui_colours[ 'thumb_border_remote_selected' ], FLAGS_MIXED )
+            
+            gridbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'thumbnail grid background: '), FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'thumbgrid_background' ], FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'autocomplete background: '), FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'autocomplete_background' ], FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'media viewer background: '), FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'media_background' ], FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'media viewer text: '), FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'media_text' ], FLAGS_MIXED )
+            
+            vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._namespace_colours, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_namespace_colour, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._edit_namespace_colour, FLAGS_EXPAND_PERPENDICULAR )
@@ -3822,6 +3898,17 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
         short_wait = self._autocomplete_short_wait.GetValue()
         
         HC.options[ 'ac_timings' ] = ( char_limit, long_wait, short_wait )
+        
+        HC.options[ 'fit_to_canvas' ] = self._fit_to_canvas.GetValue()
+        
+        for ( name, ctrl ) in self._gui_colours.items():
+            
+            colour = ctrl.GetColour()
+            
+            rgb = ( colour.Red(), colour.Green(), colour.Blue() )
+            
+            HC.options[ 'gui_colours' ][ name ] = rgb
+            
         
         HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
         
@@ -7527,9 +7614,18 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
 class DialogManageTags( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, file_service_key, media ):
+    def __init__( self, parent, file_service_key, media, canvas_key = None ):
         
         def InitialiseControls():
+            
+            if canvas_key is not None:
+                
+                self._next = wx.Button( self, label = '->' )
+                self._next.Bind( wx.EVT_BUTTON, self.EventNext )
+                
+                self._previous = wx.Button( self, label = '<-' )
+                self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
+                
             
             self._tag_repositories = ClientGUICommon.ListBook( self )
             self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
@@ -7573,6 +7669,17 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            if canvas_key is not None:
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._previous, FLAGS_MIXED )
+                hbox.AddF( ( 20, 20 ), FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._next, FLAGS_MIXED )
+                
+                vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
+                
+            
             vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
             
@@ -7586,6 +7693,8 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         self._file_service_key = file_service_key
         
         self._hashes = set()
+        
+        self._canvas_key = canvas_key
         
         for m in media: self._hashes.update( m.GetHashes() )
         
@@ -7601,12 +7710,47 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         self.RefreshAcceleratorTable()
         
+        if self._canvas_key is not None: HC.pubsub.sub( self, 'CanvasHasNewMedia', 'canvas_broadcast_current_display_media' )
+        
+    
+    def _ClearPanels( self ):
+        
+        for page in self._tag_repositories.GetNameToPageDict().values(): page.SetMedia( set() )
+        
+    
+    def _CommitCurrentChanges( self, sync = False ):
+        
+        service_keys_to_content_updates = {}
+        
+        for page in self._tag_repositories.GetNameToPageDict().values():
+            
+            ( service_key, content_updates ) = page.GetContentUpdates()
+            
+            if len( content_updates ) > 0: service_keys_to_content_updates[ service_key ] = content_updates
+            
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            if sync: m = HC.app.WriteSynchronous
+            else: m = HC.app.Write
+            
+            m( 'content_updates', service_keys_to_content_updates )
+            
+        
     
     def _SetSearchFocus( self ):
         
         page = self._tag_repositories.GetCurrentPage()
         
         page.SetTagBoxFocus()
+        
+    
+    def CanvasHasNewMedia( self, canvas_key, new_media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            for page in self._tag_repositories.GetNameToPageDict().values(): page.SetMedia( ( new_media, ) )
+            
         
     
     def EventMenu( self, event ):
@@ -7617,29 +7761,37 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             ( command, data ) = action
             
-            if command == 'manage_tags': self.EndModal( wx.ID_CANCEL )
+            if command == 'canvas_show_next': self.EventNext( event )
+            elif command == 'canvas_show_previous': self.EventPrevious( event )
+            elif command == 'manage_tags': self.EndModal( wx.ID_CANCEL )
             elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'ok': self.EventOK( event )
             else: event.Skip()
             
         
     
+    def EventNext( self, event ):
+        
+        self._CommitCurrentChanges( sync = True )
+        
+        self._ClearPanels()
+        
+        HC.pubsub.pub( 'canvas_show_next', self._canvas_key )
+        
+    
     def EventOK( self, event ):
         
-        try:
-            
-            service_keys_to_content_updates = {}
-            
-            for page in self._tag_repositories.GetNameToPageDict().values():
-                
-                ( service_key, content_updates ) = page.GetContentUpdates()
-                
-                service_keys_to_content_updates[ service_key ] = content_updates
-                
-            
-            if len( service_keys_to_content_updates ) > 0: HC.app.Write( 'content_updates', service_keys_to_content_updates )
-            
+        try: self._CommitCurrentChanges()
         finally: self.EndModal( wx.ID_OK )
+        
+    
+    def EventPrevious( self, event ):
+        
+        self._CommitCurrentChanges( sync = True )
+        
+        self._ClearPanels()
+        
+        HC.pubsub.pub( 'canvas_show_previous', self._canvas_key )
         
     
     def EventServiceChanged( self, event ):
@@ -7693,7 +7845,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 self._tags_box.ChangeTagRepository( self._tag_service_key )
                 
-                self._tags_box.SetTagsByMedia( self._media )
+                self.SetMedia( media )
                 
             
             def ArrangeControls():
@@ -7728,10 +7880,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             self._i_am_local_tag_service = self._tag_service_key == HC.LOCAL_TAG_SERVICE_KEY
             
-            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
-            
-            self._content_updates = []
-            
             if not self._i_am_local_tag_service:
                 
                 service = HC.app.GetManager( 'services' ).GetService( tag_service_key )
@@ -7739,15 +7887,6 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 try: self._account = service.GetInfo( 'account' )
                 except: self._account = HC.GetUnknownAccount()
                 
-            
-            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )
-            
-            media_results = HC.app.Read( 'media_results', self._file_service_key, hashes )
-            
-            # this should now be a nice clean copy of the original media
-            self._media = [ ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results ]
-            
-            tags_managers = [ m.GetTagsManager() for m in self._media ]
             
             InitialiseControls()
             
@@ -7838,6 +7977,22 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 for parent in parents: self._AddTag( parent, only_add = True )
                 
+            
+        
+        def SetMedia( self, media ):
+            
+            self._hashes = { hash for hash in itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) }
+            
+            self._content_updates = []
+            
+            hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media ) ) )
+            
+            media_results = HC.app.Read( 'media_results', self._file_service_key, hashes )
+            
+            # this should now be a nice clean copy of the original media
+            self._media = [ ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results ]
+            
+            self._tags_box.SetTagsByMedia( self._media )
             
         
         def EventCopyTags( self, event ):

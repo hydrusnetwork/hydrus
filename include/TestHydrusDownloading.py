@@ -260,8 +260,6 @@ class TestDownloaders( unittest.TestCase ):
         
         info[ 'rating_yaoi' ] = 1
         info[ 'rating_yuri' ] = 1
-        info[ 'rating_loli' ] = 1
-        info[ 'rating_shota' ] = 1
         info[ 'rating_teen' ] = 1
         info[ 'rating_guro' ] = 1
         info[ 'rating_furry' ] = 1

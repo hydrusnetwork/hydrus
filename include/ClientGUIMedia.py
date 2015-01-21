@@ -6,6 +6,7 @@ import ClientGUIDialogsManage
 import ClientGUICanvas
 import ClientGUIMixins
 import collections
+import HydrusTags
 import HydrusThreading
 import itertools
 import os
@@ -1083,7 +1084,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         dc = self._GetScrolledDC()
         
-        dc.SetBrush( wx.WHITE_BRUSH )
+        dc.SetBrush( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) ) )
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
@@ -2331,14 +2332,16 @@ class Thumbnail( Selectable ):
         
         if not local:
             
-            if self._selected: dc.SetBackground( wx.Brush( wx.Colour( 64, 64, 72 ) ) ) # Payne's Gray
-            else: dc.SetBackground( wx.Brush( wx.Colour( 32, 32, 36 ) ) ) # 50% Payne's Gray
+            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_background_remote_selected' ]
+            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_background_remote' ]
             
         else:
             
-            if self._selected: dc.SetBackground( wx.Brush( CC.COLOUR_SELECTED ) )
-            else: dc.SetBackground( wx.Brush( wx.WHITE ) )
+            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_background_selected' ]
+            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_background' ]
             
+        
+        dc.SetBackground( wx.Brush( wx.Colour( *rgb ) ) )
         
         dc.Clear()
         
@@ -2364,7 +2367,12 @@ class Thumbnail( Selectable ):
                 
                 collections_string = 'v' + HC.u( volume )
                 
-            else: collections_string = 'v' + HC.u( min( volumes ) ) + '-' + HC.u( max( volumes ) )
+            else:
+                
+                volumes_sorted = HydrusTags.SortTags( volumes )
+                
+                collections_string_append = 'v' + HC.u( volumes_sorted[0] ) + '-' + HC.u( volumes_sorted[-1] )
+                
             
         
         if len( chapters ) > 0:
@@ -2375,7 +2383,12 @@ class Thumbnail( Selectable ):
                 
                 collections_string_append = 'c' + HC.u( chapter )
                 
-            else: collections_string_append = 'c' + HC.u( min( chapters ) ) + '-' + HC.u( max( chapters ) )
+            else:
+                
+                chapters_sorted = HydrusTags.SortTags( chapters )
+                
+                collections_string_append = 'c' + HC.u( chapters_sorted[0] ) + '-' + HC.u( chapters_sorted[-1] )
+                
             
             if len( collections_string ) > 0: collections_string += '-' + collections_string_append
             else: collections_string = collections_string_append
@@ -2389,7 +2402,12 @@ class Thumbnail( Selectable ):
                 
                 collections_string_append = 'p' + HC.u( page )
                 
-            else: collections_string_append = 'p' + HC.u( min( pages ) ) + '-' + HC.u( max( pages ) )
+            else:
+                
+                pages_sorted = HydrusTags.SortTags( pages )
+                
+                collections_string_append = 'p' + HC.u( pages_sorted[0] ) + '-' + HC.u( pages_sorted[-1] )
+                
             
             if len( collections_string ) > 0: collections_string += '-' + collections_string_append
             else: collections_string = collections_string_append
@@ -2465,16 +2483,16 @@ class Thumbnail( Selectable ):
         
         if not local:
             
-            if self._selected: colour = wx.Colour( 227, 66, 52 ) # Vermillion, lol
-            else: colour = wx.Colour( 248, 208, 204 ) # 25% Vermillion, 75% White
+            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_border_remote_selected' ]
+            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_border_remote' ]
             
         else:
             
-            if self._selected: colour = CC.COLOUR_SELECTED_DARK
-            else: colour = CC.COLOUR_UNSELECTED
+            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_border_selected' ]
+            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_border' ]
             
         
-        dc.SetPen( wx.Pen( colour, style=wx.SOLID ) )
+        dc.SetPen( wx.Pen( wx.Colour( *rgb ), style=wx.SOLID ) )
         
         dc.DrawRectangle( 0, 0, width, height )
         

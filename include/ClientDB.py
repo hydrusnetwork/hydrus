@@ -5345,107 +5345,6 @@ class DB( ServiceDB ):
     
     def _UpdateDB( self, version ):
         
-        if version == 95:
-            
-            self._c.execute( 'COMMIT' )
-            
-            self._c.execute( 'PRAGMA foreign_keys = OFF;' )
-            
-            self._c.execute( 'BEGIN IMMEDIATE' )
-            
-            service_basic_info = self._c.execute( 'SELECT service_id, service_key, type, name FROM services;' ).fetchall()
-            service_address_info = self._c.execute( 'SELECT service_id, host, port, last_error FROM addresses;' ).fetchall()
-            service_account_info = self._c.execute( 'SELECT service_id, access_key, account FROM accounts;' ).fetchall()
-            service_repository_info = self._c.execute( 'SELECT service_id, first_begin, next_begin FROM repositories;' ).fetchall()
-            service_ratings_like_info = self._c.execute( 'SELECT service_id, like, dislike FROM ratings_like;' ).fetchall()
-            service_ratings_numerical_info = self._c.execute( 'SELECT service_id, lower, upper FROM ratings_numerical;' ).fetchall()
-            
-            service_address_info = { service_id : ( host, port, last_error ) for ( service_id, host, port, last_error ) in service_address_info }
-            service_account_info = { service_id : ( access_key, account ) for ( service_id, access_key, account ) in service_account_info }
-            service_repository_info = { service_id : ( first_begin, next_begin ) for ( service_id, first_begin, next_begin ) in service_repository_info }
-            service_ratings_like_info = { service_id : ( like, dislike ) for ( service_id, like, dislike ) in service_ratings_like_info }
-            service_ratings_numerical_info = { service_id : ( lower, upper ) for ( service_id, lower, upper ) in service_ratings_numerical_info }
-            
-            self._c.execute( 'DROP TABLE services;' )
-            self._c.execute( 'DROP TABLE addresses;' )
-            self._c.execute( 'DROP TABLE accounts;' )
-            self._c.execute( 'DROP TABLE repositories;' )
-            self._c.execute( 'DROP TABLE ratings_like;' )
-            self._c.execute( 'DROP TABLE ratings_numerical;' )
-            
-            self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
-            self._c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
-            
-            services = []
-            
-            for ( service_id, service_key, service_type, name ) in service_basic_info:
-                
-                info = {}
-                
-                if service_id in service_address_info:
-                    
-                    ( host, port, last_error ) = service_address_info[ service_id ]
-                    
-                    info[ 'host' ] = host
-                    info[ 'port' ] = port
-                    info[ 'last_error' ] = last_error
-                    
-                
-                if service_id in service_account_info:
-                    
-                    ( access_key, account ) = service_account_info[ service_id ]
-                    
-                    info[ 'access_key' ] = access_key
-                    info[ 'account' ] = account
-                    
-                
-                if service_id in service_repository_info:
-                    
-                    ( first_begin, next_begin ) = service_repository_info[ service_id ]
-                    
-                    info[ 'first_begin' ] = first_begin
-                    info[ 'next_begin' ] = next_begin
-                    
-                
-                if service_id in service_ratings_like_info:
-                    
-                    ( like, dislike ) = service_ratings_like_info[ service_id ]
-                    
-                    info[ 'like' ] = like
-                    info[ 'dislike' ] = dislike
-                    
-                
-                if service_id in service_ratings_numerical_info:
-                    
-                    ( lower, upper ) = service_ratings_numerical_info[ service_id ]
-                    
-                    info[ 'lower' ] = lower
-                    info[ 'upper' ] = upper
-                    
-                
-                self._c.execute( 'INSERT INTO services ( service_id, service_key, service_type, name, info ) VALUES ( ?, ?, ?, ?, ? );',  ( service_id, sqlite3.Binary( service_key ), service_type, name, info ) )
-                
-            
-            self._c.execute( 'COMMIT' )
-            
-            self._c.execute( 'PRAGMA foreign_keys = ON;' )
-            
-            self._c.execute( 'BEGIN IMMEDIATE' )
-            
-        
-        if version == 95:
-            
-            for ( service_id, info ) in self._c.execute( 'SELECT service_id, info FROM services;' ).fetchall():
-                
-                if 'account' in info:
-                    
-                    info[ 'account' ].MakeStale()
-                    
-                    self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
-                    
-                
-            
-        
         if version == 101:
             
             self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
@@ -7296,8 +7195,6 @@ def DAEMONSynchroniseSubscriptions():
                         
                         info[ 'rating_yaoi' ] = 1
                         info[ 'rating_yuri' ] = 1
-                        info[ 'rating_loli' ] = 1
-                        info[ 'rating_shota' ] = 1
                         info[ 'rating_teen' ] = 1
                         info[ 'rating_guro' ] = 1
                         info[ 'rating_furry' ] = 1

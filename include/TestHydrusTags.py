@@ -66,7 +66,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'double page spread' }, 'volume' : { 3 }, 'chapter' : { 1, 2 }, 'page' : { 4, 5 } }
+        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'double page spread' }, 'volume' : { '3' }, 'chapter' : { '1', '2' }, 'page' : { '4', '5' } }
         
         self.assertEqual( tags_manager.GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) ), result )
         
@@ -92,7 +92,7 @@ class TestTagsManager( unittest.TestCase ):
         service_keys_to_statuses_to_tags[ self._second_key ][ HC.PENDING ] = { 'pending' }
         service_keys_to_statuses_to_tags[ self._second_key ][ HC.PETITIONED ] = { 'petitioned' }
         
-        service_keys_to_statuses_to_tags[ self._third_key ][ HC.CURRENT ] = { 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' }
+        service_keys_to_statuses_to_tags[ self._third_key ][ HC.CURRENT ] = { 'petitioned' }
         service_keys_to_statuses_to_tags[ self._third_key ][ HC.DELETED ] = { 'pending' }
         
         self._tags_manager = HydrusTags.TagsManager( service_keys_to_statuses_to_tags )
@@ -126,7 +126,7 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_cstvcp( self ):
         
-        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'test title' }, 'volume' : { 3 }, 'chapter' : { 2 }, 'page' : { 1 } }
+        result = { 'creator' : { 'tsutomu nihei' }, 'series' : { 'blame!' }, 'title' : { 'test title' }, 'volume' : { '3' }, 'chapter' : { '2' }, 'page' : { '1' } }
         
         self.assertEqual( self._tags_manager.GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) ), result )
         
@@ -146,9 +146,9 @@ class TestTagsManager( unittest.TestCase ):
         
         self.assertEqual( self._tags_manager.GetCurrent( self._first_key ), { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' } )
         self.assertEqual( self._tags_manager.GetCurrent( self._second_key ), { 'deleted', u'\u2835' } )
-        self.assertEqual( self._tags_manager.GetCurrent( self._third_key ), { 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' } )
+        self.assertEqual( self._tags_manager.GetCurrent( self._third_key ), { 'petitioned' } )
         
-        self.assertEqual( self._tags_manager.GetCurrent(), { 'current', 'deleted', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned', 'volume:broken_volume', 'chapter:broken_chapter', 'page:broken_page' } )
+        self.assertEqual( self._tags_manager.GetCurrent(), { 'current', 'deleted', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1', 'petitioned' } )
         
     
     def test_get_deleted( self ):
@@ -182,14 +182,14 @@ class TestTagsManager( unittest.TestCase ):
         self.assertEqual( self._tags_manager.GetNumTags( self._second_key, include_current_tags = True, include_pending_tags = True ), 3 )
         
         self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = False ), 4 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = False ), 1 )
         self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = False, include_pending_tags = True ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = True ), 4 )
+        self.assertEqual( self._tags_manager.GetNumTags( self._third_key, include_current_tags = True, include_pending_tags = True ), 1 )
         
         self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = False ), 0 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 13 )
+        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = False ), 10 )
         self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = False, include_pending_tags = True ), 1 )
-        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 14 )
+        self.assertEqual( self._tags_manager.GetNumTags( HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True ), 11 )
         
     
     def test_get_pending( self ):

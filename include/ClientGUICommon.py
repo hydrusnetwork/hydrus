@@ -95,7 +95,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         wx.TextCtrl.__init__( self, parent, style=wx.TE_PROCESS_ENTER )
         
-        self.SetBackgroundColour( CC.COLOUR_LIGHT_SELECTED )
+        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] ) )
         
         #self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
         #self._dropdown_window = wx.PopupTransientWindow( self, style = wx.BORDER_RAISED )
@@ -210,6 +210,15 @@ class AutoCompleteDropdown( wx.TextCtrl ):
             
             if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
             elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
+            
+            new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
+            
+            self.ProcessEvent( new_event )
+            
+        elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self.GetValue() == '' and len( self._dropdown_list ) == 0:
+            
+            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_previous' )
+            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_next' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -3444,8 +3453,6 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         
         self._rating_yaoi = wx.CheckBox( panel )
         self._rating_yuri = wx.CheckBox( panel )
-        self._rating_loli = wx.CheckBox( panel )
-        self._rating_shota = wx.CheckBox( panel )
         self._rating_teen = wx.CheckBox( panel )
         self._rating_guro = wx.CheckBox( panel )
         self._rating_furry = wx.CheckBox( panel )
@@ -3457,8 +3464,6 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         
         self._rating_yaoi.SetValue( True )
         self._rating_yuri.SetValue( True )
-        self._rating_loli.SetValue( True )
-        self._rating_shota.SetValue( True )
         self._rating_teen.SetValue( True )
         self._rating_guro.SetValue( True )
         self._rating_furry.SetValue( True )
@@ -3507,12 +3512,6 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         gridbox.AddF( wx.StaticText( panel, label = 'yuri' ), FLAGS_MIXED )
         gridbox.AddF( self._rating_yuri, FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( panel, label = 'loli' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_loli, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'shota' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_shota, FLAGS_EXPAND_BOTH_WAYS )
-        
         gridbox.AddF( wx.StaticText( panel, label = 'teen' ), FLAGS_MIXED )
         gridbox.AddF( self._rating_teen, FLAGS_EXPAND_BOTH_WAYS )
         
@@ -3558,8 +3557,6 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         
         info[ 'rating_yaoi' ] = int( self._rating_yaoi.GetValue() )
         info[ 'rating_yuri' ] = int( self._rating_yuri.GetValue() )
-        info[ 'rating_loli' ] = int( self._rating_loli.GetValue() )
-        info[ 'rating_shota' ] = int( self._rating_shota.GetValue() )
         info[ 'rating_teen' ] = int( self._rating_teen.GetValue() )
         info[ 'rating_guro' ] = int( self._rating_guro.GetValue() )
         info[ 'rating_furry' ] = int( self._rating_furry.GetValue() )
@@ -3587,8 +3584,6 @@ class AdvancedHentaiFoundryOptions( AdvancedOptions ):
         
         self._rating_yaoi.SetValue( bool( info[ 'rating_yaoi' ] ) )
         self._rating_yuri.SetValue( bool( info[ 'rating_yuri' ] ) )
-        self._rating_loli.SetValue( bool( info[ 'rating_loli' ] ) )
-        self._rating_shota.SetValue( bool( info[ 'rating_shota' ] ) )
         self._rating_teen.SetValue( bool( info[ 'rating_teen' ] ) )
         self._rating_guro.SetValue( bool( info[ 'rating_guro' ] ) )
         self._rating_furry.SetValue( bool( info[ 'rating_furry' ] ) )
@@ -4305,7 +4300,7 @@ class TagsBoxCounts( TagsBox ):
         
         self._sort = HC.options[ 'default_tag_sort' ]
         
-        self._last_media = None
+        self._last_media = set()
         
         self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
         
@@ -4384,7 +4379,7 @@ class TagsBoxCounts( TagsBox ):
         
         self._tag_service_key = service_key
         
-        if self._last_media is not None: self.SetTagsByMedia( self._last_media, force_reload = True )
+        self.SetTagsByMedia( self._last_media, force_reload = True )
         
     
     def SetSort( self, sort ):
@@ -4430,12 +4425,8 @@ class TagsBoxCounts( TagsBox ):
             
         else:
             
-            if self._last_media is None: ( removees, adds ) = ( set(), media )
-            else:
-                
-                removees = self._last_media.difference( media )
-                adds = media.difference( self._last_media )
-                
+            removees = self._last_media.difference( media )
+            adds = media.difference( self._last_media )
             
             siblings_manager = HC.app.GetManager( 'tag_siblings' )
             

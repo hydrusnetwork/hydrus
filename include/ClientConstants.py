@@ -197,6 +197,7 @@ CLIENT_DEFAULT_OPTIONS[ 'thread_checker_timings' ] = ( 3, 1200 )
 CLIENT_DEFAULT_OPTIONS[ 'idle_period' ] = 60 * 30
 CLIENT_DEFAULT_OPTIONS[ 'maintenance_delete_orphans_period' ] = 86400 * 3
 CLIENT_DEFAULT_OPTIONS[ 'maintenance_vacuum_period' ] = 86400 * 5
+CLIENT_DEFAULT_OPTIONS[ 'fit_to_canvas' ] = False
 
 system_predicates = {}
 
@@ -225,6 +226,23 @@ default_namespace_colours[ None ] = ( 114, 160, 193 )
 default_namespace_colours[ '' ] = ( 0, 111, 250 )
 
 CLIENT_DEFAULT_OPTIONS[ 'namespace_colours' ] = default_namespace_colours
+
+default_gui_colours = {}
+
+default_gui_colours[ 'thumb_background' ] = ( 255, 255, 255 )
+default_gui_colours[ 'thumb_background_selected' ] = ( 217, 242, 255 ) # light blue
+default_gui_colours[ 'thumb_background_remote' ] = ( 32, 32, 36 ) # 50% Payne's Gray
+default_gui_colours[ 'thumb_background_remote_selected' ] = ( 64, 64, 72 ) # Payne's Gray
+default_gui_colours[ 'thumb_border' ] = ( 223, 227, 230 ) # light grey
+default_gui_colours[ 'thumb_border_selected' ] = ( 1, 17, 26 ) # dark grey
+default_gui_colours[ 'thumb_border_remote' ] = ( 248, 208, 204 ) # 25% Vermillion, 75% White
+default_gui_colours[ 'thumb_border_remote_selected' ] = ( 227, 66, 52 ) # Vermillion, lol
+default_gui_colours[ 'thumbgrid_background' ] = ( 255, 255, 255 )
+default_gui_colours[ 'autocomplete_background' ] = ( 235, 248, 255 ) # very light blue
+default_gui_colours[ 'media_background' ] = ( 255, 255, 255 )
+default_gui_colours[ 'media_text' ] = ( 0, 0, 0 )
+
+CLIENT_DEFAULT_OPTIONS[ 'gui_colours' ] = default_gui_colours
 
 default_sort_by_choices = []
 

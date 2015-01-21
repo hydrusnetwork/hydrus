@@ -7,6 +7,7 @@ import ClientGUIMixins
 import collections
 import gc
 import HydrusImageHandling
+import HydrusTags
 import HydrusVideoHandling
 import os
 import Queue
@@ -156,7 +157,7 @@ class Animation( wx.Window ):
         
         dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
         
-        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()
         
@@ -441,6 +442,8 @@ class Canvas( object ):
         
         self._file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
         
+        self._canvas_key = os.urandom( 32 )
+        
         self._closing = False
         
         self._service_keys_to_services = {}
@@ -457,7 +460,7 @@ class Canvas( object ):
         self._last_drag_coordinates = None
         self._total_drag_delta = ( 0, 0 )
         
-        self.SetBackgroundColour( wx.WHITE )
+        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
         
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
@@ -481,7 +484,7 @@ class Canvas( object ):
         
         dc = wx.BufferedDC( cdc, self._canvas_bmp )
         
-        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()
         
@@ -529,7 +532,7 @@ class Canvas( object ):
                 current_y += y
                 
             
-            dc.SetTextForeground( wx.BLACK )
+            dc.SetTextForeground( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_text' ] ) )
             
             # icons
             
@@ -697,9 +700,7 @@ class Canvas( object ):
         
         if self._current_media is not None:
             
-            try:
-                with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ) ) as dlg: dlg.ShowModal()
-            except: wx.MessageBox( 'Had a problem displaying the manage tags dialog from fullscreen.' )
+            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ) ) as dlg: dlg.ShowModal()
             
         
     
@@ -727,14 +728,14 @@ class Canvas( object ):
             
             ( media_width, media_height ) = self._current_display_media.GetResolution()
             
-            if ShouldHaveAnimationBar( self._current_display_media ):
-                
-                media_height += ANIMATED_SCANBAR_HEIGHT
-                
+            if ShouldHaveAnimationBar( self._current_display_media ): my_height -= ANIMATED_SCANBAR_HEIGHT
             
             if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: my_width -= 1
             
-            if media_width > my_width or media_height > my_height:
+            media_needs_to_be_scaled_down = media_width > my_width or media_height > my_height
+            media_needs_to_be_scaled_up = media_width < my_width and media_height < my_height and HC.options[ 'fit_to_canvas' ]
+            
+            if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up:
                 
                 width_zoom = my_width / float( media_width )
                 
@@ -854,6 +855,7 @@ class Canvas( object ):
                 
             
         
+    
 class CanvasPanel( Canvas, wx.Window ):
     
     def __init__( self, parent, page_key, file_service_key ):
@@ -1000,7 +1002,12 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 collections_string_append = 'volume ' + HC.u( volume )
                 
-            else: collections_string_append = 'volumes ' + HC.u( min( volumes ) ) + '-' + HC.u( max( volumes ) )
+            else:
+                
+                volumes_sorted = HydrusTags.SortTags( volumes )
+                
+                collections_string_append = 'volumes ' + HC.u( volumes_sorted[0] ) + '-' + HC.u( volumes_sorted[-1] )
+                
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
             else: collections_string = collections_string_append
@@ -1014,7 +1021,12 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 collections_string_append = 'chapter ' + HC.u( chapter )
                 
-            else: collections_string_append = 'chapters ' + HC.u( min( chapters ) ) + '-' + HC.u( max( chapters ) )
+            else:
+                
+                chapters_sorted = HydrusTags.SortTags( chapters )
+                
+                collections_string_append = 'chapters ' + HC.u( chapters_sorted[0] ) + '-' + HC.u( chapters_sorted[-1] )
+                
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
             else: collections_string = collections_string_append
@@ -1028,7 +1040,12 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 collections_string_append = 'page ' + HC.u( page )
                 
-            else: collections_string_append = 'pages ' + HC.u( min( pages ) ) + '-' + HC.u( max( pages ) )
+            else:
+                
+                pages_sorted = HydrusTags.SortTags( pages )
+                
+                collections_string_append = 'pages ' + HC.u( pages_sorted[0] ) + '-' + HC.u( pages_sorted[-1] )
+                
             
             if len( collections_string ) > 0: collections_string += ' - ' + collections_string_append
             else: collections_string = collections_string_append
@@ -1400,11 +1417,281 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
         else: self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
         
     
-class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
+class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
+    
+    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+        
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
+        
+        self._kept = set()
+        self._deleted = set()
+        
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseKeep )
+        self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseKeep )
+        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventBack )
+        self.Bind( wx.EVT_MIDDLE_DCLICK, self.EventBack )
+        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventDelete )
+        self.Bind( wx.EVT_RIGHT_DCLICK, self.EventDelete )
+        
+        self.Bind( wx.EVT_MENU, self.EventMenu )
+        
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        
+        self.SetMedia( self._GetFirst() )
+        
+    
+    def _Delete( self ):
+        
+        self._deleted.add( self._current_media )
+        
+        if self._current_media == self._GetLast(): self.EventClose( None )
+        else: self._ShowNext()
+        
+    
+    def _Keep( self ):
+        
+        self._kept.add( self._current_media )
+        
+        if self._current_media == self._GetLast(): self.EventClose( None )
+        else: self._ShowNext()
+        
+    
+    def EventBack( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            if self._current_media == self._GetFirst(): return
+            else:
+                
+                self._ShowPrevious()
+                
+                self._kept.discard( self._current_media )
+                self._deleted.discard( self._current_media )
+                
+            
+        
+    
+    def EventButtonBack( self, event ): self.EventBack( event )
+    def EventButtonDelete( self, event ): self._Delete()
+    def EventButtonDone( self, event ): self.EventClose( event )
+    def EventButtonKeep( self, event ): self._Keep()
+    def EventButtonSkip( self, event ):
+        
+        if self._current_media == self._GetLast(): self.EventClose( event )
+        else: self._ShowNext()
+        
+    
+    def EventClose( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            if len( self._kept ) > 0 or len( self._deleted ) > 0:
+                
+                with ClientGUIDialogs.DialogFinishFiltering( self, len( self._kept ), len( self._deleted ) ) as dlg:
+                    
+                    modal = dlg.ShowModal()
+                    
+                    if modal == wx.ID_CANCEL:
+                        
+                        if self._current_media in self._kept: self._kept.remove( self._current_media )
+                        if self._current_media in self._deleted: self._deleted.remove( self._current_media )
+                        
+                    else:
+                        
+                        if modal == wx.ID_YES:
+                            
+                            self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
+                            self._kept_hashes = [ media.GetHash() for media in self._kept ]
+                            
+                            content_updates = []
+                            
+                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
+                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
+                            
+                            HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : content_updates } )
+                            
+                            self._kept = set()
+                            self._deleted = set()
+                            
+                            self._current_media = self._GetFirst() # so the pubsub on close is better
+                            
+                        
+                        CanvasFullscreenMediaList.EventClose( self, event )
+                        
+                    
+                
+            else: CanvasFullscreenMediaList.EventClose( self, event )
+            
+        
+    
+    def EventCharHook( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+        
+            ( modifier, key ) = HC.GetShortcutFromEvent( event )
+            
+            if modifier == wx.ACCEL_NORMAL and key == wx.WXK_SPACE: self._Keep()
+            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
+            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
+            elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
+            elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self.EventBack( event )
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
+            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
+                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+            elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
+            else:
+                
+                key_dict = HC.options[ 'shortcuts' ][ modifier ]
+                
+                if key in key_dict:
+                    
+                    action = key_dict[ key ]
+                    
+                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                    
+                else: event.Skip()
+                
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else: self._Delete()
+        
+    
+    def EventMouseKeep( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            if event.ShiftDown(): self.EventDragBegin( event )
+            else: self._Keep()
+            
+        
+    
+    def EventMenu( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+            
+            if action is not None:
+                
+                ( command, data ) = action
+                
+                if command == 'archive': self._Keep()
+                elif command == 'back': self.EventBack( event )
+                elif command == 'close': self.EventClose( event )
+                elif command == 'delete': self.EventDelete( event )
+                elif command == 'fullscreen_switch': self._FullscreenSwitch()
+                elif command == 'filter': self.EventClose( event )
+                elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
+                elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
+                elif command == 'manage_ratings': self._ManageRatings()
+                elif command == 'manage_tags': self._ManageTags()
+                elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
+                    
+                    distance = 20
+                    
+                    if command == 'pan_up': self._DoManualPan( 0, -distance )
+                    elif command == 'pan_down': self._DoManualPan( 0, distance )
+                    elif command == 'pan_left': self._DoManualPan( -distance, 0 )
+                    elif command == 'pan_right': self._DoManualPan( distance, 0 )
+                    
+                elif command == 'zoom_in': self._ZoomIn()
+                elif command == 'zoom_out': self._ZoomOut()
+                else: event.Skip()
+                
+            
+        
+    
+    def EventMouseWheel( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            if event.CmdDown():
+                
+                if event.GetWheelRotation() > 0: self._ZoomIn()
+                else: self._ZoomOut()
+                
+            
+        
+    
+    def EventSkip( self, event ):
+        
+        if self._ShouldSkipInputDueToFlash(): event.Skip()
+        else:
+            
+            if self._current_media == self._GetLast(): self.EventClose( event )
+            else: self._ShowNext()
+            
+        
+    
+class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
+    
+    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+        
+        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_key, media_results )
+        
+        FullscreenPopoutFilterInbox( self )
+        
+    
+class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
+    
+    def __init__( self, my_parent, page_key, file_service_key, media_results ):
+        
+        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
+        
+        HC.pubsub.sub( self, 'ShowNext', 'canvas_show_next' )
+        HC.pubsub.sub( self, 'ShowPrevious', 'canvas_show_previous' )
+        
+    
+    def _BroadcastCurrentDisplayMedia( self ):
+        
+        HC.pubsub.pub( 'canvas_broadcast_current_display_media', self._canvas_key, self._current_display_media )
+        
+    
+    def _ManageTags( self ):
+        
+        if self._current_media is not None:
+            
+            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
+            
+        
+    
+    def ShowNext( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._ShowNext()
+            
+            self._BroadcastCurrentDisplayMedia()
+            
+        
+    
+    def ShowPrevious( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._ShowPrevious()
+            
+            self._BroadcastCurrentDisplayMedia()
+            
+        
+    
+class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
     def __init__( self, my_parent, page_key, file_service_key, media_results, first_hash ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, file_service_key, media_results )
         
         self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
         
@@ -1681,11 +1968,11 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaList ):
     
     def TIMEREventSlideshow( self, event ): self._ShowNext()
     
-class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
+class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable ):
     
     def __init__( self, my_parent, page_key, file_service_key, media_results, actions ):
         
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
+        CanvasFullscreenMediaListNavigable.__init__( self, my_parent, page_key, file_service_key, media_results )
         
         self._actions = actions
         
@@ -2044,233 +2331,6 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaList ):
         wx.CallAfter( menu.Destroy )
         
         event.Skip()
-        
-    
-class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
-    
-    def __init__( self, my_parent, page_key, file_service_key, media_results ):
-        
-        CanvasFullscreenMediaList.__init__( self, my_parent, page_key, file_service_key, media_results )
-        
-        self._kept = set()
-        self._deleted = set()
-        
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseKeep )
-        self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseKeep )
-        self.Bind( wx.EVT_MIDDLE_DOWN, self.EventBack )
-        self.Bind( wx.EVT_MIDDLE_DCLICK, self.EventBack )
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventDelete )
-        self.Bind( wx.EVT_RIGHT_DCLICK, self.EventDelete )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        
-        self.SetMedia( self._GetFirst() )
-        
-    
-    def _Delete( self ):
-        
-        self._deleted.add( self._current_media )
-        
-        if self._current_media == self._GetLast(): self.EventClose( None )
-        else: self._ShowNext()
-        
-    
-    def _Keep( self ):
-        
-        self._kept.add( self._current_media )
-        
-        if self._current_media == self._GetLast(): self.EventClose( None )
-        else: self._ShowNext()
-        
-    
-    def EventBack( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            if self._current_media == self._GetFirst(): return
-            else:
-                
-                self._ShowPrevious()
-                
-                self._kept.discard( self._current_media )
-                self._deleted.discard( self._current_media )
-                
-            
-        
-    
-    def EventButtonBack( self, event ): self.EventBack( event )
-    def EventButtonDelete( self, event ): self._Delete()
-    def EventButtonDone( self, event ): self.EventClose( event )
-    def EventButtonKeep( self, event ): self._Keep()
-    def EventButtonSkip( self, event ):
-        
-        if self._current_media == self._GetLast(): self.EventClose( event )
-        else: self._ShowNext()
-        
-    
-    def EventClose( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            if len( self._kept ) > 0 or len( self._deleted ) > 0:
-                
-                with ClientGUIDialogs.DialogFinishFiltering( self, len( self._kept ), len( self._deleted ) ) as dlg:
-                    
-                    modal = dlg.ShowModal()
-                    
-                    if modal == wx.ID_CANCEL:
-                        
-                        if self._current_media in self._kept: self._kept.remove( self._current_media )
-                        if self._current_media in self._deleted: self._deleted.remove( self._current_media )
-                        
-                    else:
-                        
-                        if modal == wx.ID_YES:
-                            
-                            self._deleted_hashes = [ media.GetHash() for media in self._deleted ]
-                            self._kept_hashes = [ media.GetHash() for media in self._kept ]
-                            
-                            content_updates = []
-                            
-                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, self._deleted_hashes ) )
-                            content_updates.append( HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, self._kept_hashes ) )
-                            
-                            HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : content_updates } )
-                            
-                            self._kept = set()
-                            self._deleted = set()
-                            
-                            self._current_media = self._GetFirst() # so the pubsub on close is better
-                            
-                        
-                        CanvasFullscreenMediaList.EventClose( self, event )
-                        
-                    
-                
-            else: CanvasFullscreenMediaList.EventClose( self, event )
-            
-        
-    
-    def EventCharHook( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-        
-            ( modifier, key ) = HC.GetShortcutFromEvent( event )
-            
-            if modifier == wx.ACCEL_NORMAL and key == wx.WXK_SPACE: self._Keep()
-            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
-            elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
-            elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
-            elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self.EventBack( event )
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
-            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
-            elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
-            else:
-                
-                key_dict = HC.options[ 'shortcuts' ][ modifier ]
-                
-                if key in key_dict:
-                    
-                    action = key_dict[ key ]
-                    
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
-                    
-                else: event.Skip()
-                
-            
-        
-    
-    def EventDelete( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else: self._Delete()
-        
-    
-    def EventMouseKeep( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            if event.ShiftDown(): self.EventDragBegin( event )
-            else: self._Keep()
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-            
-            if action is not None:
-                
-                ( command, data ) = action
-                
-                if command == 'archive': self._Keep()
-                elif command == 'back': self.EventBack( event )
-                elif command == 'close': self.EventClose( event )
-                elif command == 'delete': self.EventDelete( event )
-                elif command == 'fullscreen_switch': self._FullscreenSwitch()
-                elif command == 'filter': self.EventClose( event )
-                elif command == 'frame_back': self._media_container.GotoPreviousOrNextFrame( -1 )
-                elif command == 'frame_next': self._media_container.GotoPreviousOrNextFrame( 1 )
-                elif command == 'manage_ratings': self._ManageRatings()
-                elif command == 'manage_tags': self._ManageTags()
-                elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
-                    
-                    distance = 20
-                    
-                    if command == 'pan_up': self._DoManualPan( 0, -distance )
-                    elif command == 'pan_down': self._DoManualPan( 0, distance )
-                    elif command == 'pan_left': self._DoManualPan( -distance, 0 )
-                    elif command == 'pan_right': self._DoManualPan( distance, 0 )
-                    
-                elif command == 'zoom_in': self._ZoomIn()
-                elif command == 'zoom_out': self._ZoomOut()
-                else: event.Skip()
-                
-            
-        
-    
-    def EventMouseWheel( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            if event.CmdDown():
-                
-                if event.GetWheelRotation() > 0: self._ZoomIn()
-                else: self._ZoomOut()
-                
-            
-        
-    
-    def EventSkip( self, event ):
-        
-        if self._ShouldSkipInputDueToFlash(): event.Skip()
-        else:
-            
-            if self._current_media == self._GetLast(): self.EventClose( event )
-            else: self._ShowNext()
-            
-        
-    
-class CanvasFullscreenMediaListFilterInbox( CanvasFullscreenMediaListFilter ):
-    
-    def __init__( self, my_parent, page_key, file_service_key, media_results ):
-        
-        CanvasFullscreenMediaListFilter.__init__( self, my_parent, page_key, file_service_key, media_results )
-        
-        FullscreenPopoutFilterInbox( self )
         
     
 class FullscreenPopout( wx.Frame ):
@@ -3884,7 +3944,7 @@ class EmbedButton( wx.Window ):
         
         dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
         
-        dc.SetBackground( wx.WHITE_BRUSH )
+        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear() # gcdc doesn't support clear
         
@@ -3900,7 +3960,7 @@ class EmbedButton( wx.Window ):
         
         dc.DrawCircle( center_x, center_y, radius )
         
-        dc.SetBrush( wx.WHITE_BRUSH )
+        dc.SetBrush( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         m = ( 2 ** 0.5 ) / 2 # 45 degree angle
         
@@ -4077,7 +4137,7 @@ class StaticImage( wx.Window ):
         
         dc = wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
     
-        dc.SetBackground( wx.Brush( wx.WHITE ) )
+        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
         
         dc.Clear()
         
