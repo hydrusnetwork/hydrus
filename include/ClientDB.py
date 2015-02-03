@@ -5872,6 +5872,15 @@ class DB( ServiceDB ):
             self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
             
         
+        if version == 145:
+            
+            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+            
+            HC.options[ 'gui_colours' ][ 'tags_box' ] = ( 255, 255, 255 )
+            
+            self._c.execute( 'UPDATE options SET options = ?;', ( HC.options, ) )
+            
+        
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         
         HC.is_db_updated = True
@@ -7383,7 +7392,14 @@ def DAEMONSynchroniseSubscriptions():
                                 try: os.remove( temp_path )
                                 except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                                 
-                                if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
+                                if status in ( 'successful', 'redundant' ):
+                                    
+                                    successful_hashes.add( hash )
+                                    
+                                    job_key_s_h = set( successful_hashes )
+                                    
+                                    job_key.SetVariable( 'popup_message_files', job_key_s_h )
+                                    
                                 
                             
                         except Exception as e:

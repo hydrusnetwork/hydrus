@@ -232,8 +232,6 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                 
                 if not update.IsEmpty():
                     
-                    i += 1
-                    
                     job_key.SetVariable( 'popup_message_text_1', prefix + 'uploading petitions' )
                     
                     service.Request( HC.POST, 'update', { 'update' : update } )

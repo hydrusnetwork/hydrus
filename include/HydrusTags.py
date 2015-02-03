@@ -153,6 +153,34 @@ def CombineTagSiblingPairs( service_keys_to_statuses_to_pairs ):
     
     return processed_siblings
     
+def ConvertTagToSortable( t ):
+
+    if t[0].isdigit():
+        
+        # We want to maintain that:
+        # 0 < 0a < 0b < 1 ( lexicographic comparison )
+        # -and-
+        # 2 < 22 ( value comparison )
+        # So, if the first bit can be turned into an int, split it into ( int, extra )
+        
+        int_component = ''
+        
+        i = 0
+        
+        for character in t:
+            
+            if character.isdigit(): int_component += character
+            else: break
+            
+            i += 1
+            
+        
+        str_component = t[i:]
+        
+        return ( int( int_component ), str_component )
+        
+    else: return t
+
 def FilterNamespaces( tags, namespaces ):
     
     processed_tags = collections.defaultdict( set )
@@ -242,39 +270,10 @@ def MergeTagsManagers( tags_managers ):
     return TagsManagerSimple( merged_service_keys_to_statuses_to_tags )
     
 def SortTags( tags ):
-
-    def tagkey( t ):
-        
-        if t[0].isdigit():
-            
-            # We want to maintain that:
-            # 0 < 0a < 0b < 1 ( lexicographic comparison )
-            # -and-
-            # 2 < 22 ( value comparison )
-            # So, if the first bit can be turned into an int, split it into ( int, extra )
-            
-            int_component = ''
-            
-            i = 0
-            
-            for character in t:
-                
-                if character.isdigit(): int_component += character
-                else: break
-                
-                i += 1
-                
-            
-            str_component = t[i:]
-            
-            return ( int( int_component ), str_component )
-            
-        else: return t
-        
     
     tags = list( tags )
     
-    tags.sort( key = tagkey )
+    tags.sort( key = ConvertTagToSortable )
     
     return tags
     
@@ -325,16 +324,13 @@ class TagsManagerSimple( object ):
             
             tags = [ tag for tag in combined if tag.startswith( namespace + ':' ) ]
             
-            if collapse:
-            
-                tags = list( siblings_manager.CollapseTags( tags ) )
-                
+            if collapse: tags = list( siblings_manager.CollapseTags( tags ) )
             
             tags = [ tag.split( ':', 1 )[1] for tag in tags ]
             
             tags = SortTags( tags )
             
-            tags = tuple( tags )
+            tags = tuple( ( ConvertTagToSortable( tag ) for tag in tags ) )
             
             slice.append( tags )
             

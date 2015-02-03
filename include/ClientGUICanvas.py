@@ -59,15 +59,40 @@ FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT
 
 FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-def ShouldHaveAnimationBar( media ):
+def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
-    is_animated_gif = media.GetMime() == HC.IMAGE_GIF and media.HasDuration()
+    ( media_width, media_height ) = media.GetResolution()
     
-    is_animated_flash = media.GetMime() == HC.APPLICATION_FLASH and media.HasDuration()
+    if ShouldHaveAnimationBar( media ): canvas_height -= ANIMATED_SCANBAR_HEIGHT
     
-    is_webm = media.GetMime() == HC.VIDEO_WEBM
+    if media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: canvas_width -= 2
     
-    return is_animated_gif or is_animated_flash or is_webm
+    width_zoom = canvas_width / float( media_width )
+    
+    height_zoom = canvas_height / float( media_height )
+    
+    canvas_zoom = min( ( width_zoom, height_zoom ) )
+    
+    return canvas_zoom
+    
+def CalculateMediaContainerSize( media, zoom ):
+    
+    ( media_width, media_height ) = CalculateMediaSize( media, zoom )
+    
+    if ShouldHaveAnimationBar( media ): media_height += ANIMATED_SCANBAR_HEIGHT
+    
+    return ( media_width, media_height )
+    
+def CalculateMediaSize( media, zoom ):
+    
+    if media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( 200, 45 )
+    elif media.GetMime() in HC.AUDIO: ( original_width, original_height ) = ( 360, 240 )
+    else: ( original_width, original_height ) = media.GetResolution()
+    
+    media_width = int( round( zoom * original_width ) )
+    media_height = int( round( zoom * original_height ) )
+    
+    return ( media_width, media_height )
     
 def GetExtraDimensions( media ):
     
@@ -78,6 +103,16 @@ def GetExtraDimensions( media ):
     
     return ( extra_width, extra_height )
 
+def ShouldHaveAnimationBar( media ):
+    
+    is_animated_gif = media.GetMime() == HC.IMAGE_GIF and media.HasDuration()
+    
+    is_animated_flash = media.GetMime() == HC.APPLICATION_FLASH and media.HasDuration()
+    
+    is_webm = media.GetMime() == HC.VIDEO_WEBM
+    
+    return is_animated_gif or is_animated_flash or is_webm
+    
 class Animation( wx.Window ):
     
     def __init__( self, parent, media, initial_size, initial_position ):
@@ -456,6 +491,7 @@ class Canvas( object ):
         self._current_display_media = None
         self._media_container = None
         self._current_zoom = 1.0
+        self._canvas_zoom = 1.0
         
         self._last_drag_coordinates = None
         self._total_drag_delta = ( 0, 0 )
@@ -478,8 +514,6 @@ class Canvas( object ):
     
     def _DrawBackgroundBitmap( self ):
         
-        ( client_width, client_height ) = self.GetClientSize()
-        
         cdc = wx.ClientDC( self )
         
         dc = wx.BufferedDC( cdc, self._canvas_bmp )
@@ -488,7 +522,326 @@ class Canvas( object ):
         
         dc.Clear()
         
+        self._DrawBackgroundDetails( dc )
+        
+    
+    def _DrawBackgroundDetails( self, dc ): pass
+    
+    def _DrawCurrentMedia( self ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        if my_width > 0 and my_height > 0:
+            
+            if self._current_media is not None: self._SizeAndPositionMediaContainer()
+            
+        
+    
+    def _GetCollectionsString( self ): return ''
+    
+    def _GetInfoString( self ):
+        
+        info_string = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
+        
+        return info_string
+        
+    
+    def _GetIndexString( self ): return ''
+    
+    def _GetMediaContainerSizeAndPosition( self ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        ( media_width, media_height ) = CalculateMediaContainerSize( self._current_display_media, self._current_zoom )
+        
+        ( drag_x, drag_y ) = self._total_drag_delta
+        
+        x_offset = ( my_width - media_width ) / 2 + drag_x
+        y_offset = ( my_height - media_height ) / 2 + drag_y
+        
+        new_size = ( media_width, media_height )
+        new_position = ( x_offset, y_offset )
+        
+        return ( new_size, new_position )
+        
+    
+    def _ManageRatings( self ):
+        
         if self._current_media is not None:
+            
+            try:
+                with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+            except: wx.MessageBox( 'Had a problem displaying the manage ratings dialog from fullscreen.' )
+            
+        
+    
+    def _ManageTags( self ):
+        
+        if self._current_media is not None:
+            
+            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+            
+        
+    
+    def _OpenExternally( self ):
+        
+        if self._current_display_media is not None:
+            
+            hash = self._current_display_media.GetHash()
+            mime = self._current_display_media.GetMime()
+            
+            path = CC.GetFilePath( hash, mime )
+            
+            HC.LaunchFile( path )
+            
+        
+    
+    def _PrefetchImages( self ): pass
+    
+    def _RecalcZoom( self ):
+        
+        if self._current_display_media is None: self._current_zoom = 1.0
+        else:
+            
+            ( my_width, my_height ) = self.GetClientSize()
+            
+            ( media_width, media_height ) = self._current_display_media.GetResolution()
+            
+            self._canvas_zoom = CalculateCanvasZoom( self._current_display_media, ( my_width, my_height ) )
+            
+            media_needs_to_be_scaled_down = media_width > my_width or media_height > my_height
+            media_needs_to_be_scaled_up = media_width < my_width and media_height < my_height and HC.options[ 'fit_to_canvas' ]
+            
+            if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up: self._current_zoom = self._canvas_zoom
+            else: self._current_zoom = 1.0
+            
+        
+    
+    def _ShouldSkipInputDueToFlash( self ):
+        
+        if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
+            
+            ( x, y ) = self._media_container.GetPosition()
+            ( width, height ) = self._media_container.GetSize()
+            
+            ( mouse_x, mouse_y ) = self.ScreenToClient( wx.GetMousePosition() )
+            
+            if mouse_x > x and mouse_x < x + width and mouse_y > y and mouse_y < y + height: return True
+            
+        
+        return False
+        
+    
+    def _SizeAndPositionMediaContainer( self ):
+        
+        ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
+        
+        if new_size != self._media_container.GetSize(): self._media_container.SetSize( new_size )
+        if new_position != self._media_container.GetPosition(): self._media_container.SetPosition( new_position )
+        
+    
+    def _ZoomIn( self ):
+        
+        if self._current_display_media is not None:
+            
+            if self._current_display_media.GetMime() in NON_ZOOMABLE_MIMES: return
+            
+            my_zoomins = list( ZOOMINS )
+            my_zoomins.append( self._canvas_zoom )
+            
+            my_zoomins.sort()
+            
+            for zoom in my_zoomins:
+                
+                if self._current_zoom < zoom:
+                    
+                    if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
+                        
+                        # because of the event passing under mouse, we want to preserve whitespace around flash
+                        
+                        ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_display_media, zoom )
+                        
+                        if new_media_width >= my_width or new_media_height >= my_height: return
+                        
+                    
+                    with wx.FrozenWindow( self ):
+                        
+                        ( drag_x, drag_y ) = self._total_drag_delta
+                        
+                        zoom_ratio = zoom / self._current_zoom
+                        
+                        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+                        
+                        self._current_zoom = zoom
+                        
+                        self._DrawBackgroundBitmap()
+                        
+                        self._DrawCurrentMedia()
+                        
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _ZoomOut( self ):
+        
+        if self._current_display_media is not None:
+            
+            if self._current_display_media.GetMime() in NON_ZOOMABLE_MIMES: return
+            
+            my_zoomouts = list( ZOOMOUTS )
+            my_zoomouts.append( self._canvas_zoom )
+            
+            my_zoomouts.sort( reverse = True )
+            
+            for zoom in my_zoomouts:
+                
+                if self._current_zoom > zoom:
+                    
+                    with wx.FrozenWindow( self ):
+                        
+                        ( drag_x, drag_y ) = self._total_drag_delta
+                        
+                        zoom_ratio = zoom / self._current_zoom
+                        
+                        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+                        
+                        self._current_zoom = zoom
+                        
+                        self._DrawBackgroundBitmap()
+                        
+                        self._DrawCurrentMedia()
+                        
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _ZoomSwitch( self ):
+        
+        ( my_width, my_height ) = self.GetClientSize()
+        
+        ( media_width, media_height ) = self._current_display_media.GetResolution()
+        
+        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES:
+            
+            if self._current_zoom == 1.0: new_zoom = self._canvas_zoom
+            else: new_zoom = 1.0
+            
+            if new_zoom != self._current_zoom:
+                
+                ( drag_x, drag_y ) = self._total_drag_delta
+                
+                zoom_ratio = new_zoom / self._current_zoom
+                
+                self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
+                
+                self._current_zoom = new_zoom
+                
+                self._DrawBackgroundBitmap()
+                
+                self._DrawCurrentMedia()
+                
+            
+        
+    
+    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
+    
+    def EventResize( self, event ):
+        
+        if not self._closing:
+            
+            ( my_width, my_height ) = self.GetClientSize()
+            
+            wx.CallAfter( self._canvas_bmp.Destroy )
+            
+            self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+            
+            if self._media_container is not None:
+                
+                ( media_width, media_height ) = self._media_container.GetClientSize()
+                
+                if my_width != media_width or my_height != media_height:
+                    
+                    with wx.FrozenWindow( self ):
+                        
+                        self._RecalcZoom()
+                        
+                        self._DrawBackgroundBitmap()
+                        
+                        self._DrawCurrentMedia()
+                        
+                    
+                
+            else: self._DrawBackgroundBitmap()
+            
+        
+        event.Skip()
+        
+    
+    def KeepCursorAlive( self ): pass
+    
+    def SetMedia( self, media ):
+        
+        initial_image = self._current_media == None
+        
+        if media != self._current_media:
+            
+            HC.app.ResetIdleTimer()
+            
+            with wx.FrozenWindow( self ):
+                
+                self._current_media = media
+                self._current_display_media = None
+                self._total_drag_delta = ( 0, 0 )
+                self._last_drag_coordinates = None
+                
+                if self._media_container is not None:
+                    
+                    self._media_container.Hide()
+                    
+                    wx.CallAfter( self._media_container.Destroy )
+                    
+                    self._media_container = None
+                    
+                
+                if self._current_media is not None:
+                    
+                    self._current_display_media = self._current_media.GetDisplayMedia()
+                    
+                    if self._current_display_media.GetLocationsManager().HasLocal():
+                        
+                        self._RecalcZoom()
+                        
+                        ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
+                        
+                        self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
+                        
+                        if self._claim_focus: self._media_container.SetFocus()
+                        
+                        if not initial_image: self._PrefetchImages()
+                        
+                    else: self._current_media = None
+                    
+                
+                self._DrawBackgroundBitmap()
+                
+                self._DrawCurrentMedia()
+                
+            
+        
+    
+class CanvasWithDetails( Canvas ):
+    
+    def _DrawBackgroundDetails( self, dc ):
+        
+        if self._current_media is not None:
+            
+            ( client_width, client_height ) = self.GetClientSize()
             
             # tags on the top left
             
@@ -638,224 +991,6 @@ class Canvas( object ):
             
         
     
-    def _DrawCurrentMedia( self ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if my_width > 0 and my_height > 0:
-            
-            if self._current_media is not None: self._SizeAndPositionMediaContainer()
-            
-        
-    
-    def _GetCollectionsString( self ): return ''
-    
-    def _GetInfoString( self ):
-        
-        info_string = self._current_media.GetPrettyInfo() + ' | ' + self._current_media.GetPrettyAge()
-        
-        return info_string
-        
-    
-    def _GetIndexString( self ): return ''
-    
-    def _GetMediaContainerSizeAndPosition( self ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        if self._current_display_media.GetMime() == HC.APPLICATION_PDF: ( original_width, original_height ) = ( min( my_width, 200 ), min( my_height, 45 ) )
-        elif self._current_display_media.GetMime() in HC.AUDIO: ( original_width, original_height ) = ( min( my_width, 360 ) , min( my_height, 240 ) )
-        else: ( original_width, original_height ) = self._current_display_media.GetResolution()
-        
-        media_width = int( round( original_width * self._current_zoom ) )
-        media_height = int( round( original_height * self._current_zoom ) )
-        
-        ( extra_width, extra_height ) = GetExtraDimensions( self._current_display_media )
-        
-        media_width += extra_width
-        media_height += extra_height
-        
-        ( drag_x, drag_y ) = self._total_drag_delta
-        
-        x_offset = ( my_width - media_width ) / 2 + drag_x
-        y_offset = ( my_height - media_height ) / 2 + drag_y
-        
-        new_size = ( media_width, media_height )
-        new_position = ( x_offset, y_offset )
-        
-        return ( new_size, new_position )
-        
-    
-    def _ManageRatings( self ):
-        
-        if self._current_media is not None:
-            
-            try:
-                with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
-            except: wx.MessageBox( 'Had a problem displaying the manage ratings dialog from fullscreen.' )
-            
-        
-    
-    def _ManageTags( self ):
-        
-        if self._current_media is not None:
-            
-            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ) ) as dlg: dlg.ShowModal()
-            
-        
-    
-    def _OpenExternally( self ):
-        
-        if self._current_display_media is not None:
-            
-            hash = self._current_display_media.GetHash()
-            mime = self._current_display_media.GetMime()
-            
-            path = CC.GetFilePath( hash, mime )
-            
-            HC.LaunchFile( path )
-            
-        
-    
-    def _PrefetchImages( self ): pass
-    
-    def _RecalcZoom( self ):
-        
-        if self._current_display_media is None: self._current_zoom = 1.0
-        else:
-            
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            ( media_width, media_height ) = self._current_display_media.GetResolution()
-            
-            if ShouldHaveAnimationBar( self._current_display_media ): my_height -= ANIMATED_SCANBAR_HEIGHT
-            
-            if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: my_width -= 1
-            
-            media_needs_to_be_scaled_down = media_width > my_width or media_height > my_height
-            media_needs_to_be_scaled_up = media_width < my_width and media_height < my_height and HC.options[ 'fit_to_canvas' ]
-            
-            if media_needs_to_be_scaled_down or media_needs_to_be_scaled_up:
-                
-                width_zoom = my_width / float( media_width )
-                
-                height_zoom = my_height / float( media_height )
-                
-                self._current_zoom = min( ( width_zoom, height_zoom ) )
-                
-            else: self._current_zoom = 1.0
-            
-        
-    
-    def _ShouldSkipInputDueToFlash( self ):
-        
-        if self._current_display_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
-            
-            ( x, y ) = self._media_container.GetPosition()
-            ( width, height ) = self._media_container.GetSize()
-            
-            ( mouse_x, mouse_y ) = self.ScreenToClient( wx.GetMousePosition() )
-            
-            if mouse_x > x and mouse_x < x + width and mouse_y > y and mouse_y < y + height: return True
-            
-        
-        return False
-        
-    
-    def _SizeAndPositionMediaContainer( self ):
-        
-        ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
-        
-        if new_size != self._media_container.GetSize(): self._media_container.SetSize( new_size )
-        if new_position != self._media_container.GetPosition(): self._media_container.SetPosition( new_position )
-        
-    
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
-    
-    def EventResize( self, event ):
-        
-        if not self._closing:
-            
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            wx.CallAfter( self._canvas_bmp.Destroy )
-            
-            self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
-            
-            if self._media_container is not None:
-                
-                ( media_width, media_height ) = self._media_container.GetClientSize()
-                
-                if my_width != media_width or my_height != media_height:
-                    
-                    with wx.FrozenWindow( self ):
-                        
-                        self._RecalcZoom()
-                        
-                        self._DrawBackgroundBitmap()
-                        
-                        self._DrawCurrentMedia()
-                        
-                    
-                
-            else: self._DrawBackgroundBitmap()
-            
-        
-        event.Skip()
-        
-    
-    def KeepCursorAlive( self ): pass
-    
-    def SetMedia( self, media ):
-        
-        initial_image = self._current_media == None
-        
-        if media != self._current_media:
-            
-            HC.app.ResetIdleTimer()
-            
-            with wx.FrozenWindow( self ):
-                
-                self._current_media = media
-                self._current_display_media = None
-                self._total_drag_delta = ( 0, 0 )
-                self._last_drag_coordinates = None
-                
-                if self._media_container is not None:
-                    
-                    self._media_container.Hide()
-                    
-                    wx.CallAfter( self._media_container.Destroy )
-                    
-                    self._media_container = None
-                    
-                
-                if self._current_media is not None:
-                    
-                    self._current_display_media = self._current_media.GetDisplayMedia()
-                    
-                    if self._current_display_media.GetLocationsManager().HasLocal():
-                        
-                        self._RecalcZoom()
-                        
-                        ( initial_size, initial_position ) = self._GetMediaContainerSizeAndPosition()
-                        
-                        self._media_container = MediaContainer( self, self._image_cache, self._current_display_media, initial_size, initial_position )
-                        
-                        if self._claim_focus: self._media_container.SetFocus()
-                        
-                        if not initial_image: self._PrefetchImages()
-                        
-                    else: self._current_media = None
-                    
-                
-                self._DrawBackgroundBitmap()
-                
-                self._DrawCurrentMedia()
-                
-            
-        
-    
 class CanvasPanel( Canvas, wx.Window ):
     
     def __init__( self, parent, page_key, file_service_key ):
@@ -903,12 +1038,12 @@ class CanvasPanel( Canvas, wx.Window ):
             
         
     
-class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, ClientGUICommon.FrameThatResizes ):
+class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, CanvasWithDetails, ClientGUICommon.FrameThatResizes ):
     
     def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
-        Canvas.__init__( self, file_service_key, HC.app.GetFullscreenImageCache() )
+        CanvasWithDetails.__init__( self, file_service_key, HC.app.GetFullscreenImageCache() )
         ClientGUIMixins.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._page_key = page_key
@@ -1102,14 +1237,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
                 
                 ( media_width, media_height ) = media.GetResolution()
                 
-                if media_width > my_width or media_height > my_height:
-                    
-                    width_zoom = my_width / float( media_width )
-                    
-                    height_zoom = my_height / float( media_height )
-                    
-                    zoom = min( ( width_zoom, height_zoom ) )
-                    
+                if media_width > my_width or media_height > my_height: zoom = CalculateCanvasZoom( media, ( my_width, my_height ) )
                 else: zoom = 1.0
                 
                 resolution_to_request = ( int( round( zoom * media_width ) ), int( round( zoom * media_height ) ) )
@@ -1152,129 +1280,6 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, Canvas, Cli
     def _ShowPrevious( self ): self.SetMedia( self._GetPrevious( self._current_media ) )
     
     def _StartSlideshow( self, interval ): pass
-    
-    def _ZoomIn( self ):
-        
-        if self._current_media is not None:
-            
-            if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
-            
-            for zoom in ZOOMINS:
-                
-                if self._current_zoom < zoom:
-                    
-                    if self._current_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
-                        
-                        # because of the event passing under mouse, we want to preserve whitespace around flash
-                        
-                        ( original_width, original_height ) = self._current_display_media.GetResolution()
-                        
-                        ( my_width, my_height ) = self.GetClientSize()
-                        
-                        new_media_width = int( round( original_width * zoom ) )
-                        new_media_height = int( round( original_height * zoom ) )
-                        
-                        ( extra_width, extra_height ) = GetExtraDimensions( self._current_display_media )
-                        
-                        new_media_width += extra_width
-                        new_media_height += extra_height
-                        
-                        if new_media_width >= my_width or new_media_height >= my_height: return
-                        
-                    
-                    with wx.FrozenWindow( self ):
-                        
-                        ( drag_x, drag_y ) = self._total_drag_delta
-                        
-                        zoom_ratio = zoom / self._current_zoom
-                        
-                        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                        
-                        self._current_zoom = zoom
-                        
-                        self._DrawBackgroundBitmap()
-                        
-                        self._DrawCurrentMedia()
-                        
-                    
-                    break
-                    
-                
-            
-        
-    
-    def _ZoomOut( self ):
-        
-        if self._current_media is not None:
-            
-            if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
-            
-            for zoom in ZOOMOUTS:
-                
-                if self._current_zoom > zoom:
-                    
-                    with wx.FrozenWindow( self ):
-                        
-                        ( drag_x, drag_y ) = self._total_drag_delta
-                        
-                        zoom_ratio = zoom / self._current_zoom
-                        
-                        self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                        
-                        self._current_zoom = zoom
-                        
-                        self._DrawBackgroundBitmap()
-                        
-                        self._DrawCurrentMedia()
-                        
-                    
-                    break
-                    
-                
-            
-        
-    
-    def _ZoomSwitch( self ):
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        ( media_width, media_height ) = self._current_display_media.GetResolution()
-        
-        if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
-        
-        if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
-            
-            new_zoom = self._current_zoom
-            
-            if self._current_zoom == 1.0:
-                
-                if media_width > my_width or media_height > my_height:
-                    
-                    width_zoom = my_width / float( media_width )
-                    
-                    height_zoom = my_height / float( media_height )
-                    
-                    new_zoom = min( ( width_zoom, height_zoom ) )
-                    
-                
-            else: new_zoom = 1.0
-            
-            if new_zoom != self._current_zoom:
-                
-                ( drag_x, drag_y ) = self._total_drag_delta
-                
-                zoom_ratio = new_zoom / self._current_zoom
-                
-                self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                
-                self._current_zoom = new_zoom
-                
-                self._DrawBackgroundBitmap()
-                
-                self._DrawCurrentMedia()
-                
-            
-        
     
     def AddMediaResults( self, page_key, media_results ):
         
@@ -1542,7 +1547,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ): self.EventDelete( event )
             elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
             elif not event.ShiftDown() and key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self.EventSkip( event )
             else:
                 
@@ -1661,9 +1666,9 @@ class CanvasFullscreenMediaListNavigable( CanvasFullscreenMediaList ):
     
     def _ManageTags( self ):
         
-        if self._current_media is not None:
+        if self._current_display_media is not None:
             
-            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTags( self, self._file_service_key, ( self._current_display_media, ), canvas_key = self._canvas_key ) as dlg: dlg.ShowModal()
             
         
     
@@ -1711,18 +1716,18 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
-    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
-        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' )
+        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
         
         HC.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
         
-        path = CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
+        path = CC.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HC.pubsub.pub( 'clipboard', 'text', path )
         
@@ -1731,13 +1736,13 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _PausePlaySlideshow( self ):
         
@@ -1778,7 +1783,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
             elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
             else:
                 
                 key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -1808,7 +1813,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
@@ -1874,8 +1879,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu = wx.Menu()
         
-        menu.Append( CC.ID_NULL, self._current_media.GetPrettyInfo() )
-        menu.Append( CC.ID_NULL, self._current_media.GetPrettyAge() )
+        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyInfo() )
+        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyAge() )
         
         menu.AppendSeparator()
         
@@ -1886,7 +1891,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         #
         
-        if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
+        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -1913,8 +1918,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu.AppendSeparator()
         
-        if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-        if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        if self._current_display_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
+        if self._current_display_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
@@ -1992,18 +1997,18 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         HC.pubsub.sub( self, 'AddMediaResults', 'add_media_results' )
         
     
-    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+    def _Archive( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def _CopyLocalUrlToClipboard( self ):
         
-        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_media.GetHash().encode( 'hex' )
+        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
         
         HC.pubsub.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):
         
-        path = CC.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
+        path = CC.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HC.pubsub.pub( 'clipboard', 'text', path )
         
@@ -2012,13 +2017,13 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         with ClientGUIDialogs.DialogYesNo( self, 'Delete this file from the database?' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_media.GetHash(), ) ) ] } )
+            if dlg.ShowModal() == wx.ID_YES: HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( self._current_display_media.GetHash(), ) ) ] } )
             
         
         self.SetFocus() # annoying bug because of the modal dialog
         
     
-    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+    def _Inbox( self ): HC.app.Write( 'content_updates', { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_display_media.GetHash(), ) ) ] } )
     
     def EventActions( self, event ):
         
@@ -2037,7 +2042,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
             
             key_dict = self._actions[ modifier ]
             
-            hashes = set( ( self._current_media.GetHash(), ) )
+            hashes = set( ( self._current_display_media.GetHash(), ) )
             
             if key in key_dict:
                 
@@ -2077,7 +2082,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                         
                         tag = action
                         
-                        tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
+                        tags_manager = self._current_display_media.GetTagsManager()
                         
                         current = tags_manager.GetCurrent()
                         pending = tags_manager.GetPending()
@@ -2166,7 +2171,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
                 elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
                 elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 else:
                     
                     key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -2184,7 +2189,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
     
     def EventMenu( self, event ):
-        print( 'menu' )
+        
         # is None bit means this is prob from a keydown->menu event
         if event.GetEventObject() is None and self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
@@ -2197,7 +2202,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                 
                 if command == 'archive': self._Archive()
                 elif command == 'copy_files':
-                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                    with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                 elif command == 'copy_hash': self._CopyHashToClipboard()
                 elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
@@ -2256,8 +2261,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu = wx.Menu()
         
-        menu.Append( CC.ID_NULL, self._current_media.GetPrettyInfo() )
-        menu.Append( CC.ID_NULL, self._current_media.GetPrettyAge() )
+        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyInfo() )
+        menu.Append( CC.ID_NULL, self._current_display_media.GetPrettyAge() )
         
         menu.AppendSeparator()
         
@@ -2268,7 +2273,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         #
         
-        if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
+        if self._current_display_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES + NON_ZOOMABLE_MIMES:
             
             ( my_width, my_height ) = self.GetClientSize()
             
@@ -2295,8 +2300,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        if self._current_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-        if self._current_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        if self._current_display_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
+        if self._current_display_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
         menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
@@ -3377,7 +3382,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         elif modifier == wx.ACCEL_NORMAL and key == wx.WXK_BACK: self._GoBack()
         elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self.EventClose( event )
         elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-            with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+            with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
         else:
             
             key_dict = HC.options[ 'shortcuts' ][ modifier ]
@@ -3479,12 +3484,12 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         self._left_right = left_right
         
     
-    class _Panel( Canvas, wx.Window ):
+    class _Panel( CanvasWithDetails, wx.Window ):
         
         def __init__( self, parent ):
             
             wx.Window.__init__( self, parent, style = wx.SIMPLE_BORDER | wx.WANTS_CHARS )
-            Canvas.__init__( self, HC.LOCAL_FILE_SERVICE_KEY, HC.app.GetFullscreenImageCache() )
+            CanvasWithDetails.__init__( self, HC.LOCAL_FILE_SERVICE_KEY, HC.app.GetFullscreenImageCache() )
             
             wx.CallAfter( self.Refresh )
             
@@ -3501,124 +3506,6 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
             
             self.Bind( wx.EVT_MENU, self.EventMenu )
-            
-        
-        def _ZoomIn( self ):
-            
-            if self._current_media is not None:
-                
-                if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
-                
-                for zoom in ZOOMINS:
-                    
-                    if self._current_zoom < zoom:
-                        
-                        if self._current_media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES:
-                            
-                            # because of the event passing under mouse, we want to preserve whitespace around flash
-                            
-                            ( original_width, original_height ) = self._current_display_media.GetResolution()
-                            
-                            ( my_width, my_height ) = self.GetClientSize()
-                            
-                            new_media_width = int( round( original_width * zoom ) )
-                            new_media_height = int( round( original_height * zoom ) )
-                            
-                            if new_media_width >= my_width or new_media_height >= my_height: return
-                            
-                        
-                        with wx.FrozenWindow( self ):
-                            
-                            ( drag_x, drag_y ) = self._total_drag_delta
-                            
-                            zoom_ratio = zoom / self._current_zoom
-                            
-                            self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                            
-                            self._current_zoom = zoom
-                            
-                            self._DrawBackgroundBitmap()
-                            
-                            self._DrawCurrentMedia()
-                            
-                        
-                        break
-                        
-                    
-                
-            
-        
-        def _ZoomOut( self ):
-            
-            if self._current_media is not None:
-                
-                if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
-                
-                for zoom in ZOOMOUTS:
-                    
-                    if self._current_zoom > zoom:
-                        
-                        with wx.FrozenWindow( self ):
-                            
-                            ( drag_x, drag_y ) = self._total_drag_delta
-                            
-                            zoom_ratio = zoom / self._current_zoom
-                            
-                            self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                            
-                            self._current_zoom = zoom
-                            
-                            self._DrawBackgroundBitmap()
-                            
-                            self._DrawCurrentMedia()
-                            
-                        
-                        break
-                        
-                    
-                
-            
-        
-        def _ZoomSwitch( self ):
-            
-            ( my_width, my_height ) = self.GetClientSize()
-            
-            ( media_width, media_height ) = self._current_display_media.GetResolution()
-            
-            if self._current_media.GetMime() in NON_ZOOMABLE_MIMES: return
-            
-            if self._current_media.GetMime() not in NON_LARGABLY_ZOOMABLE_MIMES or self._current_zoom > 1.0 or ( media_width < my_width and media_height < my_height ):
-                
-                new_zoom = self._current_zoom
-                
-                if self._current_zoom == 1.0:
-                    
-                    if media_width > my_width or media_height > my_height:
-                        
-                        width_zoom = my_width / float( media_width )
-                        
-                        height_zoom = my_height / float( media_height )
-                        
-                        new_zoom = min( ( width_zoom, height_zoom ) )
-                        
-                    
-                else: new_zoom = 1.0
-                
-                if new_zoom != self._current_zoom:
-                    
-                    ( drag_x, drag_y ) = self._total_drag_delta
-                    
-                    zoom_ratio = new_zoom / self._current_zoom
-                    
-                    self._total_drag_delta = ( int( drag_x * zoom_ratio ), int( drag_y * zoom_ratio ) )
-                    
-                    self._current_zoom = new_zoom
-                    
-                    self._DrawBackgroundBitmap()
-                    
-                    self._DrawCurrentMedia()
-                    
-                
             
         
         def EventDrag( self, event ):
@@ -3721,7 +3608,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()
                     elif modifier == wx.ACCEL_NORMAL and key == ord( 'Z' ): self._ZoomSwitch()
                     elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ):
-                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_media.GetHash(), ) )
+                        with wx.BusyCursor(): HC.app.Write( 'copy_files', ( self._current_display_media.GetHash(), ) )
                     else: self.GetParent().ProcessEvent( event )
                     
             

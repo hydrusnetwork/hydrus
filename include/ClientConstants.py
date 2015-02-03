@@ -241,6 +241,7 @@ default_gui_colours[ 'thumbgrid_background' ] = ( 255, 255, 255 )
 default_gui_colours[ 'autocomplete_background' ] = ( 235, 248, 255 ) # very light blue
 default_gui_colours[ 'media_background' ] = ( 255, 255, 255 )
 default_gui_colours[ 'media_text' ] = ( 0, 0, 0 )
+default_gui_colours[ 'tags_box' ] = ( 255, 255, 255 )
 
 CLIENT_DEFAULT_OPTIONS[ 'gui_colours' ] = default_gui_colours
 

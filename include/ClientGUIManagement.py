@@ -376,9 +376,9 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        tags_box = ClientGUICommon.TagsBoxCountsSorter( self, 'selection tags' )
+        tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        t = ClientGUICommon.TagsBoxCPP( tags_box, self._page_key )
+        t = ClientGUICommon.ListBoxTagsCDPPManagementPanel( tags_box, self._page_key )
         
         tags_box.SetTagsBox( t )
         
@@ -2106,7 +2106,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
-            self._current_predicates_box = ClientGUICommon.TagsBoxPredicates( self._search_panel, self._page_key, initial_predicates )
+            self._current_predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
             
             self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, self._file_service_key, HC.COMBINED_TAG_SERVICE_KEY, self._page.GetMedia )
             

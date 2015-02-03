@@ -4332,7 +4332,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
-                self._tags = ClientGUICommon.TagsBoxFlat( self._tags_panel, self.TagRemoved )
+                self._tags = ClientGUICommon.ListBoxTagsFlat( self._tags_panel, self.TagRemoved )
                 
                 self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
@@ -4342,7 +4342,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._paths_to_single_tags = collections.defaultdict( list )
                 
-                self._single_tags = ClientGUICommon.TagsBoxFlat( self._single_tags_panel, self.SingleTagRemoved )
+                self._single_tags = ClientGUICommon.ListBoxTagsFlat( self._single_tags_panel, self.SingleTagRemoved )
                 
                 self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
@@ -5470,9 +5470,9 @@ class DialogSetupExport( Dialog ):
         
         def InitialiseControls():
             
-            self._tags_box = ClientGUICommon.TagsBoxCountsSorter( self, 'files\' tags' )
+            self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
             
-            t = ClientGUICommon.TagsBoxCounts( self._tags_box )
+            t = ClientGUICommon.ListBoxTagsCDPP( self._tags_box )
             
             self._tags_box.SetTagsBox( t )
             

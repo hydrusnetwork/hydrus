@@ -1815,6 +1815,14 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
                             
                         
                     except HydrusExceptions.NotFoundException: raise Exception( 'Thread 404' )
+                    except Exception as e:
+                        
+                        self._job_key.SetVariable( 'status', HC.u( e ) )
+                        
+                        HC.ShowException( e )
+                        
+                        time.sleep( 2 )
+                        
                     
                     last_thread_check = HC.GetNow()
                     

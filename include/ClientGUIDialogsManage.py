@@ -1624,7 +1624,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             self._page_key = os.urandom( 32 )
             
-            self._predicates_box = ClientGUICommon.TagsBoxPredicates( self._query_box, self._page_key, predicates )
+            self._predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
             
             self._searchbox = ClientGUICommon.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY )
             
@@ -2983,7 +2983,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
                 self._gui_colours[ name ] = ctrl
                 
             
-            self._namespace_colours = ClientGUICommon.TagsBoxColourOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
+            self._namespace_colours = ClientGUICommon.ListBoxTagsColourOptions( self._colour_page, HC.options[ 'namespace_colours' ] )
             
             self._edit_namespace_colour = wx.Button( self._colour_page, label = 'edit selected' )
             self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
@@ -3560,6 +3560,9 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
             gridbox.AddF( wx.StaticText( self._colour_page, label = 'media viewer text: '), FLAGS_MIXED )
             gridbox.AddF( self._gui_colours[ 'media_text' ], FLAGS_MIXED )
+            
+            gridbox.AddF( wx.StaticText( self._colour_page, label = 'tags box background: '), FLAGS_MIXED )
+            gridbox.AddF( self._gui_colours[ 'tags_box' ], FLAGS_MIXED )
             
             vbox.AddF( gridbox, FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._namespace_colours, FLAGS_EXPAND_BOTH_WAYS )
@@ -4216,7 +4219,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             ( command, data ) = action
             
-            if command == 'manage_ratings': self.EndModal( wx.ID_CANCEL )
+            if command == 'manage_ratings': self.EventOK( event )
             elif command == 'ok': self.EventOK( event )
             else: event.Skip()
             
@@ -6555,7 +6558,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
                 
                 self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
                 
-                self._tags = ClientGUICommon.TagsBoxCensorship( self )
+                self._tags = ClientGUICommon.ListBoxTagsCensorship( self )
                 
                 self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
                 self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
@@ -6768,8 +6771,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 removed_callable = lambda tag: 1
                 
-                self._children = ClientGUICommon.TagsBoxFlat( self, removed_callable )
-                self._parents = ClientGUICommon.TagsBoxFlat( self, removed_callable )
+                self._children = ClientGUICommon.ListBoxTagsFlat( self, removed_callable )
+                self._parents = ClientGUICommon.ListBoxTagsFlat( self, removed_callable )
                 
                 self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, HC.LOCAL_FILE_SERVICE_KEY, service_key )
@@ -7231,7 +7234,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 removed_callable = lambda tags: 1
                 
-                self._old_siblings = ClientGUICommon.TagsBoxFlat( self, removed_callable )
+                self._old_siblings = ClientGUICommon.ListBoxTagsFlat( self, removed_callable )
                 self._new_sibling = wx.StaticText( self )
                 
                 self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, HC.LOCAL_FILE_SERVICE_KEY, service_key )
@@ -7763,7 +7766,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             if command == 'canvas_show_next': self.EventNext( event )
             elif command == 'canvas_show_previous': self.EventPrevious( event )
-            elif command == 'manage_tags': self.EndModal( wx.ID_CANCEL )
+            elif command == 'manage_tags': self.EventOK( event )
             elif command == 'set_search_focus': self._SetSearchFocus()
             elif command == 'ok': self.EventOK( event )
             else: event.Skip()
@@ -7818,9 +7821,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             def InitialiseControls():
                 
-                self._tags_box_sorter = ClientGUICommon.TagsBoxCountsSorter( self, 'tags' )
+                self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
                 
-                self._tags_box = ClientGUICommon.TagsBoxCountsSimple( self._tags_box_sorter, self.AddTag )
+                self._tags_box = ClientGUICommon.ListBoxTagsCDPPTagsDialog( self._tags_box_sorter, self.AddTag )
                 
                 self._tags_box_sorter.SetTagsBox( self._tags_box )
                 

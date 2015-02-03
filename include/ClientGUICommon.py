@@ -457,7 +457,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _InitCachedResults( self ): return CC.AutocompleteMatchesPredicates( HC.LOCAL_FILE_SERVICE_KEY, [] )
     
-    def _InitDropDownList( self ): return TagsBoxActiveOnly( self._dropdown_window, self.BroadcastChoice )
+    def _InitDropDownList( self ): return ListBoxTagsAutocomplete( self._dropdown_window, self.BroadcastChoice )
     
     def _UpdateList( self ):
         
@@ -1717,6 +1717,8 @@ class ListBox( wx.ScrolledWindow ):
         
         wx.ScrolledWindow.__init__( self, parent, style = wx.VSCROLL | wx.BORDER_DOUBLE )
         
+        self._background_colour = wx.Colour( 255, 255, 255 )
+        
         self._current_y_offset = 0
         self._drawn_up_to = 0
         
@@ -1767,7 +1769,7 @@ class ListBox( wx.ScrolledWindow ):
         
         i = 0
         
-        dc.SetBackground( wx.Brush( wx.Colour( 255, 255, 255 ) ) )
+        dc.SetBackground( wx.Brush( self._background_colour ) )
         
         i = index
         text = self._ordered_strings[ i ]
@@ -1812,7 +1814,7 @@ class ListBox( wx.ScrolledWindow ):
             
             i = 0
             
-            dc.SetBackground( wx.Brush( wx.Colour( 255, 255, 255 ) ) )
+            dc.SetBackground( wx.Brush( self._background_colour ) )
             
             if self._drawn_up_to == 0: dc.Clear()
             
@@ -2228,6 +2230,867 @@ class ListBoxMessagesPredicates( ListBoxMessages ):
         del self._strings_to_terms[ predicate ]
         
         self._TextsHaveChanged()
+        
+    
+class ListBoxTags( ListBox ):
+    
+    has_counts = False
+    
+    def __init__( self, *args, **kwargs ):
+        
+        ListBox.__init__( self, *args, **kwargs )
+        
+        self._background_colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'tags_box' ] )
+        
+    
+    def _GetNamespaceColours( self ): return HC.options[ 'namespace_colours' ]
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ): return self._ordered_strings
+    
+    def _GetTextColour( self, tag_string ):
+        
+        namespace_colours = self._GetNamespaceColours()
+        
+        if ':' in tag_string:
+            
+            ( namespace, sub_tag ) = tag_string.split( ':', 1 )
+            
+            if namespace.startswith( '-' ): namespace = namespace[1:]
+            if namespace.startswith( '(+) ' ): namespace = namespace[4:]
+            if namespace.startswith( '(-) ' ): namespace = namespace[4:]
+            if namespace.startswith( '(X) ' ): namespace = namespace[4:]
+            if namespace.startswith( '    ' ): namespace = namespace[4:]
+            
+            if namespace in namespace_colours: ( r, g, b ) = namespace_colours[ namespace ]
+            else: ( r, g, b ) = namespace_colours[ None ]
+            
+        else: ( r, g, b ) = namespace_colours[ '' ]
+        
+        return ( r, g, b )
+        
+    
+    def EventMenu( self, event ):
+        
+        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
+            
+            ( command, data ) = action
+            
+            if command == 'copy_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                else: s = term
+                
+                HC.pubsub.pub( 'clipboard', 'text', s )
+                
+            elif command == 'copy_sub_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                else: s = term
+                
+                sub_s = s.split( ':', 1 )[1]
+                
+                HC.pubsub.pub( 'clipboard', 'text', sub_s )
+                
+            elif command == 'copy_all_tags': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
+            elif command == 'copy_all_tags_with_counts': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
+            elif command == 'new_search_page_with_term':
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                if type( term ) == HC.Predicate: predicate = term
+                else: predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
+                
+                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ predicate ] )
+                
+            elif command in ( 'parent', 'sibling' ):
+                
+                tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                import ClientGUIDialogsManage
+                
+                if command == 'parent':
+                    
+                    with ClientGUIDialogsManage.DialogManageTagParents( self, tag ) as dlg: dlg.ShowModal()
+                    
+                elif command == 'sibling':
+                    
+                    with ClientGUIDialogsManage.DialogManageTagSiblings( self, tag ) as dlg: dlg.ShowModal()
+                    
+                
+            else:
+                
+                event.Skip()
+                
+                return # this is about select_up and select_down
+                
+            
+        
+    
+    def EventMouseRightClick( self, event ):
+        
+        index = self._GetIndexUnderMouse( event )
+        
+        self._Select( index )
+        
+        if len( self._ordered_strings ) > 0:
+        
+            menu = wx.Menu()
+            
+            if self._current_selected_index is not None:
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                else: s = term
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
+                
+                menu.AppendSeparator()
+                
+            
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
+            if self.has_counts: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
+            
+            if self._current_selected_index is not None:
+                
+                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+                
+                if type( term ) == HC.Predicate: s = term.GetUnicode()
+                else: s = term
+                
+                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + s + '"' )
+                
+                if ':' in s:
+                    
+                    sub_s = s.split( ':', 1 )[1]
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_s + '"' )
+                    
+                
+                if type( term ) in ( str, unicode ):
+                    
+                    menu.AppendSeparator()
+                    
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent' ), 'add parent to ' + s )
+                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling' ), 'add sibling to ' + s )
+                    
+                
+            
+            self.PopupMenu( menu )
+            
+            wx.CallAfter( menu.Destroy )
+            
+        
+        event.Skip()
+        
+    
+    def GetSelectedTag( self ):
+        
+        if self._current_selected_index is not None: return self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+        else: return None
+        
+    
+class ListBoxTagsAutocomplete( ListBoxTags ):
+    
+    has_counts = True
+    
+    def __init__( self, parent, callable ):
+        
+        ListBoxTags.__init__( self, parent )
+        
+        self._callable = callable
+        
+        self._predicates = {}
+        
+    
+    def _Activate( self, s, term ): self._callable( term )
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
+        
+    
+    def _Select( self, index ):
+        
+        if index is not None:
+            
+            if self._current_selected_index is None: direction = 1
+            elif index - self._current_selected_index in ( -1, 1 ): direction = index - self._current_selected_index
+            else: direction = 1
+            
+            if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
+            elif index == len( self._ordered_strings ) or index < -1: index = 0
+            
+            s = self._ordered_strings[ index ]
+            
+            new_term = self._strings_to_terms[ s ]
+            
+            while new_term.GetPredicateType() == HC.PREDICATE_TYPE_PARENT:
+                
+                index += direction
+                
+                if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
+                elif index == len( self._ordered_strings ) or index < -1: index = 0
+                
+                s = self._ordered_strings[ index ]
+                
+                new_term = self._strings_to_terms[ s ]
+                
+            
+        
+        ListBox._Select( self, index )
+        
+    
+    def SetPredicates( self, predicates ):
+        
+        # need to do a clever compare, since normal predicate compare doesn't take count into account
+        
+        they_are_the_same = True
+        
+        if len( predicates ) == len( self._predicates ):
+            
+            p_list_1 = list( predicates )
+            p_list_2 = list( self._predicates )
+            
+            p_list_1.sort()
+            p_list_2.sort()
+            
+            for index in range( len( p_list_1 ) ):
+                
+                p_1 = p_list_1[ index ]
+                p_2 = p_list_2[ index ]
+                
+                if p_1 != p_2 or p_1.GetCount() != p_2.GetCount():
+                    
+                    they_are_the_same = False
+                    
+                    break
+                    
+                
+            
+        else: they_are_the_same = False
+        
+        if not they_are_the_same:
+            
+            self._predicates = predicates
+            
+            self._ordered_strings = []
+            self._strings_to_terms = {}
+            
+            for predicate in predicates:
+                
+                tag_string = predicate.GetUnicode()
+                
+                self._ordered_strings.append( tag_string )
+                self._strings_to_terms[ tag_string ] = predicate
+                
+            
+            self._TextsHaveChanged()
+            
+            if len( predicates ) > 0: self._Select( 0 )
+            
+        
+    
+class ListBoxTagsCensorship( ListBoxTags ):
+    
+    def _Activate( self, s, term ): self.RemoveTag( term )
+    
+    def _GetTagString( self, tag ):
+        
+        if tag == '': return 'unnamespaced'
+        elif tag == ':': return 'namespaced'
+        else: return tag
+        
+    
+    def AddTag( self, tag ):
+        
+        tag_string = self._GetTagString( tag )
+        
+        if tag_string in self._strings_to_terms: self.RemoveTag( tag )
+        else:
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+            self._TextsHaveChanged()
+            
+        
+    
+    def RemoveTag( self, tag ):
+        
+        tag_string = self._GetTagString( tag )
+        
+        self._ordered_strings.remove( tag_string )
+        
+        del self._strings_to_terms[ tag_string ]
+        
+        self._TextsHaveChanged()
+        
+    
+class ListBoxTagsColourOptions( ListBoxTags ):
+    
+    def __init__( self, parent, initial_namespace_colours ):
+        
+        ListBoxTags.__init__( self, parent )
+        
+        self._namespace_colours = dict( initial_namespace_colours )
+        
+        for namespace in self._namespace_colours:
+            
+            if namespace is None: namespace_string = 'default namespace:tag'
+            elif namespace == '': namespace_string = 'unnamespaced tag'
+            else: namespace_string = namespace + ':tag'
+            
+            self._ordered_strings.append( namespace_string )
+            self._strings_to_terms[ namespace_string ] = namespace
+            
+        
+        self._TextsHaveChanged()
+        
+    
+    def _Activate( self, s, term ): self.RemoveNamespace( term )
+    
+    def _GetNamespaceColours( self ): return self._namespace_colours
+    
+    def SetNamespaceColour( self, namespace, colour ):
+        
+        if namespace not in self._namespace_colours:
+            
+            namespace_string = namespace + ':tag'
+            
+            self._ordered_strings.append( namespace_string )
+            self._strings_to_terms[ namespace_string ] = namespace
+            
+            self._ordered_strings.sort()
+            
+        
+        self._namespace_colours[ namespace ] = colour.Get()
+        
+        self._TextsHaveChanged()
+        
+    
+    def GetNamespaceColours( self ): return self._namespace_colours
+    
+    def GetSelectedNamespaceColour( self ):
+        
+        if self._current_selected_index is not None:
+            
+            namespace_string = self._ordered_strings[ self._current_selected_index ]
+            
+            namespace = self._strings_to_terms[ namespace_string ]
+            
+            ( r, g, b ) = self._namespace_colours[ namespace ]
+            
+            colour = wx.Colour( r, g, b )
+            
+            return ( namespace, colour )
+            
+        
+        return None
+        
+    
+    def RemoveNamespace( self, namespace ):
+        
+        if namespace is not None and namespace != '':
+            
+            namespace_string = namespace + ':tag'
+            
+            self._ordered_strings.remove( namespace_string )
+            
+            del self._strings_to_terms[ namespace_string ]
+            
+            del self._namespace_colours[ namespace ]
+            
+            self._TextsHaveChanged()
+            
+        
+    
+class ListBoxTagsCDPP( ListBoxTags ):
+    
+    has_counts = True
+    
+    def __init__( self, parent ):
+        
+        ListBoxTags.__init__( self, parent, min_height = 200 )
+        
+        self._sort = HC.options[ 'default_tag_sort' ]
+        
+        self._last_media = set()
+        
+        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
+        
+        self._current_tags_to_count = collections.Counter()
+        self._deleted_tags_to_count = collections.Counter()
+        self._pending_tags_to_count = collections.Counter()
+        self._petitioned_tags_to_count = collections.Counter()
+        
+        self._show_current = True
+        self._show_deleted = False
+        self._show_pending = True
+        self._show_petitioned = True
+        
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        if with_counts: return self._ordered_strings
+        else: return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
+        
+    
+    def _RecalcStrings( self ):
+        
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        all_tags = set()
+        
+        if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
+        if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
+        if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
+        if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
+        
+        self._ordered_strings = []
+        self._strings_to_terms = {}
+        
+        for tag in all_tags:
+            
+            tag_string = tag
+            
+            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HC.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: tag_string += ' (' + sibling + ')'
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
+        self._SortTags()
+        
+    
+    def _SortTags( self ):
+        
+        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC: compare_function = lambda a, b: cmp( a, b )
+        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC: compare_function = lambda a, b: cmp( b, a )
+        elif self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
+            
+            tags_to_count = collections.defaultdict( lambda: 0 )
+            
+            tags_to_count.update( self._current_tags_to_count )
+            for ( tag, count ) in self._pending_tags_to_count.items(): tags_to_count[ tag ] += count
+            
+            if self._sort == CC.SORT_BY_INCIDENCE_ASC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ a ] ], a ), ( tags_to_count[ self._strings_to_terms[ b ] ], b ) )
+            elif self._sort == CC.SORT_BY_INCIDENCE_DESC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ b ] ], a ), ( tags_to_count[ self._strings_to_terms[ a ] ], b ) )
+            
+        
+        self._ordered_strings.sort( compare_function )
+        
+        self._TextsHaveChanged()
+        
+    
+    def ChangeTagRepository( self, service_key ):
+        
+        self._tag_service_key = service_key
+        
+        self.SetTagsByMedia( self._last_media, force_reload = True )
+        
+    
+    def SetSort( self, sort ):
+        
+        self._sort = sort
+        
+        self._SortTags()
+        
+    
+    def SetTags( self, current_tags_to_count = collections.Counter(), deleted_tags_to_count = collections.Counter(), pending_tags_to_count = collections.Counter(), petitioned_tags_to_count = collections.Counter() ):
+        
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+        
+        self._current_tags_to_count = current_tags_to_count
+        self._deleted_tags_to_count = deleted_tags_to_count
+        self._pending_tags_to_count = pending_tags_to_count
+        self._petitioned_tags_to_count = petitioned_tags_to_count
+        
+        self._RecalcStrings()
+        
+    
+    def SetShow( self, show_type, value ):
+        
+        if show_type == 'current': self._show_current = value
+        elif show_type == 'deleted': self._show_deleted = value
+        elif show_type == 'pending': self._show_pending = value
+        elif show_type == 'petitioned': self._show_petitioned = value
+        
+        self._RecalcStrings()
+        
+    
+    def SetTagsByMedia( self, media, force_reload = False ):
+        
+        media = set( media )
+        
+        if force_reload:
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_key )
+            
+            self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+            
+        else:
+            
+            removees = self._last_media.difference( media )
+            adds = media.difference( self._last_media )
+            
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_key )
+            
+            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+            
+            self._current_tags_to_count.subtract( current_tags_to_count )
+            self._deleted_tags_to_count.subtract( deleted_tags_to_count )
+            self._pending_tags_to_count.subtract( pending_tags_to_count )
+            self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_key )
+            
+            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+            
+            self._current_tags_to_count.update( current_tags_to_count )
+            self._deleted_tags_to_count.update( deleted_tags_to_count )
+            self._pending_tags_to_count.update( pending_tags_to_count )
+            self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+            
+            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
+                
+                tags = counter.keys()
+                
+                for tag in tags:
+                    
+                    if counter[ tag ] == 0: del counter[ tag ]
+                    
+                
+            
+        
+        self._last_media = media
+        
+        self._RecalcStrings()
+        
+    
+class ListBoxTagsCDPPManagementPanel( ListBoxTagsCDPP ):
+    
+    def __init__( self, parent, page_key ):
+        
+        ListBoxTagsCDPP.__init__( self, parent )
+        
+        self._page_key = page_key
+        
+        HC.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        
+    
+    def _Activate( self, s, term ):
+        
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
+        
+        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
+    
+    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
+        
+        if page_key == self._page_key: self.ChangeTagRepository( service_key )
+        
+    
+    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
+        
+        if page_key == self._page_key: self.SetTagsByMedia( media, force_reload = force_reload )
+        
+    
+class ListBoxTagsCDPPTagsDialog( ListBoxTagsCDPP ):
+    
+    def __init__( self, parent, callable ):
+        
+        ListBoxTagsCDPP.__init__( self, parent )
+        
+        self._callable = callable
+        
+    
+    def _Activate( self, s, term ): self._callable( term )
+    
+class ListBoxTagsFlat( ListBoxTags ):
+    
+    def __init__( self, parent, removed_callable ):
+        
+        ListBoxTags.__init__( self, parent )
+        
+        self._removed_callable = removed_callable
+        self._tags = set()
+        
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        tags = list( self._tags )
+        
+        tags.sort()
+        
+        return tags
+        
+    
+    def _RecalcTags( self ):
+        
+        self._strings_to_terms = {}
+        
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        for tag in self._tags:
+            
+            tag_string = tag
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: tag_string += ' (' + sibling + ')'
+            
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
+        self._ordered_strings = self._strings_to_terms.keys()
+        
+        self._ordered_strings.sort()
+        
+        self._TextsHaveChanged()
+        
+    
+    def _Activate( self, s, tag ):
+        
+        if tag in self._tags:
+            
+            self._tags.discard( tag )
+            
+            self._RecalcTags()
+            
+            self._removed_callable( tag )
+            
+        
+    
+    def AddTag( self, tag, parents = [] ):
+        
+        if tag in self._tags: self._tags.discard( tag )
+        else:
+            
+            self._tags.add( tag )
+            
+            self._tags.update( parents )
+            
+        
+        self._RecalcTags()
+        
+    
+    def GetTags( self ): return self._tags
+    
+    def SetTags( self, tags ):
+        
+        self._tags = set()
+        
+        for tag in tags: self._tags.add( tag )
+        
+        self._RecalcTags()
+        
+    
+class ListBoxTagsManage( ListBoxTags ):
+    
+    def __init__( self, parent, callable, current_tags, deleted_tags, pending_tags, petitioned_tags ):
+        
+        ListBoxTags.__init__( self, parent )
+        
+        self._callable = callable
+        
+        self._show_deleted = False
+        
+        self._current_tags = set( current_tags )
+        self._deleted_tags = set( deleted_tags )
+        self._pending_tags = set( pending_tags )
+        self._petitioned_tags = set( petitioned_tags )
+        
+        self._RebuildTagStrings()
+        
+    
+    def _Activate( self, s, term ): self._callable( term )
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        all_tags = set( itertools.chain( self._current_tags, self._pending_tags ) )
+        
+        all_tags = list( all_tags )
+        
+        all_tags.sort()
+        
+        return all_tags
+        
+    
+    def _RebuildTagStrings( self ):
+        
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
+        
+        self._ordered_strings = []
+        self._strings_to_terms = {}
+        
+        for tag in all_tags:
+            
+            if tag in self._petitioned_tags: prefix = HC.ConvertStatusToPrefix( HC.PETITIONED )
+            elif tag in self._current_tags: prefix = HC.ConvertStatusToPrefix( HC.CURRENT )
+            elif tag in self._pending_tags:
+                
+                if tag in self._deleted_tags: prefix = HC.ConvertStatusToPrefix( HC.DELETED_PENDING )
+                else: prefix = HC.ConvertStatusToPrefix( HC.PENDING )
+                
+            else:
+                
+                if self._show_deleted: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
+                else: continue
+                
+            
+            tag_string = prefix + tag
+            
+            sibling = siblings_manager.GetSibling( tag )
+            
+            if sibling is not None: tag_string += ' (' + sibling + ')'
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
+        self._ordered_strings.sort()
+        
+        self._TextsHaveChanged()
+        
+    
+    def HideDeleted( self ):
+        
+        self._show_deleted = False
+        
+        self._RebuildTagStrings()
+        
+    
+    def PetitionTag( self, tag ):
+        
+        self._petitioned_tags.add( tag )
+        
+        self._RebuildTagStrings()
+        
+    
+    def PendTag( self, tag ):
+        
+        self._pending_tags.add( tag )
+        
+        self._RebuildTagStrings()
+        
+    
+    def RescindPetition( self, tag ):
+        
+        self._petitioned_tags.discard( tag )
+        
+        self._RebuildTagStrings()
+        
+    
+    def RescindPend( self, tag ):
+        
+        self._pending_tags.discard( tag )
+        
+        self._RebuildTagStrings()
+        
+    
+    def ShowDeleted( self ):
+        
+        self._show_deleted = True
+        
+        self._RebuildTagStrings()
+        
+    
+class ListBoxTagsPredicates( ListBoxTags ):
+    
+    has_counts = False
+    
+    def __init__( self, parent, page_key, initial_predicates = [] ):
+        
+        ListBoxTags.__init__( self, parent, min_height = 100 )
+        
+        self._page_key = page_key
+        
+        if len( initial_predicates ) > 0:
+            
+            for predicate in initial_predicates:
+                
+                predicate_string = predicate.GetUnicode()
+                
+                self._ordered_strings.append( predicate_string )
+                self._strings_to_terms[ predicate_string ] = predicate
+                
+            
+            self._TextsHaveChanged()
+            
+        
+    
+    def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
+        
+    
+    def AddPredicate( self, predicate ):
+        
+        predicate = predicate.GetCountlessCopy()
+        
+        predicate_string = predicate.GetUnicode()
+        
+        inbox_predicate = HC.SYSTEM_PREDICATE_INBOX
+        archive_predicate = HC.SYSTEM_PREDICATE_ARCHIVE
+        
+        if predicate == inbox_predicate and self.HasPredicate( archive_predicate ): self.RemovePredicate( archive_predicate )
+        elif predicate == archive_predicate and self.HasPredicate( inbox_predicate ): self.RemovePredicate( inbox_predicate )
+        
+        local_predicate = HC.SYSTEM_PREDICATE_LOCAL
+        not_local_predicate = HC.SYSTEM_PREDICATE_NOT_LOCAL
+        
+        if predicate == local_predicate and self.HasPredicate( not_local_predicate ): self.RemovePredicate( not_local_predicate )
+        elif predicate == not_local_predicate and self.HasPredicate( local_predicate ): self.RemovePredicate( local_predicate )
+        
+        self._ordered_strings.append( predicate_string )
+        self._strings_to_terms[ predicate_string ] = predicate
+        
+        self._ordered_strings.sort()
+        
+        self._TextsHaveChanged()
+        
+    
+    def GetPredicates( self ): return self._strings_to_terms.values()
+    
+    def HasPredicate( self, predicate ): return predicate in self._strings_to_terms.values()
+    
+    def RemovePredicate( self, predicate ):
+        
+        for ( s, existing_predicate ) in self._strings_to_terms.items():
+            
+            if existing_predicate == predicate:
+                
+                self._ordered_strings.remove( s )
+                del self._strings_to_terms[ s ]
+                
+                self._TextsHaveChanged()
+                
+                break
+                
+            
         
     
 class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
@@ -3327,6 +4190,52 @@ class StaticBox( wx.Panel ):
     
     def AddF( self, widget, flags ): self._sizer.AddF( widget, flags )
     
+class StaticBoxSorterForListBoxTags( StaticBox ):
+    
+    def __init__( self, parent, title ):
+        
+        StaticBox.__init__( self, parent, title )
+        
+        self._sorter = wx.Choice( self )
+        
+        self._sorter.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
+        self._sorter.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
+        self._sorter.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
+        self._sorter.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
+        
+        if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._sorter.Select( 0 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._sorter.Select( 1 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 2 )
+        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 3 )
+        
+        self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
+        
+        self.AddF( self._sorter, FLAGS_EXPAND_PERPENDICULAR )
+        
+    
+    def ChangeTagRepository( self, service_key ): self._tags_box.ChangeTagRepository( service_key )
+    
+    def EventSort( self, event ):
+        
+        selection = self._sorter.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            sort = self._sorter.GetClientData( selection )
+            
+            self._tags_box.SetSort( sort )
+            
+        
+    
+    def SetTagsBox( self, tags_box ):
+        
+        self._tags_box = tags_box
+        
+        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
+        
+    
+    def SetTagsByMedia( self, media, force_reload = False ): self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
+    
 class CollapsiblePanel( wx.Panel ):
     
     def __init__( self, parent ):
@@ -3926,925 +4835,6 @@ class ShowKeys( Frame ):
             if dlg.ShowModal() == wx.ID_OK:
                 
                 with open( dlg.GetPath(), 'wb' ) as f: f.write( self._text )
-                
-            
-        
-    
-class TagsBox( ListBox ):
-    
-    has_counts = False
-    
-    def _GetNamespaceColours( self ): return HC.options[ 'namespace_colours' ]
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ): return self._ordered_strings
-    
-    def _GetTextColour( self, tag_string ):
-        
-        namespace_colours = self._GetNamespaceColours()
-        
-        if ':' in tag_string:
-            
-            ( namespace, sub_tag ) = tag_string.split( ':', 1 )
-            
-            if namespace.startswith( '-' ): namespace = namespace[1:]
-            if namespace.startswith( '(+) ' ): namespace = namespace[4:]
-            if namespace.startswith( '(-) ' ): namespace = namespace[4:]
-            if namespace.startswith( '(X) ' ): namespace = namespace[4:]
-            if namespace.startswith( '    ' ): namespace = namespace[4:]
-            
-            if namespace in namespace_colours: ( r, g, b ) = namespace_colours[ namespace ]
-            else: ( r, g, b ) = namespace_colours[ None ]
-            
-        else: ( r, g, b ) = namespace_colours[ '' ]
-        
-        return ( r, g, b )
-        
-    
-    def EventMenu( self, event ):
-        
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'copy_term':
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                HC.pubsub.pub( 'clipboard', 'text', term )
-                
-            elif command == 'copy_sub_term':
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                sub_term = term.split( ':', 1 )[1]
-                
-                HC.pubsub.pub( 'clipboard', 'text', sub_term )
-                
-            elif command == 'copy_all_tags': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard() ) )
-            elif command == 'copy_all_tags_with_counts': HC.pubsub.pub( 'clipboard', 'text', os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) ) )
-            elif command == 'new_search_page_with_term':
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                HC.pubsub.pub( 'new_page_query', HC.LOCAL_FILE_SERVICE_KEY, initial_predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, term ) ] )
-                
-            elif command in ( 'parent', 'sibling' ):
-                
-                tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                import ClientGUIDialogsManage
-                
-                if command == 'parent':
-                    
-                    with ClientGUIDialogsManage.DialogManageTagParents( self, tag ) as dlg: dlg.ShowModal()
-                    
-                elif command == 'sibling':
-                    
-                    with ClientGUIDialogsManage.DialogManageTagSiblings( self, tag ) as dlg: dlg.ShowModal()
-                    
-                
-            else:
-                
-                event.Skip()
-                
-                return # this is about select_up and select_down
-                
-            
-        
-    
-    def EventMouseRightClick( self, event ):
-        
-        index = self._GetIndexUnderMouse( event )
-        
-        self._Select( index )
-        
-        if len( self._ordered_strings ) > 0:
-        
-            menu = wx.Menu()
-            
-            if self._current_selected_index is not None:
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                if type( term ) in ( str, unicode ):
-                    
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + term  + '"' )
-                    
-                    menu.AppendSeparator()
-                    
-                
-            
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
-            if self.has_counts: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
-            
-            if self._current_selected_index is not None:
-                
-                term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-                
-                if type( term ) in ( str, unicode ):
-                    
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + term + '"' )
-                    
-                    if ':' in term:
-                        
-                        sub_term = term.split( ':', 1 )[1]
-                        
-                        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
-                        
-                    
-                    menu.AppendSeparator()
-                    
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent' ), 'add parent to ' + term )
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling' ), 'add sibling to ' + term )
-                    
-                
-            
-            self.PopupMenu( menu )
-            
-            wx.CallAfter( menu.Destroy )
-            
-        
-        event.Skip()
-        
-    
-    def GetSelectedTag( self ):
-        
-        if self._current_selected_index is not None: return self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
-        else: return None
-        
-    
-class TagsBoxActiveOnly( TagsBox ):
-    
-    has_counts = True
-    
-    def __init__( self, parent, callable ):
-        
-        TagsBox.__init__( self, parent )
-        
-        self._callable = callable
-        
-        self._predicates = {}
-        
-    
-    def _Activate( self, s, term ): self._callable( term )
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
-        
-    
-    def _Select( self, index ):
-        
-        if index is not None:
-            
-            if self._current_selected_index is None: direction = 1
-            elif index - self._current_selected_index in ( -1, 1 ): direction = index - self._current_selected_index
-            else: direction = 1
-            
-            if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
-            elif index == len( self._ordered_strings ) or index < -1: index = 0
-            
-            s = self._ordered_strings[ index ]
-            
-            new_term = self._strings_to_terms[ s ]
-            
-            while new_term.GetPredicateType() == HC.PREDICATE_TYPE_PARENT:
-                
-                index += direction
-                
-                if index == -1 or index > len( self._ordered_strings ): index = len( self._ordered_strings ) - 1
-                elif index == len( self._ordered_strings ) or index < -1: index = 0
-                
-                s = self._ordered_strings[ index ]
-                
-                new_term = self._strings_to_terms[ s ]
-                
-            
-        
-        ListBox._Select( self, index )
-        
-    
-    def SetPredicates( self, predicates ):
-        
-        # need to do a clever compare, since normal predicate compare doesn't take count into account
-        
-        they_are_the_same = True
-        
-        if len( predicates ) == len( self._predicates ):
-            
-            p_list_1 = list( predicates )
-            p_list_2 = list( self._predicates )
-            
-            p_list_1.sort()
-            p_list_2.sort()
-            
-            for index in range( len( p_list_1 ) ):
-                
-                p_1 = p_list_1[ index ]
-                p_2 = p_list_2[ index ]
-                
-                if p_1 != p_2 or p_1.GetCount() != p_2.GetCount():
-                    
-                    they_are_the_same = False
-                    
-                    break
-                    
-                
-            
-        else: they_are_the_same = False
-        
-        if not they_are_the_same:
-            
-            self._predicates = predicates
-            
-            self._ordered_strings = []
-            self._strings_to_terms = {}
-            
-            for predicate in predicates:
-                
-                tag_string = predicate.GetUnicode()
-                
-                self._ordered_strings.append( tag_string )
-                self._strings_to_terms[ tag_string ] = predicate
-                
-            
-            self._TextsHaveChanged()
-            
-            if len( predicates ) > 0: self._Select( 0 )
-            
-        
-    
-class TagsBoxCensorship( TagsBox ):
-    
-    def _Activate( self, s, term ): self.RemoveTag( term )
-    
-    def _GetTagString( self, tag ):
-        
-        if tag == '': return 'unnamespaced'
-        elif tag == ':': return 'namespaced'
-        else: return tag
-        
-    
-    def AddTag( self, tag ):
-        
-        tag_string = self._GetTagString( tag )
-        
-        if tag_string in self._strings_to_terms: self.RemoveTag( tag )
-        else:
-            
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
-            
-            self._TextsHaveChanged()
-            
-        
-    
-    def RemoveTag( self, tag ):
-        
-        tag_string = self._GetTagString( tag )
-        
-        self._ordered_strings.remove( tag_string )
-        
-        del self._strings_to_terms[ tag_string ]
-        
-        self._TextsHaveChanged()
-        
-    
-class TagsBoxColourOptions( TagsBox ):
-    
-    def __init__( self, parent, initial_namespace_colours ):
-        
-        TagsBox.__init__( self, parent )
-        
-        self._namespace_colours = dict( initial_namespace_colours )
-        
-        for namespace in self._namespace_colours:
-            
-            if namespace is None: namespace_string = 'default namespace:tag'
-            elif namespace == '': namespace_string = 'unnamespaced tag'
-            else: namespace_string = namespace + ':tag'
-            
-            self._ordered_strings.append( namespace_string )
-            self._strings_to_terms[ namespace_string ] = namespace
-            
-        
-        self._TextsHaveChanged()
-        
-    
-    def _Activate( self, s, term ): self.RemoveNamespace( term )
-    
-    def _GetNamespaceColours( self ): return self._namespace_colours
-    
-    def SetNamespaceColour( self, namespace, colour ):
-        
-        if namespace not in self._namespace_colours:
-            
-            namespace_string = namespace + ':tag'
-            
-            self._ordered_strings.append( namespace_string )
-            self._strings_to_terms[ namespace_string ] = namespace
-            
-            self._ordered_strings.sort()
-            
-        
-        self._namespace_colours[ namespace ] = colour.Get()
-        
-        self._TextsHaveChanged()
-        
-    
-    def GetNamespaceColours( self ): return self._namespace_colours
-    
-    def GetSelectedNamespaceColour( self ):
-        
-        if self._current_selected_index is not None:
-            
-            namespace_string = self._ordered_strings[ self._current_selected_index ]
-            
-            namespace = self._strings_to_terms[ namespace_string ]
-            
-            ( r, g, b ) = self._namespace_colours[ namespace ]
-            
-            colour = wx.Colour( r, g, b )
-            
-            return ( namespace, colour )
-            
-        
-        return None
-        
-    
-    def RemoveNamespace( self, namespace ):
-        
-        if namespace is not None and namespace != '':
-            
-            namespace_string = namespace + ':tag'
-            
-            self._ordered_strings.remove( namespace_string )
-            
-            del self._strings_to_terms[ namespace_string ]
-            
-            del self._namespace_colours[ namespace ]
-            
-            self._TextsHaveChanged()
-            
-        
-    
-class TagsBoxCounts( TagsBox ):
-    
-    has_counts = True
-    
-    def __init__( self, parent ):
-        
-        TagsBox.__init__( self, parent, min_height = 200 )
-        
-        self._sort = HC.options[ 'default_tag_sort' ]
-        
-        self._last_media = set()
-        
-        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
-        
-        self._current_tags_to_count = collections.Counter()
-        self._deleted_tags_to_count = collections.Counter()
-        self._pending_tags_to_count = collections.Counter()
-        self._petitioned_tags_to_count = collections.Counter()
-        
-        self._show_current = True
-        self._show_deleted = False
-        self._show_pending = True
-        self._show_petitioned = True
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        if with_counts: return self._ordered_strings
-        else: return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
-        
-    
-    def _RecalcStrings( self ):
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        all_tags = set()
-        
-        if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
-        if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
-        if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
-        if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
-        
-        self._ordered_strings = []
-        self._strings_to_terms = {}
-        
-        for tag in all_tags:
-            
-            tag_string = tag
-            
-            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HC.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: tag_string += ' (' + sibling + ')'
-            
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
-            
-        
-        self._SortTags()
-        
-    
-    def _SortTags( self ):
-        
-        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC: compare_function = lambda a, b: cmp( a, b )
-        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC: compare_function = lambda a, b: cmp( b, a )
-        elif self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
-            
-            tags_to_count = collections.defaultdict( lambda: 0 )
-            
-            tags_to_count.update( self._current_tags_to_count )
-            for ( tag, count ) in self._pending_tags_to_count.items(): tags_to_count[ tag ] += count
-            
-            if self._sort == CC.SORT_BY_INCIDENCE_ASC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ a ] ], a ), ( tags_to_count[ self._strings_to_terms[ b ] ], b ) )
-            elif self._sort == CC.SORT_BY_INCIDENCE_DESC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ b ] ], a ), ( tags_to_count[ self._strings_to_terms[ a ] ], b ) )
-            
-        
-        self._ordered_strings.sort( compare_function )
-        
-        self._TextsHaveChanged()
-        
-    
-    def ChangeTagRepository( self, service_key ):
-        
-        self._tag_service_key = service_key
-        
-        self.SetTagsByMedia( self._last_media, force_reload = True )
-        
-    
-    def SetSort( self, sort ):
-        
-        self._sort = sort
-        
-        self._SortTags()
-        
-    
-    def SetTags( self, current_tags_to_count = collections.Counter(), deleted_tags_to_count = collections.Counter(), pending_tags_to_count = collections.Counter(), petitioned_tags_to_count = collections.Counter() ):
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-        
-        self._current_tags_to_count = current_tags_to_count
-        self._deleted_tags_to_count = deleted_tags_to_count
-        self._pending_tags_to_count = pending_tags_to_count
-        self._petitioned_tags_to_count = petitioned_tags_to_count
-        
-        self._RecalcStrings()
-        
-    
-    def SetShow( self, show_type, value ):
-        
-        if show_type == 'current': self._show_current = value
-        elif show_type == 'deleted': self._show_deleted = value
-        elif show_type == 'pending': self._show_pending = value
-        elif show_type == 'petitioned': self._show_petitioned = value
-        
-        self._RecalcStrings()
-        
-    
-    def SetTagsByMedia( self, media, force_reload = False ):
-        
-        media = set( media )
-        
-        if force_reload:
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_key )
-            
-            self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
-            
-        else:
-            
-            removees = self._last_media.difference( media )
-            adds = media.difference( self._last_media )
-            
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_key )
-            
-            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-            
-            self._current_tags_to_count.subtract( current_tags_to_count )
-            self._deleted_tags_to_count.subtract( deleted_tags_to_count )
-            self._pending_tags_to_count.subtract( pending_tags_to_count )
-            self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_key )
-            
-            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-            
-            self._current_tags_to_count.update( current_tags_to_count )
-            self._deleted_tags_to_count.update( deleted_tags_to_count )
-            self._pending_tags_to_count.update( pending_tags_to_count )
-            self._petitioned_tags_to_count.update( petitioned_tags_to_count )
-            
-            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
-                
-                tags = counter.keys()
-                
-                for tag in tags:
-                    
-                    if counter[ tag ] == 0: del counter[ tag ]
-                    
-                
-            
-        
-        self._last_media = media
-        
-        self._RecalcStrings()
-        
-    
-class TagsBoxCPP( TagsBoxCounts ):
-    
-    def __init__( self, parent, page_key ):
-        
-        TagsBoxCounts.__init__( self, parent )
-        
-        self._page_key = page_key
-        
-        HC.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
-        
-    
-    def _Activate( self, s, term ):
-        
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
-        
-        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
-        
-    
-    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
-        
-        if page_key == self._page_key: self.ChangeTagRepository( service_key )
-        
-    
-    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
-        
-        if page_key == self._page_key: self.SetTagsByMedia( media, force_reload = force_reload )
-        
-    
-class TagsBoxCountsSimple( TagsBoxCounts ):
-    
-    def __init__( self, parent, callable ):
-        
-        TagsBoxCounts.__init__( self, parent )
-        
-        self._callable = callable
-        
-    
-    def _Activate( self, s, term ): self._callable( term )
-    
-class TagsBoxCountsSorter( StaticBox ):
-    
-    def __init__( self, parent, title ):
-        
-        StaticBox.__init__( self, parent, title )
-        
-        self._sorter = wx.Choice( self )
-        
-        self._sorter.Append( 'lexicographic (a-z)', CC.SORT_BY_LEXICOGRAPHIC_ASC )
-        self._sorter.Append( 'lexicographic (z-a)', CC.SORT_BY_LEXICOGRAPHIC_DESC )
-        self._sorter.Append( 'incidence (desc)', CC.SORT_BY_INCIDENCE_DESC )
-        self._sorter.Append( 'incidence (asc)', CC.SORT_BY_INCIDENCE_ASC )
-        
-        if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._sorter.Select( 0 )
-        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._sorter.Select( 1 )
-        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._sorter.Select( 2 )
-        elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._sorter.Select( 3 )
-        
-        self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
-        
-        self.AddF( self._sorter, FLAGS_EXPAND_PERPENDICULAR )
-        
-    
-    def ChangeTagRepository( self, service_key ): self._tags_box.ChangeTagRepository( service_key )
-    
-    def EventSort( self, event ):
-        
-        selection = self._sorter.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            sort = self._sorter.GetClientData( selection )
-            
-            self._tags_box.SetSort( sort )
-            
-        
-    
-    def SetTagsBox( self, tags_box ):
-        
-        self._tags_box = tags_box
-        
-        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
-        
-    
-    def SetTagsByMedia( self, media, force_reload = False ): self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
-    
-class TagsBoxFlat( TagsBox ):
-    
-    def __init__( self, parent, removed_callable ):
-        
-        TagsBox.__init__( self, parent )
-        
-        self._removed_callable = removed_callable
-        self._tags = set()
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        tags = list( self._tags )
-        
-        tags.sort()
-        
-        return tags
-        
-    
-    def _RecalcTags( self ):
-        
-        self._strings_to_terms = {}
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        for tag in self._tags:
-            
-            tag_string = tag
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: tag_string += ' (' + sibling + ')'
-            
-            self._strings_to_terms[ tag_string ] = tag
-            
-        
-        self._ordered_strings = self._strings_to_terms.keys()
-        
-        self._ordered_strings.sort()
-        
-        self._TextsHaveChanged()
-        
-    
-    def _Activate( self, s, tag ):
-        
-        if tag in self._tags:
-            
-            self._tags.discard( tag )
-            
-            self._RecalcTags()
-            
-            self._removed_callable( tag )
-            
-        
-    
-    def AddTag( self, tag, parents = [] ):
-        
-        if tag in self._tags: self._tags.discard( tag )
-        else:
-            
-            self._tags.add( tag )
-            
-            self._tags.update( parents )
-            
-        
-        self._RecalcTags()
-        
-    
-    def GetTags( self ): return self._tags
-    
-    def SetTags( self, tags ):
-        
-        self._tags = set()
-        
-        for tag in tags: self._tags.add( tag )
-        
-        self._RecalcTags()
-        
-    
-class TagsBoxManage( TagsBox ):
-    
-    def __init__( self, parent, callable, current_tags, deleted_tags, pending_tags, petitioned_tags ):
-        
-        TagsBox.__init__( self, parent )
-        
-        self._callable = callable
-        
-        self._show_deleted = False
-        
-        self._current_tags = set( current_tags )
-        self._deleted_tags = set( deleted_tags )
-        self._pending_tags = set( pending_tags )
-        self._petitioned_tags = set( petitioned_tags )
-        
-        self._RebuildTagStrings()
-        
-    
-    def _Activate( self, s, term ): self._callable( term )
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        all_tags = set( itertools.chain( self._current_tags, self._pending_tags ) )
-        
-        all_tags = list( all_tags )
-        
-        all_tags.sort()
-        
-        return all_tags
-        
-    
-    def _RebuildTagStrings( self ):
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
-        
-        self._ordered_strings = []
-        self._strings_to_terms = {}
-        
-        for tag in all_tags:
-            
-            if tag in self._petitioned_tags: prefix = HC.ConvertStatusToPrefix( HC.PETITIONED )
-            elif tag in self._current_tags: prefix = HC.ConvertStatusToPrefix( HC.CURRENT )
-            elif tag in self._pending_tags:
-                
-                if tag in self._deleted_tags: prefix = HC.ConvertStatusToPrefix( HC.DELETED_PENDING )
-                else: prefix = HC.ConvertStatusToPrefix( HC.PENDING )
-                
-            else:
-                
-                if self._show_deleted: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
-                else: continue
-                
-            
-            tag_string = prefix + tag
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: tag_string += ' (' + sibling + ')'
-            
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
-            
-        
-        self._ordered_strings.sort()
-        
-        self._TextsHaveChanged()
-        
-    
-    def HideDeleted( self ):
-        
-        self._show_deleted = False
-        
-        self._RebuildTagStrings()
-        
-    
-    def PetitionTag( self, tag ):
-        
-        self._petitioned_tags.add( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def PendTag( self, tag ):
-        
-        self._pending_tags.add( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def RescindPetition( self, tag ):
-        
-        self._petitioned_tags.discard( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def RescindPend( self, tag ):
-        
-        self._pending_tags.discard( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def ShowDeleted( self ):
-        
-        self._show_deleted = True
-        
-        self._RebuildTagStrings()
-        
-    
-class TagsBoxManageWithShowDeleted( StaticBox ):
-    
-    def __init__( self, parent, callable, current_tags, deleted_tags, pending_tags, petitioned_tags ):
-        
-        StaticBox.__init__( self, parent, 'tags' )
-        
-        self._tags_box = TagsBoxManage( self, callable, current_tags, deleted_tags, pending_tags, petitioned_tags )
-        
-        self._show_deleted = wx.CheckBox( self, label = 'show deleted' )
-        self._show_deleted.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
-        
-        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
-        self.AddF( self._show_deleted, FLAGS_LONE_BUTTON )
-        
-    
-    def EventShowDeleted( self, event ):
-        
-        if self._show_deleted.GetValue() == True: self._tags_box.ShowDeleted()
-        else: self._tags_box.HideDeleted()
-        
-    
-    def GetSelectedTag( self ): return self._tags_box.GetSelectedTag()
-    
-    def PetitionTag( self, tag ): self._tags_box.PetitionTag( tag )
-    
-    def PendTag( self, tag ): self._tags_box.PendTag( tag )
-    
-    def RescindPetition( self, tag ): self._tags_box.RescindPetition( tag )
-    
-    def RescindPend( self, tag ): self._tags_box.RescindPend( tag )
-    
-class TagsBoxPredicates( TagsBox ):
-    
-    has_counts = True
-    
-    def __init__( self, parent, page_key, initial_predicates = [] ):
-        
-        TagsBox.__init__( self, parent, min_height = 100 )
-        
-        self._page_key = page_key
-        
-        if len( initial_predicates ) > 0:
-            
-            for predicate in initial_predicates:
-                
-                predicate_string = predicate.GetUnicode()
-                
-                self._ordered_strings.append( predicate_string )
-                self._strings_to_terms[ predicate_string ] = predicate
-                
-            
-            self._TextsHaveChanged()
-            
-        
-    
-    def _Activate( self, s, term ): HC.pubsub.pub( 'remove_predicate', self._page_key, term )
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        return [ self._strings_to_terms[ s ].GetUnicode( with_counts ) for s in self._ordered_strings ]
-        
-    
-    def AddPredicate( self, predicate ):
-        
-        predicate = predicate.GetCountlessCopy()
-        
-        predicate_string = predicate.GetUnicode()
-        
-        inbox_predicate = HC.SYSTEM_PREDICATE_INBOX
-        archive_predicate = HC.SYSTEM_PREDICATE_ARCHIVE
-        
-        if predicate == inbox_predicate and self.HasPredicate( archive_predicate ): self.RemovePredicate( archive_predicate )
-        elif predicate == archive_predicate and self.HasPredicate( inbox_predicate ): self.RemovePredicate( inbox_predicate )
-        
-        local_predicate = HC.SYSTEM_PREDICATE_LOCAL
-        not_local_predicate = HC.SYSTEM_PREDICATE_NOT_LOCAL
-        
-        if predicate == local_predicate and self.HasPredicate( not_local_predicate ): self.RemovePredicate( not_local_predicate )
-        elif predicate == not_local_predicate and self.HasPredicate( local_predicate ): self.RemovePredicate( local_predicate )
-        
-        self._ordered_strings.append( predicate_string )
-        self._strings_to_terms[ predicate_string ] = predicate
-        
-        self._ordered_strings.sort()
-        
-        self._TextsHaveChanged()
-        
-    
-    def GetPredicates( self ): return self._strings_to_terms.values()
-    
-    def HasPredicate( self, predicate ): return predicate in self._strings_to_terms.values()
-    
-    def RemovePredicate( self, predicate ):
-        
-        for ( s, existing_predicate ) in self._strings_to_terms.items():
-            
-            if existing_predicate == predicate:
-                
-                self._ordered_strings.remove( s )
-                del self._strings_to_terms[ s ]
-                
-                self._TextsHaveChanged()
-                
-                break
                 
             
         
