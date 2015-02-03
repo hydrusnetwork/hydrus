@@ -8,6 +8,21 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 146</h3></li>
+				<ul>
+					<li>manage tags and ratings dialogs will now OK on F3/F4, not CANCEL</li>
+					<li>zoom switch (default shortcut 'z') will now work for images smaller than the media viewer's canvas</li>
+					<li>in the media viewer, the canvas-fitting zoom value is now inserted into a media's scrollable zooms</li>
+					<li>added 'tags box background' gui custom colour</li>
+					<li>volume, chapter, and page tags will sort properly again in thumbnail view, including last week's improvements</li>
+					<li>the thread watcher will no longer break its checking loop on non-404 http request or parse errors (i.e. the manual 'check now' button will still work after a misc error)</li>
+					<li>to remove clutter, the preview window will no longer show tags and file information like the normal media viewer</li>
+					<li>subscriptions will now show a live 'show files' button as they process</li>
+					<li>the copy and 'open new page' right-click menu options on tags will now work on more controls</li>
+					<li>cleaned quite a bit of tags box code</li>
+					<li>cleaned up and unified a lot of miscellaneous canvas zoom and display code</li>
+					<li>fixed an error when trying to upload a file petition without any accompanying file uploads</li>
+				</ul>
 				<li><h3>version 145</h3></li>
 				<ul>
 					<li>added custom gui colours for thumbnail backgrounds and borders, the autocomplete background, and media background and text</li>
@@ -21,6 +36,7 @@
 					<li>patched old db-stored predicates to attempt to convert to the new format when queried for _inclusive</li>
 					<li>this _should_ have fixed the recent export folder problems</li>
 					<li>created an 8chan board, and updated my various links, including in the client, to migrate from my old forum to this</li>
+					<li>added a 'fit to canvas' checkbox in file->options->media that will zoom small images to the full size of the media viewer</li>
 					<li>misc code improvements</li>
 				</ul>
 				<li><h3>version 144</h3></li>
