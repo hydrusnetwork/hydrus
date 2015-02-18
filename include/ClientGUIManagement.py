@@ -378,7 +378,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
         
-        t = ClientGUICommon.ListBoxTagsCDPPManagementPanel( tags_box, self._page_key )
+        t = ClientGUICommon.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key )
         
         tags_box.SetTagsBox( t )
         

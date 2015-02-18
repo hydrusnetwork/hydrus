@@ -390,6 +390,19 @@ def CatchExceptionClient( etype, value, tb ):
         HC.ShowText( text )
         
     
+def FilterPredicates( search_entry, predicates, service_key = None, expand_parents = False ):
+    
+    matches = [ predicate for predicate in predicates if HC.SearchEntryMatchesPredicate( search_entry, predicate ) ]
+    
+    if service_key is not None and expand_parents:
+        
+        parents_manager = HC.app.GetManager( 'tag_parents' )
+        
+        matches = parents_manager.ExpandPredicates( service_key, matches )
+        
+    
+    return matches
+    
 def GenerateCollectByChoices( sort_by_choices ):
     
     already_added = set()
@@ -485,7 +498,7 @@ def GenerateExportFilename( media, terms ):
         if term_type == 'string': filename += term
         elif term_type == 'namespace':
             
-            tags = tags_manager.GetNamespaceSlice( ( term, ) )
+            tags = tags_manager.GetNamespaceSlice( ( term, ), collapse_siblings = True )
             
             filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
             
@@ -862,66 +875,20 @@ def ShowTextClient( text ):
     
     HC.pubsub.pub( 'message', job_key )
     
-class AutocompleteMatches( object ):
+def SortPredicates( predicates, collapse_siblings = False ):
     
-    def __init__( self, matches ):
+    if collapse_siblings:
         
-        self._matches = matches
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
         
-        self._matches.sort()
-        
-    
-    def GetMatches( self, search ): return [ match for match in self._matches if HC.SearchEntryMatchesTag( search, match ) ]
-    
-class AutocompleteMatchesCounted( object ):
-    
-    def __init__( self, matches_to_count ):
-        
-        self._matches_to_count = matches_to_count
-        self._matches = self._matches_to_count.keys()
-        
-        def cmp_func( x, y ): return cmp( matches_to_count[ x ], matches_to_count[ y ] )
-        
-        self._matches.sort( cmp = cmp_func, reverse = True )
+        predicates = siblings_manager.CollapsePredicates( predicates )
         
     
-    def GetMatches( self, search ): return [ ( match, self._matches_to_count[ match ] ) for match in self._matches if HC.SearchEntryMatchesTag( search, match ) ]
+    def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
     
-class AutocompleteMatchesPredicates( object ):
+    predicates.sort( cmp = cmp_func, reverse = True )
     
-    def __init__( self, service_key, predicates, collapse = True ):
-        
-        self._service_key = service_key
-        self._predicates = predicates
-        self._collapse = collapse
-        
-        # do siblings
-        
-        if self._collapse:
-            
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
-            
-            self._predicates = siblings_manager.CollapsePredicates( self._predicates )
-            
-        
-        def cmp_func( x, y ): return cmp( x.GetCount(), y.GetCount() )
-        
-        self._predicates.sort( cmp = cmp_func, reverse = True )
-        
-    
-    def GetMatches( self, search ):
-        
-        matches = [ predicate for predicate in self._predicates if HC.SearchEntryMatchesPredicate( search, predicate ) ]
-        
-        if not self._collapse:
-            
-            parents_manager = HC.app.GetManager( 'tag_parents' )
-            
-            matches = parents_manager.ExpandPredicates( self._service_key, matches )
-            
-        
-        return matches
-        
+    return predicates
     
 class Booru( HC.HydrusYAMLBase ):
     

@@ -6771,8 +6771,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 removed_callable = lambda tag: 1
                 
-                self._children = ClientGUICommon.ListBoxTagsFlat( self, removed_callable )
-                self._parents = ClientGUICommon.ListBoxTagsFlat( self, removed_callable )
+                self._children = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
+                self._parents = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
                 
                 self._child_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddChild, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 self._parent_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddParent, HC.LOCAL_FILE_SERVICE_KEY, service_key )
@@ -7234,7 +7234,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 removed_callable = lambda tags: 1
                 
-                self._old_siblings = ClientGUICommon.ListBoxTagsFlat( self, removed_callable )
+                self._old_siblings = ClientGUICommon.ListBoxTagsStrings( self, removed_callable )
                 self._new_sibling = wx.StaticText( self )
                 
                 self._old_input = ClientGUICommon.AutoCompleteDropdownTagsWrite( self, self.AddOld, HC.LOCAL_FILE_SERVICE_KEY, service_key )
@@ -7823,7 +7823,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
                 
                 self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
                 
-                self._tags_box = ClientGUICommon.ListBoxTagsCDPPTagsDialog( self._tags_box_sorter, self.AddTag )
+                self._tags_box = ClientGUICommon.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTag )
                 
                 self._tags_box_sorter.SetTagsBox( self._tags_box )
                 

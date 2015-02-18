@@ -162,8 +162,8 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_namespace_slice( self ):
         
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( ( 'creator', 'series' ), collapse = False ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( (), collapse = False ), frozenset() )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( ( 'creator', 'series' ), collapse_siblings = False ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( (), collapse_siblings = False ), frozenset() )
         
         self.assertEqual( self._tags_manager.GetNamespaceSlice( ( 'creator', 'series' ) ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
         self.assertEqual( self._tags_manager.GetNamespaceSlice( () ), frozenset() )

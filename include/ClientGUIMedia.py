@@ -567,6 +567,8 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         self._shift_focussed_media = None
         
+        self._RefitCanvas()
+        
         self._RedrawCanvas()
         
         self._PublishSelectionChange()
@@ -1450,6 +1452,19 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self._canvas_bmp = wx.EmptyBitmap( new_canvas_width, new_canvas_height, 24 )
                 
+                if not self._canvas_bmp.Ok():
+                    
+                    text = 'Attempting to create a canvas bmp failed!'
+                    text += os.linesep
+                    text += 'Old dimensions: ' + str( ( old_canvas_width, old_canvas_height ) )
+                    text += os.linesep
+                    text += 'New (failed) dimensions: ' + str( ( new_canvas_width, new_canvas_height ) )
+                    
+                    HC.ShowText( text )
+                    
+                    raise Exception( 'Canvas bmp failure!' )
+                    
+                
                 if new_canvas_width == old_canvas_width:
                     
                     dc = wx.MemoryDC( self._canvas_bmp )
@@ -1458,12 +1473,13 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     del dc
                     
+                    self._CleanCanvas()
+                    
                 else: self._RedrawCanvas()
                 
                 wx.CallAfter( old_canvas_bmp.Destroy )
                 
-            
-            self._CleanCanvas()
+            else: self._CleanCanvas()
             
         
     

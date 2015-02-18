@@ -66,7 +66,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 146
+SOFTWARE_VERSION = 147
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1283,7 +1283,7 @@ def SearchEntryMatchesPredicate( search_entry, predicate ):
     
     ( predicate_type, value, inclusive ) = predicate.GetInfo()
     
-    if predicate_type == PREDICATE_TYPE_TAG: return SearchEntryMatchesTag( search_entry, value )
+    if predicate_type == PREDICATE_TYPE_TAG: return SearchEntryMatchesTag( search_entry, value, search_siblings = True )
     else: return False
     
 def SearchEntryMatchesTag( search_entry, tag, search_siblings = True ):
@@ -2375,7 +2375,7 @@ class Predicate( HydrusYAMLBase ):
             
             sibling = siblings_manager.GetSibling( tag )
             
-            if sibling is not None: base += u' (' + sibling + u')'
+            if sibling is not None: base += u' (will display as ' + sibling + ')'
             
         elif self._predicate_type == PREDICATE_TYPE_PARENT:
             

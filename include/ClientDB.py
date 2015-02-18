@@ -603,9 +603,7 @@ class MessageDB( object ):
         
         if name_to_exclude is not None: names = [ name for name in names if name != name_to_exclude ]
         
-        matches = CC.AutocompleteMatches( names )
-        
-        return matches
+        return names
         
     
     def _GetContact( self, parameter ):
@@ -1819,12 +1817,12 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         tag_services = self._GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
         file_services = self._GetServices( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
         
-        for ( tag_service, file_service ) in itertools.product( tag_services, file_services ): self._GetAutocompleteTags( tag_service_key = tag_service.GetServiceKey(), file_service_key = file_service.GetServiceKey(), collapse = False )
+        for ( tag_service, file_service ) in itertools.product( tag_services, file_services ): self._GetAutocompletePredicates( tag_service_key = tag_service.GetServiceKey(), file_service_key = file_service.GetServiceKey(), add_namespaceless = False )
         
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE, HC.GetNow() ) )
         
     
-    def _GetAutocompleteTags( self, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY, file_service_key = HC.COMBINED_FILE_SERVICE_KEY, tag = '', half_complete_tag = '', include_current = True, include_pending = True, collapse = True ):
+    def _GetAutocompletePredicates( self, tag_service_key = HC.COMBINED_TAG_SERVICE_KEY, file_service_key = HC.COMBINED_FILE_SERVICE_KEY, tag = '', half_complete_tag = '', include_current = True, include_pending = True, add_namespaceless = False ):
         
         tag_service_id = self._GetServiceId( tag_service_key )
         file_service_id = self._GetServiceId( file_service_key )
@@ -1885,7 +1883,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 ( namespace, half_complete_tag ) = half_complete_tag.split( ':', 1 )
                 
-                if half_complete_tag == '': return CC.AutocompleteMatchesCounted( {} )
+                if half_complete_tag == '': return []
                 else:
                     
                     if '*' in namespace:
@@ -1899,7 +1897,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                         
                         result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
                         
-                        if result is None: return CC.AutocompleteMatchesCounted( {} )
+                        if result is None: return []
                         else:
                             
                             ( namespace_id, ) = result
@@ -1938,26 +1936,28 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         results = { result for result in self._c.execute( 'SELECT namespace_id, tag_id FROM existing_tags WHERE ' + predicates_phrase + ';' ) }
         
-        if collapse:
+        # now fetch siblings, add to results set
+        
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        if len( half_complete_tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
+        elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
+        else: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( '' )
+        
+        sibling_results = []
+        
+        for sibling_tag in all_associated_sibling_tags:
             
-            # now fetch siblings, add to results set
-            
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
-            
-            if len( half_complete_tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( half_complete_tag )
-            elif len( tag ) > 0: all_associated_sibling_tags = siblings_manager.GetAllSiblings( tag )
-            else: all_associated_sibling_tags = siblings_manager.GetAutocompleteSiblings( '' )
-            
-            sibling_results = []
-            
-            for sibling_tag in all_associated_sibling_tags:
+            try:
                 
-                try: self._GetNamespaceIdTagId( sibling_tag )
-                except: continue
+                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( sibling_tag )
                 
+                sibling_results.append( ( namespace_id, tag_id ) )
+                
+            except: continue
             
-            results.update( sibling_results )
-            
+        
+        results.update( sibling_results )
         
         # fetch what we can from cache
         
@@ -2019,7 +2019,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         current_ids_to_count = collections.Counter()
         pending_ids_to_count = collections.Counter()
         
-        if collapse and not there_was_a_namespace:
+        if not there_was_a_namespace and add_namespaceless:
             
             added_namespaceless_current_ids_to_count = collections.Counter()
             added_namespaceless_pending_ids_to_count = collections.Counter()
@@ -2033,7 +2033,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             # prepare to add any namespaced counts to the namespaceless count
             
-            if collapse and not there_was_a_namespace and ( current_count > 0 or pending_count > 0 ):
+            if not there_was_a_namespace and add_namespaceless and ( current_count > 0 or pending_count > 0 ):
                 
                 tag_ids_to_incidence_count[ tag_id ] += 1
                 
@@ -2049,7 +2049,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         # e.g. 'series:evangelion (300)' is not benefitted by adding 'evangelion (300)'
         # so do not add them
         
-        if collapse and not there_was_a_namespace:
+        if not there_was_a_namespace and add_namespaceless:
             
             for ( tag_id, incidence ) in tag_ids_to_incidence_count.items():
                 
@@ -2080,9 +2080,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, counts = { HC.CURRENT : current_count, HC.PENDING : pending_count } ) for ( tag, current_count, pending_count ) in tag_info if tag in filtered_tags ]
         
-        matches = CC.AutocompleteMatchesPredicates( tag_service_key, predicates, collapse = collapse )
-        
-        return matches
+        return predicates
         
     
     def _GetDownloads( self ): return { hash for ( hash, ) in self._c.execute( 'SELECT hash FROM file_transfers, hashes USING ( hash_id ) WHERE service_id = ?;', ( self._local_file_service_id, ) ) }
@@ -5697,7 +5695,7 @@ class DB( ServiceDB ):
         
         if version == 125:
             
-            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+            options = self._GetOptions()
             
             HC.options[ 'default_tag_repository' ] = HC.options[ 'default_tag_repository' ].GetServiceKey()
             
@@ -5765,7 +5763,7 @@ class DB( ServiceDB ):
             
             #
             
-            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+            options = self._GetOptions()
             
             client_size = HC.options[ 'client_size' ]
             
@@ -5865,7 +5863,7 @@ class DB( ServiceDB ):
         
         if version == 143:
             
-            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+            options = self._GetOptions()
             
             HC.options[ 'shortcuts' ][ wx.ACCEL_CTRL ][ ord( 'E' ) ] = 'open_externally'
             
@@ -5874,7 +5872,7 @@ class DB( ServiceDB ):
         
         if version == 145:
             
-            ( HC.options, ) = self._c.execute( 'SELECT options FROM options;' ).fetchone()
+            options = self._GetOptions()
             
             HC.options[ 'gui_colours' ][ 'tags_box' ] = ( 255, 255, 255 )
             
@@ -5944,7 +5942,7 @@ class DB( ServiceDB ):
                 elif action == 'tag_archive_info': result = self._GetTagArchiveInfo( *args, **kwargs )
                 elif action == 'tag_archive_tags': result = self._GetTagArchiveTags( *args, **kwargs )
                 elif action == 'autocomplete_contacts': result = self._GetAutocompleteContacts( *args, **kwargs )
-                elif action == 'autocomplete_tags': result = self._GetAutocompleteTags( *args, **kwargs )
+                elif action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
                 elif action == 'contact_names': result = self._GetContactNames( *args, **kwargs )
                 elif action == 'do_message_query': result = self._DoMessageQuery( *args, **kwargs )
                 elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
@@ -7346,6 +7344,13 @@ def DAEMONSynchroniseSubscriptions():
                             job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'checking url status' )
                             job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_url_args ) ) )
                             
+                            if len( successful_hashes ) > 0:
+                                
+                                job_key_s_h = set( successful_hashes )
+                                
+                                job_key.SetVariable( 'popup_message_files', job_key_s_h )
+                                
+                            
                             ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
                             
                             if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
@@ -7392,14 +7397,7 @@ def DAEMONSynchroniseSubscriptions():
                                 try: os.remove( temp_path )
                                 except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
                                 
-                                if status in ( 'successful', 'redundant' ):
-                                    
-                                    successful_hashes.add( hash )
-                                    
-                                    job_key_s_h = set( successful_hashes )
-                                    
-                                    job_key.SetVariable( 'popup_message_files', job_key_s_h )
-                                    
+                                if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
                                 
                             
                         except Exception as e:

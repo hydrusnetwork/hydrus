@@ -54,7 +54,7 @@ class MediaList( object ):
         
         for media in medias:
             
-            if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by )
+            if len( namespaces_to_collect_by ) > 0: namespace_key = media.GetTagsManager().GetNamespaceSlice( namespaces_to_collect_by, collapse_siblings = True )
             else: namespace_key = None
             
             if len( ratings_to_collect_by ) > 0:
@@ -320,7 +320,7 @@ class MediaList( object ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
-                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ) ) for namespace in namespaces ]
+                return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ), collapse_siblings = True ) for namespace in namespaces ]
                 
             
             sort_function = lambda x: namespace_sort_function( sort_by_data, x )

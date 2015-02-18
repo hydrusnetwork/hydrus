@@ -89,13 +89,38 @@ class AnimatedStaticTextTimestamp( wx.StaticText ):
         
     
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
-class AutoCompleteDropdown( wx.TextCtrl ):
+class AutoCompleteDropdown( wx.Panel ):
     
     def __init__( self, parent ):
         
-        wx.TextCtrl.__init__( self, parent, style=wx.TE_PROCESS_ENTER )
+        wx.Panel.__init__( self, parent )
         
-        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] ) )
+        tlp = self.GetTopLevelParent()
+        
+        # There's a big bug in wx where FRAME_FLOAT_ON_PARENT Frames don't get passed their mouse events if their parent is a Dialog jej
+        # I think it is something to do with the initialisation order; if the frame is init'ed before the ShowModal call, but whatever.
+        
+        if issubclass( type( tlp ), wx.Dialog ): self._float_mode = False
+        else: self._float_mode = True
+        
+        self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
+        
+        self._text_ctrl.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] ) )
+        
+        if self._float_mode:
+            
+            self._text_ctrl.Bind( wx.EVT_SET_FOCUS, self.EventSetFocus )
+            self._text_ctrl.Bind( wx.EVT_KILL_FOCUS, self.EventKillFocus )
+            
+        
+        self._text_ctrl.Bind( wx.EVT_TEXT, self.EventText )
+        self._text_ctrl.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._text_ctrl.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._text_ctrl, FLAGS_EXPAND_PERPENDICULAR )
         
         #self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
         #self._dropdown_window = wx.PopupTransientWindow( self, style = wx.BORDER_RAISED )
@@ -103,59 +128,69 @@ class AutoCompleteDropdown( wx.TextCtrl ):
         
         #self._dropdown_window = wx.Panel( self )
         
-        self._dropdown_window = wx.Frame( self, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
-        
-        self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
-        
-        self._dropdown_window.SetSize( ( 0, 0 ) )
-        
-        self._dropdown_window.SetPosition( self.ClientToScreenXY( 0, 0, ) )
-        
-        self._dropdown_window.Show()
+        if self._float_mode:
+            
+            self._dropdown_window = wx.Frame( self, style = wx.FRAME_TOOL_WINDOW | wx.FRAME_NO_TASKBAR | wx.FRAME_FLOAT_ON_PARENT | wx.BORDER_RAISED )
+            
+            self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
+            
+            self._dropdown_window.SetSize( ( 0, 0 ) )
+            
+            self._dropdown_window.SetPosition( self._text_ctrl.ClientToScreenXY( 0, 0 ) )
+            
+            self._dropdown_window.Show()
+            
+            self._dropdown_hidden = True
+            
+            self._list_height = 250
+            
+        else:
+            
+            self._dropdown_window = wx.Panel( self )
+            
+            self._list_height = 125
+            
         
         self._dropdown_list = self._InitDropDownList()
         
-        self._dropdown_hidden = True
+        if not self._float_mode: vbox.AddF( self._dropdown_window, FLAGS_EXPAND_BOTH_WAYS )
         
-        self._first_letters = ''
-        self._cached_results = self._InitCachedResults()
+        self.SetSizer( vbox )
         
-        self.Bind( wx.EVT_SET_FOCUS, self.EventSetFocus )
-        self.Bind( wx.EVT_KILL_FOCUS, self.EventKillFocus )
+        self._cache_text = ''
+        self._cached_results = []
         
-        self.Bind( wx.EVT_TEXT, self.EventText, self )
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown, self )
+        if self._float_mode:
+            
+            self.Bind( wx.EVT_MOVE, self.EventMove )
+            self.Bind( wx.EVT_SIZE, self.EventMove )
+            
+            self.Bind( wx.EVT_TIMER, self.TIMEREventDropdownHide, id = ID_TIMER_DROPDOWN_HIDE )
+            
+            self._move_hide_timer = wx.Timer( self, id = ID_TIMER_DROPDOWN_HIDE )
+            
+            tlp.Bind( wx.EVT_MOVE, self.EventMove )
+            
+            parent = self
+            
+            while True:
+                
+                try:
+                    
+                    parent = parent.GetParent()
+                    
+                    if issubclass( type( parent ), wx.ScrolledWindow ):
+                        
+                        parent.Bind( wx.EVT_SCROLLWIN, self.EventMove )
+                        
+                    
+                except: break
+                
+            
         
-        self.Bind( wx.EVT_MOVE, self.EventMove )
-        self.Bind( wx.EVT_SIZE, self.EventMove )
-        
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventDropdownHide, id = ID_TIMER_DROPDOWN_HIDE )
         self.Bind( wx.EVT_TIMER, self.TIMEREventLag, id = ID_TIMER_AC_LAG )
         
-        self._move_hide_timer = wx.Timer( self, id = ID_TIMER_DROPDOWN_HIDE )
         self._lag_timer = wx.Timer( self, id = ID_TIMER_AC_LAG )
-        
-        tlp = self.GetTopLevelParent()
-        
-        tlp.Bind( wx.EVT_MOVE, self.EventMove )
-        
-        parent = self
-        
-        while True:
-            
-            try:
-                
-                parent = parent.GetParent()
-                
-                if issubclass( type( parent ), wx.ScrolledWindow ):
-                    
-                    parent.Bind( wx.EVT_SCROLLWIN, self.EventMove )
-                    
-                
-            except: break
-            
         
         wx.CallAfter( self._UpdateList )
         
@@ -164,9 +199,9 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def BroadcastChoice( self, predicate ):
         
-        if self.GetValue() != '':
+        if self._text_ctrl.GetValue() != '':
             
-            self.SetValue( '' )
+            self._text_ctrl.SetValue( '' )
             
         
         self._BroadcastChoice( predicate )
@@ -181,9 +216,9 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def _ShowDropdownIfFocussed( self ):
         
-        if self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self:
+        if self.GetTopLevelParent().IsActive() and wx.Window.FindFocus() == self._text_ctrl:
             
-            ( my_width, my_height ) = self.GetSize()
+            ( my_width, my_height ) = self._text_ctrl.GetSize()
             
             if self._dropdown_hidden:
                 
@@ -196,7 +231,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
                 self._dropdown_hidden = False
                 
             
-            self._dropdown_window.SetPosition( self.ClientToScreenXY( -2, my_height - 2 ) )
+            self._dropdown_window.SetPosition( self._text_ctrl.ClientToScreenXY( -2, my_height - 2 ) )
             
         
     
@@ -204,25 +239,25 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self.GetValue() == '' and len( self._dropdown_list ) == 0: self._BroadcastChoice( None )
+        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0: self._BroadcastChoice( None )
         elif event.KeyCode == wx.WXK_ESCAPE: self.GetTopLevelParent().SetFocus()
-        elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self.GetValue() == '' and len( self._dropdown_list ) == 0:
+        elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
             if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
             elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
-            self.ProcessEvent( new_event )
+            self._text_ctrl.ProcessEvent( new_event )
             
-        elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self.GetValue() == '' and len( self._dropdown_list ) == 0:
+        elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
             if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_previous' )
             elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_next' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
-            self.ProcessEvent( new_event )
+            self._text_ctrl.ProcessEvent( new_event )
             
         else: self._dropdown_list.ProcessEvent( event )
         
@@ -240,7 +275,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventMouseWheel( self, event ):
         
-        if self.GetValue() == '' and len( self._dropdown_list ) == 0:
+        if self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
             if event.GetWheelRotation() > 0: id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
             else: id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
@@ -305,7 +340,7 @@ class AutoCompleteDropdown( wx.TextCtrl ):
     
     def EventText( self, event ):
         
-        num_chars = len( self.GetValue() )
+        num_chars = len( self._text_ctrl.GetValue() )
         
         ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
         
@@ -342,23 +377,23 @@ class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
     
     def _GenerateMatches( self ):
         
-        num_first_letters = 1
+        num_autocomplete_chars = 1
         
-        entry = self.GetValue()
+        entry = self._text_ctrl.GetValue()
         
         if entry == '':
             
-            self._first_letters = ''
+            self._cache_text = ''
             
             matches = []
             
         else:
             
-            if len( entry ) >= num_first_letters:
+            if len( entry ) >= num_autocomplete_chars:
                 
-                if entry[ : num_first_letters ] != self._first_letters:
+                if entry[ : num_autocomplete_chars ] != self._cache_text:
                     
-                    self._first_letters = entry[ : num_first_letters ]
+                    self._cache_text = entry[ : num_autocomplete_chars ]
                     
                     self._cached_results = HC.app.Read( 'autocomplete_contacts', entry, name_to_exclude = self._identity.GetName() )
                     
@@ -371,8 +406,6 @@ class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
         return matches
         
     
-    def _InitCachedResults( self ): return CC.AutocompleteMatches( [] )
-    
     def _InitDropDownList( self ): return ListBoxMessagesActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
     def _UpdateList( self ):
@@ -382,8 +415,11 @@ class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
         # this obv needs to be SetValues or whatever
         self._dropdown_list.SetTexts( matches )
         
-        if len( matches ) > 0: self._ShowDropdownIfFocussed()
-        else: self._HideDropdown()
+        if self._float_mode:
+            
+            if len( matches ) > 0: self._ShowDropdownIfFocussed()
+            else: self._HideDropdown()
+            
         
     
 class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
@@ -404,13 +440,11 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
     
     def _BroadcastChoice( self, predicate ): HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
     
-    def _InitCachedResults( self ): return CC.AutocompleteMatchesCounted( {} )
-    
     def _InitDropDownList( self ): return ListBoxMessagesActiveOnly( self._dropdown_window, self.BroadcastChoice )
     
     def _GenerateMatches( self ):
         
-        entry = self.GetValue()
+        entry = self._text_ctrl.GetValue()
         
         if entry.startswith( '-' ): search_term = entry[1:]
         else: search_term = entry
@@ -427,8 +461,11 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         
         self._dropdown_list.SetTerms( matches )
         
-        if len( matches ) > 0: self._ShowDropdownIfFocussed()
-        else: self._HideDropdown()
+        if self._float_mode:
+            
+            if len( matches ) > 0: self._ShowDropdownIfFocussed()
+            else: self._HideDropdown()
+            
         
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
@@ -448,16 +485,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._file_repo_button = wx.Button( self._dropdown_window, label = file_service.GetName() )
         self._file_repo_button.Bind( wx.EVT_BUTTON, self.EventFileButton )
+        self._file_repo_button.SetMinSize( ( 20, -1 ) )
         
         self._tag_repo_button = wx.Button( self._dropdown_window, label = tag_service.GetName() )
         self._tag_repo_button.Bind( wx.EVT_BUTTON, self.EventTagButton )
+        self._tag_repo_button.SetMinSize( ( 20, -1 ) )
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
-    def _InitCachedResults( self ): return CC.AutocompleteMatchesPredicates( HC.LOCAL_FILE_SERVICE_KEY, [] )
-    
-    def _InitDropDownList( self ): return ListBoxTagsAutocomplete( self._dropdown_window, self.BroadcastChoice )
+    def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoice, min_height = self._list_height )
     
     def _UpdateList( self ):
         
@@ -467,7 +504,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._current_matches = matches
         
-        num_chars = len( self.GetValue() )
+        num_chars = len( self._text_ctrl.GetValue() )
         
         if num_chars == 0: self._lag_timer.Start( 5 * 60 * 1000, wx.TIMER_ONE_SHOT )
         
@@ -485,7 +522,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
         
-        self.PopupMenu( menu )
+        self._file_repo_button.PopupMenu( menu )
         
         wx.CallAfter( menu.Destroy )
         
@@ -529,7 +566,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
                 return # this is about select_up and select_down
                 
             
-            self._first_letters = ''
+            self._cache_text = ''
             self._current_namespace = ''
             
             self._UpdateList()
@@ -549,7 +586,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
         
-        self.PopupMenu( menu )
+        self._tag_repo_button.PopupMenu( menu )
         
         wx.CallAfter( menu.Destroy )
         
@@ -603,9 +640,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
-        num_first_letters = HC.options[ 'num_autocomplete_chars' ]
+        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
-        raw_entry = self.GetValue()
+        raw_entry = self._text_ctrl.GetValue()
         
         if raw_entry.startswith( '-' ):
             
@@ -624,7 +661,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if search_text == '':
             
-            self._first_letters = ''
+            self._cache_text = ''
             self._current_namespace = ''
             
             if self._file_service_key == HC.COMBINED_FILE_SERVICE_KEY: search_service_key = self._tag_service_key
@@ -646,7 +683,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     self._current_namespace = namespace # do a new search, no matter what half_complete tag is
                     
-                    must_do_a_search = True
+                    if half_complete_tag != '': must_do_a_search = True
+                    
+                else:
+                    
+                    if self._cache_text == self._current_namespace + ':' and half_complete_tag != '': must_do_a_search = True
                     
                 
             else:
@@ -656,7 +697,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 half_complete_tag = search_text
                 
             
-            if half_complete_tag == '': matches = [] # a query like 'namespace:'
+            if half_complete_tag == '':
+                
+                self._cache_text = self._current_namespace + ':'
+                
+                matches = [] # a query like 'namespace:'
+                
             else:
                 
                 fetch_from_db = True
@@ -670,22 +716,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 if fetch_from_db:
                     
-                    if len( search_text ) < num_first_letters:
+                    if len( search_text ) < num_autocomplete_chars:
                         
-                        results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
-                        
-                        matches = results.GetMatches( search_text )
+                        predicates = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                         
                     else:
                         
-                        if must_do_a_search or self._first_letters == '' or not search_text.startswith( self._first_letters ):
+                        if must_do_a_search or self._cache_text == '' or not search_text.startswith( self._cache_text ):
                             
-                            self._first_letters = search_text
+                            self._cache_text = search_text
                             
-                            self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending )
+                            self._cached_results = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, include_current = self._include_current, include_pending = self._include_pending, add_namespaceless = True )
                             
                         
-                        matches = self._cached_results.GetMatches( search_text )
+                        predicates = self._cached_results
                         
                     
                 else:
@@ -718,13 +762,15 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     if self._include_current: tags_to_do.update( current_tags_to_count.keys() )
                     if self._include_pending: tags_to_do.update( pending_tags_to_count.keys() )
                     
-                    results = CC.AutocompleteMatchesPredicates( self._tag_service_key, [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ] )
-                    
-                    matches = results.GetMatches( search_text )
+                    predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
                 
+                predicates = CC.SortPredicates( predicates, collapse_siblings = True )
+                
+                matches = CC.FilterPredicates( search_text, predicates )
+                
             
-            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) )
+            if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
             if '*' in search_text: matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive = inclusive ) )
             
             entry_predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive = inclusive )
@@ -754,7 +800,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if page_key == self._page_key: self._include_current = value
         
-        self._first_letters = ''
+        self._cache_text = ''
         self._current_namespace = ''
         
     
@@ -762,7 +808,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         if page_key == self._page_key: self._include_pending = value
         
-        self._first_letters = ''
+        self._cache_text = ''
         self._current_namespace = ''
         
     
@@ -822,15 +868,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
-        num_first_letters = HC.options[ 'num_autocomplete_chars' ]
+        num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
-        raw_entry = self.GetValue()
+        raw_entry = self._text_ctrl.GetValue()
         
         search_text = HC.CleanTag( raw_entry )
         
         if search_text == '':
             
-            self._first_letters = ''
+            self._cache_text = ''
             self._current_namespace = ''
             
             matches = []
@@ -841,39 +887,38 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if ':' in search_text:
                 
-                ( namespace, half_complete_tag ) = search_text.split( ':' )
+                ( namespace, other_half ) = search_text.split( ':' )
                 
-                if namespace != self._current_namespace:
+                if other_half != '' and namespace != self._current_namespace:
                     
                     self._current_namespace = namespace # do a new search, no matter what half_complete tag is
                     
                     must_do_a_search = True
                     
                 
+            else: self._current_namespace = ''
+            
+            half_complete_tag = search_text
+            
+            if len( search_text ) < num_autocomplete_chars:
+                
+                predicates = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, add_namespaceless = False )
+                
             else:
                 
-                self._current_namespace = ''
+                if must_do_a_search or self._cache_text == '' or not half_complete_tag.startswith( self._cache_text ):
+                    
+                    self._cache_text = half_complete_tag
+                    
+                    self._cached_results = HC.app.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, add_namespaceless = False )
+                    
                 
-                half_complete_tag = search_text
+                predicates = self._cached_results
                 
             
-            if len( search_text ) < num_first_letters:
-                
-                results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, tag = search_text, collapse = False )
-                
-                matches = results.GetMatches( half_complete_tag )
-                
-            else:
-                
-                if must_do_a_search or self._first_letters == '' or not half_complete_tag.startswith( self._first_letters ):
-                    
-                    self._first_letters = half_complete_tag
-                    
-                    self._cached_results = HC.app.Read( 'autocomplete_tags', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, half_complete_tag = search_text, collapse = False )
-                    
-                
-                matches = self._cached_results.GetMatches( half_complete_tag )
-                
+            predicates = CC.SortPredicates( predicates, collapse_siblings = False )
+            
+            matches = CC.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = True )
             
             # do the 'put whatever they typed in at the top, whether it has count or not'
             # now with sibling support!
@@ -2396,13 +2441,13 @@ class ListBoxTags( ListBox ):
         else: return None
         
     
-class ListBoxTagsAutocomplete( ListBoxTags ):
+class ListBoxTagsAutocompleteDropdown( ListBoxTags ):
     
     has_counts = True
     
-    def __init__( self, parent, callable ):
+    def __init__( self, parent, callable, **kwargs ):
         
-        ListBoxTags.__init__( self, parent )
+        ListBoxTags.__init__( self, parent, **kwargs )
         
         self._callable = callable
         
@@ -2611,221 +2656,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
             
         
     
-class ListBoxTagsCDPP( ListBoxTags ):
-    
-    has_counts = True
-    
-    def __init__( self, parent ):
-        
-        ListBoxTags.__init__( self, parent, min_height = 200 )
-        
-        self._sort = HC.options[ 'default_tag_sort' ]
-        
-        self._last_media = set()
-        
-        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
-        
-        self._current_tags_to_count = collections.Counter()
-        self._deleted_tags_to_count = collections.Counter()
-        self._pending_tags_to_count = collections.Counter()
-        self._petitioned_tags_to_count = collections.Counter()
-        
-        self._show_current = True
-        self._show_deleted = False
-        self._show_pending = True
-        self._show_petitioned = True
-        
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        if with_counts: return self._ordered_strings
-        else: return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
-        
-    
-    def _RecalcStrings( self ):
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        all_tags = set()
-        
-        if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
-        if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
-        if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
-        if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
-        
-        self._ordered_strings = []
-        self._strings_to_terms = {}
-        
-        for tag in all_tags:
-            
-            tag_string = tag
-            
-            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HC.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: tag_string += ' (' + sibling + ')'
-            
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
-            
-        
-        self._SortTags()
-        
-    
-    def _SortTags( self ):
-        
-        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC: compare_function = lambda a, b: cmp( a, b )
-        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC: compare_function = lambda a, b: cmp( b, a )
-        elif self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
-            
-            tags_to_count = collections.defaultdict( lambda: 0 )
-            
-            tags_to_count.update( self._current_tags_to_count )
-            for ( tag, count ) in self._pending_tags_to_count.items(): tags_to_count[ tag ] += count
-            
-            if self._sort == CC.SORT_BY_INCIDENCE_ASC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ a ] ], a ), ( tags_to_count[ self._strings_to_terms[ b ] ], b ) )
-            elif self._sort == CC.SORT_BY_INCIDENCE_DESC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ b ] ], a ), ( tags_to_count[ self._strings_to_terms[ a ] ], b ) )
-            
-        
-        self._ordered_strings.sort( compare_function )
-        
-        self._TextsHaveChanged()
-        
-    
-    def ChangeTagRepository( self, service_key ):
-        
-        self._tag_service_key = service_key
-        
-        self.SetTagsByMedia( self._last_media, force_reload = True )
-        
-    
-    def SetSort( self, sort ):
-        
-        self._sort = sort
-        
-        self._SortTags()
-        
-    
-    def SetTags( self, current_tags_to_count = collections.Counter(), deleted_tags_to_count = collections.Counter(), pending_tags_to_count = collections.Counter(), petitioned_tags_to_count = collections.Counter() ):
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-        
-        self._current_tags_to_count = current_tags_to_count
-        self._deleted_tags_to_count = deleted_tags_to_count
-        self._pending_tags_to_count = pending_tags_to_count
-        self._petitioned_tags_to_count = petitioned_tags_to_count
-        
-        self._RecalcStrings()
-        
-    
-    def SetShow( self, show_type, value ):
-        
-        if show_type == 'current': self._show_current = value
-        elif show_type == 'deleted': self._show_deleted = value
-        elif show_type == 'pending': self._show_pending = value
-        elif show_type == 'petitioned': self._show_petitioned = value
-        
-        self._RecalcStrings()
-        
-    
-    def SetTagsByMedia( self, media, force_reload = False ):
-        
-        media = set( media )
-        
-        if force_reload:
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_key )
-            
-            self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
-            
-        else:
-            
-            removees = self._last_media.difference( media )
-            adds = media.difference( self._last_media )
-            
-            siblings_manager = HC.app.GetManager( 'tag_siblings' )
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_key )
-            
-            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-            
-            self._current_tags_to_count.subtract( current_tags_to_count )
-            self._deleted_tags_to_count.subtract( deleted_tags_to_count )
-            self._pending_tags_to_count.subtract( pending_tags_to_count )
-            self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
-            
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_key )
-            
-            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
-            
-            self._current_tags_to_count.update( current_tags_to_count )
-            self._deleted_tags_to_count.update( deleted_tags_to_count )
-            self._pending_tags_to_count.update( pending_tags_to_count )
-            self._petitioned_tags_to_count.update( petitioned_tags_to_count )
-            
-            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
-                
-                tags = counter.keys()
-                
-                for tag in tags:
-                    
-                    if counter[ tag ] == 0: del counter[ tag ]
-                    
-                
-            
-        
-        self._last_media = media
-        
-        self._RecalcStrings()
-        
-    
-class ListBoxTagsCDPPManagementPanel( ListBoxTagsCDPP ):
-    
-    def __init__( self, parent, page_key ):
-        
-        ListBoxTagsCDPP.__init__( self, parent )
-        
-        self._page_key = page_key
-        
-        HC.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
-        
-    
-    def _Activate( self, s, term ):
-        
-        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
-        
-        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
-        
-    
-    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
-        
-        if page_key == self._page_key: self.ChangeTagRepository( service_key )
-        
-    
-    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
-        
-        if page_key == self._page_key: self.SetTagsByMedia( media, force_reload = force_reload )
-        
-    
-class ListBoxTagsCDPPTagsDialog( ListBoxTagsCDPP ):
-    
-    def __init__( self, parent, callable ):
-        
-        ListBoxTagsCDPP.__init__( self, parent )
-        
-        self._callable = callable
-        
-    
-    def _Activate( self, s, term ): self._callable( term )
-    
-class ListBoxTagsFlat( ListBoxTags ):
+class ListBoxTagsStrings( ListBoxTags ):
     
     def __init__( self, parent, removed_callable ):
         
@@ -2856,7 +2687,7 @@ class ListBoxTagsFlat( ListBoxTags ):
             
             sibling = siblings_manager.GetSibling( tag )
             
-            if sibling is not None: tag_string += ' (' + sibling + ')'
+            if sibling is not None: tag_string += ' (will display as ' + sibling + ')'
             
             self._strings_to_terms[ tag_string ] = tag
             
@@ -2902,118 +2733,6 @@ class ListBoxTagsFlat( ListBoxTags ):
         for tag in tags: self._tags.add( tag )
         
         self._RecalcTags()
-        
-    
-class ListBoxTagsManage( ListBoxTags ):
-    
-    def __init__( self, parent, callable, current_tags, deleted_tags, pending_tags, petitioned_tags ):
-        
-        ListBoxTags.__init__( self, parent )
-        
-        self._callable = callable
-        
-        self._show_deleted = False
-        
-        self._current_tags = set( current_tags )
-        self._deleted_tags = set( deleted_tags )
-        self._pending_tags = set( pending_tags )
-        self._petitioned_tags = set( petitioned_tags )
-        
-        self._RebuildTagStrings()
-        
-    
-    def _Activate( self, s, term ): self._callable( term )
-    
-    def _GetAllTagsForClipboard( self, with_counts = False ):
-        
-        all_tags = set( itertools.chain( self._current_tags, self._pending_tags ) )
-        
-        all_tags = list( all_tags )
-        
-        all_tags.sort()
-        
-        return all_tags
-        
-    
-    def _RebuildTagStrings( self ):
-        
-        siblings_manager = HC.app.GetManager( 'tag_siblings' )
-        
-        all_tags = self._current_tags | self._deleted_tags | self._pending_tags | self._petitioned_tags
-        
-        self._ordered_strings = []
-        self._strings_to_terms = {}
-        
-        for tag in all_tags:
-            
-            if tag in self._petitioned_tags: prefix = HC.ConvertStatusToPrefix( HC.PETITIONED )
-            elif tag in self._current_tags: prefix = HC.ConvertStatusToPrefix( HC.CURRENT )
-            elif tag in self._pending_tags:
-                
-                if tag in self._deleted_tags: prefix = HC.ConvertStatusToPrefix( HC.DELETED_PENDING )
-                else: prefix = HC.ConvertStatusToPrefix( HC.PENDING )
-                
-            else:
-                
-                if self._show_deleted: prefix = HC.ConvertStatusToPrefix( HC.DELETED )
-                else: continue
-                
-            
-            tag_string = prefix + tag
-            
-            sibling = siblings_manager.GetSibling( tag )
-            
-            if sibling is not None: tag_string += ' (' + sibling + ')'
-            
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = tag
-            
-        
-        self._ordered_strings.sort()
-        
-        self._TextsHaveChanged()
-        
-    
-    def HideDeleted( self ):
-        
-        self._show_deleted = False
-        
-        self._RebuildTagStrings()
-        
-    
-    def PetitionTag( self, tag ):
-        
-        self._petitioned_tags.add( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def PendTag( self, tag ):
-        
-        self._pending_tags.add( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def RescindPetition( self, tag ):
-        
-        self._petitioned_tags.discard( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def RescindPend( self, tag ):
-        
-        self._pending_tags.discard( tag )
-        
-        self._RebuildTagStrings()
-        
-    
-    def ShowDeleted( self ):
-        
-        self._show_deleted = True
-        
-        self._RebuildTagStrings()
         
     
 class ListBoxTagsPredicates( ListBoxTags ):
@@ -3092,6 +2811,243 @@ class ListBoxTagsPredicates( ListBoxTags ):
                 
             
         
+    
+class ListBoxTagsSelection( ListBoxTags ):
+    
+    has_counts = True
+    
+    def __init__( self, parent, collapse_siblings = False ):
+        
+        ListBoxTags.__init__( self, parent, min_height = 200 )
+        
+        self._sort = HC.options[ 'default_tag_sort' ]
+        
+        self._last_media = set()
+        
+        self._tag_service_key = HC.COMBINED_TAG_SERVICE_KEY
+        
+        self._collapse_siblings = collapse_siblings
+        
+        self._current_tags_to_count = collections.Counter()
+        self._deleted_tags_to_count = collections.Counter()
+        self._pending_tags_to_count = collections.Counter()
+        self._petitioned_tags_to_count = collections.Counter()
+        
+        self._show_current = True
+        self._show_deleted = False
+        self._show_pending = True
+        self._show_petitioned = True
+        
+    
+    def _GetAllTagsForClipboard( self, with_counts = False ):
+        
+        if with_counts: return self._ordered_strings
+        else: return [ self._strings_to_terms[ s ] for s in self._ordered_strings ]
+        
+    
+    def _RecalcStrings( self ):
+        
+        siblings_manager = HC.app.GetManager( 'tag_siblings' )
+        
+        all_tags = set()
+        
+        if self._show_current: all_tags.update( ( tag for ( tag, count ) in self._current_tags_to_count.items() if count > 0 ) )
+        if self._show_deleted: all_tags.update( ( tag for ( tag, count ) in self._deleted_tags_to_count.items() if count > 0 ) )
+        if self._show_pending: all_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
+        if self._show_petitioned: all_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
+        
+        self._ordered_strings = []
+        self._strings_to_terms = {}
+        
+        for tag in all_tags:
+            
+            tag_string = tag
+            
+            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HC.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HC.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HC.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HC.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
+            
+            if not self._collapse_siblings:
+                
+                sibling = siblings_manager.GetSibling( tag )
+                
+                if sibling is not None: tag_string += ' (will display as ' + sibling + ')'
+                
+            
+            self._ordered_strings.append( tag_string )
+            self._strings_to_terms[ tag_string ] = tag
+            
+        
+        self._SortTags()
+        
+    
+    def _SortTags( self ):
+        
+        if self._sort == CC.SORT_BY_LEXICOGRAPHIC_ASC: compare_function = lambda a, b: cmp( a, b )
+        elif self._sort == CC.SORT_BY_LEXICOGRAPHIC_DESC: compare_function = lambda a, b: cmp( b, a )
+        elif self._sort in ( CC.SORT_BY_INCIDENCE_ASC, CC.SORT_BY_INCIDENCE_DESC ):
+            
+            tags_to_count = collections.defaultdict( lambda: 0 )
+            
+            tags_to_count.update( self._current_tags_to_count )
+            for ( tag, count ) in self._pending_tags_to_count.items(): tags_to_count[ tag ] += count
+            
+            if self._sort == CC.SORT_BY_INCIDENCE_ASC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ a ] ], a ), ( tags_to_count[ self._strings_to_terms[ b ] ], b ) )
+            elif self._sort == CC.SORT_BY_INCIDENCE_DESC: compare_function = lambda a, b: cmp( ( tags_to_count[ self._strings_to_terms[ b ] ], a ), ( tags_to_count[ self._strings_to_terms[ a ] ], b ) )
+            
+        
+        self._ordered_strings.sort( compare_function )
+        
+        self._TextsHaveChanged()
+        
+    
+    def ChangeTagRepository( self, service_key ):
+        
+        self._tag_service_key = service_key
+        
+        self.SetTagsByMedia( self._last_media, force_reload = True )
+        
+    
+    def SetSort( self, sort ):
+        
+        self._sort = sort
+        
+        self._SortTags()
+        
+    
+    def SetTags( self, current_tags_to_count = collections.Counter(), deleted_tags_to_count = collections.Counter(), pending_tags_to_count = collections.Counter(), petitioned_tags_to_count = collections.Counter() ):
+        
+        if self._collapse_siblings:
+            
+            siblings_manager = HC.app.GetManager( 'tag_siblings' )
+            
+            current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+            deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
+            pending_tags_to_count = siblings_manager.CollapseTagsToCount( pending_tags_to_count )
+            petitioned_tags_to_count = siblings_manager.CollapseTagsToCount( petitioned_tags_to_count )
+            
+        
+        self._current_tags_to_count = current_tags_to_count
+        self._deleted_tags_to_count = deleted_tags_to_count
+        self._pending_tags_to_count = pending_tags_to_count
+        self._petitioned_tags_to_count = petitioned_tags_to_count
+        
+        self._RecalcStrings()
+        
+    
+    def SetShow( self, show_type, value ):
+        
+        if show_type == 'current': self._show_current = value
+        elif show_type == 'deleted': self._show_deleted = value
+        elif show_type == 'pending': self._show_pending = value
+        elif show_type == 'petitioned': self._show_petitioned = value
+        
+        self._RecalcStrings()
+        
+    
+    def SetTagsByMedia( self, media, force_reload = False ):
+        
+        media = set( media )
+        
+        if force_reload:
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_key )
+            
+            self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+            
+        else:
+            
+            removees = self._last_media.difference( media )
+            adds = media.difference( self._last_media )
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_key )
+            
+            if self._collapse_siblings:
+                
+                siblings_manager = HC.app.GetManager( 'tag_siblings' )
+                
+                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+                deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
+                pending_tags_to_count = siblings_manager.CollapseTagsToCount( pending_tags_to_count )
+                petitioned_tags_to_count = siblings_manager.CollapseTagsToCount( petitioned_tags_to_count )
+                
+            
+            self._current_tags_to_count.subtract( current_tags_to_count )
+            self._deleted_tags_to_count.subtract( deleted_tags_to_count )
+            self._pending_tags_to_count.subtract( pending_tags_to_count )
+            self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
+            
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_key )
+            
+            if self._collapse_siblings:
+                
+                current_tags_to_count = siblings_manager.CollapseTagsToCount( current_tags_to_count )
+                deleted_tags_to_count = siblings_manager.CollapseTagsToCount( deleted_tags_to_count )
+                pending_tags_to_count = siblings_manager.CollapseTagsToCount( pending_tags_to_count )
+                petitioned_tags_to_count = siblings_manager.CollapseTagsToCount( petitioned_tags_to_count )
+                
+            
+            self._current_tags_to_count.update( current_tags_to_count )
+            self._deleted_tags_to_count.update( deleted_tags_to_count )
+            self._pending_tags_to_count.update( pending_tags_to_count )
+            self._petitioned_tags_to_count.update( petitioned_tags_to_count )
+            
+            for counter in ( self._current_tags_to_count, self._deleted_tags_to_count, self._pending_tags_to_count, self._petitioned_tags_to_count ):
+                
+                tags = counter.keys()
+                
+                for tag in tags:
+                    
+                    if counter[ tag ] == 0: del counter[ tag ]
+                    
+                
+            
+            self._RecalcStrings()
+            
+        
+        self._last_media = media
+        
+    
+class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
+    
+    def __init__( self, parent, page_key ):
+        
+        ListBoxTagsSelection.__init__( self, parent, collapse_siblings = True )
+        
+        self._page_key = page_key
+        
+        HC.pubsub.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HC.pubsub.sub( self, 'ChangeTagRepositoryPubsub', 'change_tag_repository' )
+        
+    
+    def _Activate( self, s, term ):
+        
+        predicate = HC.Predicate( HC.PREDICATE_TYPE_TAG, term )
+        
+        HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+        
+    
+    def ChangeTagRepositoryPubsub( self, page_key, service_key ):
+        
+        if page_key == self._page_key: self.ChangeTagRepository( service_key )
+        
+    
+    def SetTagsByMediaPubsub( self, page_key, media, force_reload = False ):
+        
+        if page_key == self._page_key: self.SetTagsByMedia( media, force_reload = force_reload )
+        
+    
+class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
+    
+    def __init__( self, parent, callable ):
+        
+        ListBoxTagsSelection.__init__( self, parent, collapse_siblings = False )
+        
+        self._callable = callable
+        
+    
+    def _Activate( self, s, term ): self._callable( term )
     
 class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     

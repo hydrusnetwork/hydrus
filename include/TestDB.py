@@ -93,13 +93,13 @@ class TestClientDB( unittest.TestCase ):
         
         self._clear_db()
         
-        result = self._read( 'autocomplete_tags', half_complete_tag = 'c' )
+        result = self._read( 'autocomplete_predicates', half_complete_tag = 'c' )
         
-        self.assertEqual( result.GetMatches( 'c' ), [] )
+        self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_tags', half_complete_tag = 'series:' )
+        result = self._read( 'autocomplete_predicates', half_complete_tag = 'series:' )
         
-        self.assertEqual( result.GetMatches( 'series:' ), [] )
+        self.assertEqual( result, [] )
         
         #
         
@@ -125,36 +125,43 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_tags', half_complete_tag = 'c' )
+        result = self._read( 'autocomplete_predicates', half_complete_tag = 'c', add_namespaceless = True )
         
         preds = set()
         
         preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
         preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
         
-        read_preds = result.GetMatches( 'c' )
+        for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
         
-        # count isn't tested in predicate.__eq__, I think
+        self.assertEqual( set( result ), preds )
         
-        for p in read_preds: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
+        # cars
         
-        self.assertEqual( set( read_preds ), preds )
+        result = self._read( 'autocomplete_predicates', half_complete_tag = 'c', add_namespaceless = False )
+        
+        preds = set()
+        
+        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } ) )
+        preds.add( HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } ) )
+        
+        for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
+        
+        self.assertEqual( set( result ), preds )
         
         #
         
-        result = self._read( 'autocomplete_tags', half_complete_tag = 'ser' )
+        result = self._read( 'autocomplete_predicates', half_complete_tag = 'ser' )
         
-        read_preds = result.GetMatches( 'ser' )
-        
-        self.assertEqual( read_preds, [] )
+        self.assertEqual( result, [] )
         
         #
         
-        result = self._read( 'autocomplete_tags', half_complete_tag = 'series:c' )
+        result = self._read( 'autocomplete_predicates', half_complete_tag = 'series:c' )
         
         pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', counts = { HC.CURRENT : 1 } )
         
-        ( read_pred, ) = result.GetMatches( 'series:c' )
+        ( read_pred, ) = result
         
         self.assertEqual( read_pred.GetCount( HC.CURRENT ), 1 )
         
@@ -162,11 +169,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_tags', tag = 'car' )
+        result = self._read( 'autocomplete_predicates', tag = 'car' )
         
         pred = HC.Predicate( HC.PREDICATE_TYPE_TAG, 'car', counts = { HC.CURRENT : 1 } )
         
-        ( read_pred, ) = result.GetMatches( 'car' )
+        ( read_pred, ) = result
         
         self.assertEqual( read_pred.GetCount( HC.CURRENT ), 1 )
         
@@ -174,11 +181,9 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_tags', tag = 'c' )
+        result = self._read( 'autocomplete_predicates', tag = 'c' )
         
-        read_preds = result.GetMatches( 'c' )
-        
-        self.assertEqual( read_preds, [] )
+        self.assertEqual( result, [] )
         
     
     def test_booru( self ):

@@ -307,7 +307,7 @@ class TagsManagerSimple( object ):
         return result
         
     
-    def GetComparableNamespaceSlice( self, namespaces, collapse = True ):
+    def GetComparableNamespaceSlice( self, namespaces, collapse_siblings = False ):
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
         
@@ -338,7 +338,7 @@ class TagsManagerSimple( object ):
         return tuple( slice )
         
     
-    def GetNamespaceSlice( self, namespaces, collapse = True ):
+    def GetNamespaceSlice( self, namespaces, collapse_siblings = False ):
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ HC.COMBINED_TAG_SERVICE_KEY ]
         
@@ -347,7 +347,7 @@ class TagsManagerSimple( object ):
         
         slice = { tag for tag in combined_current.union( combined_pending ) if True in ( tag.startswith( namespace + ':' ) for namespace in namespaces ) }
         
-        if collapse:
+        if collapse_siblings:
             
             siblings_manager = HC.app.GetManager( 'tag_siblings' )
             
@@ -821,7 +821,7 @@ class TagSiblingsManager( object ):
                         
                         ( old_pred_type, old_value, old_inclusive ) = old_predicate.GetInfo()
                         
-                        new_predicate = HC.Predicate( old_pred_type, old_value, inclusive = old_inclusive )
+                        new_predicate = HC.Predicate( old_pred_type, new_tag, inclusive = old_inclusive )
                         
                         tags_to_predicates[ new_tag ] = new_predicate
                         

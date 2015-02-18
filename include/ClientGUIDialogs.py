@@ -2641,7 +2641,7 @@ class DialogInputLocalFiles( Dialog ):
                     paths_to_send_to_dialog.append( pretty_path )
                     
                 
-                with DialogPathsToTagsRegex( self, paths_to_send_to_dialog ) as dlg:
+                with DialogPathsToTags( self, paths_to_send_to_dialog ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
@@ -4143,7 +4143,7 @@ class DialogPageChooser( Dialog ):
             
         
     
-class DialogPathsToTagsRegex( Dialog ):
+class DialogPathsToTags( Dialog ):
     
     def __init__( self, parent, paths ):
         
@@ -4206,7 +4206,12 @@ class DialogPathsToTagsRegex( Dialog ):
             
             self.SetSizer( vbox )
             
-            self.SetInitialSize( ( 980, 680 ) )
+            ( width, height ) = self.GetMinSize()
+            
+            width = max( width, 930 )
+            height = max( height, 680 )
+            
+            self.SetInitialSize( ( width, height ) )
             
         
         Dialog.__init__( self, parent, 'path tagging' )
@@ -4292,12 +4297,15 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
                 self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
+                self._add_quick_namespace_button.SetMinSize( ( 20, -1 ) )
                 
                 self._edit_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'edit' )
                 self._edit_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventEditQuickNamespace )
+                self._edit_quick_namespace_button.SetMinSize( ( 20, -1 ) )
                 
                 self._delete_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'delete' )
                 self._delete_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventDeleteQuickNamespace )
+                self._delete_quick_namespace_button.SetMinSize( ( 20, -1 ) )
                 
                 #
                 
@@ -4317,22 +4325,22 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._num_panel = ClientGUICommon.StaticBox( self, '#' )
                 
-                self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 80, -1 ) )
+                self._num_base = wx.SpinCtrl( self._num_panel, min = -10000000, max = 10000000, size = ( 60, -1 ) )
                 self._num_base.SetValue( 1 )
                 self._num_base.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
                 
-                self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 80, -1 ) )
+                self._num_step = wx.SpinCtrl( self._num_panel, min = -1000000, max = 1000000, size = ( 60, -1 ) )
                 self._num_step.SetValue( 1 )
                 self._num_step.Bind( wx.EVT_SPINCTRL, self.EventRecalcNum )
                 
-                self._num_namespace = wx.TextCtrl( self._num_panel )
+                self._num_namespace = wx.TextCtrl( self._num_panel, size = ( 100, -1 ) )
                 self._num_namespace.Bind( wx.EVT_TEXT, self.EventNumNamespaceChanged )
                 
                 #
                 
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
-                self._tags = ClientGUICommon.ListBoxTagsFlat( self._tags_panel, self.TagRemoved )
+                self._tags = ClientGUICommon.ListBoxTagsStrings( self._tags_panel, self.TagRemoved )
                 
                 self._tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._tags_panel, self.AddTag, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
@@ -4342,7 +4350,7 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 self._paths_to_single_tags = collections.defaultdict( list )
                 
-                self._single_tags = ClientGUICommon.ListBoxTagsFlat( self._single_tags_panel, self.SingleTagRemoved )
+                self._single_tags = ClientGUICommon.ListBoxTagsStrings( self._single_tags_panel, self.SingleTagRemoved )
                 
                 self._single_tag_box = ClientGUICommon.AutoCompleteDropdownTagsWrite( self._single_tags_panel, self.AddTagSingle, HC.LOCAL_FILE_SERVICE_KEY, service_key )
                 
@@ -4372,12 +4380,12 @@ class DialogPathsToTagsRegex( Dialog ):
                 
                 button_box = wx.BoxSizer( wx.HORIZONTAL )
                 
-                button_box.AddF( self._add_quick_namespace_button, FLAGS_MIXED )
-                button_box.AddF( self._edit_quick_namespace_button, FLAGS_MIXED )
-                button_box.AddF( self._delete_quick_namespace_button, FLAGS_MIXED )
+                button_box.AddF( self._add_quick_namespace_button, FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._edit_quick_namespace_button, FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._delete_quick_namespace_button, FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._quick_namespaces_panel.AddF( self._quick_namespaces_list, FLAGS_EXPAND_BOTH_WAYS )
-                self._quick_namespaces_panel.AddF( button_box, FLAGS_BUTTON_SIZER )
+                self._quick_namespaces_panel.AddF( button_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 #
                 
@@ -5472,7 +5480,7 @@ class DialogSetupExport( Dialog ):
             
             self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
             
-            t = ClientGUICommon.ListBoxTagsCDPP( self._tags_box )
+            t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, collapse_siblings = True )
             
             self._tags_box.SetTagsBox( t )
             
