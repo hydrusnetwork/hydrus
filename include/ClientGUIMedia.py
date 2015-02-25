@@ -439,7 +439,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            with ClientGUIDialogsManage.DialogManageTags( None, self._file_service_key, self._selected_media ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogsManage.DialogManageTags( self.GetTopLevelParent(), self._file_service_key, self._selected_media ) as dlg: dlg.ShowModal()
             
             self.SetFocus()
             
@@ -541,40 +541,9 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _RedrawCanvas( self ): pass
+    def _RecalculateVirtualSize( self ): pass
     
     def _RedrawMediaIfLoaded( self, media ): pass
-    
-    def _RefitCanvas( self ): pass
-    
-    def _Remove( self ):
-        
-        singletons = [ media for media in self._selected_media if not media.IsCollection() ]
-        
-        collections = [ media for media in self._selected_media if media.IsCollection() ]
-        
-        self._RemoveMedia( singletons, collections )
-        
-    
-    def _RemoveMedia( self, singleton_media, collected_media ):
-        
-        ClientGUIMixins.ListeningMediaList._RemoveMedia( self, singleton_media, collected_media )
-        
-        self._selected_media.difference_update( singleton_media )
-        self._selected_media.difference_update( collected_media )
-        
-        if self._focussed_media not in self._selected_media: self._SetFocussedMedia( None )
-        
-        self._shift_focussed_media = None
-        
-        self._RefitCanvas()
-        
-        self._RedrawCanvas()
-        
-        self._PublishSelectionChange()
-        
-        HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
-        
     
     def _RescindPetitionFiles( self, file_service_key ):
         
@@ -596,33 +565,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _ScrollEnd( self, shift = False ):
-        
-        if len( self._sorted_media ) > 0:
-            
-            end_media = self._sorted_media[ -1 ]
-            
-            self._HitMedia( end_media, False, shift )
-            
-            self._ScrollToMedia( end_media )
-            
-        
-    
-    def _ScrollHome( self, shift = False ):
-        
-        if len( self._sorted_media ) > 0:
-            
-            home_media = self._sorted_media[ 0 ]
-            
-            self._HitMedia( home_media, False, shift )
-            
-            self._ScrollToMedia( home_media )
-            
-        
-    
     def _Select( self, select_type ):
-        
-        self._RefitCanvas()
         
         if select_type == 'all': self._DeselectSelect( [], self._sorted_media )
         else:
@@ -750,7 +693,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             ClientGUIMixins.ListeningMediaList.Collect( self, collect_by )
             
-            self._RefitCanvas()
+            self._RecalculateVirtualSize()
             
             # no refresh needed since the sort call that always comes after will do it
             
@@ -823,7 +766,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
                 
                 ( action, row ) = service_update.ToTuple()
                 
-                if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ): self._RefitCanvas()
+                if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ): self._RecalculateVirtualSize()
                 
                 self._PublishSelectionChange( force_reload = True )
                 
@@ -840,34 +783,11 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def SetFocussedMedia( self, page_key, media ):
-        
-        if page_key == self._page_key:
-            
-            if media is None: self._SetFocussedMedia( None )
-            else:
-                
-                try:
-                    
-                    my_media = self._GetMedia( media.GetHashes() )[0]
-                    
-                    self._HitMedia( my_media, False, False )
-                    
-                    self._ScrollToMedia( self._focussed_media )
-                    
-                except: pass
-                
-            
-        
+    def SetFocussedMedia( self, page_key, media ): pass
     
     def Sort( self, page_key, sort_by = None ):
         
-        if page_key == self._page_key:
-            
-            ClientGUIMixins.ListeningMediaList.Sort( self, sort_by )
-            
-            self._RedrawCanvas()
-            
+        if page_key == self._page_key: ClientGUIMixins.ListeningMediaList.Sort( self, sort_by )
         
         HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
@@ -928,14 +848,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._refreshable = refreshable
         
+        self._last_client_size = ( 0, 0 )
         self._num_columns = 1
-        self._num_rows_in_client_height = 0
-        self._drawn_index_bounds = None
+        
+        self._client_bmp = wx.EmptyBitmap( 0, 0 )
+        self._clean_canvas_pages = {}
+        self._dirty_canvas_pages = []
+        self._num_rows_per_canvas_page = 1
         
         self._timer_animation = wx.Timer( self, ID_TIMER_ANIMATION )
         self._thumbnails_being_faded_in = {}
-        
-        self._current_y_offset = 0
         
         self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
@@ -943,9 +865,6 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.SetScrollRate( 0, thumbnail_span_height )
         
-        self._canvas_bmp = wx.EmptyBitmap( 0, 0 )
-        
-        self.Bind( wx.EVT_SCROLLWIN, self.EventScroll )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventSelection )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseFullScreen )
@@ -953,6 +872,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_TIMER, self.TIMEREventAnimation, id = ID_TIMER_ANIMATION )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
@@ -966,55 +886,7 @@ class MediaPanelThumbnails( MediaPanel ):
         HC.pubsub.sub( self, 'WaterfallThumbnail', 'waterfall_thumbnail' )
         
     
-    def _CalculateCanvasNumRows( self ):
-        
-        ( canvas_width, canvas_height ) = self._canvas_bmp.GetSize()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
-        
-        num_rows = canvas_height / thumbnail_span_height
-        
-        if canvas_height % thumbnail_span_height > 0: num_rows += 1
-        
-        return num_rows
-        
-    
-    def _CalculateCurrentIndexBounds( self ):
-        
-        NUM_ROWS_TO_DRAW_AHEAD = 0 # this is buggy
-        
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        y_start = self._GetYStart()
-        
-        earliest_y = y_start * yUnit
-        
-        ( my_client_width, my_client_height ) = self.GetClientSize()
-        
-        last_y = earliest_y + my_client_height
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
-        
-        #
-        
-        earliest_row = earliest_y / thumbnail_span_height
-        
-        earliest_index = max( 0, ( earliest_row - NUM_ROWS_TO_DRAW_AHEAD ) * self._num_columns )
-        
-        #
-        
-        last_row = last_y / thumbnail_span_height
-        
-        if last_y % thumbnail_span_height > 0: last_row += 1
-        
-        virtual_last_index = ( ( last_row + 1 + NUM_ROWS_TO_DRAW_AHEAD ) * self._num_columns ) - 1
-        
-        last_index = min( virtual_last_index, len( self._sorted_media ) - 1 )
-        
-        return ( earliest_index, last_index )
-        
-    
-    def _CalculateLastVisibleRow( self ):
+    def _CalculateVisiblePageIndices( self ):
         
         ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
         
@@ -1022,124 +894,109 @@ class MediaPanelThumbnails( MediaPanel ):
         
         y_offset = y_start * yUnit
         
-        ( my_client_width, my_client_height ) = self.GetClientSize()
-        
-        total_visible_y = y_offset + my_client_height
+        ( client_width, client_height ) = self.GetClientSize()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
-        max_last_visible_row = total_visible_y / thumbnail_span_height
+        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
         
-        if total_visible_y % thumbnail_span_height > 0: max_last_visible_row += 1
+        page_indices = set()
         
-        actual_last_visible_row = min( self._CalculateNumRows(), max_last_visible_row )
+        page_indices.add( y_offset / page_height )
+        page_indices.add( ( y_offset + client_height ) / page_height )
         
-        return actual_last_visible_row
+        page_indices = list( page_indices )
         
-    
-    def _CalculateNumRows( self ):
+        page_indices.sort()
         
-        num_media = len( self._sorted_media )
-        
-        num_rows = num_media / self._num_columns
-        
-        if num_media % self._num_columns > 0: num_rows += 1
-        
-        return num_rows
+        return page_indices
         
     
-    def _CleanCanvas( self ):
+    def _DirtyAllPages( self ):
         
-        ( earliest_index, last_index ) = self._CalculateCurrentIndexBounds()
+        for ( index, bmp ) in self._clean_canvas_pages.items(): self._dirty_canvas_pages.append( bmp )
         
-        if self._drawn_index_bounds is None: self._DrawIndices( earliest_index, last_index )
-        else:
-            
-            ( drawn_from_index, drawn_to_index ) = self._drawn_index_bounds
-            
-            if earliest_index < drawn_from_index: self._DrawIndices( earliest_index, drawn_from_index - 1 )
-            
-            if drawn_to_index < last_index: self._DrawIndices( drawn_to_index + 1, last_index )
-            
+        self._clean_canvas_pages = {}
+        
+        self.Refresh()
         
     
-    def _DrawIndices( self, from_index, to_index ):
+    def _DrawCanvasPage( self, page_index, bmp ):
         
-        ( my_width, my_height ) = self._canvas_bmp.GetSize()
+        ( bmp_width, bmp_height ) = bmp.GetSize()
         
-        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
-        
-        from_row = from_index / self._num_columns
-        to_row = to_index / self._num_columns
-        
-        begin_white_from_row = from_row
-        
-        if from_index % self._num_columns > 0: begin_white_from_row += 1
-        
-        begin_white_y = begin_white_from_row * thumbnail_span_height
-        
-        # i.e. if we are drawing the last thumb, so have to fill in the rest of any space with white
-        if to_index == len( self._sorted_media ) - 1: end_white_y = max( ( to_row + 1 ) * thumbnail_span_height, my_height )
-        else: end_white_y = ( to_row + 1 ) * thumbnail_span_height
-        
-        height_white_y = end_white_y - begin_white_y
-        
-        dc = self._GetScrolledDC()
+        dc = wx.MemoryDC( bmp )
         
         dc.SetBrush( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) ) )
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
-        dc.DrawRectangle( 0, begin_white_y, my_width, height_white_y )
+        dc.DrawRectangle( 0, 0, bmp_width, bmp_height )
         
         #
         
-        thumbnails_to_render_later = []
+        num_thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
         
-        for i in range( from_index, to_index + 1 ): # + 1 means we include to_index
+        start_index = num_thumbnails_per_page * page_index
+        
+        if start_index <= len( self._sorted_media ):
             
-            thumbnail = self._sorted_media[ i ]
+            end_index = min( len( self._sorted_media ), start_index + num_thumbnails_per_page )
             
-            hash = thumbnail.GetDisplayMedia().GetHash()
+            ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
             
-            if hash in self._thumbnails_being_faded_in:
-                
-                ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
+            thumbnails_to_render_later = []
             
-                current_row = i / self._num_columns
+            for thumbnail_index in range( start_index, end_index ):
                 
-                current_col = i % self._num_columns
+                thumbnail = self._sorted_media[ thumbnail_index ]
                 
-                x = current_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
-                y = current_row * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                hash = thumbnail.GetDisplayMedia().GetHash()
                 
-                self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, x, y, num_frames_rendered )
-                
-            else:
+                self._StopFading( hash )
                 
                 if thumbnail.IsLoaded():
                     
-                    current_row = i / self._num_columns
+                    thumbnail_col = thumbnail_index % self._num_columns
                     
-                    current_col = i % self._num_columns
+                    thumbnail_row = thumbnail_index / self._num_columns
                     
-                    dc.DrawBitmap( thumbnail.GetBmp(), current_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN, current_row * thumbnail_span_height + CC.THUMBNAIL_MARGIN )
+                    x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                    
+                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                    
+                    dc.DrawBitmap( thumbnail.GetBmp(), x, y )
                     
                 else: thumbnails_to_render_later.append( thumbnail )
                 
             
+            HC.app.GetThumbnailCache().Waterfall( self._page_key, thumbnails_to_render_later )
+            
         
-        HC.app.GetThumbnailCache().Waterfall( self._page_key, thumbnails_to_render_later )
+    
+    def _DrawThumbnail( self, thumbnail_index ):
         
-        if self._drawn_index_bounds is None: self._drawn_index_bounds = ( from_index, to_index )
-        else:
+        page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+        
+        if page_index in self._clean_canvas_pages:
             
-            ( drawn_from_index, drawn_to_index ) = self._drawn_index_bounds
+            canvas_bmp = self._clean_canvas_pages[ page_index ]
+    
+            ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
             
-            drawn_from_index = min( from_index, drawn_from_index )
-            drawn_to_index = max( to_index, drawn_to_index )
+            thumbnail = self._sorted_media[ thumbnail_index ]
             
-            self._drawn_index_bounds = ( drawn_from_index, drawn_to_index )
+            thumbnail_col = thumbnail_index % self._num_columns
+            
+            thumbnail_row = thumbnail_index / self._num_columns
+            
+            x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+            
+            y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+            
+            dc = wx.MemoryDC( canvas_bmp )
+            
+            dc.DrawBitmap( thumbnail.GetBmp(), x, y )
             
         
     
@@ -1238,45 +1095,30 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def _FadeThumbnail( self, thumbnail ):
+    def _FadeThumbnail( self, thumbnail_index ):
         
-        ( x, y ) = self._GetMediaCoordinates( thumbnail )
+        thumbnail = self._sorted_media[ thumbnail_index ]
         
-        if ( x, y ) != ( -1, -1 ):
-            
-            bmp = thumbnail.GetBmp()
+        hash = thumbnail.GetDisplayMedia().GetHash()
         
-            image = bmp.ConvertToImage()
-            
-            try: image.InitAlpha()
-            except: pass
-            
-            image = image.AdjustChannels( 1, 1, 1, 0.25 )
-            
-            alpha_bmp = wx.BitmapFromImage( image, 32 )
-            
-            wx.CallAfter( image.Destroy )
-            
-            hash = thumbnail.GetDisplayMedia().GetHash()
-            
-            self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, x, y, 0 )
-            
-            if not self._timer_animation.IsRunning(): self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
-            
+        self._StopFading( hash )
         
-    
-    def _FilterViewableMedia( self, thumbnails ):
+        bmp = thumbnail.GetBmp()
         
-        if self._drawn_index_bounds is None: return []
-        else:
-            
-            ( earliest_index, last_index ) = self._drawn_index_bounds
-            
-            indices = [ ( self._sorted_media.index( t ), t ) for t in thumbnails ]
-            
-            return [ t for ( index, t ) in indices if earliest_index <= index and index <= last_index ]
-            
+        image = bmp.ConvertToImage()
         
+        try: image.InitAlpha()
+        except: pass
+        
+        image = image.AdjustChannels( 1, 1, 1, 0.25 )
+        
+        alpha_bmp = wx.BitmapFromImage( image, 32 )
+        
+        wx.CallAfter( image.Destroy )
+        
+        self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, 0 )
+        
+        if not self._timer_animation.IsRunning(): self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
         
     
     def _GenerateMediaCollection( self, media_results ): return ThumbnailMediaCollection( self._file_service_key, media_results )
@@ -1298,13 +1140,13 @@ class MediaPanelThumbnails( MediaPanel ):
         return ( x, y )
         
     
-    def _GetScrolledDC( self ):
+    def _GetPageIndexFromThumbnailIndex( self, thumbnail_index ):
         
-        cdc = wx.ClientDC( self )
+        thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
         
-        self.DoPrepareDC( cdc ) # because this is a scrolled window
+        page_index = thumbnail_index / thumbnails_per_page
         
-        return wx.BufferedDC( cdc, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
+        return page_index
         
     
     def _GetThumbnailUnderMouse( self, mouse_event ):
@@ -1351,8 +1193,6 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( x, y ) = self.GetViewStart()
         
-        y += self._current_y_offset
-        
         y = max( 0, y )
         
         y = min( y, max_y )
@@ -1377,32 +1217,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def _RedrawCanvas( self ):
-        
-        self._drawn_index_bounds = None
-        
-        for ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) in self._thumbnails_being_faded_in.values():
-            
-            wx.CallAfter( original_bmp.Destroy )
-            wx.CallAfter( alpha_bmp.Destroy )
-            
-        
-        self._thumbnails_being_faded_in = {}
-        
-        self._CleanCanvas()
-        
-    
-    def _RedrawMediaIfLoaded( self, thumbnails ):
-        
-        thumbnails = self._FilterViewableMedia( thumbnails )
-        
-        for t in thumbnails:
-            
-            if t.IsLoaded(): self._FadeThumbnail( t )
-            
-        
-    
-    def _RefitCanvas( self ):
+    def _RecalculateVirtualSize( self ):
         
         ( client_width, client_height ) = self.GetClientSize()
         
@@ -1410,84 +1225,125 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
             
-            virtual_num_rows = self._CalculateNumRows()
+            num_media = len( self._sorted_media )
             
-            #
+            num_rows = max( 1, num_media / self._num_columns )
+            
+            if num_media % self._num_columns > 0: num_rows += 1
             
             virtual_width = client_width
             
-            virtual_height = max( virtual_num_rows * thumbnail_span_height, client_height )
+            virtual_height = max( num_rows * thumbnail_span_height, client_height )
             
             if ( virtual_width, virtual_height ) != self.GetVirtualSize(): self.SetVirtualSize( ( virtual_width, virtual_height ) )
             
-            #
+        
+    
+    def _RedrawMediaIfLoaded( self, thumbnails ):
+        
+        loaded_thumbnails = [ thumbnail for thumbnail in thumbnails if thumbnail.IsLoaded() ]
+        
+        indices = [ self._sorted_media.index( thumbnail ) for thumbnail in loaded_thumbnails ]
+        
+        indices_to_draw = [ index for index in indices if self._ThumbnailIndexIsClean( index ) ]
+        
+        for index in indices_to_draw:
             
-            current_canvas_num_rows = self._CalculateCanvasNumRows()
+            self._FadeThumbnail( index )
             
-            last_visible_row = self._CalculateLastVisibleRow()
+        
+        self.Refresh()
+        
+    
+    def _ReinitialisePageCacheIfNeeded( self ):
+        
+        old_num_rows = self._num_rows_per_canvas_page
+        old_num_columns = self._num_columns
+        
+        ( old_client_width, old_client_height ) = self._last_client_size
+        
+        ( client_width, client_height ) = self.GetClientSize()
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
+        
+        num_rows = client_height / thumbnail_span_height
+        
+        if client_height % thumbnail_span_height > 0: num_rows += 1
+        
+        self._num_rows_per_canvas_page = max( 1, num_rows )
+        
+        self._num_columns = max( 1, client_width / thumbnail_span_width )
+        
+        thumb_dimensions_changed = old_num_columns != self._num_columns or old_num_rows != self._num_rows_per_canvas_page
+        
+        width_got_bigger = old_client_width < client_width
+        
+        if thumb_dimensions_changed or width_got_bigger:
             
-            if last_visible_row > current_canvas_num_rows / 2:
-                
-                if current_canvas_num_rows == 0: new_canvas_num_rows = min( last_visible_row, virtual_num_rows ) + 1
-                else:
-                    
-                    how_far_we_want_to_extend_to = max( int( current_canvas_num_rows * 2.5 ), last_visible_row )
-                    
-                    new_canvas_num_rows = min( how_far_we_want_to_extend_to, virtual_num_rows ) + 1
-                    
-                
-                # +1 to cover gap
-                
-            else: new_canvas_num_rows = current_canvas_num_rows
+            self._client_bmp = wx.EmptyBitmap( client_width, client_height, 24 )
             
-            new_canvas_width = ( self._num_columns + 1 ) * thumbnail_span_width # +1 to fill in any gap
+            for ( index, bmp ) in self._clean_canvas_pages.items(): wx.CallAfter( bmp.Destroy )
             
-            new_canvas_height = max( new_canvas_num_rows * thumbnail_span_height, client_height )
+            for bmp in self._dirty_canvas_pages: wx.CallAfter( bmp.Destroy )
             
-            ( old_canvas_width, old_canvas_height ) = self._canvas_bmp.GetSize()
+            self._clean_canvas_pages = {}
+            self._dirty_canvas_pages = []
             
-            if ( new_canvas_width, new_canvas_height ) != ( old_canvas_width, old_canvas_height ):
-                
-                old_canvas_bmp = self._canvas_bmp
-                
-                self._canvas_bmp = wx.EmptyBitmap( new_canvas_width, new_canvas_height, 24 )
-                
-                if not self._canvas_bmp.Ok():
-                    
-                    text = 'Attempting to create a canvas bmp failed!'
-                    text += os.linesep
-                    text += 'Old dimensions: ' + str( ( old_canvas_width, old_canvas_height ) )
-                    text += os.linesep
-                    text += 'New (failed) dimensions: ' + str( ( new_canvas_width, new_canvas_height ) )
-                    
-                    HC.ShowText( text )
-                    
-                    raise Exception( 'Canvas bmp failure!' )
-                    
-                
-                if new_canvas_width == old_canvas_width:
-                    
-                    dc = wx.MemoryDC( self._canvas_bmp )
-                    
-                    dc.DrawBitmap( old_canvas_bmp, 0, 0 )
-                    
-                    del dc
-                    
-                    self._CleanCanvas()
-                    
-                else: self._RedrawCanvas()
-                
-                wx.CallAfter( old_canvas_bmp.Destroy )
-                
-            else: self._CleanCanvas()
+            for i in range( 5 ): self._dirty_canvas_pages.append( wx.EmptyBitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_width, 24 ) )
             
+        
+    
+    def _Remove( self ):
+        
+        singletons = [ media for media in self._selected_media if not media.IsCollection() ]
+        
+        collections = [ media for media in self._selected_media if media.IsCollection() ]
+        
+        self._RemoveMedia( singletons, collections )
         
     
     def _RemoveMedia( self, singleton_media, collected_media ):
         
-        self._drawn_index_bounds = None
-        
         MediaPanel._RemoveMedia( self, singleton_media, collected_media )
+        
+        self._selected_media.difference_update( singleton_media )
+        self._selected_media.difference_update( collected_media )
+        
+        if self._focussed_media not in self._selected_media: self._SetFocussedMedia( None )
+        
+        self._shift_focussed_media = None
+        
+        self._RecalculateVirtualSize()
+        
+        self._DirtyAllPages()
+        
+        self._PublishSelectionChange()
+        
+        HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
+        
+    
+    def _ScrollEnd( self, shift = False ):
+        
+        if len( self._sorted_media ) > 0:
+            
+            end_media = self._sorted_media[ -1 ]
+            
+            self._HitMedia( end_media, False, shift )
+            
+            self._ScrollToMedia( end_media )
+            
+        
+    
+    def _ScrollHome( self, shift = False ):
+        
+        if len( self._sorted_media ) > 0:
+            
+            home_media = self._sorted_media[ 0 ]
+            
+            self._HitMedia( home_media, False, shift )
+            
+            self._ScrollToMedia( home_media )
+            
         
     
     def _ScrollToMedia( self, media ):
@@ -1523,23 +1379,46 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def _StopFading( self, hash ):
+        
+        if hash in self._thumbnails_being_faded_in:
+            
+            ( bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames ) = self._thumbnails_being_faded_in[ hash ]
+            
+            wx.CallAfter( bmp.Destroy )
+            wx.CallAfter( alpha_bmp.Destroy )
+            
+            del self._thumbnails_being_faded_in[ hash ]
+            
+        
+    
+    def _ThumbnailIndexIsClean( self, thumbnail_index ):
+        
+        page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+        
+        return page_index in self._clean_canvas_pages
+        
+    
     def AddMediaResults( self, page_key, media_results, append = True ):
         
         if page_key == self._page_key:
             
-            old_num_rows = self._CalculateNumRows()
+            thumbnails = MediaPanel.AddMediaResults( self, page_key, media_results, append = append )
             
-            media = MediaPanel.AddMediaResults( self, page_key, media_results, append = append )
+            self._RecalculateVirtualSize()
             
-            new_num_rows = self._CalculateNumRows()
-            
-            self._RefitCanvas()
-            
-            if not append: self._RedrawCanvas()
+            for thumbnail in thumbnails:
+                
+                thumbnail_index = self._sorted_media.index( thumbnail )
+                
+                self._FadeThumbnail( thumbnail_index )
+                
             
             self._PublishSelectionChange()
             
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventKeyDown( self, event ):
         
@@ -1627,21 +1506,71 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
+    def EventPaint( self, event ):
+        
+        page_indices_to_display = self._CalculateVisiblePageIndices()
+        
+        dc = wx.BufferedPaintDC( self, self._client_bmp )
+        
+        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+        
+        y_start = self._GetYStart()
+        
+        earliest_y = y_start * yUnit
+        
+        earliest_page_index_to_display = min( page_indices_to_display )
+        last_page_index_to_display = max( page_indices_to_display )
+        
+        page_indices_to_draw = list( page_indices_to_display )
+        
+        if earliest_page_index_to_display > 0: page_indices_to_draw.insert( 0, earliest_page_index_to_display - 1 )
+        page_indices_to_draw.append( last_page_index_to_display + 1 )
+        
+        potential_clean_indices_to_steal = [ page_index for page_index in self._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
+        
+        potential_clean_indices_to_steal.sort( reverse = True )
+        
+        for page_index in page_indices_to_draw:
+            
+            if page_index not in self._clean_canvas_pages:
+                
+                if len( self._dirty_canvas_pages ) > 0: bmp = self._dirty_canvas_pages.pop()
+                else:
+                    
+                    index_to_steal = potential_clean_indices_to_steal.pop()
+                    
+                    bmp = self._clean_canvas_pages[ index_to_steal ]
+                    
+                    del self._clean_canvas_pages[ index_to_steal ]
+                    
+                
+                self._DrawCanvasPage( page_index, bmp )
+                
+                self._clean_canvas_pages[ page_index ] = bmp
+                
+            
+            if page_index in page_indices_to_draw:
+                
+                bmp = self._clean_canvas_pages[ page_index ]
+                
+                ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
+                
+                page_y_start = thumbnail_span_height * self._num_rows_per_canvas_page * page_index
+                
+                dc.DrawBitmap( bmp, 0, page_y_start - earliest_y )
+                
+            
+        
     
     def EventResize( self, event ):
         
-        ( client_width, client_height ) = self.GetClientSize()
+        self._ReinitialisePageCacheIfNeeded()
         
-        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
-        
-        self._num_columns = client_width / thumbnail_span_width
-        
-        if self._num_columns == 0: self._num_columns = 1
-        
-        self._RefitCanvas()
+        self._RecalculateVirtualSize()
         
         self.Refresh() # in case of small resizes where a dc isn't created, I think, where we get tiny black lines
+        
+        self._last_client_size = self.GetClientSize()
         
     
     def EventSelection( self, event ):
@@ -2053,39 +1982,6 @@ class MediaPanelThumbnails( MediaPanel ):
         event.Skip()
         
     
-    def EventScroll( self, event ):
-        
-        # it seems that some scroll events happen after the viewstart has changed, some happen before
-        # so I have to keep track of a manual current_y_start
-        
-        ( start_x, start_y ) = self.GetViewStart()
-        
-        ( my_virtual_width, my_virtual_height ) = self.GetVirtualSize()
-        
-        ( my_width, my_height ) = self.GetClientSize()
-        
-        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-        
-        page_of_y_units = my_height / yUnit
-        
-        event_type = event.GetEventType()
-        
-        if event_type == wx.wxEVT_SCROLLWIN_LINEUP: self._current_y_offset = -1
-        elif event_type == wx.wxEVT_SCROLLWIN_LINEDOWN: self._current_y_offset = 1
-        elif event_type == wx.wxEVT_SCROLLWIN_THUMBTRACK: self._current_y_offset = 0
-        elif event_type == wx.wxEVT_SCROLLWIN_THUMBRELEASE: self._current_y_offset = 0
-        elif event_type == wx.wxEVT_SCROLLWIN_PAGEUP: self._current_y_offset = - page_of_y_units
-        elif event_type == wx.wxEVT_SCROLLWIN_PAGEDOWN: self._current_y_offset = page_of_y_units
-        elif event_type == wx.wxEVT_SCROLLWIN_TOP: self._current_y_offset = - start_y
-        elif event_type == wx.wxEVT_SCROLLWIN_BOTTOM: self._current_y_offset = ( my_virtual_height / yUnit ) - start_y
-        
-        self._RefitCanvas()
-        
-        self._current_y_offset = 0
-        
-        event.Skip()
-        
-    
     def NewThumbnails( self, hashes ):
         
         affected_thumbnails = self._GetMedia( hashes )
@@ -2139,16 +2035,35 @@ class MediaPanelThumbnails( MediaPanel ):
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
+    def SetFocussedMedia( self, page_key, media ):
+        
+        MediaPanel.SetFocussedMedia( self, page_key, media )
+        
+        if page_key == self._page_key:
+            
+            if media is None: self._SetFocussedMedia( None )
+            else:
+                
+                try:
+                    
+                    my_media = self._GetMedia( media.GetHashes() )[0]
+                    
+                    self._HitMedia( my_media, False, False )
+                    
+                    self._ScrollToMedia( self._focussed_media )
+                    
+                except: pass
+                
+            
+        
+    
     def Sort( self, page_key, sort_by = None ):
         
         MediaPanel.Sort( self, page_key, sort_by )
         
-        for thumbnail in self._collected_media:
-            
-            thumbnail.ReloadFromDB()
-            
+        for thumbnail in self._collected_media: thumbnail.ReloadFromDB()
         
-        self._RedrawMediaIfLoaded( self._collected_media )
+        self._DirtyAllPages()
         
     
     def ThumbnailsResized( self ):
@@ -2157,17 +2072,13 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
-        ( client_width, client_height ) = self.GetClientSize()
-        
-        self._num_columns = client_width / thumbnail_span_width
-        
-        if self._num_columns == 0: self._num_columns = 1
+        self._ReinitialisePageCacheIfNeeded()
         
         self.SetScrollRate( 0, thumbnail_span_height )
         
         for t in self._sorted_media: t.ReloadFromDBLater()
         
-        self._RedrawCanvas() # to force redraw
+        self._DirtyAllPages()
         
     
     def TIMEREventAnimation( self, event ):
@@ -2176,40 +2087,69 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
-        ( start_x, start_y ) = self.GetViewStart()
-        
-        ( x_unit, y_unit ) = self.GetScrollPixelsPerUnit()
-        
-        ( width, height ) = self.GetClientSize()
-        
-        min_y = ( start_y * y_unit ) - thumbnail_span_height
-        max_y = ( start_y * y_unit ) + height + thumbnail_span_height
-        
-        dc = self._GetScrolledDC()
-        
         all_info = self._thumbnails_being_faded_in.items()
         
-        for ( hash, ( original_bmp, alpha_bmp, x, y, num_frames_rendered ) ) in all_info:
+        random.shuffle( all_info )
+        
+        dcs = {}
+        
+        for ( hash, ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered ) ) in all_info:
             
             num_frames_rendered += 1
             
-            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, x, y, num_frames_rendered )
+            page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
             
-            if y < min_y or y > max_y or num_frames_rendered >= 9:
+            delete_entry = False
+            
+            try: expected_thumbnail = self._sorted_media[ thumbnail_index ]
+            except: expected_thumbnail = None
+            
+            if expected_thumbnail != thumbnail: delete_entry = True
+            elif page_index not in self._clean_canvas_pages: delete_entry = True
+            else:
                 
-                bmp_to_use = original_bmp
+                if num_frames_rendered >= 9:
+                    
+                    bmp_to_use = original_bmp
+                    
+                    delete_entry = True
+                    
+                else:
+                    
+                    bmp_to_use = alpha_bmp
+                    
+                    self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered )
+                    
+                
+                thumbnail_col = thumbnail_index % self._num_columns
+                
+                thumbnail_row = thumbnail_index / self._num_columns
+                
+                x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                
+                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                
+                if page_index not in dcs:
+                    
+                    canvas_bmp = self._clean_canvas_pages[ page_index ]
+                    
+                    dc = wx.MemoryDC( canvas_bmp )
+                    
+                    dcs[ page_index ] = dc
+                    
+                
+                dc = dcs[ page_index ]
+                
+                dc.DrawBitmap( bmp_to_use, x, y, True )
+                
+            
+            if delete_entry:
                 
                 del self._thumbnails_being_faded_in[ hash ]
                 
                 wx.CallAfter( original_bmp.Destroy )
                 wx.CallAfter( alpha_bmp.Destroy )
                 
-            else:
-                
-                bmp_to_use = alpha_bmp
-                
-            
-            dc.DrawBitmap( bmp_to_use, x, y, True )
             
             if HC.GetNowPrecise() - started > 0.016: break
             
@@ -2225,6 +2165,8 @@ class MediaPanelThumbnails( MediaPanel ):
             self._timer_animation.Start( ms, wx.TIMER_ONE_SHOT )
             
         
+        self.Refresh()
+        
     
     def WaterfallThumbnail( self, page_key, thumbnail, thumbnail_bmp ):
         
@@ -2232,7 +2174,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             thumbnail.SetBmp( thumbnail_bmp )
             
-            self._FadeThumbnail( thumbnail )
+            thumbnail_index = self._sorted_media.index( thumbnail )
+            
+            self._FadeThumbnail( thumbnail_index )
             
         
     
@@ -2247,64 +2191,6 @@ class Selectable( object ):
     def IsSelected( self ): return self._selected
     
     def Select( self ): self._selected = True
-    
-# keep this around, just for reference
-class ThumbGridSizer( wx.PySizer ):
-    
-    def __init__( self, parent_container ):
-        
-        wx.PySizer.__init__( self )
-        
-        self._parent_container = parent_container
-        
-        self._thumbnails = []
-        
-    
-    def _GetThumbnailDimensions( self ): return CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_MARGIN + CC.THUMBNAIL_BORDER ) * 2 )
-    
-    def AddThumbnail( self, thumbnail ): self._thumbnails.append( thumbnail )
-    
-    def CalcMin( self ):
-        
-        ( width, height ) = self._parent_container.GetClientSize()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailDimensions()
-        
-        self._num_columns = width / thumbnail_span_width
-        
-        if self._num_columns == 0: self._num_columns = 1
-        
-        num_items = len( self._parent_container )
-        
-        my_min_height = num_items / self._num_columns
-        
-        if num_items % self._num_columns > 0: my_min_height += 1
-        
-        my_min_height *= thumbnail_span_height
-        
-        return wx.Size( width, my_min_height )
-        
-    
-    def RecalcSizes( self ):
-        
-        w = self.GetContainingWindow()
-        
-        ( xUnit, yUnit ) = w.GetScrollPixelsPerUnit()
-        
-        ( x, y ) = w.GetViewStart()
-        
-        y_offset = y * yUnit
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailDimensions()
-        
-        for ( index, thumbnail ) in enumerate( self.GetChildren() ):
-            
-            current_col = index % self._num_columns
-            current_row = index / self._num_columns
-            
-            thumbnail.SetDimension( ( current_col * thumbnail_span_width, current_row * thumbnail_span_height - y_offset ), ( thumbnail_span_width, thumbnail_span_height ) )
-            
-        
     
 class Thumbnail( Selectable ):
     
@@ -2606,7 +2492,7 @@ class ThumbnailMediaSingleton( Thumbnail, ClientGUIMixins.MediaSingleton ):
         Thumbnail.__init__( self, file_service_key )
         
     
-    def ProcessContentUpdate( self, servce_key, content_update ):
+    def ProcessContentUpdate( self, service_key, content_update ):
         
         ClientGUIMixins.MediaSingleton.ProcessContentUpdate( self, service_key, content_update )
         

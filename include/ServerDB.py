@@ -957,7 +957,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             if len( mappings_dict ) > 0:
                 
-                for ( tag_id, hash_ids ) in mappings_dict.items(): self._DeleteMappings( admin_account_id, tag_id, hash_ids, reason_id )
+                for ( tag_id, hash_ids ) in mappings_dict.items(): self._DeleteMappings( service_id, admin_account_id, tag_id, hash_ids, reason_id )
                 
             
         
@@ -1359,7 +1359,7 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
         
         self._c.execute( 'DELETE FROM messaging_sessions WHERE ? > expiry;', ( now, ) )
         
-        existing_session_ids = HC.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expires ) ) for ( service_id, identifier, name, expires ) in self._c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
+        existing_session_ids = HC.BuildKeyToListDict( [ ( service_id, ( session_key, account_id, identifier, name, expires ) ) for ( service_id, session_key, account_id, identifier, name, expires ) in self._c.execute( 'SELECT service_id, session_key, account_id, identifier, name, expiry FROM messaging_sessions;' ) ] )
         
         existing_sessions = {}
         
@@ -1594,12 +1594,14 @@ class ServiceDB( FileDB, MessageDB, TagDB ):
             
             reason_id = self._GetReasonId( reason )
             
-            if lifetime in request_args: lifetime = kwargs[ 'lifetime' ]
+            if 'lifetime' in kwargs: lifetime = kwargs[ 'lifetime' ]
             else: lifetime = None
             
             self._Ban( service_id, action, admin_account_id, subject_account_ids, reason_id, lifetime ) # fold ban and superban together, yo
             
         else:
+            
+            admin_account = self._GetAccount( admin_account_key )
             
             admin_account.CheckPermission( HC.GENERAL_ADMIN ) # special case, don't let manage_users people do these:
             

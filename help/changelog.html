@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 148</h3></li>
+				<ul>
+					<li>rewrote thumbnail canvas and scrolling code from a crashtastic monolithic bmp to a lighter, faster, and more flexible page buffer</li>
+					<li>all custom gui elements should be less flickery</li>
+					<li>the manage tags dialog will now grow significantly taller if its parent window is also tall</li>
+					<li>dialogs launched by the media viewer will initially position themselves according to that, rather than the main gui</li>
+					<li>dialogs launched by controls will initially position themselves according the control's toplevelwindow, as originally intended</li>
+					<li>thumbnail download (for file repositories) no longer happens silently in the background; it will now occur in the repository sync daemon, reporting its progress in the normal repo sync popup</li>
+					<li>missing thumbnails are now replaced with the hydrus psi symbol silently, with a simple statement written to the log</li>
+					<li>fixed a tiny typo in update error code that was reporting version wrong</li>
+					<li>fixed a typo bug in gettagarchivetags</li>
+					<li>fixed a typo that had broken namespace sorting</li>
+					<li>numerous other single-line miscellaneous bug fixes</li>
+					<li>fixed a bug with displaying media with size (0,0)</li>
+					<li>fixed a bug with zooming in flash files</li>
+					<li>improved some buggy tag selection logic that was sometimes desyncing indices between menu popup and selection</li>
+					<li>tags will now stay selected even through changes to the tags list</li>
+					<li>any attempt to close the autocomplete dropdown floating frame should now bump the close event up to the whole program</li>
+					<li>linux release now includes source code alongside executables</li>
+				</ul>
 				<li><h3>version 147</h3></li>
 				<ul>
 					<li>fixed a problem when trying to do a multi-release update that contained the v146 update</li>

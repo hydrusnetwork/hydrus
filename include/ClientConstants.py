@@ -2681,8 +2681,7 @@ class ThumbnailCache( object ):
                     
                 except Exception as e:
                     
-                    HC.ShowText( path )
-                    HC.ShowException( e )
+                    print( 'Could not find the thumbnail for ' + hash.encode( 'hex' ) + '!' )
                     
                     return self._special_thumbs[ 'hydrus' ]
                     

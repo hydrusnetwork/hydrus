@@ -28,7 +28,7 @@ class HydrusMessagingSessionManagerServer( object ):
         
         for ( service_key, session_tuples ) in existing_sessions:
             
-            self._service_keys_to_sessions[ service_key ] = { session_key : ( account, name, expires ) for ( session_Key, account, name, expires ) in session_tuples }
+            self._service_keys_to_sessions[ service_key ] = { session_key : ( account, name, expires ) for ( session_key, account, name, expires ) in session_tuples }
             
         
         self._lock = threading.Lock()

@@ -88,7 +88,7 @@ def EfficientlyThumbnailPILImage( pil_image, ( target_x, target_y ) ):
     
 def GenerateNumpyImage( path ):
     
-    numpy_image = cv2.imread( self._path, flags = -1 ) # flags = -1 loads alpha channel, if present
+    numpy_image = cv2.imread( path, flags = -1 ) # flags = -1 loads alpha channel, if present
     
     ( y, x, depth ) = numpy_image.shape
     

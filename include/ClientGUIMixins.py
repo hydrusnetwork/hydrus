@@ -389,7 +389,7 @@ class ListeningMediaList( MediaList ):
             
             if self._collect_by is not None:
                 
-                keys_to_medias = self._CalculateCollectionKeysToMedias( collect_by, new_media )
+                keys_to_medias = self._CalculateCollectionKeysToMedias( self._collect_by, new_media )
                 
                 new_media = []
                 
@@ -546,17 +546,6 @@ class MediaCollection( MediaList, Media ):
             
             return result
             
-        
-    
-    def GetHashes( self, discriminant = None, not_uploaded_to = None ):
-        
-        if discriminant is not None:
-            if ( discriminant == CC.DISCRIMINANT_INBOX and not self._inbox ) or ( discriminant == CC.DISCRIMINANT_ARCHIVE and not self._archive ) or ( discriminant == CC.DISCRIMINANT_LOCAL and not self._locations_manager().HasLocal() ) or ( discriminant == CC.DISCRIMINANT_NOT_LOCAL and self._locations_manager().HasLocal() ): return set()
-        
-        if not_uploaded_to is not None:
-            if not_uploaded_to in self._locations_manager.GetCurrentRemote(): return set()
-        
-        return self._hashes
         
     
     def GetLocationsManager( self ): return self._locations_manager

@@ -1,6 +1,7 @@
 import HydrusConstants as HC
 import HydrusExceptions
 import httplib
+import os
 import threading
 import time
 import urllib
@@ -51,7 +52,7 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
         if network_version > HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
         else: message = 'The server is out of date; please ask its admin to update to the latest release.'
         
-        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + u( network_version ) + ', whereas your client\'s is ' + u( HC.NETWORK_VERSION ) + '! ' + message )
+        raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + HC.u( network_version ) + ', whereas your client\'s is ' + HC.u( HC.NETWORK_VERSION ) + '! ' + message )
         
     
 def ConvertHydrusGETArgsToQuery( request_args ):
@@ -325,7 +326,7 @@ class HTTPConnection( object ):
             elif content_type in HC.mime_enum_lookup and HC.mime_enum_lookup[ content_type ] == HC.APPLICATION_YAML:
                 
                 try: parsed_response = yaml.safe_load( data )
-                except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + u( e ) )
+                except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HC.u( e ) )
                 
             elif content_type == 'text/html':
                 

@@ -140,6 +140,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._dropdown_window.Show()
             
+            self._dropdown_window.Bind( wx.EVT_CLOSE, self.EventCloseDropdown )
+            
             self._dropdown_hidden = True
             
             self._list_height = 250
@@ -236,6 +238,11 @@ class AutoCompleteDropdown( wx.Panel ):
         
     
     def _UpdateList( self ): pass
+    
+    def EventCloseDropdown( self, event ):
+        
+        HC.app.GetGUI().EventExit( event )
+        
     
     def EventKeyDown( self, event ):
         
@@ -997,10 +1004,13 @@ class BufferedWindow( wx.Window ):
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         
     
     def GetDC( self ): return wx.BufferedDC( wx.ClientDC( self ), self._canvas_bmp )
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     
@@ -1773,6 +1783,7 @@ class ListBox( wx.ScrolledWindow ):
         self._canvas_bmp = wx.EmptyBitmap( 0, 0, 24 )
         
         self._current_selected_index = None
+        self._current_selected_term = None
         
         dc = self._GetScrolledDC()
         
@@ -1788,6 +1799,7 @@ class ListBox( wx.ScrolledWindow ):
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseSelect )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventDClick )
@@ -1935,9 +1947,13 @@ class ListBox( wx.ScrolledWindow ):
         self._current_selected_index = index
         
         if old_index is not None: self._DrawText( old_index )
-        if self._current_selected_index is not None: self._DrawText( self._current_selected_index )
         
-        if self._current_selected_index is not None:
+        if self._current_selected_index is None: self._current_selected_term = None
+        else:
+            
+            self._current_selected_term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            
+            self._DrawText( self._current_selected_index )
             
             # scroll to index, if needed
             
@@ -1971,7 +1987,23 @@ class ListBox( wx.ScrolledWindow ):
     def _TextsHaveChanged( self ):
         
         self._drawn_up_to = 0
+        
         self._current_selected_index = None
+        
+        if self._current_selected_term is not None:
+            
+            for ( s, term ) in self._strings_to_terms.items():
+                
+                if term == self._current_selected_term:
+                    
+                    self._current_selected_index = self._ordered_strings.index( s )
+                    
+                    break
+                    
+                
+            
+            if self._current_selected_index is None: self._current_selected_term = None
+            
         
         total_height = self._text_y * len( self._ordered_strings )
         
@@ -1994,6 +2026,8 @@ class ListBox( wx.ScrolledWindow ):
             self._Activate( s, term )
             
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventKeyDown( self, event ):
         

@@ -99,7 +99,10 @@ class Dialog( wx.Dialog ):
         
         if parent is not None and position == 'topleft':
             
-            ( pos_x, pos_y ) = HC.app.GetGUI().GetPositionTuple()
+            if issubclass( type( parent ), wx.TopLevelWindow ): parent_tlp = parent
+            else: parent_tlp = parent.GetTopLevelParent()
+            
+            ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
             
             pos = ( pos_x + 50, pos_y + 100 )
             

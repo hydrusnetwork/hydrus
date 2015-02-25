@@ -5968,7 +5968,7 @@ class DialogManageSubscriptions( ClientGUIDialogs.Dialog ):
         
         panel = self._listbook.GetCurrentPage()
         
-        if sub_panel is not None:
+        if panel is not None:
             
             ( name, info ) = panel.GetSubscription()
             
@@ -7690,7 +7690,9 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
             
             ( x, y ) = self.GetEffectiveMinSize()
             
-            self.SetInitialSize( ( x + 200, 500 ) )
+            ( parent_width, parent_height ) = parent.GetSize()
+            
+            self.SetInitialSize( ( x + 200, max( 500, parent_height - 200 ) ) )
             
         
         self._file_service_key = file_service_key

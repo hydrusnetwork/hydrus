@@ -63,6 +63,8 @@ def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
     ( media_width, media_height ) = media.GetResolution()
     
+    if media_width == 0 or media_height == 0: return 1.0
+    
     if ShouldHaveAnimationBar( media ): canvas_height -= ANIMATED_SCANBAR_HEIGHT
     
     if media.GetMime() in NON_LARGABLY_ZOOMABLE_MIMES: canvas_width -= 2
@@ -143,6 +145,7 @@ class Animation( wx.Window ):
         self.Bind( wx.EVT_TIMER, self.TIMEREventVideo, id = ID_TIMER_VIDEO )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.EventResize( None )
         
@@ -198,6 +201,8 @@ class Animation( wx.Window ):
         
     
     def CurrentFrame( self ): return self._current_frame_index
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     
@@ -350,6 +355,7 @@ class AnimationBar( wx.Window ):
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self._timer_update = wx.Timer( self, id = ID_TIMER_ANIMATION_BAR_UPDATE )
         self._timer_update.Start( 100, wx.TIMER_CONTINUOUS )
@@ -387,6 +393,8 @@ class AnimationBar( wx.Window ):
         
         dc.DrawText( s, my_width - x - 3, 3 )
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventMouse( self, event ):
         
@@ -503,6 +511,7 @@ class Canvas( object ):
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
     def _CopyHashToClipboard( self ):
@@ -659,6 +668,8 @@ class Canvas( object ):
                         
                         # because of the event passing under mouse, we want to preserve whitespace around flash
                         
+                        ( my_width, my_height ) = self.GetClientSize()
+                        
                         ( new_media_width, new_media_height ) = CalculateMediaContainerSize( self._current_display_media, zoom )
                         
                         if new_media_width >= my_width or new_media_height >= my_height: return
@@ -749,7 +760,9 @@ class Canvas( object ):
             
         
     
-    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp, wx.BUFFER_VIRTUAL_AREA )
+    def EventEraseBackground( self, event ): pass
+    
+    def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     
     def EventResize( self, event ):
         
@@ -3138,7 +3151,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     def _Skip( self ):
         
-        if len( self._media_still_to_rate ) == 0: self.EventClose()
+        if len( self._media_still_to_rate ) == 0: self.EventClose( None )
         else: self._ShowNewMedia()
         
     
@@ -3821,6 +3834,7 @@ class EmbedButton( wx.Window ):
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
     def _Redraw( self ):
@@ -3863,6 +3877,8 @@ class EmbedButton( wx.Window ):
         
         dc.DrawPolygon( points )
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     
@@ -4014,6 +4030,7 @@ class StaticImage( wx.Window ):
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_TIMER, self.TIMEREventRenderWait, id = ID_TIMER_RENDER_WAIT )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.EventResize( None )
         
@@ -4055,6 +4072,8 @@ class StaticImage( wx.Window ):
             self._timer_render_wait.Stop()
             
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._canvas_bmp )
     

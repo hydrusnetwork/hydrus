@@ -324,7 +324,7 @@ class TagsManagerSimple( object ):
             
             tags = [ tag for tag in combined if tag.startswith( namespace + ':' ) ]
             
-            if collapse: tags = list( siblings_manager.CollapseTags( tags ) )
+            if collapse_siblings: tags = list( siblings_manager.CollapseTags( tags ) )
             
             tags = [ tag.split( ':', 1 )[1] for tag in tags ]
             

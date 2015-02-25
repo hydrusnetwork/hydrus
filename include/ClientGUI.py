@@ -1925,7 +1925,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def ImportFiles( self, paths ): self._ImportFiles( paths )
-    
+    '''
     def NewCompose( self, identity ):
         
         draft_key = os.urandom( 32 )
@@ -1941,7 +1941,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         FrameComposeMessage( empty_draft_message )
         
-    
+    '''
     def NewPageImportGallery( self, gallery_name, gallery_type ): self._NewPageImportGallery( gallery_name, gallery_type )
     
     def NewPageImportHDD( self, paths_info, advanced_import_options = {}, paths_to_tags = {}, delete_after_success = False ):
@@ -2126,7 +2126,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.TestAbleToClose()
         
-    
+    '''
 class FrameComposeMessage( ClientGUICommon.Frame ):
     
     def __init__( self, empty_draft_message ):
@@ -2158,7 +2158,7 @@ class FrameComposeMessage( ClientGUICommon.Frame ):
         
         if draft_key == self._draft_panel.GetDraftKey(): self.Close()
         
-    
+    '''
 class FrameReviewServices( ClientGUICommon.Frame ):
     
     def __init__( self ):
@@ -2974,6 +2974,7 @@ class FrameSplash( ClientGUICommon.Frame ):
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
         self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
+        self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         if action == 'boot':
             
@@ -3073,6 +3074,8 @@ class FrameSplash( ClientGUICommon.Frame ):
         
         event.Skip()
         
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventPaint( self, event ): wx.BufferedPaintDC( self, self._bmp )
     

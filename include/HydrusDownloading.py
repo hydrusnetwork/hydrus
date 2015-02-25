@@ -113,6 +113,8 @@ class Downloader( object ):
         return HC.http.Request( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, response_to_path = response_to_path )
         
     
+    def _GetNextGalleryPageURL( self ): return ''
+    
     def _GetNextGalleryPageURLs( self ): return ( self._GetNextGalleryPageURL(), )
     
     def AddReportHook( self, hook ): self._report_hooks.append( hook )
@@ -1449,7 +1451,7 @@ class ImportController( object ):
         
         with self._lock:
             
-            if s in self._pending_import_queue_jobs:
+            if job in self._pending_import_queue_jobs:
                 
                 index = self._pending_import_queue_jobs.index( job )
                 

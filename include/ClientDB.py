@@ -247,7 +247,7 @@ class MessageDB( object ):
                     
                     temp_path = HC.GetTempPath()
                     
-                    with open( temp_path, 'wb' ) as f: f.write( temp_path )
+                    with open( temp_path, 'wb' ) as f: f.write( file )
                     
                     try:
                         
@@ -3262,7 +3262,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for ( archive_name, hta ) in self._tag_archives.items():
             
-            hash_type == hta.GetHashType()
+            hash_type = hta.GetHashType()
             
             sha256_to_archive_hashes = {}
             
@@ -3654,7 +3654,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         notify_new_pending = False
         notify_new_parents = False
         notify_new_siblings = False
-        notify_new_thumbnails = False
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
@@ -3689,8 +3688,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             hash_id = self._GetHashId( hash )
                             
                             self._AddFile( service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words )
-                            
-                            notify_new_thumbnails = True
                             
                         elif action == HC.CONTENT_UPDATE_PENDING:
                             
@@ -4114,7 +4111,6 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 self.pub_after_commit( 'notify_new_siblings' )
                 self.pub_after_commit( 'notify_new_parents' )
                 
-            if notify_new_thumbnails: self.pub_after_commit( 'notify_new_thumbnails' )
             
             self.pub_content_updates_after_commit( service_keys_to_content_updates )
             
@@ -4898,7 +4894,7 @@ class DB( ServiceDB ):
                 
                 self._c.execute( 'ROLLBACK' )
                 
-                raise Exception( 'Updating the client db to version ' + HC.u( version ) + ' caused this error:' + os.linesep + traceback.format_exc() )
+                raise Exception( 'Updating the client db to version ' + HC.u( version + 1 ) + ' caused this error:' + os.linesep + traceback.format_exc() )
                 
             
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
@@ -6182,7 +6178,6 @@ class DB( ServiceDB ):
         HydrusThreading.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
         HydrusThreading.DAEMONWorker( 'CheckExportFolders', DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
         HydrusThreading.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'DownloadThumbnails', DAEMONDownloadThumbnails, ( 'notify_new_permissions', 'notify_new_thumbnails' ) )
         HydrusThreading.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
         HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
         HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
@@ -6474,62 +6469,6 @@ def DAEMONDownloadFiles():
     
     if num_downloads == 0: HC.pubsub.pub( 'downloads_status', 'no file downloads' )
     elif num_downloads > 0: HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' inactive file downloads' )
-    
-def DAEMONDownloadThumbnails():
-    
-    services = HC.app.ReadDaemon( 'services', ( HC.FILE_REPOSITORY, ) )
-    
-    thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
-    
-    for service in services:
-        
-        service_key = service.GetServiceKey()
-        
-        thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_key )
-        
-        thumbnail_hashes_i_need = list( thumbnail_hashes_i_should_have - thumbnail_hashes_i_have )
-        
-        if len( thumbnail_hashes_i_need ) > 0:
-            
-            try: file_repository = HC.app.GetManager( 'services' ).GetService( service_key )
-            except: continue
-            
-            if file_repository.CanDownload():
-                
-                try:
-                    
-                    num_per_round = 50
-                    
-                    for i in range( 0, len( thumbnail_hashes_i_need ), num_per_round ):
-                        
-                        if HC.shutdown: return
-                        
-                        thumbnails = []
-                        
-                        for hash in thumbnail_hashes_i_need[ i : i + num_per_round ]:
-                            
-                            request_args = { 'hash' : hash.encode( 'hex' ) }
-                            
-                            thumbnail = file_repository.Request( HC.GET, 'thumbnail', request_args = request_args )
-                            
-                            thumbnails.append( ( hash, thumbnail ) )
-                            
-                        
-                        HC.app.WaitUntilGoodTimeToUseGUIThread()
-                        
-                        HC.app.WriteSynchronous( 'thumbnails', thumbnails )
-                        
-                        HC.pubsub.pub( 'add_thumbnail_count', service_key, len( thumbnails ) )
-                        
-                        thumbnail_hashes_i_have.update( { hash for ( hash, thumbnail ) in thumbnails } )
-                        
-                        time.sleep( 0.25 )
-                        
-                    
-                except: pass # if bad download, the repo gets dinged an error. no need to do anything here
-                
-            
-        
     
 def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
     
@@ -7104,6 +7043,89 @@ def DAEMONSynchroniseRepositories():
                 job_key.DeleteVariable( 'popup_message_gauge_1' )
                 job_key.DeleteVariable( 'popup_message_text_2' )
                 job_key.DeleteVariable( 'popup_message_gauge_2' )
+                
+                if service_type == HC.FILE_REPOSITORY and service.CanDownload():
+                    
+                    job_key.SetVariable( 'popup_message_text_1', 'reviewing existing thumbnails' )
+                    
+                    thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
+                    
+                    job_key.SetVariable( 'popup_message_text_1', 'reviewing service thumbnails' )
+                    
+                    thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_key )
+                    
+                    thumbnail_hashes_i_need = thumbnail_hashes_i_should_have.difference( thumbnail_hashes_i_have )
+                    
+                    if len( thumbnail_hashes_i_need ) > 0:
+                        
+                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
+                            
+                            time.sleep( 0.1 )
+                            
+                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
+                            
+                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
+                            
+                            if HC.shutdown: raise Exception( 'application shutting down!' )
+                            
+                            if job_key.IsCancelled():
+                                
+                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
+                                return
+                                
+                            
+                            if HC.repos_changed:
+                                
+                                job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
+                                
+                                print( HC.ConvertJobKeyToString( job_key ) )
+                                
+                                HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
+                                
+                                return
+                                
+                            
+                        
+                        def SaveThumbnails( batch_of_thumbnails ):
+                            
+                            job_key.SetVariable( 'popup_message_text_1', 'saving thumbnails to database' )
+                            
+                            HC.app.WriteSynchronous( 'thumbnails', batch_of_thumbnails )
+                            
+                            HC.pubsub.pub( 'add_thumbnail_count', service_key, len( batch_of_thumbnails ) )
+                            
+                        
+                        thumbnails = []
+                        
+                        for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
+                            
+                            job_key.SetVariable( 'popup_message_text_1', 'downloading thumbnail ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( thumbnail_hashes_i_need ) ) )
+                            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( thumbnail_hashes_i_need ) ) )
+                            
+                            request_args = { 'hash' : hash.encode( 'hex' ) }
+                            
+                            thumbnail = service.Request( HC.GET, 'thumbnail', request_args = request_args )
+                            
+                            thumbnails.append( ( hash, thumbnail ) )
+                            
+                            if i % 50 == 0:
+                                
+                                SaveThumbnails( thumbnails )
+                                
+                                thumbnails = []
+                                
+                            
+                            HC.app.WaitUntilGoodTimeToUseGUIThread()
+                            
+                        
+                        if len( thumbnails ) > 0: SaveThumbnails( thumbnails )
+                        
+                        job_key.DeleteVariable( 'popup_message_gauge_1' )
+                        
+                    
                 
                 job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - finished' )
                 

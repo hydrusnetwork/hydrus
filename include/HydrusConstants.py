@@ -66,7 +66,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 147
+SOFTWARE_VERSION = 148
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -2691,7 +2691,7 @@ class ServerToClientUpdate( HydrusYAMLBase ):
             
         
     
-    def GetHashes( self ): return set( hash_ids_to_hashes.values() )
+    def GetHashes( self ): return set( self._hash_ids_to_hashes.values() )
     
     def GetTags( self ):
         
