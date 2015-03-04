@@ -504,6 +504,8 @@ class VideoRendererFFMPEG( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
+        self.lastread = None
+        
         self.fps = float( self._num_frames ) / self._duration
         
         if self.fps == 0: self.fps = 24

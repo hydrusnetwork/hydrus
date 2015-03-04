@@ -66,7 +66,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 148
+SOFTWARE_VERSION = 149
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -675,7 +675,7 @@ def CheckTagNotEmpty( tag ):
         if subtag == '': empty_tag = True
         
     
-    if empty_tag: raise Exception( 'Received a zero-length tag!' )
+    if empty_tag: raise HydrusExceptions.SizeException( 'Received a zero-length tag!' )
     
 def CleanTag( tag ):
     
@@ -704,15 +704,12 @@ def CleanTags( tags ):
     
     for tag in tags:
         
-        try:
-            
-            tag = CleanTag( tag )
-            
-            CheckTagNotEmpty( tag )
-            
-            clean_tags.add( tag )
-            
-        except: continue
+        tag = CleanTag( tag )
+        
+        try: CheckTagNotEmpty( tag )
+        except HydrusExceptions.SizeException: continue
+        
+        clean_tags.add( tag )
         
     
     return clean_tags
@@ -1551,7 +1548,7 @@ class Account( HydrusYAMLBase ):
         return self._info[ 'account_type' ].HasPermission( permission )
         
     
-    def IsAdmin( self ): return True in [ self.HasPermissions( permission ) for permission in ADMIN_PERMISSIONS ]
+    def IsAdmin( self ): return True in [ self.HasPermission( permission ) for permission in ADMIN_PERMISSIONS ]
     
     def IsBanned( self ): return self._IsBanned()
     

@@ -604,7 +604,7 @@ class MediaCollection( MediaList, Media ):
     
     def IsCollection( self ): return True
     
-    def IsImage( self ): return HC.IsImage( self._mime )
+    def IsImage( self ): return False
     
     def IsNoisy( self ): return self.GetDisplayMedia().GetMime() in HC.NOISY_MIMES
     

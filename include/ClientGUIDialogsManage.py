@@ -188,7 +188,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
             self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
             
-            self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ] )
+            self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ], delete_key_callback = self.Delete )
             
             self._add = wx.Button( self._account_types_panel, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -278,6 +278,37 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._apply.SetFocus )
         
     
+    def Delete( self ):
+        
+        indices = self._ctrl_account_types.GetAllSelected()
+        
+        titles_about_to_delete = { self._ctrl_account_types.GetClientData( index )[0] for index in indices }
+        
+        all_titles = set( self._titles_to_account_types.keys() )
+        
+        titles_can_move_to = list( all_titles - titles_about_to_delete )
+        
+        if len( titles_can_move_to ) == 0:
+            
+            wx.MessageBox( 'You cannot delete every account type!' )
+            
+            return
+            
+        
+        for title in titles_about_to_delete:
+            
+            with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'what should deleted ' + title + ' accounts become?', titles_can_move_to ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK: title_to_move_to = dlg.GetString()
+                else: return
+                
+            
+            self._edit_log.append( ( HC.DELETE, ( title, title_to_move_to ) ) )
+            
+        
+        self._ctrl_account_types.RemoveAllSelected()
+        
+    
     def EventAdd( self, event ):
         
         with ClientGUIDialogs.DialogInputNewAccountType( self ) as dlg:
@@ -309,36 +340,7 @@ class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventDelete( self, event ):
-        
-        indices = self._ctrl_account_types.GetAllSelected()
-        
-        titles_about_to_delete = { self._ctrl_account_types.GetClientData( index )[0] for index in indices }
-        
-        all_titles = set( self._titles_to_account_types.keys() )
-        
-        titles_can_move_to = list( all_titles - titles_about_to_delete )
-        
-        if len( titles_can_move_to ) == 0:
-            
-            wx.MessageBox( 'You cannot delete every account type!' )
-            
-            return
-            
-        
-        for title in titles_about_to_delete:
-            
-            with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'what should deleted ' + title + ' accounts become?', titles_can_move_to ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK: title_to_move_to = dlg.GetString()
-                else: return
-                
-            
-            self._edit_log.append( ( HC.DELETE, ( title, title_to_move_to ) ) )
-            
-        
-        self._ctrl_account_types.RemoveAllSelected()
-        
+    def EventDelete( self, event ): self.Delete()
     
     def EventEdit( self, event ):
         
@@ -1427,7 +1429,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ] )
+            self._export_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete )
             
             self._add_button = wx.Button( self, label = 'add' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1540,6 +1542,8 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         return ( pretty_predicates, pretty_period, pretty_phrase )
         
     
+    def Delete( self ): self._export_folders.RemoveAllSelected()
+    
     def EventAdd( self, event ):
         
         with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
@@ -1553,7 +1557,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventDelete( self, event ): self._export_folders.RemoveAllSelected()
+    def EventDelete( self, event ): self.Delete()
     
     def EventEdit( self, event ):
         
@@ -2102,8 +2106,6 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 name = self._imageboards.GetCurrentName()
                 
-                self._edit_log.append( ( HC.DELETE, name ) )
-                
                 self._imageboards.DeleteCurrentPage()
                 
                 self._has_changes = True
@@ -2121,8 +2123,6 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             if not self._imageboards.NameExists( name ):
                 
                 new_imageboard = CC.Imageboard( name, '', 60, [], {} )
-                
-                self._edit_log.append( ( HC.SET, ( name, new_imageboard ) ) )
                 
                 page = self._Panel( self._imageboards, new_imageboard )
                 
@@ -2160,7 +2160,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     self._form_fields_panel = ClientGUICommon.StaticBox( self._imageboard_panel, 'form fields' )
                     
-                    self._form_fields = ClientGUICommon.SaneListCtrl( self._form_fields_panel, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ] )
+                    self._form_fields = ClientGUICommon.SaneListCtrl( self._form_fields_panel, 350, [ ( 'name', 120 ), ( 'type', 120 ), ( 'default', -1 ), ( 'editable', 120 ) ], delete_key_callback = self.Delete )
                     
                     self._add = wx.Button( self._form_fields_panel, label = 'add' )
                     self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2327,6 +2327,8 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 return ( imageboard_name, post_url, flood_time, form_fields, restrictions )
                 
             
+            def Delete( self ): self._form_fields.RemoveAllSelected()
+            
             def EventAdd( self, event ):
                 
                 with ClientGUIDialogs.DialogInputNewFormField( self ) as dlg:
@@ -2363,7 +2365,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                 
             
-            def EventDelete( self, event ): self._form_fields.RemoveAllSelected()
+            def EventDelete( self, event ): self.Delete()
             
             def EventRemoveMime( self, event ):
                 
@@ -2477,7 +2479,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         def InitialiseControls():
             
-            self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'check period', 120 ), ( 'local tag', 120 ) ] )
+            self._import_folders = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'type', 120 ), ( 'check period', 120 ), ( 'local tag', 120 ) ], delete_key_callback = self.Delete )
             
             self._add_button = wx.Button( self, label = 'add' )
             self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2602,6 +2604,8 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         return ( pretty_type, pretty_check_period, pretty_local_tag )
         
     
+    def Delete( self ): self._import_folders.RemoveAllSelected()
+    
     def EventAdd( self, event ):
         
         with wx.DirDialog( self, 'Select a folder to add.' ) as dlg:
@@ -2615,7 +2619,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventDelete( self, event ): self._import_folders.RemoveAllSelected()
+    def EventDelete( self, event ): self.Delete()
     
     def EventEdit( self, event ):
         
@@ -3024,7 +3028,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             self._shortcuts_page = wx.Panel( self._listbook )
             self._shortcuts_page.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE ) )
             
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self._shortcuts_page, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ] )
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self._shortcuts_page, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts )
             
             self._shortcuts_add = wx.Button( self._shortcuts_page, label = 'add' )
             self._shortcuts_add.Bind( wx.EVT_BUTTON, self.EventShortcutsAdd )
@@ -3661,6 +3665,8 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
     
     def _SortListCtrl( self ): self._shortcuts.SortListItems( 2 )
     
+    def DeleteShortcuts( self ): self._shortcuts.RemoveAllSelected()
+    
     def EventATOAdd( self, event ):
         
         pretty_names_to_names = {}
@@ -4006,7 +4012,7 @@ class DialogManageOptions( ClientGUIDialogs.Dialog ):
             
         
     
-    def EventShortcutsDelete( self, event ): self._shortcuts.RemoveAllSelected()
+    def EventShortcutsDelete( self, event ): self.DeleteShortcuts()
     
     def EventShortcutsEdit( self, event ):
         
@@ -6847,20 +6853,34 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             ArrangeControls()
             
         
-        def _AddPair( self, child, parent ):
+        def _AddPair( self, children, parent ):
             
-            old_status = None
-            new_status = None
+            pairs = [ ( child, parent ) for child in children ]
             
-            pair = ( child, parent )
+            current_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.CURRENT ] ]
+            pending_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PENDING ] ]
+            petitioned_pairs = [ pair for pair in pairs if pair in self._current_statuses_to_pairs[ HC.PETITIONED ] ]
             
-            pair_string = child + '->' + parent
+            existing_pairs = set()
             
-            if pair in self._current_statuses_to_pairs[ HC.CURRENT ]:
+            existing_pairs.update( current_pairs )
+            existing_pairs.update( pending_pairs )
+            existing_pairs.update( petitioned_pairs )
+            
+            new_pairs = [ pair for pair in pairs if pair not in existing_pairs and self._CanAdd( *pair ) ]
+            
+            actions = []
+            
+            if len( current_pairs ) > 0:
                 
-                message = pair_string + ' already exists.'
+                pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
+                
+                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
+                else: message = 'The pair ' + pair_strings + ' already exists.'
                 
                 with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition it', no_label = 'do nothing' ) as dlg:
+                    
+                    do_it = True
                     
                     if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
                         
@@ -6873,23 +6893,34 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                                 
                                 with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
                                     
-                                    if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
-                                    else: return
+                                    if dlg.ShowModal() == wx.ID_OK:
+                                        
+                                        reason = dlg.GetValue()
+                                        
+                                        for pair in current_pairs: self._pairs_to_reasons[ pair ] = reason
+                                        
+                                    else: do_it = False
                                     
                                 
                             
-                            self._pairs_to_reasons[ pair ] = reason
-                            
-                        else: return
                         
                     
-                    old_status = HC.CURRENT
-                    new_status = HC.PETITIONED
+                    if do_it:
+                        
+                        old_status = HC.CURRENT
+                        new_status = HC.PETITIONED
+                        
+                        actions.append( ( current_pairs, old_status, new_status ) )
+                        
                     
                 
-            elif pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+            
+            if len( pending_pairs ) > 0:
                 
-                message = pair_string + ' is pending.'
+                pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                
+                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                else: message = 'The pair ' + pair_strings + ' is pending.'
                 
                 with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' ) as dlg:
                     
@@ -6897,14 +6928,21 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                         
                         old_status = HC.PENDING
                         
-                        if pair in self._current_statuses_to_pairs[ HC.DELETED ]: new_status = HC.DELETED
+                        deleted_pending_pairs = [ pair for pair in pending_pairs if pair in self._current_statuses_to_pairs[ HC.DELETED ] ]
+                        non_existing_pending_pairs = [ pair for pair in pending_pairs if pair not in self._current_statuses_to_pairs[ HC.DELETED ] ]
                         
-                    else: return
+                        actions.append( ( deleted_pending_pairs, old_status, HC.DELETED ) )
+                        actions.append( ( non_existing_pending_pairs, old_status, None ) )
+                        
                     
                 
-            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+            
+            if len( petitioned_pairs ) > 0:
                 
-                message = pair_string + ' is petitioned.'
+                pair_strings = ', '.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                
+                if len( current_pairs ) > 1: message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
+                else: message = 'The pair ' + pair_strings + ' is petitioned.'
                 
                 with ClientGUIDialogs.DialogYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' ) as dlg:
                     
@@ -6913,52 +6951,66 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                         old_status = HC.PETITIONED
                         new_status = HC.CURRENT
                         
-                    else: return
-                    
-                
-            else:
-                
-                if self._CanAdd( child, parent ):
-                    
-                    if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
+                        actions.append( ( petitioned_pairs, old_status, new_status ) )
                         
-                        if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
-                        else:
-                            
-                            message = 'Enter a reason for ' + pair_string + ' to be added. A janitor will review your petition.'
-                            
-                            with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
-                                
-                                if dlg.ShowModal() == wx.ID_OK: reason = dlg.GetValue()
-                                else: return
-                                
-                            
-                        
-                        self._pairs_to_reasons[ pair ] = reason
-                        
-                    
-                    if pair in self._current_statuses_to_pairs[ HC.DELETED ]: old_status = HC.DELETED
-                    
-                    new_status = HC.PENDING
                     
                 
             
-            if old_status is not None:
+            if len( new_pairs ) > 0:
                 
-                self._current_statuses_to_pairs[ old_status ].discard( pair )
+                if self._service_key != HC.LOCAL_TAG_SERVICE_KEY:
+                    
+                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                    else:
+                        
+                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
+                        
+                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                reason = dlg.GetValue()
+                                
+                                for pair in new_pairs: self._pairs_to_reasons[ pair ] = reason
+                                
+                            else: return
+                            
+                        
+                    
                 
-                index = self._tag_parents.GetIndexFromClientData( ( old_status, child, parent ) )
+                deleted_new_pairs = [ pair for pair in new_pairs if pair in self._current_statuses_to_pairs[ HC.DELETED ] ]
+                non_existing_new_pairs = [ pair for pair in new_pairs if pair not in self._current_statuses_to_pairs[ HC.DELETED ] ]
                 
-                self._tag_parents.DeleteItem( index )
+                actions.append( ( deleted_new_pairs, HC.DELETED, HC.PENDING ) )
+                actions.append( ( non_existing_new_pairs, None, HC.PENDING ) )
                 
             
-            if new_status is not None:
+            for ( pairs, old_status, new_status ) in actions:
                 
-                self._current_statuses_to_pairs[ new_status ].add( pair )
-                
-                sign = HC.ConvertStatusToPrefix( new_status )
-                
-                self._tag_parents.Append( ( sign, child, parent ), ( new_status, child, parent ) )
+                for pair in pairs:
+                    
+                    ( child, parent ) = pair
+                    
+                    if old_status is not None:
+                        
+                        self._current_statuses_to_pairs[ old_status ].discard( pair )
+                        
+                        index = self._tag_parents.GetIndexFromClientData( ( old_status, child, parent ) )
+                        
+                        self._tag_parents.DeleteItem( index )
+                        
+                    
+                    if new_status is not None:
+                        
+                        self._current_statuses_to_pairs[ new_status ].add( pair )
+                        
+                        sign = HC.ConvertStatusToPrefix( new_status )
+                        
+                        self._tag_parents.Append( ( sign, child, parent ), ( new_status, child, parent ) )
+                        
+                    
                 
             
         
@@ -7027,7 +7079,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 ( status, child, parent ) = self._tag_parents.GetClientData( selection )
                 
-                self._AddPair( child, parent )
+                self._AddPair( ( child, ), parent )
                 
             
         
@@ -7036,7 +7088,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             children = self._children.GetTags()
             parents = self._parents.GetTags()
             
-            for ( child, parent ) in itertools.product( children, parents ): self._AddPair( child, parent )
+            for parent in parents: self._AddPair( children, parent )
             
             self._children.SetTags( [] )
             self._parents.SetTags( [] )
@@ -7723,7 +7775,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         for page in self._tag_repositories.GetNameToPageDict().values(): page.SetMedia( set() )
         
     
-    def _CommitCurrentChanges( self, sync = False ):
+    def _CommitCurrentChanges( self ):
         
         service_keys_to_content_updates = {}
         
@@ -7736,10 +7788,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
         
         if len( service_keys_to_content_updates ) > 0:
             
-            if sync: m = HC.app.WriteSynchronous
-            else: m = HC.app.Write
-            
-            m( 'content_updates', service_keys_to_content_updates )
+            HC.app.Write( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -7777,7 +7826,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventNext( self, event ):
         
-        self._CommitCurrentChanges( sync = True )
+        self._CommitCurrentChanges()
         
         self._ClearPanels()
         
@@ -7792,7 +7841,7 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
     def EventPrevious( self, event ):
         
-        self._CommitCurrentChanges( sync = True )
+        self._CommitCurrentChanges()
         
         self._ClearPanels()
         
@@ -8065,16 +8114,13 @@ class DialogManageTags( ClientGUIDialogs.Dialog ):
     
 class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, service_key ):
+    def __init__( self, parent ):
         
         def InitialiseControls():
             
             self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
             
-            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ] )
-            
-            self._add_local = wx.Button( self, label = 'add service mapping' )
-            self._add_local.Bind( wx.EVT_BUTTON, self.EventAddServiceMapping )
+            self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ], delete_key_callback = self.RemoveMappings )
             
             self._add_custom = wx.Button( self, label = 'add custom mapping' )
             self._add_custom.Bind( wx.EVT_BUTTON, self.EventAddCustomMapping )
@@ -8099,9 +8145,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
             edit_buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            if self._service_key == HC.LOCAL_FILE_SERVICE_KEY: self._add_local.Hide()
-            
-            edit_buttons.AddF( self._add_local, FLAGS_MIXED )
             edit_buttons.AddF( self._add_custom, FLAGS_MIXED )
             edit_buttons.AddF( self._edit, FLAGS_MIXED )
             edit_buttons.AddF( self._remove, FLAGS_MIXED )
@@ -8121,17 +8164,9 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             self.SetInitialSize( ( x, y ) )
             
         
-        if service_key == HC.LOCAL_FILE_SERVICE_KEY: title = 'manage local upnp'
-        else:
-            
-            service = HC.app.GetManager( 'services' ).GetService( service_key )
-            
-            title = 'manage upnp for ' + service.GetName()
-            
+        title = 'manage local upnp'
         
         ClientGUIDialogs.Dialog.__init__( self, parent, title )
-        
-        self._service_key = service_key
         
         InitialiseControls()
         
@@ -8146,11 +8181,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     
         self._mappings_list_ctrl.DeleteAllItems()
         
-        if self._service_key == HC.LOCAL_FILE_SERVICE_KEY: self._mappings = HydrusNATPunch.GetUPnPMappings()
-        else:
-            
-            wx.MessageBox( 'get mappings from service' )
-            
+        self._mappings = HydrusNATPunch.GetUPnPMappings()
         
         for mapping in self._mappings: self._mappings_list_ctrl.Append( mapping, mapping )
         
@@ -8194,15 +8225,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         if do_refresh: self._RefreshMappings()
         
     
-    def EventAddServiceMapping( self, event ):
-        
-        # start dialog with helpful default values
-        # attempt to add mapping via service
-        # add to listctrl
-        
-        pass
-        
-    
     def EventEditMapping( self, event ):
         
         do_refresh = False
@@ -8236,7 +8258,9 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-    def EventRemoveMapping( self, event ):
+    def EventRemoveMapping( self, event ): self.RemoveMappings()
+    
+    def RemoveMappings( self ):
         
         do_refresh = False
         
@@ -8251,4 +8275,3 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         if do_refresh: self._RefreshMappings()
         
-    

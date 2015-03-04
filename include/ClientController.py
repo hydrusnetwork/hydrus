@@ -16,7 +16,6 @@ import ClientGUIDialogs
 import os
 import random
 import shutil
-import sqlite3
 import stat
 import subprocess
 import sys
@@ -568,51 +567,47 @@ class Controller( wx.App ):
     
     def THREADDoFileQuery( self, query_key, search_context ):
         
-        try:
+        query_hash_ids = self.Read( 'file_query_ids', search_context )
+        
+        query_hash_ids = list( query_hash_ids )
+        
+        random.shuffle( query_hash_ids )
+        
+        limit = search_context.GetSystemPredicates().GetLimit()
+        
+        if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
+        
+        service_key = search_context.GetFileServiceKey()
+        
+        include_current_tags = search_context.IncludeCurrentTags()
+        
+        media_results = []
+        
+        include_pending_tags = search_context.IncludePendingTags()
+        
+        i = 0
+        
+        base = 256
+        
+        while i < len( query_hash_ids ):
             
-            query_hash_ids = self.Read( 'file_query_ids', search_context )
+            if query_key.IsCancelled(): return
             
-            query_hash_ids = list( query_hash_ids )
+            if i == 0: ( last_i, i ) = ( 0, base )
+            else: ( last_i, i ) = ( i, i + base )
             
-            random.shuffle( query_hash_ids )
+            sub_query_hash_ids = query_hash_ids[ last_i : i ]
             
-            limit = search_context.GetSystemPredicates().GetLimit()
+            more_media_results = self.Read( 'media_results_from_ids', service_key, sub_query_hash_ids )
             
-            if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
+            media_results.extend( more_media_results )
             
-            service_key = search_context.GetFileServiceKey()
+            HC.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
             
-            include_current_tags = search_context.IncludeCurrentTags()
+            self.WaitUntilGoodTimeToUseGUIThread()
             
-            media_results = []
-            
-            include_pending_tags = search_context.IncludePendingTags()
-            
-            i = 0
-            
-            base = 256
-            
-            while i < len( query_hash_ids ):
-                
-                if query_key.IsCancelled(): return
-                
-                if i == 0: ( last_i, i ) = ( 0, base )
-                else: ( last_i, i ) = ( i, i + base )
-                
-                sub_query_hash_ids = query_hash_ids[ last_i : i ]
-                
-                more_media_results = self.Read( 'media_results_from_ids', service_key, sub_query_hash_ids )
-                
-                media_results.extend( more_media_results )
-                
-                HC.pubsub.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
-                
-                self.WaitUntilGoodTimeToUseGUIThread()
-                
-            
-            HC.pubsub.pub( 'file_query_done', query_key, media_results )
-            
-        except Exception as e: HC.ShowException( e )
+        
+        HC.pubsub.pub( 'file_query_done', query_key, media_results )
         
     
     def TIMEREventMaintenance( self, event ):

@@ -17,6 +17,7 @@ import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
 import ClientConstantsMessages
+import ClientDaemons
 import os
 import Queue
 import random
@@ -40,154 +41,6 @@ YAML_DUMP_ID_EXPORT_FOLDER = 6
 YAML_DUMP_ID_SUBSCRIPTION = 7
 YAML_DUMP_ID_LOCAL_BOORU = 8
 
-class FileDB( object ):
-    
-    def _AddThumbnails( self, thumbnails ):
-        
-        for ( hash, thumbnail ) in thumbnails:
-            
-            thumbnail_path = CC.GetExpectedThumbnailPath( hash, True )
-            
-            with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
-            
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
-            
-            thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
-            
-            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
-            
-            phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
-            
-            hash_id = self._GetHashId( hash )
-            
-            self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
-            
-        
-        hashes = { hash for ( hash, thumbnail ) in thumbnails }
-        
-        self.pub_after_commit( 'new_thumbnails', hashes )
-        
-    
-    def _CopyFiles( self, hashes ):
-        
-        if len( hashes ) > 0:
-            
-            export_dir = HC.TEMP_DIR
-            
-            if not os.path.exists( export_dir ): os.mkdir( export_dir )
-            
-            error_messages = set()
-            
-            paths = []
-            
-            for hash in hashes:
-                
-                try:
-                    
-                    hash_id = self._GetHashId( hash )
-                    
-                    path_from = CC.GetFilePath( hash )
-                    
-                    filename = os.path.basename( path_from )
-                    
-                    path_to = export_dir + os.path.sep + filename
-                    
-                    shutil.copy( path_from, path_to )
-                    
-                    os.chmod( path_to, stat.S_IWRITE )
-                    
-                    paths.append( path_to )
-                    
-                except Exception as e: error_messages.add( HC.u( e ) )
-                
-            
-            self.pub_after_commit( 'clipboard', 'paths', paths )
-            
-            if len( error_messages ) > 0: raise Exception( 'Some of the file exports failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
-            
-        
-    
-    def _GenerateHashIdsEfficiently( self, hashes ):
-        
-        hashes_not_in_db = set( hashes )
-        
-        for i in range( 0, len( hashes ), 250 ): # there is a limit on the number of parameterised variables in sqlite, so only do a few at a time
-            
-            hashes_subset = hashes[ i : i + 250 ]
-            
-            hashes_not_in_db.difference_update( [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash IN (' + ','.join( '?' * len( hashes_subset ) ) + ');', [ sqlite3.Binary( hash ) for hash in hashes_subset ] ) ] )
-            
-        
-        if len( hashes_not_in_db ) > 0: self._c.executemany( 'INSERT INTO hashes ( hash ) VALUES( ? );', [ ( sqlite3.Binary( hash ), ) for hash in hashes_not_in_db ] )
-        
-    
-    def _GetHash( self, hash_id ):
-        
-        result = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        if result is None: raise Exception( 'File hash error in database' )
-        
-        ( hash, ) = result
-        
-        return hash
-        
-    
-    def _GetHashes( self, hash_ids ): return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
-    
-    def _GetHashId( self, hash ):
-        
-        result = self._c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO hashes ( hash ) VALUES ( ? );', ( sqlite3.Binary( hash ), ) )
-            
-            hash_id = self._c.lastrowid
-            
-        else: ( hash_id, ) = result
-        
-        return hash_id
-        
-    
-    def _GetHashIds( self, hashes ):
-        
-        hash_ids = []
-        
-        if type( hashes ) == type( set() ): hashes = list( hashes )
-        
-        for i in range( 0, len( hashes ), 250 ): # there is a limit on the number of parameterised variables in sqlite, so only do a few at a time
-            
-            hashes_subset = hashes[ i : i + 250 ]
-            
-            hash_ids.extend( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM hashes WHERE hash IN (' + ','.join( '?' * len( hashes_subset ) ) + ');', [ sqlite3.Binary( hash ) for hash in hashes_subset ] ) ] )
-            
-        
-        if len( hashes ) > len( hash_ids ):
-            
-            if len( set( hashes ) ) > len( hash_ids ):
-                
-                # must be some new hashes the db has not seen before, so let's generate them as appropriate
-                
-                self._GenerateHashIdsEfficiently( hashes )
-                
-                hash_ids = self._GetHashIds( hashes )
-                
-            
-        
-        return hash_ids
-        
-    
-    def _GetHashIdsToHashes( self, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
-    
-    def _GetThumbnail( self, hash, full_size = False ):
-        
-        path = CC.GetThumbnailPath( hash, full_size )
-        
-        with open( path, 'rb' ) as f: thumbnail = f.read()
-        
-        return thumbnail
-        
-    
 class MessageDB( object ):
     
     def _AddContact( self, contact ):
@@ -581,20 +434,6 @@ class MessageDB( object ):
             
         
     
-    def _GenerateMessageIdsEfficiently( self, message_keys ):
-        
-        message_keys_not_in_db = set( message_keys )
-        
-        for i in range( 0, len( message_keys ), 250 ): # there is a limit on the number of parameterised variables in sqlite, so only do a few at a time
-            
-            message_keys_subset = message_keys[ i : i + 250 ]
-            
-            message_keys_not_in_db.difference_update( [ message_key for ( message_key, ) in self._c.execute( 'SELECT message_key FROM message_keys WHERE message_key IN (' + ','.join( '?' * len( message_keys_subset ) ) + ');', [ sqlite3.Binary( message_key ) for message_key in message_keys_subset ] ) ] )
-            
-        
-        if len( message_keys_not_in_db ) > 0: self._c.executemany( 'INSERT INTO message_keys ( message_key ) VALUES( ? );', [ ( sqlite3.Binary( message_key ), ) for message_key in message_keys_not_in_db ] )
-        
-    
     def _GetAutocompleteContacts( self, half_complete_name, name_to_exclude = None ):
         
         # expand this later to do groups as well
@@ -847,8 +686,6 @@ class MessageDB( object ):
                 
                 # must be some new messages the db has not seen before, so let's generate them as appropriate
                 
-                self._GenerateMessageIdsEfficiently( message_keys )
-                
                 message_ids = self._GetMessageIds( message_keys )
                 
             
@@ -1092,185 +929,7 @@ class MessageDB( object ):
         self.pub_after_commit( 'notify_check_messages' )
         
     
-class RatingDB( object ):
-    
-    def _GetRatingsMediaResult( self, service_key, min, max ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        half_point = ( min + max ) / 2
-        
-        tighter_min = ( min + half_point ) / 2
-        tighter_max = ( max + half_point ) / 2
-        
-        # I know this is horrible, ordering by random, but I can't think of a better way to do it right now
-        result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, tighter_min, tighter_max ) ).fetchone()
-        
-        if result is None: result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, min, max ) ).fetchone()
-        
-        if result is None: return None
-        else:
-            
-            ( hash_id, ) = result
-            
-            ( media_result, ) = self._GetMediaResults( HC.COMBINED_FILE_SERVICE_KEY, { hash_id } )
-            
-            return media_result
-            
-        
-    
-    def _GetRatingsFilter( self, service_key, hashes ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        hash_ids = self._GetHashIds( hashes )
-        
-        empty_rating = lambda: ( 0.0, 1.0 )
-        
-        ratings_filter = collections.defaultdict( empty_rating )
-        
-        ratings_filter.update( ( ( hash, ( min, max ) ) for ( hash, min, max ) in self._c.execute( 'SELECT hash, min, max FROM ratings_filter, hashes USING ( hash_id ) WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
-        
-        return ratings_filter
-        
-    
-    # leave this until I am more sure of how it'll work remotely
-    # pending is involved here too
-    def _UpdateRemoteRatings( self, service_key, ratings ):
-        
-        service_id = self._GetServiceId( service_key )
-        
-        hashes = [ hash for ( hash, count, rating ) in ratings ]
-        
-        hash_ids = self._GetHashIds( hashes )
-        
-        self._c.execute( 'DELETE FROM ratings WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) )
-        
-        self._c.executemany( 'INSERT INTO ratings ( service_id, hash_id, count, rating, score ) VALUES ( ?, ?, ?, ?, ? );', [ ( service_id, self._GetHashId( hash ), count, rating, HC.CalculateScoreFromRating( count, rating ) ) for ( hash, count, rating ) in ratings if count > 0 ] )
-        
-        # these need count and score in
-        #self.pub_after_commit( 'content_updates_data', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_key, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
-        #self.pub_after_commit( 'content_updates_gui', [ HC.ContentUpdate( HC.CONTENT_UPDATE_RATING_REMOTE, service_key, ( hash, ), rating ) for ( hash, rating ) in ratings ] )
-        
-    
-class TagDB( object ):
-    
-    def _GenerateTagIdsEfficiently( self, tags ):
-        
-        namespaced_tags = [ tag.split( ':', 1 ) for tag in tags if ':' in tag ]
-        
-        namespaces = [ namespace for ( namespace, tag ) in namespaced_tags ]
-        
-        tags = [ tag for tag in tags if ':' not in tag ] + [ tag for ( namespace, tag ) in namespaced_tags ]
-        
-        namespaces_not_in_db = set( namespaces )
-        
-        for i in range( 0, len( namespaces ), 250 ): # there is a limit on the number of parameterised variables in sqlite, so only do a few at a time
-            
-            namespaces_subset = namespaces[ i : i + 250 ]
-            
-            namespaces_not_in_db.difference_update( [ namespace for ( namespace, ) in self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace IN (' + ','.join( '?' * len( namespaces_subset ) ) + ');', [ namespace for namespace in namespaces_subset ] ) ] )
-            
-        
-        if len( namespaces_not_in_db ) > 0: self._c.executemany( 'INSERT INTO namespaces( namespace ) VALUES( ? );', [ ( namespace, ) for namespace in namespaces_not_in_db ] )
-        
-        tags_not_in_db = set( tags )
-        
-        for i in range( 0, len( tags ), 250 ): # there is a limit on the number of parameterised variables in sqlite, so only do a few at a time
-            
-            tags_subset = tags[ i : i + 250 ]
-            
-            tags_not_in_db.difference_update( [ tag for ( tag, ) in self._c.execute( 'SELECT tag FROM tags WHERE tag IN (' + ','.join( '?' * len( tags_subset ) ) + ');', [ tag for tag in tags_subset ] ) ] )
-            
-        
-        if len( tags_not_in_db ) > 0:
-            
-            inserts = [ ( tag, ) for tag in tags_not_in_db ]
-            
-            self._c.executemany( 'INSERT INTO tags ( tag ) VALUES ( ? );', inserts )
-            
-            self._c.executemany( 'INSERT INTO tags_fts4 ( docid, tag ) SELECT tag_id, tag FROM tags WHERE tag = ?;', inserts )
-            
-        
-    
-    def _GetNamespaceTag( self, namespace_id, tag_id ):
-        
-        result = self._c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
-        
-        if result is None: raise Exception( 'Tag error in database' )
-        
-        ( tag, ) = result
-        
-        if namespace_id == 1: return tag
-        else:
-            
-            result = self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace_id = ?;', ( namespace_id, ) ).fetchone()
-            
-            if result is None: raise Exception( 'Namespace error in database' )
-            
-            ( namespace, ) = result
-            
-            return namespace + ':' + tag
-            
-        
-    
-    def _GetNamespaceId( self, namespace ):
-        
-        result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO namespaces ( namespace ) VALUES ( ? );', ( namespace, ) )
-            
-            namespace_id = self._c.lastrowid
-            
-        else: ( namespace_id, ) = result
-        
-        return namespace_id
-        
-    
-    def _GetNamespaceIdTagId( self, tag ):
-        
-        tag = HC.CleanTag( tag )
-        
-        HC.CheckTagNotEmpty( tag )
-        
-        if ':' in tag:
-            
-            ( namespace, tag ) = tag.split( ':', 1 )
-            
-            namespace_id = self._GetNamespaceId( namespace )
-            
-        else: namespace_id = 1
-        
-        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
-            
-            tag_id = self._c.lastrowid
-            
-            self._c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
-            
-        else: ( tag_id, ) = result
-        
-        result = self._c.execute( 'SELECT 1 FROM existing_tags WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ).fetchone()
-        
-        if result is None:
-            
-            self._c.execute( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', ( namespace_id, tag_id ) )
-            
-            #tag_service_ids = self._GetServiceIds( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG, HC.COMBINED_TAG ) )
-            #file_service_ids = self._GetServiceIds( ( HC.FILE_REPOSITORY, HC.LOCAL_FILE, HC.COMBINED_FILE ) )
-            
-            #self._c.executemany( 'INSERT OR IGNORE INTO autocomplete_tags_cache ( file_service_id, tag_service_id, namespace_id, tag_id, current_count, pending_count ) VALUES ( ?, ?, ?, ?, ?, ? );', [ ( file_service_id, tag_service_id, namespace_id, tag_id, 0, 0 ) for ( tag_service_id, file_service_id ) in itertools.product( tag_service_ids, file_service_ids ) ] )
-            
-        
-        return ( namespace_id, tag_id )
-        
-    
-class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
+class ServiceDB( MessageDB ):
     
     def _AddFile( self, service_id, hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ):
         
@@ -1397,6 +1056,32 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
         
     
+    def _AddThumbnails( self, thumbnails ):
+        
+        for ( hash, thumbnail ) in thumbnails:
+            
+            thumbnail_path = CC.GetExpectedThumbnailPath( hash, True )
+            
+            with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
+            
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
+            
+            thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
+            
+            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
+            
+            phash = HydrusImageHandling.GeneratePerceptualHash( thumbnail_path )
+            
+            hash_id = self._GetHashId( hash )
+            
+            self._c.execute( 'INSERT OR REPLACE INTO perceptual_hashes ( hash_id, phash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( phash ) ) )
+            
+        
+        hashes = { hash for ( hash, thumbnail ) in thumbnails }
+        
+        self.pub_after_commit( 'new_thumbnails', hashes )
+        
+    
     def _AddWebSession( self, name, cookies, expires ):
         
         self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
@@ -1515,6 +1200,45 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
     
     def _ClearCombinedAutocompleteTags( self ): self._c.execute( 'DELETE FROM autocomplete_tags_cache WHERE tag_service_id = ?;', ( self._combined_tag_service_id, ) )
     
+    def _CopyFiles( self, hashes ):
+        
+        if len( hashes ) > 0:
+            
+            export_dir = HC.TEMP_DIR
+            
+            if not os.path.exists( export_dir ): os.mkdir( export_dir )
+            
+            error_messages = set()
+            
+            paths = []
+            
+            for hash in hashes:
+                
+                try:
+                    
+                    hash_id = self._GetHashId( hash )
+                    
+                    path_from = CC.GetFilePath( hash )
+                    
+                    filename = os.path.basename( path_from )
+                    
+                    path_to = export_dir + os.path.sep + filename
+                    
+                    shutil.copy( path_from, path_to )
+                    
+                    os.chmod( path_to, stat.S_IWRITE )
+                    
+                    paths.append( path_to )
+                    
+                except Exception as e: error_messages.add( HC.u( e ) )
+                
+            
+            self.pub_after_commit( 'clipboard', 'paths', paths )
+            
+            if len( error_messages ) > 0: raise Exception( 'Some of the file exports failed with the following error message(s):' + os.linesep + os.linesep.join( error_messages ) )
+            
+        
+    
     def _DeleteFiles( self, service_id, hash_ids ):
         
         splayed_hash_ids = HC.SplayListForDB( hash_ids )
@@ -1593,27 +1317,30 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for hash in local_files_hashes & deletee_hashes:
             
+            if HC.shutdown or job_key.IsCancelled():
+                
+                if job_key.IsCancelled():
+                    
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
+                    
+                
+                return
+                
+            
+            try: path = CC.GetFilePath( hash )
+            except HydrusExceptions.NotFoundException: continue
+            
             try:
-                
-                if HC.shutdown or job_key.IsCancelled():
-                    
-                    if HC.shutdown: return
-                    
-                    if job_key.IsCancelled():
-                        
-                        job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
-                        
-                        return
-                        
-                    
-                
-                path = CC.GetFilePath( hash )
                 
                 os.chmod( path, stat.S_IWRITE )
                 
                 os.remove( path )
                 
-            except: continue
+            except OSError:
+                
+                print( 'In trying to delete the orphan ' + path + ', this error was encountered:' )
+                print( traceback.format_exc() )
+                
             
         
         # perceptual_hashes and thumbs
@@ -1641,24 +1368,26 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             path = CC.GetExpectedThumbnailPath( hash, True )
             resized_path = CC.GetExpectedThumbnailPath( hash, False )
             
-            try:
+            if HC.shutdown or job_key.IsCancelled():
                 
-                if HC.shutdown or job_key.IsCancelled():
+                if job_key.IsCancelled():
                     
-                    if HC.shutdown: return
+                    job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
                     
-                    if job_key.IsCancelled():
-                        
-                        job_key.SetVariable( 'popup_message_text_1', prefix + 'cancelled' )
-                        
-                        return
-                        
-                    
+                
+                return
+                
+            
+            try:
                 
                 if os.path.exists( path ): os.remove( path )
                 if os.path.exists( resized_path ): os.remove( resized_path )
                 
-            except: continue
+            except OSError:
+                
+                print( 'In trying to delete the orphan ' + path + ' or ' + resized_path + ', this error was encountered:' )
+                print( traceback.format_exc() )
+                
             
         
         self._c.execute( 'REPLACE INTO shutdown_timestamps ( shutdown_type, timestamp ) VALUES ( ?, ? );', ( CC.SHUTDOWN_TIMESTAMP_DELETE_ORPHANS, HC.GetNow() ) )
@@ -1948,13 +1677,10 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         for sibling_tag in all_associated_sibling_tags:
             
-            try:
-                
-                ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( sibling_tag )
-                
-                sibling_results.append( ( namespace_id, tag_id ) )
-                
-            except: continue
+            try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( sibling_tag )
+            except HydrusExceptions.SizeException: continue
+            
+            sibling_results.append( ( namespace_id, tag_id ) )
             
         
         results.update( sibling_results )
@@ -2482,6 +2208,62 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return predicates
         
     
+    def _GetHash( self, hash_id ):
+        
+        result = self._c.execute( 'SELECT hash FROM hashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None: raise Exception( 'File hash error in database' )
+        
+        ( hash, ) = result
+        
+        return hash
+        
+    
+    def _GetHashes( self, hash_ids ): return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) ]
+    
+    def _GetHashId( self, hash ):
+        
+        result = self._c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO hashes ( hash ) VALUES ( ? );', ( sqlite3.Binary( hash ), ) )
+            
+            hash_id = self._c.lastrowid
+            
+        else: ( hash_id, ) = result
+        
+        return hash_id
+        
+    
+    def _GetHashIds( self, hashes ):
+        
+        hash_ids = set()
+        hashes_not_in_db = set()
+        
+        for hash in hashes:
+            
+            result = self._c.execute( 'SELECT hash_id FROM hashes WHERE hash = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+            
+            if result is None: hashes_not_in_db.add( hash )
+            else:
+                
+                ( hash_id, ) = result
+                
+                hash_ids.add( hash_id )
+                
+            
+        
+        if len( hashes_not_in_db ) > 0:
+            
+            self._c.executemany( 'INSERT INTO hashes ( hash ) VALUES( ? );', ( ( sqlite3.Binary( hash ), ) for hash in hashes_not_in_db ) )
+            
+            hash_ids.update( self._GetHashIds( hashes ) )
+            
+        
+        return hash_ids
+        
+    
     def _GetHashIdsFromNamespace( self, file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ):
         
         statuses = []
@@ -2576,7 +2358,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for tag in tags:
             
             try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
-            except: continue
+            except HydrusExceptions.SizeException: continue
             
             if ':' in tag:
                 
@@ -2677,6 +2459,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         return hash_ids
         
+    
+    def _GetHashIdsToHashes( self, hash_ids ): return { hash_id : hash for ( hash_id, hash ) in self._c.execute( 'SELECT hash_id, hash FROM hashes WHERE hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';' ) }
     
     def _GetHydrusSessions( self ):
         
@@ -2900,6 +2684,78 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return mime
         
     
+    def _GetNamespaceId( self, namespace ):
+        
+        result = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( namespace, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO namespaces ( namespace ) VALUES ( ? );', ( namespace, ) )
+            
+            namespace_id = self._c.lastrowid
+            
+        else: ( namespace_id, ) = result
+        
+        return namespace_id
+        
+    
+    def _GetNamespaceIdTagId( self, tag ):
+        
+        tag = HC.CleanTag( tag )
+        
+        HC.CheckTagNotEmpty( tag )
+        
+        if ':' in tag:
+            
+            ( namespace, tag ) = tag.split( ':', 1 )
+            
+            namespace_id = self._GetNamespaceId( namespace )
+            
+        else: namespace_id = 1
+        
+        result = self._c.execute( 'SELECT tag_id FROM tags WHERE tag = ?;', ( tag, ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO tags ( tag ) VALUES ( ? );', ( tag, ) )
+            
+            tag_id = self._c.lastrowid
+            
+            self._c.execute( 'INSERT INTO tags_fts4 ( docid, tag ) VALUES ( ?, ? );', ( tag_id, tag ) )
+            
+        else: ( tag_id, ) = result
+        
+        result = self._c.execute( 'SELECT 1 FROM existing_tags WHERE namespace_id = ? AND tag_id = ?;', ( namespace_id, tag_id ) ).fetchone()
+        
+        if result is None:
+            
+            self._c.execute( 'INSERT INTO existing_tags ( namespace_id, tag_id ) VALUES ( ?, ? );', ( namespace_id, tag_id ) )
+            
+        
+        return ( namespace_id, tag_id )
+        
+    
+    def _GetNamespaceTag( self, namespace_id, tag_id ):
+        
+        result = self._c.execute( 'SELECT tag FROM tags WHERE tag_id = ?;', ( tag_id, ) ).fetchone()
+        
+        if result is None: raise Exception( 'Tag error in database' )
+        
+        ( tag, ) = result
+        
+        if namespace_id == 1: return tag
+        else:
+            
+            result = self._c.execute( 'SELECT namespace FROM namespaces WHERE namespace_id = ?;', ( namespace_id, ) ).fetchone()
+            
+            if result is None: raise Exception( 'Namespace error in database' )
+            
+            ( namespace, ) = result
+            
+            return namespace + ':' + tag
+            
+        
+    
     def _GetNews( self, service_key ):
         
         service_id = self._GetServiceId( service_key )
@@ -3095,21 +2951,66 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         return reason_id
         
     
+    def _GetRatingsMediaResult( self, service_key, min, max ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        half_point = ( min + max ) / 2
+        
+        tighter_min = ( min + half_point ) / 2
+        tighter_max = ( max + half_point ) / 2
+        
+        # I know this is horrible, ordering by random, but I can't think of a better way to do it right now
+        result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, tighter_min, tighter_max ) ).fetchone()
+        
+        if result is None: result = self._c.execute( 'SELECT hash_id FROM local_ratings, files_info USING ( hash_id ) WHERE local_ratings.service_id = ? AND files_info.service_id = ? AND rating BETWEEN ? AND ? ORDER BY RANDOM() LIMIT 1;', ( service_id, self._local_file_service_id, min, max ) ).fetchone()
+        
+        if result is None: return None
+        else:
+            
+            ( hash_id, ) = result
+            
+            ( media_result, ) = self._GetMediaResults( HC.COMBINED_FILE_SERVICE_KEY, { hash_id } )
+            
+            return media_result
+            
+        
+    
+    def _GetRatingsFilter( self, service_key, hashes ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        hash_ids = self._GetHashIds( hashes )
+        
+        empty_rating = lambda: ( 0.0, 1.0 )
+        
+        ratings_filter = collections.defaultdict( empty_rating )
+        
+        ratings_filter.update( ( ( hash, ( min, max ) ) for ( hash, min, max ) in self._c.execute( 'SELECT hash, min, max FROM ratings_filter, hashes USING ( hash_id ) WHERE service_id = ? AND hash_id IN ' + HC.SplayListForDB( hash_ids ) + ';', ( service_id, ) ) ) )
+        
+        return ratings_filter
+        
+    
     def _GetService( self, service_id ):
         
-        ( service_key, service_type, name, info ) = self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+        if service_id in self._service_cache: service = self._service_cache[ service_id ]
+        else:
+            
+            ( service_key, service_type, name, info ) = self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            service = CC.Service( service_key, service_type, name, info )
+            
+            self._service_cache[ service_id ] = service
+            
         
-        return CC.Service( service_key, service_type, name, info )
+        return service
         
     
     def _GetServices( self, limited_types = HC.ALL_SERVICES ):
         
-        services = []
+        service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ) ]
         
-        for ( service_key, service_type, name, info ) in self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_type IN ' + HC.SplayListForDB( limited_types ) + ';' ):
-            
-            services.append( CC.Service( service_key, service_type, name, info ) )
-            
+        services = [ self._GetService( service_id ) for service_id in service_ids ]
         
         return services
         
@@ -3118,7 +3019,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         result = self._c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
         
-        if result is None: raise Exception( 'Service id error in database' )
+        if result is None: raise HydrusExceptions.NotFoundException( 'Service id error in database' )
         
         ( service_id, ) = result
         
@@ -3385,6 +3286,15 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
             
             return statuses_to_pairs
             
+        
+    
+    def _GetThumbnail( self, hash, full_size = False ):
+        
+        path = CC.GetThumbnailPath( hash, full_size )
+        
+        with open( path, 'rb' ) as f: thumbnail = f.read()
+        
+        return thumbnail
         
     
     def _GetThumbnailHashesIShouldHave( self, service_key ):
@@ -3658,7 +3568,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             try: service_id = self._GetServiceId( service_key )
-            except: continue
+            except  HydrusExceptions.NotFoundException: continue
             
             service = self._GetService( service_id )
             
@@ -3786,7 +3696,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 if tag_type == 'tag':
                                     
                                     try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
-                                    except: continue
+                                    except HydrusExceptions.SizeException: continue
                                     
                                     predicates.append( 'namespace_id = ' + str( namespace_id ) )
                                     predicates.append( 'tag_id = ' + str( tag_id ) )
@@ -3860,7 +3770,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             else: ( tag, hashes ) = row
                             
                             try: ( namespace_id, tag_id ) = self._GetNamespaceIdTagId( tag )
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             hash_ids = self._GetHashIds( hashes )
                             
@@ -3892,7 +3802,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( new_tag )
                                 
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ?;', ( service_id, old_namespace_id, old_tag_id ) )
                             self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
@@ -3912,7 +3822,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 ( new_namespace_id, new_tag_id ) = self._GetNamespaceIdTagId( new_tag )
                                 
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             reason_id = self._GetReasonId( reason )
                             
@@ -3930,7 +3840,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                             ( old_tag, new_tag ) = row
                             
                             try: ( old_namespace_id, old_tag_id ) = self._GetNamespaceIdTagId( old_tag )
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND old_namespace_id = ? AND old_tag_id = ? AND status = ?;', ( service_id, old_namespace_id, old_tag_id, deletee_status ) )
                             
@@ -3954,7 +3864,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( parent_tag )
                                 
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id ) )
                             self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
@@ -3989,7 +3899,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( parent_tag )
                                 
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             reason_id = self._GetReasonId( reason )
                             
@@ -4027,7 +3937,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                                 
                                 ( parent_namespace_id, parent_tag_id ) = self._GetNamespaceIdTagId( parent_tag )
                                 
-                            except: continue
+                            except HydrusExceptions.SizeException: continue
                             
                             self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_namespace_id = ? AND child_tag_id = ? AND parent_namespace_id = ? AND parent_tag_id = ? AND status = ?;', ( service_id, child_namespace_id, child_tag_id, parent_namespace_id, parent_tag_id, deletee_status ) )
                             
@@ -4126,7 +4036,7 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
             try: service_id = self._GetServiceId( service_key )
-            except: continue
+            except HydrusExceptions.NotFoundException: continue
             
             service = self._GetService( service_id )
             
@@ -4276,6 +4186,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         ( service_key, service_type, name, info ) = service.ToTuple()
         
         self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
+        
+        if service_id in self._service_cache: del self._service_cache[ service_id ]
         
         if service_type == HC.TAG_REPOSITORY: self._ClearCombinedAutocompleteTags()
         
@@ -4685,6 +4597,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                     
                     self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                     
+                    if service_id in self._service_cache: del self._service_cache[ service_id ]
+                    
                     service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                     
                     service_keys_to_service_updates = { client_service_key : [ service_update ] }
@@ -4759,6 +4673,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
                 
+                if service_id in self._service_cache: del self._service_cache[ service_id ]
+                
                 service_update = HC.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
                 
                 service_keys_to_service_updates = { service_key : [ service_update ] }
@@ -4822,6 +4738,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
                 
                 self._UpdateServiceInfo( service_id, info_update )
                 
+                if service_id in self._service_cache: del self._service_cache[ service_id ]
+                
                 if service_type == HC.LOCAL_BOORU:
                     
                     self.pub_after_commit( 'restart_booru' )
@@ -4843,6 +4761,8 @@ class ServiceDB( FileDB, MessageDB, TagDB, RatingDB ):
         
         self._c.execute( 'UPDATE services SET info = ? WHERE service_id = ?;', ( info, service_id ) )
         
+        if service_id in self._service_cache: del self._service_cache[ service_id ]
+        
     
 class DB( ServiceDB ):
     
@@ -4857,6 +4777,7 @@ class DB( ServiceDB ):
         self._pubsubs = []
         
         self._subscriptions_cache = {}
+        self._service_cache = {}
         
         self._currently_doing_job = False
         
@@ -4882,7 +4803,10 @@ class DB( ServiceDB ):
             time.sleep( 2 )
             
             try: self._c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
+            except Exception as e:
+                
+                raise HydrusExceptions.DBAccessException( HC.u( e ) )
+                
             
             try:
                 
@@ -4927,9 +4851,7 @@ class DB( ServiceDB ):
         
         self._null_namespace_id = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) )
         
-        options = self._GetOptions()
-        
-        HC.options = options
+        HC.options = self._GetOptions()
         
         self._CloseDBCursor()
         
@@ -5047,7 +4969,10 @@ class DB( ServiceDB ):
             self._c.execute( 'PRAGMA journal_mode=WAL;' )
             
             try: self._c.execute( 'BEGIN IMMEDIATE' )
-            except Exception as e: raise HydrusExceptions.DBAccessException( HC.u( e ) )
+            except Exception as e:
+                
+                raise HydrusExceptions.DBAccessException( HC.u( e ) )
+                
             
             self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, info TEXT_YAML );' )
             self._c.execute( 'CREATE UNIQUE INDEX services_service_key_index ON services ( service_key );' )
@@ -5691,7 +5616,7 @@ class DB( ServiceDB ):
         
         if version == 125:
             
-            options = self._GetOptions()
+            HC.options = self._GetOptions()
             
             HC.options[ 'default_tag_repository' ] = HC.options[ 'default_tag_repository' ].GetServiceKey()
             
@@ -5759,7 +5684,7 @@ class DB( ServiceDB ):
             
             #
             
-            options = self._GetOptions()
+            HC.options = self._GetOptions()
             
             client_size = HC.options[ 'client_size' ]
             
@@ -5792,7 +5717,7 @@ class DB( ServiceDB ):
                 hash = self._GetHash( hash_id )
                 
                 try: path = CC.GetFilePath( hash )
-                except: continue
+                except HydrusExceptions.NotFoundException: continue
                 
                 h_sha512 = hashlib.sha512()
                 
@@ -5859,7 +5784,7 @@ class DB( ServiceDB ):
         
         if version == 143:
             
-            options = self._GetOptions()
+            HC.options = self._GetOptions()
             
             HC.options[ 'shortcuts' ][ wx.ACCEL_CTRL ][ ord( 'E' ) ] = 'open_externally'
             
@@ -5868,7 +5793,7 @@ class DB( ServiceDB ):
         
         if version == 145:
             
-            options = self._GetOptions()
+            HC.options = self._GetOptions()
             
             HC.options[ 'gui_colours' ][ 'tags_box' ] = ( 255, 255, 255 )
             
@@ -5991,12 +5916,10 @@ class DB( ServiceDB ):
             def ProcessWrite( action, args, kwargs ):
                 
                 if action == '4chan_pass': result = self._SetYAMLDump( YAML_DUMP_ID_SINGLE, '4chan_pass', *args, **kwargs )
-                elif action == 'add_downloads': result = self._AddDownloads( *args, **kwargs )
-                elif action == 'add_uploads': result = self._AddUploads( *args, **kwargs )
                 elif action == 'archive_conversation': result = self._ArchiveConversation( *args, **kwargs )
                 elif action == 'backup': result = self._Backup( *args, **kwargs )
                 elif action == 'contact_associated': result = self._AssociateContact( *args, **kwargs )
-                elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
+                elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
                 elif action == 'copy_files': result = self._CopyFiles( *args, **kwargs )
                 elif action == 'delete_conversation': result = self._DeleteConversation( *args, **kwargs )
                 elif action == 'delete_draft': result = self._DeleteDraft( *args, **kwargs )
@@ -6019,7 +5942,6 @@ class DB( ServiceDB ):
                 elif action == 'favourite_custom_filter_actions': result = self._SetYAMLDump( YAML_DUMP_ID_FAVOURITE_CUSTOM_FILTER_ACTIONS, *args, **kwargs )
                 elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
                 elif action == 'flush_message_statuses': result = self._FlushMessageStatuses( *args, **kwargs )
-                elif action == 'generate_tag_ids': result = self._GenerateTagIdsEfficiently( *args, **kwargs )
                 elif action == 'gui_session': result = self._SetYAMLDump( YAML_DUMP_ID_GUI_SESSION, *args, **kwargs )
                 elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )
                 elif action == 'imageboard': result = self._SetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
@@ -6175,15 +6097,16 @@ class DB( ServiceDB ):
     
     def StartDaemons( self ):
         
-        HydrusThreading.DAEMONWorker( 'CheckImportFolders', DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
-        HydrusThreading.DAEMONWorker( 'CheckExportFolders', DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
-        HydrusThreading.DAEMONWorker( 'DownloadFiles', DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'ResizeThumbnails', DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
-        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
-        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
-        HydrusThreading.DAEMONWorker( 'UPnP', DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
-        HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
+        HydrusThreading.DAEMONWorker( 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 )
+        HydrusThreading.DAEMONWorker( 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 )
+        HydrusThreading.DAEMONWorker( 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) )
+        HydrusThreading.DAEMONWorker( 'ResizeThumbnails', ClientDaemons.DAEMONResizeThumbnails, period = 3600 * 24, init_wait = 600 )
+        HydrusThreading.DAEMONWorker( 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ) )
+        HydrusThreading.DAEMONWorker( 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), period = 360, init_wait = 120 )
+        HydrusThreading.DAEMONWorker( 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), pre_callable_wait = 10 )
+        
+        HydrusThreading.DAEMONQueue( 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 )
         
     
     def WaitUntilGoodTimeToUseDBThread( self ):
@@ -6208,1349 +6131,5 @@ class DB( ServiceDB ):
         self._jobs.put( ( priority, job ) )
         
         if synchronous: return job.GetResult()
-        
-    
-def DAEMONCheckExportFolders():
-    
-    if not HC.options[ 'pause_export_folders_sync' ]:
-        
-        export_folders = HC.app.ReadDaemon( 'export_folders' )
-        
-        for ( folder_path, details ) in export_folders.items():
-            
-            now = HC.GetNow()
-            
-            if now > details[ 'last_checked' ] + details[ 'period' ]:
-                
-                if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
-                    
-                    existing_filenames = dircache.listdir( folder_path )
-                    
-                    #
-                    
-                    predicates = details[ 'predicates' ]
-                    
-                    search_context = CC.FileSearchContext( HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = predicates )
-                    
-                    query_hash_ids = HC.app.Read( 'file_query_ids', search_context )
-                    
-                    query_hash_ids = list( query_hash_ids )
-                    
-                    random.shuffle( query_hash_ids )
-                    
-                    limit = search_context.GetSystemPredicates().GetLimit()
-                    
-                    if limit is not None: query_hash_ids = query_hash_ids[ : limit ]
-                    
-                    media_results = []
-                    
-                    i = 0
-                    
-                    base = 256
-                    
-                    while i < len( query_hash_ids ):
-                        
-                        if HC.options[ 'pause_export_folders_sync' ]: return
-                        
-                        if i == 0: ( last_i, i ) = ( 0, base )
-                        else: ( last_i, i ) = ( i, i + base )
-                        
-                        sub_query_hash_ids = query_hash_ids[ last_i : i ]
-                        
-                        more_media_results = HC.app.Read( 'media_results_from_ids', HC.LOCAL_FILE_SERVICE_KEY, sub_query_hash_ids )
-                        
-                        media_results.extend( more_media_results )
-                        
-                    
-                    #
-                    
-                    phrase = details[ 'phrase' ]
-                    
-                    terms = CC.ParseExportPhrase( phrase )
-                    
-                    for media_result in media_results:
-                        
-                        hash = media_result.GetHash()
-                        mime = media_result.GetMime()
-                        
-                        filename = CC.GenerateExportFilename( media_result, terms )
-                        
-                        ext = HC.mime_ext_lookup[ mime ]
-                        
-                        path = folder_path + os.path.sep + filename + ext
-                        
-                        if not os.path.exists( path ):
-                            
-                            source_path = CC.GetFilePath( hash, mime )
-                            
-                            shutil.copy( source_path, path )
-                            
-                        
-                    
-                    details[ 'last_checked' ] = now
-                    
-                    HC.app.WriteSynchronous( 'export_folder', folder_path, details )
-                    
-                
-            
-        
-    
-def DAEMONCheckImportFolders():
-    
-    if not HC.options[ 'pause_import_folders_sync' ]:
-        
-        import_folders = HC.app.ReadDaemon( 'import_folders' )
-        
-        for ( folder_path, details ) in import_folders.items():
-            
-            now = HC.GetNow()
-            
-            if now > details[ 'last_checked' ] + details[ 'check_period' ]:
-                
-                if os.path.exists( folder_path ) and os.path.isdir( folder_path ):
-                    
-                    filenames = dircache.listdir( folder_path )
-                    
-                    raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
-                    
-                    all_paths = CC.GetAllPaths( raw_paths )
-                    
-                    if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
-                        
-                        all_paths = [ path for path in all_paths if path not in details[ 'cached_imported_paths' ] ]
-                        
-                    
-                    all_paths = [ path for path in all_paths if path not in details[ 'failed_imported_paths' ] ]
-                    
-                    successful_hashes = set()
-                    
-                    for ( i, path ) in enumerate( all_paths ):
-                        
-                        if HC.options[ 'pause_import_folders_sync' ]: return
-                        
-                        should_import = True
-                        should_action = True
-                        
-                        temp_path = HC.GetTempPath()
-                        
-                        try:
-                            
-                            # make read only perms to make sure it isn't being written/downloaded right now
-                            
-                            os.chmod( path, stat.S_IREAD )
-                            
-                            os.chmod( path, stat.S_IWRITE )
-                            
-                            shutil.copy( path, temp_path )
-                            
-                            os.chmod( temp_path, stat.S_IWRITE )
-                            
-                        except:
-                            
-                            # could not lock, so try again later
-                            
-                            should_import = False
-                            should_action = False
-                            
-                        
-                        if should_import:
-                            
-                            try:
-                                
-                                if details[ 'local_tag' ] is not None: service_keys_to_tags = { HC.LOCAL_TAG_SERVICE_KEY : { details[ 'local_tag' ] } }
-                                else: service_keys_to_tags = {}
-                                
-                                ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, service_keys_to_tags = service_keys_to_tags )
-                                
-                                if result in ( 'successful', 'redundant' ): successful_hashes.add( hash )
-                                elif result == 'deleted':
-                                    
-                                    details[ 'failed_imported_paths' ].add( path )
-                                    
-                                
-                            except:
-                                
-                                details[ 'failed_imported_paths' ].add( path )
-                                
-                                HC.ShowText( 'Import folder failed to import ' + path + ':' + os.linesep * 2 + traceback.format_exc() )
-                                
-                                should_action = False
-                                
-                            
-                            try: os.remove( temp_path )
-                            except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
-                            
-                        
-                        if should_action:
-                            
-                            if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_DELETE:
-                                
-                                try: os.remove( path )
-                                except: details[ 'failed_imported_paths' ].add( path )
-                                
-                            elif details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: details[ 'cached_imported_paths' ].add( path )
-                            
-                        
-                    
-                    if len( successful_hashes ) > 0:
-                        
-                        text = HC.u( len( successful_hashes ) ) + ' files imported from ' + folder_path
-                        
-                        job_key = HC.JobKey()
-                        
-                        job_key.SetVariable( 'popup_message_title', 'import folder' )
-                        job_key.SetVariable( 'popup_message_text_1', text )
-                        job_key.SetVariable( 'popup_message_files', successful_hashes )
-                        
-                        HC.pubsub.pub( 'message', job_key )
-                        
-                    
-                    details[ 'last_checked' ] = now
-                    
-                    HC.app.WriteSynchronous( 'import_folder', folder_path, details )
-                    
-                
-            
-        
-    
-def DAEMONDownloadFiles():
-    
-    hashes = HC.app.ReadDaemon( 'downloads' )
-    
-    num_downloads = len( hashes )
-    
-    for hash in hashes:
-        
-        ( media_result, ) = HC.app.ReadDaemon( 'media_results', HC.COMBINED_FILE_SERVICE_KEY, ( hash, ) )
-        
-        service_keys = list( media_result.GetLocationsManager().GetCurrent() )
-        
-        random.shuffle( service_keys )
-        
-        for service_key in service_keys:
-            
-            if service_key == HC.LOCAL_FILE_SERVICE_KEY: break
-            
-            try: file_repository = HC.app.GetManager( 'services' ).GetService( service_key )
-            except: continue
-            
-            HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
-            
-            if file_repository.CanDownload(): 
-                
-                try:
-                    
-                    request_args = { 'hash' : hash.encode( 'hex' ) }
-                    
-                    temp_path = file_repository.Request( HC.GET, 'file', request_args = request_args, response_to_path = True )
-                    
-                    num_downloads -= 1
-                    
-                    HC.app.WaitUntilGoodTimeToUseGUIThread()
-                    
-                    HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' file downloads' )
-                    
-                    HC.app.WriteSynchronous( 'import_file', temp_path )
-                    
-                    try: os.remove( temp_path )
-                    except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
-                    
-                    break
-                    
-                except:
-                    
-                    HC.ShowText( 'Error downloading file:' + os.linesep + traceback.format_exc() )
-                    
-                
-            
-            if HC.shutdown: return
-            
-        
-    
-    if num_downloads == 0: HC.pubsub.pub( 'downloads_status', 'no file downloads' )
-    elif num_downloads > 0: HC.pubsub.pub( 'downloads_status', HC.ConvertIntToPrettyString( num_downloads ) + ' inactive file downloads' )
-    
-def DAEMONFlushServiceUpdates( list_of_service_keys_to_service_updates ):
-    
-    service_keys_to_service_updates = HC.MergeKeyToListDicts( list_of_service_keys_to_service_updates )
-    
-    HC.app.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
-    
-def DAEMONResizeThumbnails():
-    
-    if not HC.app.CurrentlyIdle(): return
-    
-    full_size_thumbnail_paths = { path for path in CC.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
-    
-    resized_thumbnail_paths = { path[:-8] for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
-    
-    thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
-    
-    random.shuffle( thumbnail_paths_to_render )
-    
-    i = 0
-    
-    limit = max( 100, len( thumbnail_paths_to_render ) / 10 )
-    
-    for thumbnail_path in thumbnail_paths_to_render:
-        
-        try:
-            
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
-            
-            thumbnail_resized_path = thumbnail_path + '_resized'
-            
-            with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
-            
-        except IOError as e: HC.ShowText( 'Thumbnail read error:' + os.linesep + traceback.format_exc() )
-        except Exception as e: HC.ShowText( 'Thumbnail rendering error:' + os.linesep + traceback.format_exc() )
-        
-        if i % 10 == 0: time.sleep( 2 )
-        else:
-            
-            if limit > 10000: time.sleep( 0.05 )
-            elif limit > 1000: time.sleep( 0.25 )
-            else: time.sleep( 0.5 )
-            
-        
-        i += 1
-        
-        if i > limit: break
-        
-        if HC.shutdown: break
-        
-    
-def DAEMONSynchroniseAccounts():
-    
-    services = HC.app.GetManager( 'services' ).GetServices( HC.RESTRICTED_SERVICES )
-    
-    do_notify = False
-    
-    for service in services:
-        
-        service_key = service.GetServiceKey()
-        service_type = service.GetServiceType()
-        
-        account = service.GetInfo( 'account' )
-        credentials = service.GetCredentials()
-        
-        if service_type in HC.REPOSITORIES:
-            
-            if HC.options[ 'pause_repo_sync' ]: continue
-            
-            info = service.GetInfo()
-            
-            if info[ 'paused' ]: continue
-            
-        
-        if account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
-            
-            try:
-                
-                response = service.Request( HC.GET, 'account' )
-                
-                account = response[ 'account' ]
-                
-                account.MakeFresh()
-                
-                HC.app.WriteSynchronous( 'service_updates', { service_key : [ HC.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
-                
-                do_notify = True
-                
-            except Exception as e:
-                
-                print( 'Failed to refresh account for ' + service.GetName() + ':' )
-                
-                print( traceback.format_exc() )
-                
-            
-        
-    
-    if do_notify: HC.pubsub.pub( 'notify_new_permissions' )
-    
-def DAEMONSynchroniseMessages():
-    
-    services = HC.app.GetManager( 'services' ).GetServices( ( HC.MESSAGE_DEPOT, ) )
-    
-    for service in services:
-        
-        try:
-            
-            service_key = service.GetServiceKey()
-            service_type = service.GetServiceType()
-            name = service.GetName()
-            
-            if service.CanCheck():
-                
-                contact = service.GetContact()
-                
-                connection = service.GetConnection()
-                
-                private_key = service.GetPrivateKey()
-                
-                # is the account associated?
-                
-                if not contact.HasPublicKey():
-                    
-                    try:
-                        
-                        public_key = HydrusEncryption.GetPublicKey( private_key )
-                        
-                        connection.Post( 'contact', public_key = public_key )
-                        
-                        HC.app.WriteSynchronous( 'contact_associated', service_key )
-                        
-                        contact = service.GetContact()
-                        
-                        HC.ShowText( 'associated public key with account at ' + name )
-                        
-                    except:
-                        
-                        continue
-                        
-                    
-                
-                # see if there are any new message_keys to download or statuses
-                
-                last_check = service.GetLastCheck()
-                
-                ( message_keys, statuses ) = connection.Get( 'message_info_since', since = last_check )
-                
-                decrypted_statuses = []
-                
-                for status in statuses:
-                    
-                    try: decrypted_statuses.append( HydrusMessageHandling.UnpackageDeliveredStatus( status, private_key ) )
-                    except: pass
-                    
-                
-                new_last_check = HC.GetNow() - 5
-                
-                HC.app.WriteSynchronous( 'message_info_since', service_key, message_keys, decrypted_statuses, new_last_check )
-                
-                if len( message_keys ) > 0: HC.ShowText( 'Checked ' + name + ' up to ' + HC.ConvertTimestampToPrettyTime( new_last_check ) + ', finding ' + HC.u( len( message_keys ) ) + ' new messages' )
-                
-            
-            # try to download any messages that still need downloading
-            
-            if service.CanDownload():
-                
-                serverside_message_keys = HC.app.ReadDaemon( 'message_keys_to_download', service_key )
-                
-                if len( serverside_message_keys ) > 0:
-                    
-                    connection = service.GetConnection()
-                    
-                    private_key = service.GetPrivateKey()
-                    
-                    num_processed = 0
-                    
-                    for serverside_message_key in serverside_message_keys:
-                        
-                        try:
-                            
-                            encrypted_message = connection.Get( 'message', message_key = serverside_message_key.encode( 'hex' ) )
-                            
-                            message = HydrusMessageHandling.UnpackageDeliveredMessage( encrypted_message, private_key )
-                            
-                            HC.app.WriteSynchronous( 'message', message, serverside_message_key = serverside_message_key )
-                            
-                            num_processed += 1
-                            
-                        except Exception as e:
-                            
-                            if issubclass( e, httplib.HTTPException ): break # it was an http error; try again later
-                            
-                        
-                    
-                    if num_processed > 0:
-                        
-                        HC.ShowText( 'Downloaded and parsed ' + HC.u( num_processed ) + ' messages from ' + name )
-                        
-                    
-                
-            
-        except Exception as e:
-            
-            HC.ShowText( 'Failed to check ' + name + ':' )
-            
-            HC.ShowException( e )
-            
-        
-    
-    HC.app.WriteSynchronous( 'flush_message_statuses' )
-    
-    # send messages to recipients and update my status to sent/failed
-    
-    messages_to_send = HC.app.ReadDaemon( 'messages_to_send' )
-    
-    for ( message_key, contacts_to ) in messages_to_send:
-        
-        message = HC.app.ReadDaemon( 'transport_message', message_key )
-        
-        contact_from = message.GetContactFrom()
-        
-        from_anon = contact_from is None or contact_from.GetName() == 'Anonymous'
-        
-        if not from_anon:
-            
-            my_public_key = contact_from.GetPublicKey()
-            my_contact_key = contact_from.GetContactKey()
-            
-            my_message_depot = HC.app.GetManager( 'services' ).GetService( contact_from.GetServiceKey() )
-            
-            from_connection = my_message_depot.GetConnection()
-            
-        
-        service_status_updates = []
-        local_status_updates = []
-        
-        for contact_to in contacts_to:
-            
-            public_key = contact_to.GetPublicKey()
-            contact_key = contact_to.GetContactKey()
-            
-            encrypted_message = HydrusMessageHandling.PackageMessageForDelivery( message, public_key )
-            
-            try:
-                
-                to_connection = contact_to.GetConnection()
-                
-                to_connection.Post( 'message', message = encrypted_message, contact_key = contact_key )
-                
-                status = 'sent'
-                
-            except:
-                
-                HC.ShowText( 'Sending a message failed: ' + os.linesep + traceback.format_exc() )
-                
-                status = 'failed'
-                
-            
-            status_key = hashlib.sha256( contact_key + message_key ).digest()
-            
-            if not from_anon: service_status_updates.append( ( status_key, HydrusMessageHandling.PackageStatusForDelivery( ( message_key, contact_key, status ), my_public_key ) ) )
-            
-            local_status_updates.append( ( contact_key, status ) )
-            
-        
-        if not from_anon: from_connection.Post( 'message_statuses', contact_key = my_contact_key, statuses = service_status_updates )
-        
-        HC.app.WriteSynchronous( 'message_statuses', message_key, local_status_updates )
-        
-    
-    HC.app.ReadDaemon( 'status_num_inbox' )
-    
-def DAEMONSynchroniseRepositories():
-    
-    HC.repos_changed = False
-    
-    if not HC.options[ 'pause_repo_sync' ]:
-        
-        services = HC.app.GetManager( 'services' ).GetServices( HC.REPOSITORIES )
-        
-        for service in services:
-            
-            if HC.shutdown: raise Exception( 'Application shutting down!' )
-            
-            ( service_key, service_type, name, info ) = service.ToTuple()
-            
-            if info[ 'paused' ]: continue
-            
-            if not service.CanDownloadUpdate() and not service.CanProcessUpdate(): continue
-            
-            try:
-                
-                job_key = HC.JobKey( pausable = True, cancellable = True )
-                
-                job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name )
-                
-                HC.pubsub.pub( 'message', job_key )
-                
-                num_updates_downloaded = 0
-                
-                if service.CanDownloadUpdate():
-                    
-                    job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - downloading' )
-                    job_key.SetVariable( 'popup_message_text_1', 'checking' )
-                    
-                    while service.CanDownloadUpdate():
-                        
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
-                            
-                            time.sleep( 0.1 )
-                            
-                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
-                            
-                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
-                            
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if job_key.IsCancelled():
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                return
-                                
-                            
-                            if HC.repos_changed:
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                                
-                                return
-                                
-                            
-                        
-                        now = HC.GetNow()
-                        
-                        ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = service.GetTimestamps()
-                        
-                        if first_timestamp is None:
-                            
-                            range = None
-                            value = 0
-                            
-                            update_index_string = 'initial update: '
-                            
-                        else:
-                            
-                            range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
-                            value = ( ( next_download_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
-                            
-                            update_index_string = 'update ' + HC.ConvertIntToPrettyString( value ) + '/' + HC.ConvertIntToPrettyString( range ) + ': '
-                            
-                        
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'downloading and parsing' )
-                        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
-                        
-                        update = service.Request( HC.GET, 'update', { 'begin' : next_download_timestamp } )
-                        
-                        ( begin, end ) = update.GetBeginEnd()
-                        
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'saving to disk' )
-                        
-                        update_path = CC.GetUpdatePath( service_key, begin )
-                        
-                        with open( update_path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
-                        
-                        next_download_timestamp = end + 1
-                        
-                        service_updates = [ HC.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP, next_download_timestamp ) ]
-                        
-                        service_keys_to_service_updates = { service_key : service_updates }
-                        
-                        HC.app.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
-                        
-                        # this waits for pubsubs to flush, so service updates are processed
-                        HC.app.WaitUntilGoodTimeToUseGUIThread()
-                        
-                        num_updates_downloaded += 1
-                        
-                    
-                
-                num_updates_processed = 0
-                total_content_weight_processed = 0
-                
-                if service.CanProcessUpdate():
-                    
-                    job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - processing' )
-                    
-                    WEIGHT_THRESHOLD = 50.0
-                    
-                    while service.CanProcessUpdate():
-                        
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
-                            
-                            time.sleep( 0.1 )
-                            
-                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
-                            
-                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
-                            
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if job_key.IsCancelled():
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                return
-                                
-                            
-                            if HC.repos_changed:
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                                
-                                return
-                                
-                            
-                        
-                        now = HC.GetNow()
-                        
-                        ( first_timestamp, next_download_timestamp, next_processing_timestamp ) = service.GetTimestamps()
-                        
-                        range = ( ( now - first_timestamp ) / HC.UPDATE_DURATION ) + 1
-                        
-                        if next_processing_timestamp == 0: value = 0
-                        else: value = ( ( next_processing_timestamp - first_timestamp ) / HC.UPDATE_DURATION ) + 1
-                        
-                        update_index_string = 'update ' + HC.ConvertIntToPrettyString( value ) + '/' + HC.ConvertIntToPrettyString( range ) + ': '
-                        
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'loading from disk' )
-                        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
-                        
-                        update_path = CC.GetUpdatePath( service_key, next_processing_timestamp )
-                        
-                        with open( update_path, 'rb' ) as f: update_yaml = f.read()
-                        
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'parsing' )
-                        
-                        update = yaml.safe_load( update_yaml )
-                        
-                        if service_type == HC.TAG_REPOSITORY:
-                            
-                            job_key.SetVariable( 'popup_message_text_1', update_index_string + 'pre-processing tags' )
-                            
-                            HC.app.WriteSynchronous( 'generate_tag_ids', update.GetTags() )
-                            
-                        
-                        job_key.SetVariable( 'popup_message_text_1', update_index_string + 'processing' )
-                        
-                        num_content_updates = update.GetNumContentUpdates()
-                        content_updates = []
-                        current_weight = 0
-                        
-                        for ( i, content_update ) in enumerate( update.IterateContentUpdates() ):
-                            
-                            while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
-                                
-                                time.sleep( 0.1 )
-                                
-                                if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_2', 'paused' )
-                                
-                                if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_2', 'repository synchronisation paused' )
-                                
-                                if HC.shutdown: raise Exception( 'application shutting down!' )
-                                
-                                if job_key.IsCancelled():
-                                    
-                                    job_key.SetVariable( 'popup_message_text_2', 'cancelled' )
-                                    
-                                    print( HC.ConvertJobKeyToString( job_key ) )
-                                    
-                                    return
-                                    
-                                
-                                if HC.repos_changed:
-                                    
-                                    job_key.SetVariable( 'popup_message_text_2', 'repositories were changed during processing; this job was abandoned' )
-                                    
-                                    print( HC.ConvertJobKeyToString( job_key ) )
-                                    
-                                    HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                                    
-                                    return
-                                    
-                                
-                            
-                            content_update_index_string = 'content part ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) + ': '
-                            
-                            job_key.SetVariable( 'popup_message_gauge_2', ( i, num_content_updates ) )
-                            
-                            content_updates.append( content_update )
-                            
-                            current_weight += len( content_update.GetHashes() )
-                            
-                            if current_weight > WEIGHT_THRESHOLD:
-                                
-                                job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
-                                
-                                HC.app.WaitUntilGoodTimeToUseGUIThread()
-                                
-                                before_precise = HC.GetNowPrecise()
-                                
-                                HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                                
-                                after_precise = HC.GetNowPrecise()
-                                
-                                if after_precise - before_precise > 0.75: WEIGHT_THRESHOLD /= 1.5
-                                elif after_precise - before_precise < 0.5: WEIGHT_THRESHOLD *= 1.05
-                                
-                                if after_precise - before_precise > 10.0 or WEIGHT_THRESHOLD < 1.0:
-                                    
-                                    job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
-                                    
-                                    time.sleep( 10 )
-                                    
-                                    WEIGHT_THRESHOLD = 1.0
-                                    
-                                
-                                total_content_weight_processed += current_weight
-                                
-                                content_updates = []
-                                current_weight = 0
-                                
-                            
-                        
-                        if len( content_updates ) > 0:
-                            
-                            content_update_index_string = 'content part ' + HC.ConvertIntToPrettyString( num_content_updates ) + '/' + HC.ConvertIntToPrettyString( num_content_updates ) + ': '
-                            
-                            job_key.SetVariable( 'popup_message_text_2', content_update_index_string + 'committing' )
-                            
-                            HC.app.WriteSynchronous( 'content_updates', { service_key : content_updates } )
-                            
-                            total_content_weight_processed += current_weight
-                            
-                        
-                        job_key.SetVariable( 'popup_message_text_2', 'committing service updates' )
-                        
-                        service_updates = [ service_update for service_update in update.IterateServiceUpdates() ]
-                        
-                        ( begin, end ) = update.GetBeginEnd()
-                        
-                        next_processing_timestamp = end + 1
-                        
-                        service_updates.append( HC.ServiceUpdate( HC.SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP, next_processing_timestamp ) )
-                        
-                        service_keys_to_service_updates = { service_key : service_updates }
-                        
-                        HC.app.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
-                        
-                        HC.pubsub.pub( 'notify_new_pending' )
-                        
-                        # this waits for pubsubs to flush, so service updates are processed
-                        HC.app.WaitUntilGoodTimeToUseGUIThread()
-                        
-                        job_key.SetVariable( 'popup_message_gauge_2', ( 0, 1 ) )
-                        job_key.SetVariable( 'popup_message_text_2', '' )
-                        
-                        num_updates_processed += 1
-                        
-                    
-                
-                job_key.DeleteVariable( 'popup_message_gauge_1' )
-                job_key.DeleteVariable( 'popup_message_text_2' )
-                job_key.DeleteVariable( 'popup_message_gauge_2' )
-                
-                if service_type == HC.FILE_REPOSITORY and service.CanDownload():
-                    
-                    job_key.SetVariable( 'popup_message_text_1', 'reviewing existing thumbnails' )
-                    
-                    thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
-                    
-                    job_key.SetVariable( 'popup_message_text_1', 'reviewing service thumbnails' )
-                    
-                    thumbnail_hashes_i_should_have = HC.app.ReadDaemon( 'thumbnail_hashes_i_should_have', service_key )
-                    
-                    thumbnail_hashes_i_need = thumbnail_hashes_i_should_have.difference( thumbnail_hashes_i_have )
-                    
-                    if len( thumbnail_hashes_i_need ) > 0:
-                        
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_repo_sync' ] or HC.shutdown:
-                            
-                            time.sleep( 0.1 )
-                            
-                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
-                            
-                            if HC.options[ 'pause_repo_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'repository synchronisation paused' )
-                            
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if job_key.IsCancelled():
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                return
-                                
-                            
-                            if HC.repos_changed:
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'repositories were changed during processing; this job was abandoned' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                HC.pubsub.pub( 'notify_restart_repo_sync_daemon' )
-                                
-                                return
-                                
-                            
-                        
-                        def SaveThumbnails( batch_of_thumbnails ):
-                            
-                            job_key.SetVariable( 'popup_message_text_1', 'saving thumbnails to database' )
-                            
-                            HC.app.WriteSynchronous( 'thumbnails', batch_of_thumbnails )
-                            
-                            HC.pubsub.pub( 'add_thumbnail_count', service_key, len( batch_of_thumbnails ) )
-                            
-                        
-                        thumbnails = []
-                        
-                        for ( i, hash ) in enumerate( thumbnail_hashes_i_need ):
-                            
-                            job_key.SetVariable( 'popup_message_text_1', 'downloading thumbnail ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( thumbnail_hashes_i_need ) ) )
-                            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( thumbnail_hashes_i_need ) ) )
-                            
-                            request_args = { 'hash' : hash.encode( 'hex' ) }
-                            
-                            thumbnail = service.Request( HC.GET, 'thumbnail', request_args = request_args )
-                            
-                            thumbnails.append( ( hash, thumbnail ) )
-                            
-                            if i % 50 == 0:
-                                
-                                SaveThumbnails( thumbnails )
-                                
-                                thumbnails = []
-                                
-                            
-                            HC.app.WaitUntilGoodTimeToUseGUIThread()
-                            
-                        
-                        if len( thumbnails ) > 0: SaveThumbnails( thumbnails )
-                        
-                        job_key.DeleteVariable( 'popup_message_gauge_1' )
-                        
-                    
-                
-                job_key.SetVariable( 'popup_message_title', 'repository synchronisation - ' + name + ' - finished' )
-                
-                updates_text = HC.ConvertIntToPrettyString( num_updates_downloaded ) + ' updates downloaded, ' + HC.ConvertIntToPrettyString( num_updates_processed ) + ' updates processed'
-                
-                if service_type == HC.TAG_REPOSITORY: content_text = HC.ConvertIntToPrettyString( total_content_weight_processed ) + ' mappings added'
-                elif service_type == HC.FILE_REPOSITORY: content_text = HC.ConvertIntToPrettyString( total_content_weight_processed ) + ' files added'
-                
-                job_key.SetVariable( 'popup_message_text_1', updates_text + ', and ' + content_text )
-                
-                print( HC.ConvertJobKeyToString( job_key ) )
-                
-                if total_content_weight_processed > 0: job_key.Finish()
-                else: job_key.Delete()
-                
-            except Exception as e:
-                
-                job_key.Cancel()
-                
-                print( traceback.format_exc() )
-                
-                HC.ShowText( 'Failed to update ' + name + ':' )
-                
-                HC.ShowException( e )
-                
-                time.sleep( 3 )
-                
-            
-        
-        time.sleep( 5 )
-        
-    
-def DAEMONSynchroniseSubscriptions():
-    
-    HC.subs_changed = False
-    
-    if not HC.options[ 'pause_subs_sync' ]:
-        
-        subscription_names = HC.app.ReadDaemon( 'subscription_names' )
-        
-        for name in subscription_names:
-            
-            info = HC.app.ReadDaemon( 'subscription', name )
-            
-            site_type = info[ 'site_type' ]
-            query_type = info[ 'query_type' ]
-            query = info[ 'query' ]
-            frequency_type = info[ 'frequency_type' ]
-            frequency = info[ 'frequency' ]
-            advanced_tag_options = info[ 'advanced_tag_options' ]
-            advanced_import_options = info[ 'advanced_import_options' ]
-            last_checked = info[ 'last_checked' ]
-            url_cache = info[ 'url_cache' ]
-            paused = info[ 'paused' ]
-            
-            if paused: continue
-            
-            now = HC.GetNow()
-            
-            if last_checked is None: last_checked = 0
-            
-            if last_checked + ( frequency_type * frequency ) < now:
-                
-                try:
-                    
-                    job_key = HC.JobKey( pausable = True, cancellable = True )
-                    
-                    job_key.SetVariable( 'popup_message_title', 'subscriptions - ' + name )
-                    job_key.SetVariable( 'popup_message_text_1', 'checking' )
-                    
-                    HC.pubsub.pub( 'message', job_key )
-                    
-                    do_tags = len( advanced_tag_options ) > 0
-                    
-                    if site_type == HC.SITE_TYPE_BOORU:
-                        
-                        ( booru_name, booru_query_type ) = query_type
-                        
-                        try: booru = HC.app.ReadDaemon( 'remote_booru', booru_name )
-                        except: raise Exception( 'While attempting to execute a subscription on booru ' + name + ', the client could not find that booru in the db.' )
-                        
-                        tags = query.split( ' ' )
-                        
-                        all_args = ( ( booru, tags ), )
-                        
-                    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
-                        
-                        info = {}
-                        
-                        info[ 'rating_nudity' ] = 3
-                        info[ 'rating_violence' ] = 3
-                        info[ 'rating_profanity' ] = 3
-                        info[ 'rating_racism' ] = 3
-                        info[ 'rating_sex' ] = 3
-                        info[ 'rating_spoilers' ] = 3
-                        
-                        info[ 'rating_yaoi' ] = 1
-                        info[ 'rating_yuri' ] = 1
-                        info[ 'rating_teen' ] = 1
-                        info[ 'rating_guro' ] = 1
-                        info[ 'rating_furry' ] = 1
-                        info[ 'rating_beast' ] = 1
-                        info[ 'rating_male' ] = 1
-                        info[ 'rating_female' ] = 1
-                        info[ 'rating_futa' ] = 1
-                        info[ 'rating_other' ] = 1
-                        
-                        info[ 'filter_media' ] = 'A'
-                        info[ 'filter_order' ] = 'date_new'
-                        info[ 'filter_type' ] = 0
-                        
-                        advanced_hentai_foundry_options = info
-                        
-                        if query_type == 'artist': all_args = ( ( 'artist pictures', query, advanced_hentai_foundry_options ), ( 'artist scraps', query, advanced_hentai_foundry_options ) )
-                        else:
-                            
-                            tags = query.split( ' ' )
-                            
-                            all_args = ( ( query_type, tags, advanced_hentai_foundry_options ), )
-                            
-                        
-                    elif site_type == HC.SITE_TYPE_PIXIV: all_args = ( ( query_type, query ), )
-                    else: all_args = ( ( query, ), )
-                    
-                    downloaders = [ HydrusDownloading.GetDownloader( site_type, *args ) for args in all_args ]
-                    
-                    downloaders[0].SetupGallerySearch() # for now this is cookie-based for hf, so only have to do it on one
-                    
-                    all_url_args = []
-                    
-                    while True:
-                        
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_subs_sync' ] or HC.shutdown:
-                            
-                            time.sleep( 0.1 )
-                            
-                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
-                            
-                            if HC.options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
-                            
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if job_key.IsCancelled():
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                return
-                                
-                            
-                            if HC.subs_changed:
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'subscriptions were changed during processing; this job was abandoned' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
-                                
-                                return
-                                
-                            
-                        
-                        downloaders_to_remove = []
-                        
-                        for downloader in downloaders:
-                            
-                            page_of_url_args = downloader.GetAnotherPage()
-                            
-                            if len( page_of_url_args ) == 0: downloaders_to_remove.append( downloader )
-                            else:
-                                
-                                fresh_url_args = [ url_args for url_args in page_of_url_args if url_args[0] not in url_cache ]
-                                
-                                # i.e. we have hit the url cache, so no need to fetch any more pages
-                                if len( fresh_url_args ) == 0 or len( fresh_url_args ) != len( page_of_url_args ): downloaders_to_remove.append( downloader )
-                                
-                                all_url_args.extend( fresh_url_args )
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'found ' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ' new files' )
-                                
-                            
-                            time.sleep( 5 )
-                            
-                        
-                        for downloader in downloaders_to_remove: downloaders.remove( downloader )
-                        
-                        if len( downloaders ) == 0: break
-                        
-                    
-                    all_url_args.reverse() # to do oldest first, which means we can save incrementally
-                    
-                    num_new = 0
-                    
-                    successful_hashes = set()
-                    
-                    for ( i, url_args ) in enumerate( all_url_args ):
-                        
-                        while job_key.IsPaused() or job_key.IsCancelled() or HC.options[ 'pause_subs_sync' ] or HC.shutdown:
-                            
-                            time.sleep( 0.1 )
-                            
-                            if job_key.IsPaused(): job_key.SetVariable( 'popup_message_text_1', 'paused' )
-                            
-                            if HC.options[ 'pause_subs_sync' ]: job_key.SetVariable( 'popup_message_text_1', 'subscriptions paused' )
-                            
-                            if HC.shutdown: raise Exception( 'application shutting down!' )
-                            
-                            if job_key.IsCancelled():
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'cancelled' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                return
-                                
-                            
-                            if HC.subs_changed:
-                                
-                                job_key.SetVariable( 'popup_message_text_1', 'subscriptions were changed during processing; this job was abandoned' )
-                                
-                                print( HC.ConvertJobKeyToString( job_key ) )
-                                
-                                HC.pubsub.pub( 'notify_restart_subs_sync_daemon' )
-                                
-                                return
-                                
-                            
-                        
-                        try:
-                            
-                            url = url_args[0]
-                            
-                            url_cache.add( url )
-                            
-                            x_out_of_y = 'file ' + HC.ConvertIntToPrettyString( i ) + '/' + HC.ConvertIntToPrettyString( len( all_url_args ) ) + ': '
-                            
-                            job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'checking url status' )
-                            job_key.SetVariable( 'popup_message_gauge_1', ( i, len( all_url_args ) ) )
-                            
-                            if len( successful_hashes ) > 0:
-                                
-                                job_key_s_h = set( successful_hashes )
-                                
-                                job_key.SetVariable( 'popup_message_files', job_key_s_h )
-                                
-                            
-                            ( status, hash ) = HC.app.ReadDaemon( 'url_status', url )
-                            
-                            if status == 'deleted' and 'exclude_deleted_files' not in advanced_import_options: status = 'new'
-                            
-                            if status == 'redundant':
-                                
-                                if do_tags:
-                                    
-                                    try:
-                                        
-                                        job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'found file in db, fetching tags' )
-                                        
-                                        tags = downloader.GetTags( *url_args )
-                                        
-                                        service_keys_to_tags = HydrusDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options )
-                                        
-                                        service_keys_to_content_updates = HydrusDownloading.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hash, service_keys_to_tags )
-                                        
-                                        HC.app.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                                        
-                                    except: pass
-                                    
-                                
-                            elif status == 'new':
-                                
-                                num_new += 1
-                                
-                                job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'downloading file' )
-                                
-                                if do_tags: ( temp_path, tags ) = downloader.GetFileAndTags( *url_args )
-                                else:
-                                    
-                                    temp_path = downloader.GetFile( *url_args )
-                                    
-                                    tags = []
-                                    
-                                
-                                service_keys_to_tags = HydrusDownloading.ConvertTagsToServiceKeysToTags( tags, advanced_tag_options )
-                                
-                                job_key.SetVariable( 'popup_message_text_1', x_out_of_y + 'importing file' )
-                                
-                                ( status, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path, advanced_import_options = advanced_import_options, service_keys_to_tags = service_keys_to_tags, url = url )
-                                
-                                try: os.remove( temp_path )
-                                except: pass # sometimes this fails, I think due to old handles not being cleaned up fast enough. np--it'll be cleaned up later
-                                
-                                if status in ( 'successful', 'redundant' ): successful_hashes.add( hash )
-                                
-                            
-                        except Exception as e:
-                            
-                            HC.ShowText( 'While trying to execute subscription ' + name + ', the url ' + url + ' caused this problem:' )
-                            
-                            HC.ShowException( e )
-                            
-                        
-                        if i % 20 == 0:
-                            
-                            info[ 'site_type' ] = site_type
-                            info[ 'query_type' ] = query_type
-                            info[ 'query' ] = query
-                            info[ 'frequency_type' ] = frequency_type
-                            info[ 'frequency' ] = frequency
-                            info[ 'advanced_tag_options' ] = advanced_tag_options
-                            info[ 'advanced_import_options' ] = advanced_import_options
-                            info[ 'last_checked' ] = last_checked
-                            info[ 'url_cache' ] = url_cache
-                            info[ 'paused' ] = paused
-                            
-                            HC.app.WriteSynchronous( 'subscription', name, info )
-                            
-                        
-                        HC.app.WaitUntilGoodTimeToUseGUIThread()
-                        
-                        time.sleep( 3 )
-                        
-                    
-                    job_key.DeleteVariable( 'popup_message_gauge_1' )
-                    
-                    if len( successful_hashes ) > 0:
-                        
-                        job_key.SetVariable( 'popup_message_text_1', HC.u( len( successful_hashes ) ) + ' files imported' )
-                        job_key.SetVariable( 'popup_message_files', successful_hashes )
-                        
-                    else: job_key.SetVariable( 'popup_message_text_1', 'no new files' )
-                    
-                    print( HC.ConvertJobKeyToString( job_key ) )
-                    
-                    job_key.DeleteVariable( 'popup_message_text_1' )
-                    
-                    if len( successful_hashes ) > 0: job_key.Finish()
-                    else: job_key.Delete()
-                    
-                    last_checked = now
-                    
-                except Exception as e:
-                    
-                    job_key.Cancel()
-                    
-                    last_checked = now + HC.UPDATE_DURATION
-                    
-                    HC.ShowText( 'Problem with ' + name + ':' )
-                    
-                    HC.ShowException( e )
-                    
-                    time.sleep( 3 )
-                    
-                
-                info[ 'site_type' ] = site_type
-                info[ 'query_type' ] = query_type
-                info[ 'query' ] = query
-                info[ 'frequency_type' ] = frequency_type
-                info[ 'frequency' ] = frequency
-                info[ 'advanced_tag_options' ] = advanced_tag_options
-                info[ 'advanced_import_options' ] = advanced_import_options
-                info[ 'last_checked' ] = last_checked
-                info[ 'url_cache' ] = url_cache
-                info[ 'paused' ] = paused
-                
-                HC.app.WriteSynchronous( 'subscription', name, info )
-                
-            
-        
-        time.sleep( 3 )
-        
-    
-def DAEMONUPnP():
-    
-    try:
-        
-        local_ip = HydrusNATPunch.GetLocalIP()
-        
-        current_mappings = HydrusNATPunch.GetUPnPMappings()
-        
-        our_mappings = { ( internal_client, internal_port ) : external_port for ( description, internal_client, internal_port, external_ip_address, external_port, protocol, enabled ) in current_mappings }
-        
-    except: return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
-    
-    services = HC.app.GetManager( 'services' ).GetServices( ( HC.LOCAL_BOORU, ) )
-    
-    for service in services:
-        
-        info = service.GetInfo()
-        
-        internal_port = info[ 'port' ]
-        upnp = info[ 'upnp' ]
-        
-        if ( local_ip, internal_port ) in our_mappings:
-            
-            current_external_port = our_mappings[ ( local_ip, internal_port ) ]
-            
-            if upnp is None or current_external_port != upnp: HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
-            
-        
-    
-    for service in services:
-        
-        info = service.GetInfo()
-        
-        internal_port = info[ 'port' ]
-        upnp = info[ 'upnp' ]
-        
-        if upnp is not None:
-            
-            if ( local_ip, internal_port ) not in our_mappings:
-                
-                service_type = service.GetServiceType()
-                
-                external_port = upnp
-                
-                protocol = 'TCP'
-                
-                description = HC.service_string_lookup[ service_type ] + ' at ' + local_ip + ':' + str( internal_port )
-                
-                duration = 3600
-                
-                HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, external_port, protocol, description, duration = duration )
-                
-            
         
     

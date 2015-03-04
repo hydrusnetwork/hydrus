@@ -364,71 +364,6 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def TIMEREventLag( self, event ): self._UpdateList()
     
-class AutoCompleteDropdownContacts( AutoCompleteDropdown ):
-    
-    def __init__( self, parent, compose_key, identity ):
-        
-        AutoCompleteDropdown.__init__( self, parent )
-        
-        self._compose_key = compose_key
-        self._identity = identity
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._dropdown_list, FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._dropdown_window.SetSizer( vbox )
-        
-    
-    def _BroadcastChoice( self, contact_name ): HC.pubsub.pub( 'add_contact', self._compose_key, contact_name )
-    
-    def _GenerateMatches( self ):
-        
-        num_autocomplete_chars = 1
-        
-        entry = self._text_ctrl.GetValue()
-        
-        if entry == '':
-            
-            self._cache_text = ''
-            
-            matches = []
-            
-        else:
-            
-            if len( entry ) >= num_autocomplete_chars:
-                
-                if entry[ : num_autocomplete_chars ] != self._cache_text:
-                    
-                    self._cache_text = entry[ : num_autocomplete_chars ]
-                    
-                    self._cached_results = HC.app.Read( 'autocomplete_contacts', entry, name_to_exclude = self._identity.GetName() )
-                    
-                
-                matches = self._cached_results.GetMatches( entry )
-                
-            else: matches = []
-            
-        
-        return matches
-        
-    
-    def _InitDropDownList( self ): return ListBoxMessagesActiveOnly( self._dropdown_window, self.BroadcastChoice )
-    
-    def _UpdateList( self ):
-        
-        matches = self._GenerateMatches()
-        
-        # this obv needs to be SetValues or whatever
-        self._dropdown_list.SetTexts( matches )
-        
-        if self._float_mode:
-            
-            if len( matches ) > 0: self._ShowDropdownIfFocussed()
-            else: self._HideDropdown()
-            
-        
-    
 class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
     
     def __init__( self, parent, page_key, identity ):
@@ -501,6 +436,28 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
     
+    def _ChangeFileRepository( self, file_service_key ):
+
+        self._file_service_key = file_service_key
+        
+        file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
+        
+        name = file_service.GetName()
+        
+        self._file_repo_button.SetLabel( name )
+        
+    
+    def _ChangeTagRepository( self, tag_service_key ):
+
+        self._tag_service_key = tag_service_key
+        
+        tag_service = tag_service = HC.app.GetManager( 'services' ).GetService( self._tag_service_key )
+        
+        name = tag_service.GetName()
+        
+        self._tag_repo_button.SetLabel( name )
+        
+    
     def _InitDropDownList( self ): return ListBoxTagsAutocompleteDropdown( self._dropdown_window, self.BroadcastChoice, min_height = self._list_height )
     
     def _UpdateList( self ):
@@ -542,30 +499,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
             ( command, data ) = action
             
-            if command == 'change_file_repository':
-                
-                self._file_service_key = data
-                
-                file_service = HC.app.GetManager( 'services' ).GetService( self._file_service_key )
-                
-                name = file_service.GetName()
-                
-                self._file_repo_button.SetLabel( name )
-                
-                HC.pubsub.pub( 'change_file_repository', self._page_key, self._file_service_key )
-                
-            elif command == 'change_tag_repository':
-                
-                self._tag_service_key = data
-                
-                tag_service = tag_service = HC.app.GetManager( 'services' ).GetService( self._tag_service_key )
-                
-                name = tag_service.GetName()
-                
-                self._tag_repo_button.SetLabel( name )
-                
-                HC.pubsub.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
-                
+            if command == 'change_file_repository': self._ChangeFileRepository( data )
+            elif command == 'change_tag_repository': self._ChangeTagRepository( data )
             else:
                 
                 event.Skip()
@@ -644,6 +579,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
     
     def _BroadcastChoice( self, predicate ): HC.pubsub.pub( 'add_predicate', self._page_key, predicate )
+    
+    def _ChangeFileRepository( self, file_service_key ):
+        
+        AutoCompleteDropdownTags._ChangeFileRepository( self, file_service_key )
+        
+        HC.pubsub.pub( 'change_file_repository', self._page_key, self._file_service_key )
+        
+    
+    def _ChangeTagRepository( self, tag_service_key ):
+        
+        AutoCompleteDropdownTags._ChangeTagRepository( self, tag_service_key )
+        
+        HC.pubsub.pub( 'change_tag_repository', self._page_key, self._tag_service_key )
+        
     
     def _GenerateMatches( self ):
         
@@ -829,8 +778,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     def __init__( self, parent, chosen_tag_callable, file_service_key, tag_service_key ):
         
         self._chosen_tag_callable = chosen_tag_callable
-        
-        self._page_key = None # this makes the parent's eventmenu pubsubs with page_key simpler!
         
         if HC.options[ 'show_all_tags_in_autocomplete' ]: file_service_key = HC.COMBINED_FILE_SERVICE_KEY
         
@@ -1973,11 +1920,11 @@ class ListBox( wx.ScrolledWindow ):
                 
                 wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
                 
-            elif y > ( start_y * y_unit ) + height:
+            elif y > ( start_y * y_unit ) + height - self._text_y:
                 
                 y_to_scroll_to = ( y - height ) / y_unit
                 
-                self.Scroll( -1, y_to_scroll_to + 3 )
+                self.Scroll( -1, y_to_scroll_to + 2 )
                 
                 wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
                 
@@ -2699,6 +2646,8 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._removed_callable = removed_callable
         self._tags = set()
         
+        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
@@ -2733,7 +2682,9 @@ class ListBoxTagsStrings( ListBoxTags ):
         self._TextsHaveChanged()
         
     
-    def _Activate( self, s, tag ):
+    def _Activate( self, s, tag ): self._RemoveTag( tag )
+    
+    def _RemoveTag( self, tag ):
         
         if tag in self._tags:
             
@@ -2756,6 +2707,17 @@ class ListBoxTagsStrings( ListBoxTags ):
             
         
         self._RecalcTags()
+        
+    
+    def EventKeyDown( self, event ):
+        
+        if event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ):
+            
+            tag = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
+            
+            self._RemoveTag( tag )
+            
+        else: event.Skip()
         
     
     def GetTags( self ): return self._tags
@@ -3970,7 +3932,7 @@ class RegexButton( wx.Button ):
     
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
-    def __init__( self, parent, height, columns ):
+    def __init__( self, parent, height, columns, delete_key_callback = None ):
         
         num_columns = len( columns )
         
@@ -3994,6 +3956,10 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         self.SetMinSize( ( -1, height ) )
         
+        self._delete_key_callback = delete_key_callback
+        
+        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
     
     def Append( self, display_tuple, data_tuple ):
         
@@ -4004,6 +3970,15 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         self.itemDataMap[ self._next_data_index ] = list( data_tuple )
         
         self._next_data_index += 1
+        
+    
+    def EventKeyDown( self, event ):
+        
+        if event.KeyCode in ( wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE ):
+            
+            if self._delete_key_callback is not None: self._delete_key_callback()
+            
+        else: event.Skip()
         
     
     def GetAllSelected( self ):
@@ -4318,6 +4293,8 @@ class AdvancedOptions( StaticBox ):
         
         self.AddF( self._collapsible_panel, FLAGS_EXPAND_PERPENDICULAR )
         
+    
+    def _InitPanel( self ): raise NotImplemented()
     
     def ExpandCollapse( self ): self._collapsible_panel.ExpandCollapse()
     

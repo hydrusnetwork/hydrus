@@ -1,4 +1,4 @@
-import ClientDB
+import ClientDaemons
 import collections
 import HydrusConstants as HC
 import os
@@ -36,7 +36,7 @@ class TestDaemons( unittest.TestCase ):
         
         HC.app.SetRead( 'import_folders', { path : details } )
         
-        ClientDB.DAEMONCheckImportFolders()
+        ClientDaemons.DAEMONCheckImportFolders()
         
         #(('C:\\code\\Hydrus\\temp\\7baa9a818a14b7a9cbefb04c16bdc45ac651eb7400c1996e66e2efeef9e3ee5d',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
         #(('C:\\code\\Hydrus\\temp\\e0dbdcb1a13c0565ffb73f2f497528adbe1703ca1dfc69680202487187b9fcfa',), {'service_keys_to_tags': {HC.LOCAL_TAG_SERVICE_KEY: set(['local tag'])}})
@@ -92,7 +92,7 @@ class TestDaemons( unittest.TestCase ):
         
         HC.app.SetRead( 'import_folders', { path : details } )
         
-        ClientDB.DAEMONCheckImportFolders()
+        ClientDaemons.DAEMONCheckImportFolders()
         
         # improve these tests as above
         

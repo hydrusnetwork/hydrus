@@ -85,7 +85,10 @@ def ConvertTagsToServiceKeysToTags( tags, advanced_tag_options ):
 def GetYoutubeFormats( youtube_url ):
     
     try: p = pafy.Pafy( youtube_url )
-    except Exception as e: raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HC.u( e ) )
+    except Exception as e:
+        
+        raise Exception( 'Could not fetch video info from youtube!' + os.linesep + HC.u( e ) )
+        
     
     info = { ( s.extension, s.resolution ) : ( s.url, s.title ) for s in p.streams if s.extension in ( 'flv', 'mp4' ) }
     
@@ -608,7 +611,10 @@ class DownloaderHentaiFoundry( Downloader ):
             
             image_url = 'http://' + image_url
             
-        except Exception as e: raise Exception( 'Could not parse image url!' + os.linesep + HC.u( e ) )
+        except Exception as e:
+            
+            raise Exception( 'Could not parse image url!' + os.linesep + HC.u( e ) )
+            
         
         soup = bs4.BeautifulSoup( html )
         
@@ -1570,7 +1576,10 @@ class ImportController( object ):
                 time.sleep( 0.05 )
                 
             
-        except Exception as e: HC.ShowException( e )
+        except Exception as e:
+            
+            HC.ShowException( e )
+            
         finally:
             
             self._import_job_key.Cancel()
@@ -1853,35 +1862,31 @@ class ImportQueueBuilderThread( ImportQueueBuilder ):
     
 def THREADDownloadURL( job_key, url, url_string ):
     
-    try:
+    def hook( range, value ):
         
-        def hook( range, value ):
-            
-            if range is None: text = url_string + ' - ' + HC.ConvertIntToBytes( value )
-            else: text = url_string + ' - ' + HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
-            
-            job_key.SetVariable( 'popup_message_text_1', text )
-            job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
-            
+        if range is None: text = url_string + ' - ' + HC.ConvertIntToBytes( value )
+        else: text = url_string + ' - ' + HC.ConvertIntToBytes( value ) + '/' + HC.ConvertIntToBytes( range )
         
-        temp_path = HC.http.Request( HC.GET, url, response_to_path = True, report_hooks = [ hook ] )
+        job_key.SetVariable( 'popup_message_text_1', text )
+        job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
         
-        job_key.DeleteVariable( 'popup_message_gauge_1' )
-        job_key.SetVariable( 'popup_message_text_1', 'importing ' + url_string )
+    
+    temp_path = HC.http.Request( HC.GET, url, response_to_path = True, report_hooks = [ hook ] )
+    
+    job_key.DeleteVariable( 'popup_message_gauge_1' )
+    job_key.SetVariable( 'popup_message_text_1', 'importing ' + url_string )
+    
+    ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
+    
+    if result in ( 'successful', 'redundant' ):
         
-        ( result, hash ) = HC.app.WriteSynchronous( 'import_file', temp_path )
+        job_key.SetVariable( 'popup_message_text_1', url_string )
+        job_key.SetVariable( 'popup_message_files', { hash } )
         
-        if result in ( 'successful', 'redundant' ):
-            
-            job_key.SetVariable( 'popup_message_text_1', url_string )
-            job_key.SetVariable( 'popup_message_files', { hash } )
-            
-        elif result == 'deleted':
-            
-            job_key.SetVariable( 'popup_message_text_1', url_string + ' was already deleted!' )
-            
+    elif result == 'deleted':
         
-    except Exception as e: HC.ShowException( e )
+        job_key.SetVariable( 'popup_message_text_1', url_string + ' was already deleted!' )
+        
     
 def Parse4chanPostScreen( html ):
     

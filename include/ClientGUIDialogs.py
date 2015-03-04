@@ -2347,7 +2347,7 @@ class DialogInputLocalFiles( Dialog ):
         
         def InitialiseControls():
             
-            self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ] )
+            self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
             
             self._gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -2612,12 +2612,7 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def EventRemovePaths( self, event ):
-        
-        self._paths_list.RemoveAllSelected()
-        
-        self._current_paths = set( self._GetPathsInfo() )
-        
+    def EventRemovePaths( self, event ): self.RemovePaths()
     
     def EventTags( self, event ):
         
@@ -2660,6 +2655,13 @@ class DialogInputLocalFiles( Dialog ):
                 
             
         except: wx.MessageBox( traceback.format_exc() )
+        
+    
+    def RemovePaths( self ):
+        
+        self._paths_list.RemoveAllSelected()
+        
+        self._current_paths = set( self._GetPathsInfo() )
         
     
     def SetGaugeInfo( self, range, value, text ):
@@ -2744,9 +2746,9 @@ class DialogInputLocalFiles( Dialog ):
                     
                     job_key = HC.JobKey()
                     
-                    def WXTHREADGetAESKey():
+                    def WXTHREADGetAESKey( key ):
                         
-                        while aes_key is None:
+                        while key is None:
                             
                             with DialogTextEntry( HC.app.GetTopWindow(), 'Please enter the key for ' + path + '.' ) as dlg:
                                 
@@ -2758,9 +2760,9 @@ class DialogInputLocalFiles( Dialog ):
                                         
                                         key_text = dlg.GetValue()
                                         
-                                        ( aes_key, iv ) = HydrusEncryption.AESTextToKey( key_text )
+                                        ( key, iv ) = HydrusEncryption.AESTextToKey( key_text )
                                         
-                                        job_key.SetVariable( 'result', ( aes_key, iv ) )
+                                        job_key.SetVariable( 'result', ( key, iv ) )
                                         
                                     except: wx.MessageBox( 'Did not understand that key!' )
                                     
@@ -2771,7 +2773,7 @@ class DialogInputLocalFiles( Dialog ):
                     
                     if aes_key is None:
                         
-                        wx.CallAfter( WXTHREADGetAESKey )
+                        wx.CallAfter( WXTHREADGetAESKey, aes_key )
                         
                         while not job_key.HasVariable( 'result' ):
                             
@@ -3316,12 +3318,6 @@ class DialogInputNewAccountType( Dialog ):
             
             if permission not in existing_permissions: self._permissions.Append( HC.permissions_string_lookup[ permission ], permission )
             
-        
-    
-    def EventCheckBox( self, event ):
-        
-        if self._max_num_requests_checkbox.GetValue(): self._max_num_requests.Disable()
-        else: self._max_num_requests.Enable()
         
     
     def EventRemovePermission( self, event ):
@@ -4296,7 +4292,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
                 
-                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ] )
+                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces )
                 
                 self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
                 self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
@@ -4526,8 +4522,6 @@ class DialogPathsToTags( Dialog ):
                 
                 self._tags.AddTag( tag, parents )
                 
-                self._tag_box.Clear()
-                
                 self._RefreshFileList()
                 
             
@@ -4537,8 +4531,6 @@ class DialogPathsToTags( Dialog ):
             if tag is not None:
                 
                 self._single_tags.AddTag( tag, parents )
-                
-                self._single_tag_box.Clear()
                 
                 indices = self._paths_list.GetAllSelected()
                 
@@ -4560,6 +4552,13 @@ class DialogPathsToTags( Dialog ):
                 
                 self._RefreshFileList()
                 
+            
+        
+        def DeleteQuickNamespaces( self ):
+            
+            self._quick_namespaces_list.RemoveAllSelected()
+            
+            self._RefreshFileList()
             
         
         def EventAddRegex( self, event ):
@@ -4591,12 +4590,7 @@ class DialogPathsToTags( Dialog ):
                 
             
         
-        def EventDeleteQuickNamespace( self, event ):
-            
-            self._quick_namespaces_list.RemoveAllSelected()
-            
-            self._RefreshFileList()
-            
+        def EventDeleteQuickNamespace( self, event ): self.DeleteQuickNamespaces()
         
         def EventEditQuickNamespace( self, event ):
             
@@ -5157,7 +5151,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         
         def InitialiseControls():
             
-            self._actions = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ] )
+            self._actions = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', -1 ), ( 'action', 250 ) ], delete_key_callback = self.RemoveActions )
             
             self._favourites = wx.ListBox( self )
             self._favourites.Bind( wx.EVT_LISTBOX, self.EventSelectFavourite )
@@ -5379,7 +5373,7 @@ class DialogSetupCustomFilterActions( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-    def EventRemove( self, event ): self._actions.RemoveAllSelected()
+    def EventRemove( self, event ): self.RemoveActions()
     
     def EventSaveFavourite( self, event ):
         
@@ -5475,6 +5469,8 @@ class DialogSetupCustomFilterActions( Dialog ):
         return actions
         
     
+    def RemoveActions( self ): self._actions.RemoveAllSelected()
+    
 class DialogSetupExport( Dialog ):
     
     def __init__( self, parent, flat_media ):
@@ -5489,7 +5485,7 @@ class DialogSetupExport( Dialog ):
             
             self._tags_box.SetMinSize( ( 220, 300 ) )
             
-            self._paths = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ] )
+            self._paths = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ], delete_key_callback = self.DeletePaths )
             self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
             self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
             
@@ -5660,6 +5656,13 @@ class DialogSetupExport( Dialog ):
                 self._paths.UpdateRow( index, ( HC.u( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
                 
             
+        
+    
+    def DeletePaths( self ):
+        
+        self._paths.RemoveAllSelected()
+        
+        self._RecalcPaths()
         
     
     def EventExport( self, event ):

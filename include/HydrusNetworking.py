@@ -326,7 +326,10 @@ class HTTPConnection( object ):
             elif content_type in HC.mime_enum_lookup and HC.mime_enum_lookup[ content_type ] == HC.APPLICATION_YAML:
                 
                 try: parsed_response = yaml.safe_load( data )
-                except Exception as e: raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HC.u( e ) )
+                except Exception as e:
+                    
+                    raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HC.u( e ) )
+                    
                 
             elif content_type == 'text/html':
                 

@@ -8,6 +8,25 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 149</h3></li>
+				<ul>
+					<li>all listctrls with an attendant delete button will now support the same action with the delete key</li>
+					<li>several normal tag boxes will support the delete key as well</li>
+					<li>added a temporary service cache to the client db to speed up service fetching until I can figure out a yaml replacement</li>
+					<li>cleared out inefficient tag and hash database fetching and generation code</li>
+					<li>tag parent dialog will now ask for an action/reason for every ( children, parent ) pair rather than every ( child, parent ) pair</li>
+					<li>fixed an error with collecting by rating</li>
+					<li>fixed the 'fix' to the gui_colours db update problem</li>
+					<li>the autocomplete dropdowns in the paths-to-tags dialog will no longer produce errors when tags are submitted</li>
+					<li>improved accuracy of taglist scroll-to-selected scrolldown calculation</li>
+					<li>collapsed some of the helter-skelter db code in prep for future improvements</li>
+					<li>moved daemon code to separate files</li>
+					<li>silenced server upnp errors</li>
+					<li>all except: continue lines are banished!</li>
+					<li>cleaned up some miscellaneous exception code</li>
+					<li>cleaned some ugly behind the scenes a/c dropdown button code</li>
+					<li>did some general code cleanup</li>
+				</ul>
 				<li><h3>version 148</h3></li>
 				<ul>
 					<li>rewrote thumbnail canvas and scrolling code from a crashtastic monolithic bmp to a lighter, faster, and more flexible page buffer</li>

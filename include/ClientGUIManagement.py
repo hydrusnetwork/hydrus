@@ -597,7 +597,10 @@ class ManagementPanelDumper( ManagementPanel ):
             
             ( status, phrase ) = HydrusDownloading.Parse4chanPostScreen( response )
             
-        except Exception as e: ( status, phrase ) = ( 'big error', HC.u( e ) )
+        except Exception as e:
+            
+            ( status, phrase ) = ( 'big error', HC.u( e ) )
+            
         
         wx.CallAfter( self.CALLBACKDoneDump, hash, post_field_info, status, phrase )
         
@@ -644,7 +647,7 @@ class ManagementPanelDumper( ManagementPanel ):
             tags_manager = media.GetTagsManager()
             
             try: service = HC.app.GetManager( 'services' ).GetService( service_key )
-            except: continue
+            except HydrusExceptions.NotFoundException: continue
             
             service_key = service.GetServiceKey()
             
@@ -2081,7 +2084,10 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._num_petitions > 0: self.EventGetPetition( event )
             
-        except Exception as e: self._num_petitions_text.SetLabel( HC.u( e ) )
+        except Exception as e:
+            
+            self._num_petitions_text.SetLabel( HC.u( e ) )
+            
         
     
     def RefreshQuery( self, page_key ):

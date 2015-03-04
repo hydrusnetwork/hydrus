@@ -68,8 +68,14 @@ class DAEMONQueue( DAEMON ):
             
             while not self._queue.empty(): items.append( self._queue.get() )
             
-            try: self._callable( items )
-            except Exception as e: HC.ShowException( e )
+            try:
+                
+                self._callable( items )
+                
+            except Exception as e:
+                
+                HC.ShowException( e )
+                
             
         
     
@@ -164,7 +170,10 @@ class DAEMONCallToThread( DAEMON ):
                 
                 del callable
                 
-            except Exception as e: HC.ShowException( e )
+            except Exception as e:
+                
+                HC.ShowException( e )
+                
             
             time.sleep( 0.00001 )
             

@@ -35,10 +35,15 @@ FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERT
 
 class PageBase( object ):
     
+    _is_storable = False
+    
     def __init__( self, starting_from_session = False ):
         
         self._starting_from_session = starting_from_session
         self._page_key = os.urandom( 32 )
+        
+        self._management_panel = None
+        self._media_panel = None
         
         self._InitControllers()
         
@@ -48,6 +53,10 @@ class PageBase( object ):
         
     
     def _InitControllers( self ): pass
+    
+    def _InitManagementPanel( self ): pass
+    
+    def _InitMediaPanel( self ): pass
     
     def _PauseControllers( self ): pass
     
@@ -65,6 +74,8 @@ class PageBase( object ):
         
         return ( x, y )
         
+    
+    def IsStorable( self ): return self._is_storable
     
     def PageHidden( self ): HC.pubsub.pub( 'page_hidden', self._page_key )
     
@@ -247,6 +258,8 @@ class PageWithMedia( PageBase, wx.SplitterWindow ):
     def TestAbleToClose( self ): self._management_panel.TestAbleToClose()
     
 class PageImport( PageWithMedia ):
+    
+    _is_storable = True
     
     def _GenerateImportArgsGeneratorFactory( self ):
         
@@ -641,6 +654,8 @@ class PagePetitions( PageWithMedia ):
     def _InitMediaPanel( self ): self._media_panel = ClientGUIMedia.MediaPanelNoQuery( self, self._page_key, self._file_service_key )
     
 class PageQuery( PageWithMedia ):
+    
+    _is_storable = True
     
     def __init__( self, parent, file_service_key, initial_hashes = [], initial_media_results = [], initial_predicates = [], starting_from_session = False ):
         

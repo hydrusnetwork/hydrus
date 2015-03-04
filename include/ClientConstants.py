@@ -403,61 +403,6 @@ def FilterPredicates( search_entry, predicates, service_key = None, expand_paren
     
     return matches
     
-def GenerateCollectByChoices( sort_by_choices ):
-    
-    already_added = set()
-    
-    collect_choices = []
-    
-    for ( sort_by_type, namespaces ) in sort_by_choices:
-        
-        for i in range( 1, len( namespaces ) ):
-            
-            combinations = itertools.combinations( namespaces, i )
-            
-            for combination in combinations:
-                
-                combination_set = frozenset( combination )
-                
-                if combination_set not in already_added:
-                    
-                    already_added.add( combination_set )
-                    
-                    collect_choices.append( ( 'collect by ' + '-'.join( combination ), combination ) )
-                    
-                
-            
-        '''
-        namespaces_set = frozenset( namespaces )
-        
-        if namespaces_set not in already_added:
-            
-            collect_choices.append( ( 'collect by ' + '-'.join( namespaces ), namespaces ) )
-            
-            already_added.add( namespaces_set )
-            
-        
-        for i in range( 1, len( namespaces ) ):
-            
-            sub_namespaces = namespaces[:-i]
-            
-            sub_namespaces_set = frozenset( sub_namespaces )
-            
-            if sub_namespaces_set not in already_added:
-                
-                collect_choices.append( ( 'collect by ' + '-'.join( sub_namespaces ), sub_namespaces ) )
-                
-                already_added.add( sub_namespaces_set )
-                
-            
-        '''
-    
-    collect_choices.sort()
-    
-    collect_choices.insert( 0, ( 'no collections', None ) )
-    
-    return collect_choices
-    
 def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     m = multipart.Multipart()
@@ -551,13 +496,16 @@ def GetAllFileHashes():
         
         ( base, filename ) = os.path.split( path )
         
-        try:
-            
-            ( hash_encoded, ext ) = filename.split( '.', 1 )
-            
-            file_hashes.add( hash_encoded.decode( 'hex' ) )
-            
-        except: continue
+        result = filename.split( '.', 1 )
+        
+        if len( result ) != 2: continue
+        
+        ( hash_encoded, ext ) = result
+        
+        try: hash = hash_encoded.decode( 'hex' )
+        except TypeError: continue
+        
+        file_hashes.add( hash )
         
     
     return file_hashes
@@ -610,8 +558,10 @@ def GetAllThumbnailHashes():
         
         if not filename.endswith( '_resized' ):
             
-            try: thumbnail_hashes.add( filename.decode( 'hex' ) )
-            except: continue
+            try: hash = filename.decode( 'hex' )
+            except TypeError: continue
+            
+            thumbnail_hashes.add( hash )
             
         
     
@@ -1211,7 +1161,7 @@ class CPRemoteRatingsServiceKeys( object ):
         
         # this doesn't work yet. it should probably use self.GetScore( service_key ) like I think Sort by remote rating does
         
-        return frozenset( { self._service_keys_to_ratings[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_ratings } )
+        return frozenset( { self._service_keys_to_cp[ service_key ] for service_key in service_keys if service_key in self._service_keys_to_cp } )
         
     
     def GetServiceKeysToRatingsCP( self ): return self._service_keys_to_cp
@@ -2604,7 +2554,11 @@ class ServicesManager( object ):
     
     def GetService( self, service_key ):
         
-        with self._lock: return self._keys_to_services[ service_key ]
+        with self._lock:
+            
+            try: return self._keys_to_services[ service_key ]
+            except KeyError: raise HydrusExceptions.NotFoundException( 'That service was not found!' )
+            
         
     
     def GetServices( self, types = HC.ALL_SERVICES ):
@@ -2707,7 +2661,7 @@ class ThumbnailCache( object ):
         while not HC.shutdown:
             
             try: ( page_key, medias ) = self._queue.get( timeout = 1 )
-            except: continue
+            except Queue.Empty: continue
             
             try:
                 
@@ -2727,7 +2681,10 @@ class ThumbnailCache( object ):
                         
                     
                 
-            except Exception as e: HC.ShowException( e )
+            except Exception as e:
+                
+                HC.ShowException( e )
+                
             
         
     

@@ -893,11 +893,3 @@ class TestTagSiblings( unittest.TestCase ):
         self.assertEqual( self._tag_siblings_manager.CollapseTagsToCount( { 'tree_1' : 10, 'tree_2' : 3, 'tree_3' : 5, 'tree_4' : 2, 'tree_5' : 20, 'tree_6' : 30 } ), { 'tree_6' : 70 } )
         
     
-if __name__ == '__main__':
-    
-    app = TestConstants.TestController()
-    
-    unittest.main( verbosity = 2, exit = False )
-    
-    raw_input()
-    

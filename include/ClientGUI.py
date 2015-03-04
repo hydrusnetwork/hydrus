@@ -905,7 +905,7 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
             menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
             menu.AppendSeparator()
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp', HC.LOCAL_FILE_SERVICE_KEY ), p( 'Manage Local UPnP' ) )
+            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_upnp' ), p( 'Manage Local UPnP' ) )
             
             if len( tag_services ) + len( file_services ) > 0:
                 
@@ -1085,7 +1085,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                                 
                             
                         
-                    except Exception as e: HC.ShowException( e )
+                    except Exception as e:
+                        
+                        HC.ShowException( e )
+                        
                     
                 
         
@@ -1142,7 +1145,10 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
                     
                     new_page.SetSearchFocus()
                     
-                except Exception as e: HC.ShowException( e )
+                except Exception as e:
+                    
+                    HC.ShowException( e )
+                    
                 
             
             if HC.PLATFORM_OSX: self._ClosePage( 0 )
@@ -1240,9 +1246,9 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
         
     
-    def _ManageUPnP( self, service_key ):
+    def _ManageUPnP( self ):
         
-        with ClientGUIDialogsManage.DialogManageUPnP( self, service_key ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogsManage.DialogManageUPnP( self ) as dlg: dlg.ShowModal()
         
     
     def _ModifyAccount( self, service_key ):
@@ -1558,14 +1564,15 @@ class FrameGUI( ClientGUICommon.FrameThatResizes ):
             
             page = self._notebook.GetPage( i )
             
+            if not page.IsStorable(): continue
+            
             page_name = self._notebook.GetPageText( i )
             
             c = type( page )
             
             c_text = ClientGUIPages.class_to_text[ c ]
             
-            try: ( args, kwargs ) = page.GetSessionArgs()
-            except: continue
+            ( args, kwargs ) = page.GetSessionArgs()
             
             info.append( ( page_name, c_text, args, kwargs ) )
             
@@ -1848,7 +1855,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'manage_tag_censorship': self._ManageTagCensorship()
             elif command == 'manage_tag_parents': self._ManageTagParents()
             elif command == 'manage_tag_siblings': self._ManageTagSiblings()
-            elif command == 'manage_upnp': self._ManageUPnP( data )
+            elif command == 'manage_upnp': self._ManageUPnP()
             elif command == 'modify_account': self._ModifyAccount( data )
             elif command == 'new_accounts': self._GenerateNewAccounts( data )
             elif command == 'new_import_booru': self._NewPageImportBooru()
@@ -2372,7 +2379,7 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                     
                     self._booru_shares_panel = ClientGUICommon.StaticBox( self, 'shares' )
                     
-                    self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ] )
+                    self._booru_shares = ClientGUICommon.SaneListCtrl( self._booru_shares_panel, -1, [ ( 'title', 110 ), ( 'text', -1 ), ( 'expires', 170 ), ( 'num files', 70 ) ], delete_key_callback = self.DeleteBoorus )
                     
                     self._booru_open_search = wx.Button( self._booru_shares_panel, label = 'open share in new page' )
                     self._booru_open_search.Bind( wx.EVT_BUTTON, self.EventBooruOpenSearch )
@@ -2781,13 +2788,15 @@ class FrameReviewServices( ClientGUICommon.Frame ):
                 
             
         
-        def EventBooruDelete( self, event ):
+        def DeleteBoorus( self ):
             
             for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
                 
                 HC.app.Write( 'delete_local_booru_share', share_key )
                 
             
+        
+        def EventBooruDelete( self, event ): self.DeleteBoorus()
         
         def EventBooruEdit( self, event ):
             
