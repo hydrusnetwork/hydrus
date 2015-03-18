@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 150</h3></li>
+				<ul>
+					<li>added an 'idle' updating processing mode that churns through tags four times faster but makes gui laggy. it will kick in whenever you haven't done anything in thirty minutes</li>
+					<li>improved some gallery downloader status texts</li>
+					<li>gallery downloader will no longer wait 5 secs before fetching first page of urls</li>
+					<li>fixed a critical race condition that had a chance of causing complete and unrecoverable gui freeze in the gallery downloader code</li>
+					<li>fixed rendering of some bizarro pngs that CV couldn't understand</li>
+					<li>fixed tag parent management for admin users</li>
+					<li>fixed up some tag parent dialog code</li>
+					<li>tag sibling dialog now accepts single reasons for multiple pairs, like the tag parent dialog</li>
+					<li>improved error state on rendering video that reports resolution of 0x0</li>
+					<li>removed looping error reporting on certain static image rendering errors</li>
+					<li>fixed an error when some thumbs were 'collected' while fading in</li>
+					<li>tagboxes now select on home/end and support numpad versions of page up/down</li>
+					<li>fixed a radio button initialisation bug</li>
+					<li>boosted the initial size of the 'set default advanced tag options' dialog so the collapsible pane is more visibile</li>
+					<li>silenced a upnp error when external ip can't be parsed</li>
+					<li>reduced some tag dialog previous/next button lag</li>
+					<li>general code cleanup and refactorisation</li>
+					<li>gui flag refactorisation and unification</li>
+					<li>refactorisation of most non-constant stuff from constants files</li>
+					<li>refactorisations of media mixins class in prep for a general rewrite of that code</li>
+					<li>improved client initialisation of default options, boorus, and imageboards</li>
+				</ul>
 				<li><h3>version 149</h3></li>
 				<ul>
 					<li>all listctrls with an attendant delete button will now support the same action with the delete key</li>
