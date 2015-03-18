@@ -1,3 +1,8 @@
+import ClientData
+import ClientDefaults
+import ClientFiles
+import ClientMedia
+import ClientRatings
 import collections
 import dircache
 import hashlib
@@ -776,7 +781,7 @@ class MessageDB( object ):
         
         for hash in attachment_hashes:
             
-            path = CC.GetFilePath( hash )
+            path = ClientFiles.GetFilePath( hash )
             
             with open( path, 'rb' ) as f: file = f.read()
             
@@ -820,7 +825,7 @@ class MessageDB( object ):
         
         for hash in attachment_hashes:
             
-            path = CC.GetFilePath( hash )
+            path = ClientFiles.GetFilePath( hash )
             
             with open( path, 'rb' ) as f: file = f.read()
             
@@ -1060,13 +1065,13 @@ class ServiceDB( MessageDB ):
         
         for ( hash, thumbnail ) in thumbnails:
             
-            thumbnail_path = CC.GetExpectedThumbnailPath( hash, True )
+            thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash, True )
             
             with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
             
             thumbnail_resized = HydrusFileHandling.GenerateThumbnail( thumbnail_path, HC.options[ 'thumbnail_dimensions' ] )
             
-            thumbnail_resized_path = CC.GetExpectedThumbnailPath( hash, False )
+            thumbnail_resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
             
             with open( thumbnail_resized_path, 'wb' ) as f: f.write( thumbnail_resized )
             
@@ -1165,7 +1170,7 @@ class ServiceDB( MessageDB ):
             
             hash = self._GetHash( hash_id )
             
-            try: path = CC.GetFilePath( hash, mime )
+            try: path = ClientFiles.GetFilePath( hash, mime )
             except HydrusExceptions.NotFoundException:
                 
                 deletee_hash_ids.append( hash_id )
@@ -1218,7 +1223,7 @@ class ServiceDB( MessageDB ):
                     
                     hash_id = self._GetHashId( hash )
                     
-                    path_from = CC.GetFilePath( hash )
+                    path_from = ClientFiles.GetFilePath( hash )
                     
                     filename = os.path.basename( path_from )
                     
@@ -1311,7 +1316,7 @@ class ServiceDB( MessageDB ):
         
         deletee_hashes = set( self._GetHashes( deletee_hash_ids ) )
         
-        local_files_hashes = CC.GetAllFileHashes()
+        local_files_hashes = ClientFiles.GetAllFileHashes()
         
         job_key.SetVariable( 'popup_message_text_1', prefix + 'deleting orphan files' )
         
@@ -1327,7 +1332,7 @@ class ServiceDB( MessageDB ):
                 return
                 
             
-            try: path = CC.GetFilePath( hash )
+            try: path = ClientFiles.GetFilePath( hash )
             except HydrusExceptions.NotFoundException: continue
             
             try:
@@ -1357,7 +1362,7 @@ class ServiceDB( MessageDB ):
         
         job_key.SetVariable( 'popup_message_text_1', prefix + 'gathering thumbnail information' )
         
-        local_thumbnail_hashes = CC.GetAllThumbnailHashes()
+        local_thumbnail_hashes = ClientFiles.GetAllThumbnailHashes()
         
         hashes = set( self._GetHashes( hash_ids ) )
         
@@ -1365,8 +1370,8 @@ class ServiceDB( MessageDB ):
         
         for hash in local_thumbnail_hashes - hashes:
             
-            path = CC.GetExpectedThumbnailPath( hash, True )
-            resized_path = CC.GetExpectedThumbnailPath( hash, False )
+            path = ClientFiles.GetExpectedThumbnailPath( hash, True )
+            resized_path = ClientFiles.GetExpectedThumbnailPath( hash, False )
             
             if HC.shutdown or job_key.IsCancelled():
                 
@@ -2602,18 +2607,18 @@ class ServiceDB( MessageDB ):
             
             petitioned_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_petitioned_file_service_ids[ hash_id ] }
             
-            file_service_keys_cdpp = CC.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys )
+            file_service_keys_cdpp = ClientFiles.LocationsManager( current_file_service_keys, deleted_file_service_keys, pending_file_service_keys, petitioned_file_service_keys )
             
             #
             
             local_ratings = { service_ids_to_service_keys[ service_id ] : rating for ( service_id, rating ) in hash_ids_to_local_ratings[ hash_id ] }
             
-            local_ratings = CC.LocalRatingsManager( local_ratings )
+            local_ratings = ClientRatings.LocalRatingsManager( local_ratings )
             remote_ratings = {}
             
             #
             
-            media_results.append( CC.MediaResult( ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_keys_cdpp, local_ratings, remote_ratings ) ) )
+            media_results.append( ClientMedia.MediaResult( ( hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, file_service_keys_cdpp, local_ratings, remote_ratings ) ) )
             
         
         return media_results
@@ -2998,7 +3003,7 @@ class ServiceDB( MessageDB ):
             
             ( service_key, service_type, name, info ) = self._c.execute( 'SELECT service_key, service_type, name, info FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
             
-            service = CC.Service( service_key, service_type, name, info )
+            service = ClientData.Service( service_key, service_type, name, info )
             
             self._service_cache[ service_id ] = service
             
@@ -3095,7 +3100,7 @@ class ServiceDB( MessageDB ):
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS: result = self._c.execute( 'SELECT COUNT( * ) FROM files_info WHERE service_id = ? AND mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ';', ( service_id, ) ).fetchone()
                     elif info_type == HC.SERVICE_INFO_NUM_THUMBNAILS_LOCAL:
                         
-                        thumbnails_i_have = CC.GetAllThumbnailHashes()
+                        thumbnails_i_have = ClientFiles.GetAllThumbnailHashes()
                         
                         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM files_info WHERE mime IN ' + HC.SplayListForDB( HC.MIMES_WITH_THUMBNAILS ) + ' AND service_id = ?;', ( service_id, ) ) ]
                         
@@ -3290,7 +3295,7 @@ class ServiceDB( MessageDB ):
     
     def _GetThumbnail( self, hash, full_size = False ):
         
-        path = CC.GetThumbnailPath( hash, full_size )
+        path = ClientFiles.GetThumbnailPath( hash, full_size )
         
         with open( path, 'rb' ) as f: thumbnail = f.read()
         
@@ -3467,7 +3472,7 @@ class ServiceDB( MessageDB ):
             
             timestamp = HC.GetNow()
             
-            dest_path = CC.GetExpectedFilePath( hash, mime )
+            dest_path = ClientFiles.GetExpectedFilePath( hash, mime )
             
             if not os.path.exists( dest_path ):
                 
@@ -4871,7 +4876,7 @@ class DB( ServiceDB ):
         
         if result is None:
             
-            options = CC.CLIENT_DEFAULT_OPTIONS
+            options = ClientDefaults.GetClientDefaultOptions()
             
             self._c.execute( 'INSERT INTO options ( options ) VALUES ( ? );', ( options, ) )
             
@@ -4879,9 +4884,11 @@ class DB( ServiceDB ):
             
             ( options, ) = result
             
-            for key in CC.CLIENT_DEFAULT_OPTIONS:
+            default_options = ClientDefaults.GetClientDefaultOptions()
+            
+            for key in default_options:
                 
-                if key not in options: options[ key ] = CC.CLIENT_DEFAULT_OPTIONS[ key ]
+                if key not in options: options[ key ] = default_options[ key ]
                 
             
         
@@ -5126,9 +5133,9 @@ class DB( ServiceDB ):
                 self._AddService( service_key, service_type, name, info )
                 
             
-            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in CC.DEFAULT_BOORUS.items() ) )
+            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_REMOTE_BOORU, name, booru ) for ( name, booru ) in ClientDefaults.GetDefaultBoorus().items() ) )
             
-            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in CC.DEFAULT_IMAGEBOARDS ) )
+            self._c.executemany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
             
             self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
             
@@ -5152,7 +5159,7 @@ class DB( ServiceDB ):
         
         self._db = sqlite3.connect( self._db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
         
-        self._db.create_function( 'hydrus_hamming', 2, HydrusImageHandling.GetHammingDistance )
+        self._db.create_function( 'hydrus_hamming', 2, ClientData.GetHammingDistance )
         
         self._c = self._db.cursor()
         
@@ -5182,7 +5189,7 @@ class DB( ServiceDB ):
             
             HC.pubsub.pub( 'message', job_key )
             
-            thumbnail_paths = ( path for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
+            thumbnail_paths = ( path for path in ClientFiles.IterateAllThumbnailPaths() if path.endswith( '_resized' ) )
             
             for ( i, path ) in enumerate( thumbnail_paths ):
                 
@@ -5239,7 +5246,7 @@ class DB( ServiceDB ):
                         
                         name = data
                         
-                        imageboard = CC.Imageboard( name, '', 60, [], {} )
+                        imageboard = ClientData.Imageboard( name, '', 60, [], {} )
                         
                         self._c.execute( 'INSERT INTO imageboards ( site_id, name, imageboard ) VALUES ( ?, ?, ? );', ( site_id, name, imageboard ) )
                         
@@ -5454,7 +5461,7 @@ class DB( ServiceDB ):
                 
                 ( begin, end ) = update.GetBeginEnd()
                 
-                new_path = CC.GetUpdatePath( service_key, begin )
+                new_path = ClientFiles.GetUpdatePath( service_key, begin )
                 
                 if os.path.exists( new_path ): os.remove( path )
                 else: os.rename( path, new_path )
@@ -5499,7 +5506,7 @@ class DB( ServiceDB ):
         
         if version == 115:
             
-            for path in CC.IterateAllFilePaths():
+            for path in ClientFiles.IterateAllFilePaths():
                 
                 try:
                     
@@ -5513,7 +5520,7 @@ class DB( ServiceDB ):
                         
                         thumbnail = HydrusFileHandling.GenerateThumbnail( path )
                         
-                        with open( CC.GetExpectedThumbnailPath( hash ), 'wb' ) as f: f.write( thumbnail )
+                        with open( ClientFiles.GetExpectedThumbnailPath( hash ), 'wb' ) as f: f.write( thumbnail )
                         
                     
                 except: print( traceback.format_exc())
@@ -5529,7 +5536,7 @@ class DB( ServiceDB ):
             
             i = 0
             
-            for path in CC.IterateAllThumbnailPaths():
+            for path in ClientFiles.IterateAllThumbnailPaths():
                 
                 if not path.endswith( '_resized' ):
                     
@@ -5558,7 +5565,7 @@ class DB( ServiceDB ):
             
             i = 0
             
-            for path in CC.IterateAllFilePaths():
+            for path in ClientFiles.IterateAllFilePaths():
                 
                 try:
                     
@@ -5578,7 +5585,7 @@ class DB( ServiceDB ):
                     
                     thumbnail = HydrusFileHandling.GenerateThumbnail( path )
                     
-                    thumbnail_path = CC.GetExpectedThumbnailPath( hash )
+                    thumbnail_path = ClientFiles.GetExpectedThumbnailPath( hash )
                     
                     with open( thumbnail_path, 'wb' ) as f: f.write( thumbnail )
                     
@@ -5716,7 +5723,7 @@ class DB( ServiceDB ):
                 
                 hash = self._GetHash( hash_id )
                 
-                try: path = CC.GetFilePath( hash )
+                try: path = ClientFiles.GetFilePath( hash )
                 except HydrusExceptions.NotFoundException: continue
                 
                 h_sha512 = hashlib.sha512()
@@ -5779,7 +5786,7 @@ class DB( ServiceDB ):
             
             #
             
-            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'sankaku chan', CC.DEFAULT_BOORUS[ 'sankaku chan' ] ) )
+            self._c.execute( 'REPLACE INTO yaml_dumps VALUES ( ?, ?, ? );', ( YAML_DUMP_ID_REMOTE_BOORU, 'sankaku chan', ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ] ) )
             
         
         if version == 143:

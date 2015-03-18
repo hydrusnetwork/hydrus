@@ -1,7 +1,8 @@
 import collections
 import HydrusConstants as HC
+import ClientCaches
+import ClientData
 import ClientConstants as CC
-import ClientGUIMixins
 import itertools
 import os
 import random
@@ -29,25 +30,6 @@ ID_TIMER_POPUP = wx.NewId()
 
 ZOOMINS = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
 ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 0.3, 0.2, 0.15, 0.1, 0.05, 0.01 ]
-
-# Sizer Flags
-
-FLAGS_NONE = wx.SizerFlags( 0 )
-
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 class AnimatedStaticTextTimestamp( wx.StaticText ):
     
@@ -120,7 +102,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._text_ctrl, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._text_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #self._dropdown_window = wx.PopupWindow( self, flags = wx.BORDER_RAISED )
         #self._dropdown_window = wx.PopupTransientWindow( self, style = wx.BORDER_RAISED )
@@ -155,7 +137,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._dropdown_list = self._InitDropDownList()
         
-        if not self._float_mode: vbox.AddF( self._dropdown_window, FLAGS_EXPAND_BOTH_WAYS )
+        if not self._float_mode: vbox.AddF( self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -199,14 +181,9 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _BroadcastChoice( self, predicate ): pass
     
-    def BroadcastChoice( self, predicate ):
+    def _GenerateMatches( self ):
         
-        if self._text_ctrl.GetValue() != '':
-            
-            self._text_ctrl.SetValue( '' )
-            
-        
-        self._BroadcastChoice( predicate )
+        raise NotImplementedError()
         
     
     def _HideDropdown( self ):
@@ -214,6 +191,11 @@ class AutoCompleteDropdown( wx.Panel ):
         self._dropdown_window.SetSize( ( 0, 0 ) )
         
         self._dropdown_hidden = True
+        
+    
+    def _InitDropDownList( self ):
+        
+        raise NotImplementedError()
         
     
     def _ShowDropdownIfFocussed( self ):
@@ -239,6 +221,16 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _UpdateList( self ): pass
     
+    def BroadcastChoice( self, predicate ):
+        
+        if self._text_ctrl.GetValue() != '':
+            
+            self._text_ctrl.SetValue( '' )
+            
+        
+        self._BroadcastChoice( predicate )
+        
+    
     def EventCloseDropdown( self, event ):
         
         HC.app.GetGUI().EventExit( event )
@@ -250,8 +242,8 @@ class AutoCompleteDropdown( wx.Panel ):
         elif event.KeyCode == wx.WXK_ESCAPE: self.GetTopLevelParent().SetFocus()
         elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
-            elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
+            if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
+            elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -259,8 +251,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_previous' )
-            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_next' )
+            if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_previous' )
+            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'canvas_show_next' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -284,8 +276,8 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.GetWheelRotation() > 0: id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
-            else: id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
+            if event.GetWheelRotation() > 0: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_up' )
+            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select_down' )
             
             new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
             
@@ -375,7 +367,7 @@ class AutoCompleteDropdownMessageTerms( AutoCompleteDropdown ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._dropdown_list, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._dropdown_list, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._dropdown_window.SetSizer( vbox )
         
@@ -484,7 +476,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_file_repository', service.GetServiceKey() ), service.GetName() )
         
         self._file_repo_button.PopupMenu( menu )
         
@@ -493,7 +485,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -526,7 +518,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         menu = wx.Menu()
         
-        for service in services: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
+        for service in services: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'change_tag_repository', service.GetServiceKey() ), service.GetName() )
         
         self._tag_repo_button.PopupMenu( menu )
         
@@ -555,20 +547,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         button_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox_1.AddF( self._include_current_tags, FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox_1.AddF( self._include_pending_tags, FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox_1.AddF( self._include_current_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox_1.AddF( self._include_pending_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         button_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox_2.AddF( self._file_repo_button, FLAGS_EXPAND_BOTH_WAYS )
-        button_hbox_2.AddF( self._tag_repo_button, FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox_2.AddF( self._file_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox_2.AddF( self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( button_hbox_1, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._synchronised, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( button_hbox_2, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._dropdown_list, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._synchronised, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( button_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._dropdown_list, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._dropdown_window.SetSizer( vbox )
         
@@ -721,9 +713,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive, counts = { HC.CURRENT : current_tags_to_count[ tag ], HC.PENDING : pending_tags_to_count[ tag ] } ) for tag in tags_to_do ]
                     
                 
-                predicates = CC.SortPredicates( predicates, collapse_siblings = True )
+                predicates = ClientData.SortPredicates( predicates, collapse_siblings = True )
                 
-                matches = CC.FilterPredicates( search_text, predicates )
+                matches = ClientData.FilterPredicates( search_text, predicates )
                 
             
             if self._current_namespace != '': matches.insert( 0, HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive = inclusive ) )
@@ -787,11 +779,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._file_repo_button, FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._tag_repo_button, FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._file_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._dropdown_list, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._dropdown_list, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._dropdown_window.SetSizer( vbox )
         
@@ -870,9 +862,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 predicates = self._cached_results
                 
             
-            predicates = CC.SortPredicates( predicates, collapse_siblings = False )
+            predicates = ClientData.SortPredicates( predicates, collapse_siblings = False )
             
-            matches = CC.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = True )
+            matches = ClientData.FilterPredicates( half_complete_tag, predicates, service_key = self._tag_service_key, expand_parents = True )
             
             # do the 'put whatever they typed in at the top, whether it has count or not'
             # now with sibling support!
@@ -1470,12 +1462,12 @@ class ListBook( wx.Panel ):
         
         self._panel_sizer = wx.BoxSizer( wx.VERTICAL )
         
-        self._panel_sizer.AddF( self._empty_panel, FLAGS_EXPAND_BOTH_WAYS )
+        self._panel_sizer.AddF( self._empty_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._list_box, FLAGS_EXPAND_PERPENDICULAR )
-        hbox.AddF( self._panel_sizer, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        hbox.AddF( self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox.AddF( self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._list_box.Bind( wx.EVT_LISTBOX, self.EventSelection )
         
@@ -1525,7 +1517,7 @@ class ListBook( wx.Panel ):
                 
                 page.Hide()
                 
-                self._panel_sizer.AddF( page, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 self._list_box.SetClientData( selection, page )
                 
@@ -1552,7 +1544,7 @@ class ListBook( wx.Panel ):
             
             page.Hide()
             
-            self._panel_sizer.AddF( page, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
         self._list_box.Append( name, page )
@@ -1569,7 +1561,7 @@ class ListBook( wx.Panel ):
         
         self._panel_sizer.Clear( deleteWindows = True )
         
-        self._panel_sizer.AddF( self._empty_panel, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._panel_sizer.AddF( self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._current_name = None
         
@@ -1580,7 +1572,7 @@ class ListBook( wx.Panel ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -1992,8 +1984,10 @@ class ListBox( wx.ScrolledWindow ):
                 
             elif key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): self._Select( self._current_selected_index - 1 )
             elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): self._Select( self._current_selected_index + 1 )
-            elif key_code == wx.WXK_PAGEUP: self._Select( self._current_selected_index - self._num_rows_per_page )
-            elif key_code == wx.WXK_PAGEDOWN: self._Select( self._current_selected_index + self._num_rows_per_page )
+            elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ): self._Select( self._current_selected_index - self._num_rows_per_page )
+            elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ): self._Select( self._current_selected_index + self._num_rows_per_page )
+            elif key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ): self._Select( 0 )
+            elif key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ): self._Select( len( self._ordered_strings ) - 1 )
             else: event.Skip()
             
         else: event.Skip()
@@ -2001,7 +1995,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -2042,13 +2036,13 @@ class ListBox( wx.ScrolledWindow ):
             
             term = self._strings_to_terms[ self._ordered_strings[ self._current_selected_index ] ]
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + term + '"' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + term + '"' )
             
             if ':' in term:
                 
                 sub_term = term.split( ':', 1 )[1]
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_term + '"' )
                 
             
             self.PopupMenu( menu )
@@ -2297,7 +2291,7 @@ class ListBoxTags( ListBox ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -2375,13 +2369,13 @@ class ListBoxTags( ListBox ):
                 if type( term ) == HC.Predicate: s = term.GetUnicode()
                 else: s = term
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_search_page_with_term' ), 'open a new search page for "' + s + '"' )
                 
                 menu.AppendSeparator()
                 
             
-            menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
-            if self.has_counts: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
+            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags' ), 'copy all tags' )
+            if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
             
             if self._current_selected_index is not None:
                 
@@ -2390,21 +2384,21 @@ class ListBoxTags( ListBox ):
                 if type( term ) == HC.Predicate: s = term.GetUnicode()
                 else: s = term
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + s + '"' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_term' ), 'copy "' + s + '"' )
                 
                 if ':' in s:
                     
                     sub_s = s.split( ':', 1 )[1]
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_s + '"' )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_sub_term' ), 'copy "' + sub_s + '"' )
                     
                 
                 if type( term ) in ( str, unicode ):
                     
                     menu.AppendSeparator()
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent' ), 'add parent to ' + s )
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling' ), 'add sibling to ' + s )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'parent' ), 'add parent to ' + s )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'sibling' ), 'add sibling to ' + s )
                     
                 
             
@@ -2948,7 +2942,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if force_reload:
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( media, self._tag_service_key )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( media, self._tag_service_key )
             
             self.SetTags( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
             
@@ -2957,7 +2951,7 @@ class ListBoxTagsSelection( ListBoxTags ):
             removees = self._last_media.difference( media )
             adds = media.difference( self._last_media )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( removees, self._tag_service_key )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( removees, self._tag_service_key )
             
             if self._collapse_siblings:
                 
@@ -2974,7 +2968,7 @@ class ListBoxTagsSelection( ListBoxTags ):
             self._pending_tags_to_count.subtract( pending_tags_to_count )
             self._petitioned_tags_to_count.subtract( petitioned_tags_to_count )
             
-            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = CC.GetMediasTagCount( adds, self._tag_service_key )
+            ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientData.GetMediasTagCount( adds, self._tag_service_key )
             
             if self._collapse_siblings:
                 
@@ -3096,16 +3090,16 @@ class NoneableSpinCtrl( wx.Panel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( wx.StaticText( self, label=message + ': ' ), FLAGS_MIXED )
-        hbox.AddF( self._one, FLAGS_MIXED )
+        hbox.AddF( wx.StaticText( self, label=message + ': ' ), CC.FLAGS_MIXED )
+        hbox.AddF( self._one, CC.FLAGS_MIXED )
         
         if self._num_dimensions == 2:
             
-            hbox.AddF( wx.StaticText( self, label = 'x' ), FLAGS_MIXED )
-            hbox.AddF( self._two, FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = 'x' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._two, CC.FLAGS_MIXED )
             
         
-        hbox.AddF( self._checkbox, FLAGS_MIXED )
+        hbox.AddF( self._checkbox, CC.FLAGS_MIXED )
         
         self.SetSizer( hbox )
         
@@ -3242,8 +3236,8 @@ class PopupDismissAll( PopupWindow ):
         button.Bind( wx.EVT_BUTTON, self.EventButton )
         button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        hbox.AddF( self._text, FLAGS_MIXED )
-        hbox.AddF( button, FLAGS_MIXED )
+        hbox.AddF( self._text, CC.FLAGS_MIXED )
+        hbox.AddF( button, CC.FLAGS_MIXED )
         
         self.SetSizer( hbox )
         
@@ -3338,23 +3332,23 @@ class PopupMessage( PopupWindow ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._pause_button, FLAGS_MIXED )
-        hbox.AddF( self._cancel_button, FLAGS_MIXED )
+        hbox.AddF( self._pause_button, CC.FLAGS_MIXED )
+        hbox.AddF( self._cancel_button, CC.FLAGS_MIXED )
         
-        vbox.AddF( self._title, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._text_1, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._gauge_1, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._text_2, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._gauge_2, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_files_button, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_tb_button, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._tb_text, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_caller_tb_button, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._caller_tb_text, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_db_tb_button, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._db_tb_text, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._copy_tb_button, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
+        vbox.AddF( self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_caller_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._caller_tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._show_db_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._db_tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._copy_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -3619,8 +3613,8 @@ class PopupMessageManager( wx.Frame ):
         self._dismiss_all = PopupDismissAll( self )
         self._dismiss_all.Hide()
         
-        vbox.AddF( self._message_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._dismiss_all, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._message_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._dismiss_all, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -3636,9 +3630,9 @@ class PopupMessageManager( wx.Frame ):
         self._old_excepthook = sys.excepthook
         self._old_show_exception = HC.ShowException
         
-        sys.excepthook = CC.CatchExceptionClient
-        HC.ShowException = CC.ShowExceptionClient
-        HC.ShowText = CC.ShowTextClient
+        sys.excepthook = ClientData.CatchExceptionClient
+        HC.ShowException = ClientData.ShowExceptionClient
+        HC.ShowText = ClientData.ShowTextClient
         
         self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_POPUP )
         
@@ -3659,7 +3653,7 @@ class PopupMessageManager( wx.Frame ):
             
             window.Update()
             
-            self._message_vbox.AddF( window, FLAGS_EXPAND_PERPENDICULAR )
+            self._message_vbox.AddF( window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         num_messages_pending = len( self._pending_job_keys )
@@ -4148,7 +4142,7 @@ class StaticBox( wx.Panel ):
         title_text = wx.StaticText( self, label = title, style = wx.ALIGN_CENTER )
         title_text.SetFont( title_font )
         
-        self._sizer.AddF( title_text, FLAGS_EXPAND_PERPENDICULAR )
+        self._sizer.AddF( title_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( self._sizer )
         
@@ -4175,7 +4169,7 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
         
-        self.AddF( self._sorter, FLAGS_EXPAND_PERPENDICULAR )
+        self.AddF( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def ChangeTagRepository( self, service_key ): self._tags_box.ChangeTagRepository( service_key )
@@ -4196,495 +4190,10 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         self._tags_box = tags_box
         
-        self.AddF( self._tags_box, FLAGS_EXPAND_BOTH_WAYS )
+        self.AddF( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def SetTagsByMedia( self, media, force_reload = False ): self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
-    
-class CollapsiblePanel( wx.Panel ):
-    
-    def __init__( self, parent ):
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._expanded = False
-        
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        self._button = wx.Button( self, label = 'expand' )
-        self._button.Bind( wx.EVT_BUTTON, self.EventChange )
-        
-        line = wx.StaticLine( self, style = wx.LI_HORIZONTAL )
-        
-        hbox.AddF( self._button, FLAGS_MIXED )
-        hbox.AddF( line, FLAGS_EXPAND_DEPTH_ONLY )
-        
-        self._vbox.AddF( hbox, FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( self._vbox )
-        
-    
-    def _Change( self ):
-        
-        if self._expanded:
-            
-            self._button.SetLabel( 'expand' )
-            
-            self._panel.Hide()
-            
-            self._expanded = False
-            
-        else:
-            
-            self._button.SetLabel( 'collapse' )
-            
-            self._panel.Show()
-            
-            self._expanded = True
-            
-        
-        parent_of_container = self.GetParent().GetParent()
-        
-        old_height = self.GetMinHeight()
-        
-        parent_of_container.Layout()
-        
-        new_height = self.GetMinHeight()
-        
-        height_difference = new_height - old_height
-        
-        if isinstance( parent_of_container, wx.ScrolledWindow ):
-            
-            # fitinside is like fit, but it does the virtual size!
-            parent_of_container.FitInside()
-            
-        
-    
-    def ExpandCollapse( self ): self._Change()
-    
-    def EventChange( self, event ): self._Change()
-    
-    def IsExpanded( self ): return self._expanded
-    
-    def SetPanel( self, panel ):
-        
-        self._panel = panel
-        
-        self._vbox.AddF( self._panel, FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._panel.Hide()
-        
-    
-class AdvancedOptions( StaticBox ):
-    
-    def __init__( self, parent, title ):
-        
-        StaticBox.__init__( self, parent, title )
-        
-        self._collapsible_panel = CollapsiblePanel( self )
-        
-        self._panel = wx.Panel( self._collapsible_panel )
-        
-        self._InitPanel()
-        
-        self._collapsible_panel.SetPanel( self._panel )
-        
-        self.AddF( self._collapsible_panel, FLAGS_EXPAND_PERPENDICULAR )
-        
-    
-    def _InitPanel( self ): raise NotImplemented()
-    
-    def ExpandCollapse( self ): self._collapsible_panel.ExpandCollapse()
-    
-class AdvancedHentaiFoundryOptions( AdvancedOptions ):
-    
-    def __init__( self, parent ): AdvancedOptions.__init__( self, parent, 'advanced hentai foundry options' )
-    
-    def _InitPanel( self ):
-        
-        panel = self._panel
-        
-        def offensive_choice():
-            
-            c = wx.Choice( panel )
-            
-            c.Append( 'none', 0 )
-            c.Append( 'mild', 1 )
-            c.Append( 'moderate', 2 )
-            c.Append( 'strong', 3 )
-            
-            c.SetSelection( 3 )
-            
-            return c
-            
-        
-        self._rating_nudity = offensive_choice()
-        self._rating_violence = offensive_choice()
-        self._rating_profanity = offensive_choice()
-        self._rating_racism = offensive_choice()
-        self._rating_sex = offensive_choice()
-        self._rating_spoilers = offensive_choice()
-        
-        self._rating_yaoi = wx.CheckBox( panel )
-        self._rating_yuri = wx.CheckBox( panel )
-        self._rating_teen = wx.CheckBox( panel )
-        self._rating_guro = wx.CheckBox( panel )
-        self._rating_furry = wx.CheckBox( panel )
-        self._rating_beast = wx.CheckBox( panel )
-        self._rating_male = wx.CheckBox( panel )
-        self._rating_female = wx.CheckBox( panel )
-        self._rating_futa = wx.CheckBox( panel )
-        self._rating_other = wx.CheckBox( panel )
-        
-        self._rating_yaoi.SetValue( True )
-        self._rating_yuri.SetValue( True )
-        self._rating_teen.SetValue( True )
-        self._rating_guro.SetValue( True )
-        self._rating_furry.SetValue( True )
-        self._rating_beast.SetValue( True )
-        self._rating_male.SetValue( True )
-        self._rating_female.SetValue( True )
-        self._rating_futa.SetValue( True )
-        self._rating_other.SetValue( True )
-        
-        self._filter_order = wx.Choice( panel )
-        
-        self._filter_order.Append( 'newest first', 'date_new' )
-        self._filter_order.Append( 'oldest first', 'date_old' )
-        self._filter_order.Append( 'most views first', 'views most' ) # no underscore
-        self._filter_order.Append( 'highest rating first', 'rating highest' ) # no underscore
-        self._filter_order.Append( 'most favourites first', 'faves most' ) # no underscore
-        self._filter_order.Append( 'most popular first', 'popularity most' ) # no underscore
-        
-        self._filter_order.SetSelection( 0 )
-        
-        gridbox = wx.FlexGridSizer( 0, 2 )
-        
-        gridbox.AddGrowableCol( 1, 1 )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'nudity' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_nudity, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'violence' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_violence, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'profanity' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_profanity, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'racism' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_racism, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'sex' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_sex, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'spoilers' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_spoilers, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'yaoi' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_yaoi, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'yuri' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_yuri, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'teen' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_teen, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'guro' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_guro, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'furry' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_furry, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'beast' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_beast, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'male' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_male, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'female' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_female, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'futa' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_futa, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'other' ), FLAGS_MIXED )
-        gridbox.AddF( self._rating_other, FLAGS_EXPAND_BOTH_WAYS )
-        
-        gridbox.AddF( wx.StaticText( panel, label = 'order' ), FLAGS_MIXED )
-        gridbox.AddF( self._filter_order, FLAGS_EXPAND_BOTH_WAYS )
-        
-        panel.SetSizer( gridbox )
-        
-        return panel
-        
-    
-    def GetInfo( self ):
-        
-        info = {}
-        
-        info[ 'rating_nudity' ] = self._rating_nudity.GetClientData( self._rating_nudity.GetSelection() )
-        info[ 'rating_violence' ] = self._rating_violence.GetClientData( self._rating_violence.GetSelection() )
-        info[ 'rating_profanity' ] = self._rating_profanity.GetClientData( self._rating_profanity.GetSelection() )
-        info[ 'rating_racism' ] = self._rating_racism.GetClientData( self._rating_racism.GetSelection() )
-        info[ 'rating_sex' ] = self._rating_sex.GetClientData( self._rating_sex.GetSelection() )
-        info[ 'rating_spoilers' ] = self._rating_spoilers.GetClientData( self._rating_spoilers.GetSelection() )
-        
-        info[ 'rating_yaoi' ] = int( self._rating_yaoi.GetValue() )
-        info[ 'rating_yuri' ] = int( self._rating_yuri.GetValue() )
-        info[ 'rating_teen' ] = int( self._rating_teen.GetValue() )
-        info[ 'rating_guro' ] = int( self._rating_guro.GetValue() )
-        info[ 'rating_furry' ] = int( self._rating_furry.GetValue() )
-        info[ 'rating_beast' ] = int( self._rating_beast.GetValue() )
-        info[ 'rating_male' ] = int( self._rating_male.GetValue() )
-        info[ 'rating_female' ] = int( self._rating_female.GetValue() )
-        info[ 'rating_futa' ] = int( self._rating_futa.GetValue() )
-        info[ 'rating_other' ] = int( self._rating_other.GetValue() )
-        
-        info[ 'filter_media' ] = 'A'
-        info[ 'filter_order' ] = self._filter_order.GetClientData( self._filter_order.GetSelection() )
-        info[ 'filter_type' ] = 0
-        
-        return info
-        
-    
-    def SetInfo( self, info ):
-        
-        self._rating_nudity.SetSelection( info[ 'rating_nudity' ] )
-        self._rating_violence.SetSelection( info[ 'rating_violence' ] )
-        self._rating_profanity.SetSelection( info[ 'rating_profanity' ] )
-        self._rating_racism.SetSelection( info[ 'rating_racism' ] )
-        self._rating_sex.SetSelection( info[ 'rating_sex' ] )
-        self._rating_spoilers.SetSelection( info[ 'rating_spoilers' ] )
-        
-        self._rating_yaoi.SetValue( bool( info[ 'rating_yaoi' ] ) )
-        self._rating_yuri.SetValue( bool( info[ 'rating_yuri' ] ) )
-        self._rating_teen.SetValue( bool( info[ 'rating_teen' ] ) )
-        self._rating_guro.SetValue( bool( info[ 'rating_guro' ] ) )
-        self._rating_furry.SetValue( bool( info[ 'rating_furry' ] ) )
-        self._rating_beast.SetValue( bool( info[ 'rating_beast' ] ) )
-        self._rating_male.SetValue( bool( info[ 'rating_male' ] ) )
-        self._rating_female.SetValue( bool( info[ 'rating_female' ] ) )
-        self._rating_futa.SetValue( bool( info[ 'rating_futa' ] ) )
-        self._rating_other.SetValue( bool( info[ 'rating_other' ] ) )
-        
-        #info[ 'filter_media' ] = 'A'
-        self._filter_order.SetSelection( info[ 'filter_order' ] )
-        #info[ 'filter_type' ] = 0
-        
-    
-class AdvancedImportOptions( AdvancedOptions ):
-    
-    def __init__( self, parent, initial_settings = {} ):
-        
-        self._initial_settings = initial_settings
-        
-        AdvancedOptions.__init__( self, parent, 'advanced import options' )
-        
-    
-    def _InitPanel( self ):
-        
-        panel = self._panel
-        
-        self._auto_archive = wx.CheckBox( panel, label = 'archive all imports' )
-        
-        self._exclude_deleted = wx.CheckBox( panel, label = 'exclude already deleted files' )
-        
-        self._min_size = NoneableSpinCtrl( panel, 'minimum size (KB): ', multiplier = 1024 )
-        self._min_size.SetValue( 5120 )
-        
-        self._min_resolution = NoneableSpinCtrl( panel, 'minimum resolution: ', num_dimensions = 2 )
-        self._min_resolution.SetValue( ( 50, 50 ) )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._auto_archive, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._exclude_deleted, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._min_size, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._min_resolution, FLAGS_EXPAND_PERPENDICULAR )
-        
-        panel.SetSizer( vbox )
-        
-        self._SetControls( self._initial_settings )
-        
-        return panel
-        
-    
-    def _SetControls( self, info ):
-        
-        if 'auto_archive' in info: self._auto_archive.SetValue( info[ 'auto_archive' ] )
-        else: self._auto_archive.SetValue( False )
-        
-        if 'exclude_deleted_files' in info: self._exclude_deleted.SetValue( info[ 'exclude_deleted_files' ] )
-        else: self._exclude_deleted.SetValue( HC.options[ 'exclude_deleted_files' ] )
-        
-        if 'min_size' in info: self._min_size.SetValue( info[ 'min_size' ] )
-        else: self._min_size.SetValue( None )
-        
-        if 'min_resolution' in info: self._min_resolution.SetValue( info[ 'min_resolution' ] )
-        else: self._min_resolution.SetValue( None )
-        
-    
-    def GetInfo( self ):
-        
-        info = {}
-        
-        if self._auto_archive.GetValue(): info[ 'auto_archive' ] = True
-        
-        if self._exclude_deleted.GetValue(): info[ 'exclude_deleted_files' ] = True
-        
-        min_size = self._min_size.GetValue()
-        
-        if min_size is not None: info[ 'min_size' ] = min_size
-        
-        min_resolution = self._min_resolution.GetValue()
-        
-        if min_resolution is not None: info[ 'min_resolution' ] = min_resolution
-        
-        return info
-        
-    
-    def SetInfo( self, info ): self._SetControls( info )
-    
-class AdvancedTagOptions( AdvancedOptions ):
-    
-    def __init__( self, parent, namespaces = [], initial_settings = {} ):
-        
-        self._namespaces = namespaces
-        self._initial_settings = initial_settings
-        
-        self._service_keys_to_checkbox_info = {}
-        
-        AdvancedOptions.__init__( self, parent, 'advanced tag options' )
-        
-    
-    def _DrawNamespaces( self ):
-        
-        panel = self._panel
-        
-        self._vbox.Clear( True )
-        
-        self._service_keys_to_checkbox_info = {}
-        
-        services = HC.app.GetManager( 'services' ).GetServices( ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
-        
-        if len( services ) > 0:
-            
-            outer_gridbox = wx.FlexGridSizer( 0, 2 )
-            
-            outer_gridbox.AddGrowableCol( 1, 1 )
-            
-            for service in services:
-                
-                service_key = service.GetServiceKey()
-                
-                self._service_keys_to_checkbox_info[ service_key ] = []
-                
-                outer_gridbox.AddF( wx.StaticText( panel, label = service.GetName() ), FLAGS_MIXED )
-            
-                vbox = wx.BoxSizer( wx.VERTICAL )
-                
-                for namespace in self._namespaces:
-                    
-                    if namespace == '': label = 'no namespace'
-                    else: label = namespace
-                    
-                    namespace_checkbox = wx.CheckBox( panel, label = label )
-                    
-                    if service_key in self._initial_settings and namespace in self._initial_settings[ service_key ]: namespace_checkbox.SetValue( True )
-                    else: namespace_checkbox.SetValue( False )
-                    
-                    namespace_checkbox.Bind( wx.EVT_CHECKBOX, self.EventChecked )
-                    
-                    self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
-                    
-                    vbox.AddF( namespace_checkbox, FLAGS_EXPAND_BOTH_WAYS )
-                    
-                
-                outer_gridbox.AddF( vbox, FLAGS_MIXED )
-                
-            
-            self._vbox.AddF( outer_gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-        else:
-            
-            self._vbox.AddF( wx.StaticText( panel, label = 'no tag repositories' ), FLAGS_EXPAND_BOTH_WAYS )
-            
-        
-    
-    def _InitPanel( self ):
-        
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._DrawNamespaces()
-        
-        self._panel.SetSizer( self._vbox )
-        
-        return self._panel
-        
-    
-    def EventChecked( self, event ):
-        
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'advanced_tag_options_changed' ) ) )
-        
-        event.Skip()
-        
-    
-    def GetInfo( self ):
-        
-        result = {}
-        
-        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
-            
-            namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
-            
-            result[ service_key ] = namespaces
-            
-        
-        return result
-        
-    
-    def SetNamespaces( self, namespaces ):
-        
-        self._namespaces = namespaces
-        
-        self._DrawNamespaces()
-        
-        if self._collapsible_panel.IsExpanded(): self._collapsible_panel.EventChange( None )
-        
-    
-    def SetInfo( self, new_service_keys_to_namespaces_info ):
-        
-        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
-            
-            if service_key in new_service_keys_to_namespaces_info:
-                
-                new_namespaces_info = new_service_keys_to_namespaces_info[ service_key ]
-                
-                for ( namespace, checkbox ) in checkbox_info:
-                    
-                    if type( new_namespaces_info ) == bool:
-                        
-                        value = new_namespaces_info
-                        
-                        checkbox.SetValue( value )
-                        
-                    else:
-                        
-                        new_namespaces = new_namespaces_info
-                        
-                        if namespace in new_namespaces: checkbox.SetValue( True )
-                        else: checkbox.SetValue( False )
-                        
-                    
-                
-            else:
-                
-                for ( namespace, checkbox ) in checkbox_info: checkbox.SetValue( False )
-                
-            
-        
     
 class RadioBox( StaticBox ):
     
@@ -4709,13 +4218,13 @@ class RadioBox( StaticBox ):
             
             radio_button = wx.RadioButton( self, label = text, style = style )
             
-            self.AddF( radio_button, FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._indices_to_radio_buttons[ index ] = radio_button
             self._radio_buttons_to_data[ radio_button ] = data
             
         
-        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ index ].SetValue( True )
+        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ initial_index ].SetValue( True )
         
     
     def GetSelectedClientData( self ):
@@ -4734,45 +4243,6 @@ class ShowKeys( Frame ):
     
     def __init__( self, key_type, keys ):
         
-        def InitialiseControls():
-            
-            self._text_ctrl = wx.TextCtrl( self, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_DONTWRAP )
-            
-            self._save_to_file = wx.Button( self, label = 'save to file' )
-            self._save_to_file.Bind( wx.EVT_BUTTON, self.EventSaveToFile )
-            
-            self._done = wx.Button( self, id = wx.ID_OK, label = 'done' )
-            self._done.Bind( wx.EVT_BUTTON, self.EventDone )
-            
-        
-        def PopulateControls():
-            
-            if key_type == 'registration': prepend = 'r'
-            else: prepend = ''
-            
-            self._text = os.linesep.join( [ prepend + key.encode( 'hex' ) for key in self._keys ] )
-            
-            self._text_ctrl.SetValue( self._text )
-            
-        
-        def ArrangeControls():
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._text_ctrl, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._save_to_file, FLAGS_LONE_BUTTON )
-            vbox.AddF( self._done, FLAGS_LONE_BUTTON )
-            
-            self.SetSizer( vbox )
-            
-            ( x, y ) = self.GetEffectiveMinSize()
-            
-            if x < 500: x = 500
-            if y < 200: y = 200
-            
-            self.SetInitialSize( ( x, y ) )
-            
-        
         if key_type == 'registration': title = 'Registration Keys'
         elif key_type == 'access': title = 'Access Keys'
         
@@ -4782,11 +4252,41 @@ class ShowKeys( Frame ):
         self._key_type = key_type
         self._keys = keys
         
-        InitialiseControls()
+        #
         
-        PopulateControls()
+        self._text_ctrl = wx.TextCtrl( self, style = wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_DONTWRAP )
         
-        ArrangeControls()
+        self._save_to_file = wx.Button( self, label = 'save to file' )
+        self._save_to_file.Bind( wx.EVT_BUTTON, self.EventSaveToFile )
+        
+        self._done = wx.Button( self, id = wx.ID_OK, label = 'done' )
+        self._done.Bind( wx.EVT_BUTTON, self.EventDone )
+        
+        #
+        
+        if key_type == 'registration': prepend = 'r'
+        else: prepend = ''
+        
+        self._text = os.linesep.join( [ prepend + key.encode( 'hex' ) for key in self._keys ] )
+        
+        self._text_ctrl.SetValue( self._text )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._save_to_file, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        if x < 500: x = 500
+        if y < 200: y = 200
+        
+        self.SetInitialSize( ( x, y ) )
         
         self.Show( True )
         

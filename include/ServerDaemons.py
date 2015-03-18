@@ -11,7 +11,7 @@ import itertools
 import os
 import Queue
 import random
-import ServerConstants as SC
+import ServerFiles
 import shutil
 import sqlite3
 import sys

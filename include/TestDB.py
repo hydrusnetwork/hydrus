@@ -1,5 +1,7 @@
 import ClientConstants as CC
+import ClientData
 import ClientDB
+import ClientDefaults
 import collections
 import HydrusConstants as HC
 import HydrusExceptions
@@ -188,7 +190,9 @@ class TestClientDB( unittest.TestCase ):
     
     def test_booru( self ):
         
-        for ( name, booru ) in CC.DEFAULT_BOORUS.items():
+        default_boorus = ClientDefaults.GetDefaultBoorus()
+        
+        for ( name, booru ) in default_boorus.items():
             
             read_booru = self._read( 'remote_booru', name )
             
@@ -199,7 +203,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'remote_boorus' )
         
-        for name in CC.DEFAULT_BOORUS: self.assertEqual( result[ name ].GetData(), CC.DEFAULT_BOORUS[ name ].GetData() )
+        for ( name, booru ) in default_boorus.items(): self.assertEqual( result[ name ].GetData(), booru.GetData() )
         
         #
     
@@ -212,7 +216,7 @@ class TestClientDB( unittest.TestCase ):
         image_data = 'Download'
         tag_classnames_to_namespaces = { 'tag' : '' }
         
-        booru = CC.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+        booru = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
         
         self._write( 'remote_booru', 'blah', booru )
         
@@ -302,7 +306,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ HC.Predicate( HC.PREDICATE_TYPE_NAMESPACE, namespace, inclusive = inclusive ) ]
                 
-                search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                search_context = ClientData.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -316,7 +320,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ HC.Predicate( HC.PREDICATE_TYPE_SYSTEM, ( predicate_type, info ) ) ]
                 
-                search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                search_context = ClientData.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -330,7 +334,7 @@ class TestClientDB( unittest.TestCase ):
                 
                 predicates = [ HC.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive = inclusive ) ]
                 
-                search_context = CC.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
+                search_context = ClientData.FileSearchContext( file_service_key = HC.LOCAL_FILE_SERVICE_KEY, predicates = predicates )
                 
                 file_query_ids = self._read( 'file_query_ids', search_context )
                 
@@ -625,7 +629,7 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertEqual( site_name_4chan, '4chan' )
         
-        [ ( site_name_4chan, imageboards ) ] = CC.DEFAULT_IMAGEBOARDS
+        [ ( site_name_4chan, imageboards ) ] = ClientDefaults.GetDefaultImageboards()
         
         read_imageboards = { imageboard.GetName() : imageboard for imageboard in read_imageboards }
         imageboards = { imageboard.GetName() : imageboard for imageboard in imageboards }

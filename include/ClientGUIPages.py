@@ -7,31 +7,13 @@ import ClientGUIMedia
 import ClientGUIMessages
 import ClientGUICanvas
 import HydrusDownloading
+import HydrusThreading
 import inspect
 import os
 import sys
 import time
 import traceback
 import wx
-
-# Sizer Flags
-
-FLAGS_NONE = wx.SizerFlags( 0 )
-
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 class PageBase( object ):
     
@@ -265,7 +247,7 @@ class PageImport( PageWithMedia ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = self._management_panel.GetAdvancedImportOptions()
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
             
             return HydrusDownloading.ImportArgsGenerator( job_key, item, advanced_import_options )
             
@@ -340,8 +322,9 @@ class PageImportGallery( PageImport ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = self._management_panel.GetAdvancedImportOptions()
-            advanced_tag_options = self._management_panel.GetAdvancedTagOptions()
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
+            
+            advanced_tag_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedTagOptions )
             
             downloaders_factory = self._GetDownloadersFactory()
             
@@ -398,7 +381,7 @@ class PageImportGallery( PageImport ):
                 
                 def downloaders_factory( artist ):
                     
-                    advanced_hentai_foundry_options = self._management_panel.GetAdvancedHentaiFoundryOptions()
+                    advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedHentaiFoundryOptions )
                     
                     pictures_downloader = HydrusDownloading.DownloaderHentaiFoundry( 'artist pictures', artist, advanced_hentai_foundry_options )
                     scraps_downloader = HydrusDownloading.DownloaderHentaiFoundry( 'artist scraps', artist, advanced_hentai_foundry_options )
@@ -410,7 +393,7 @@ class PageImportGallery( PageImport ):
                 
                 def downloaders_factory( raw_tags ):
                     
-                    advanced_hentai_foundry_options = self._management_panel.GetAdvancedHentaiFoundryOptions()
+                    advanced_hentai_foundry_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedHentaiFoundryOptions )
                     
                     tags = raw_tags.split( ' ' )
                     
@@ -582,8 +565,8 @@ class PageImportThreadWatcher( PageImport ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = self._management_panel.GetAdvancedImportOptions()
-            advanced_tag_options = self._management_panel.GetAdvancedTagOptions()
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
+            advanced_tag_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedTagOptions )
             
             # fourchan_board should be on the job_key or whatever. it is stuck on initial queue generation
             # we should not be getting it from the management_panel
@@ -613,7 +596,7 @@ class PageImportURL( PageImport ):
         
         def factory( job_key, item ):
             
-            advanced_import_options = self._management_panel.GetAdvancedImportOptions()
+            advanced_import_options = HydrusThreading.CallBlockingToWx( self._management_panel.GetAdvancedImportOptions )
             
             return HydrusDownloading.ImportArgsGeneratorURLs( job_key, item, advanced_import_options )
             

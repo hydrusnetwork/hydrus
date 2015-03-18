@@ -1,4 +1,7 @@
 import ClientConstants as CC
+import ClientData
+import ClientFiles
+import ClientMedia
 import hashlib
 import httplib
 import HydrusConstants as HC
@@ -7,7 +10,7 @@ import HydrusServerAMP
 import HydrusServerResources
 import itertools
 import os
-import ServerConstants as SC
+import ServerFiles
 import shutil
 import stat
 import TestConstants
@@ -25,9 +28,9 @@ class TestServer( unittest.TestCase ):
         
         services = []
         
-        self._file_service = CC.Service( os.urandom( 32 ), HC.FILE_REPOSITORY, 'file repo', {} )
-        self._tag_service = CC.Service( os.urandom( 32 ), HC.TAG_REPOSITORY, 'tag repo', {} )
-        self._admin_service = CC.Service( os.urandom( 32 ), HC.SERVER_ADMIN, 'server admin', {} )
+        self._file_service = ClientData.Service( os.urandom( 32 ), HC.FILE_REPOSITORY, 'file repo', {} )
+        self._tag_service = ClientData.Service( os.urandom( 32 ), HC.TAG_REPOSITORY, 'tag repo', {} )
+        self._admin_service = ClientData.Service( os.urandom( 32 ), HC.SERVER_ADMIN, 'server admin', {} )
         
         services_manager = HC.app.GetManager( 'services' )
         
@@ -99,7 +102,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = CC.GetExpectedFilePath( self._file_hash, HC.IMAGE_JPEG )
+        path = ClientFiles.GetExpectedFilePath( self._file_hash, HC.IMAGE_JPEG )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -116,7 +119,7 @@ class TestServer( unittest.TestCase ):
         
         #
         
-        path = CC.GetExpectedThumbnailPath( self._file_hash )
+        path = ClientFiles.GetExpectedThumbnailPath( self._file_hash )
         
         with open( path, 'wb' ) as f: f.write( 'thumb' )
         
@@ -140,7 +143,7 @@ class TestServer( unittest.TestCase ):
         
         # file
         
-        path = SC.GetExpectedPath( 'file', self._file_hash )
+        path = ServerFiles.GetExpectedPath( 'file', self._file_hash )
         
         with open( path, 'wb' ) as f: f.write( 'file' )
         
@@ -183,7 +186,7 @@ class TestServer( unittest.TestCase ):
         
         # thumbnail
         
-        path = SC.GetExpectedPath( 'thumbnail', self._file_hash )
+        path = ServerFiles.GetExpectedPath( 'thumbnail', self._file_hash )
         
         with open( path, 'wb' ) as f: f.write( 'thumb' )
         
@@ -218,8 +221,8 @@ class TestServer( unittest.TestCase ):
         share_key = os.urandom( 32 )
         hashes = [ os.urandom( 32 ) for i in range( 5 ) ]
         
-        with open( CC.GetExpectedFilePath( hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
-        with open( CC.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
+        with open( ClientFiles.GetExpectedFilePath( hashes[0], HC.IMAGE_JPEG ), 'wb' ) as f: f.write( 'file' )
+        with open( ClientFiles.GetExpectedThumbnailPath( hashes[0], False ), 'wb' ) as f: f.write( 'thumbnail' )
         
         local_booru_manager = HC.app.GetManager( 'local_booru' )
         
@@ -237,7 +240,7 @@ class TestServer( unittest.TestCase ):
         
         # hash, inbox, size, mime, timestamp, width, height, duration, num_frames, num_words, tags_manager, locations_manager, local_ratings, remote_ratings
         
-        media_results = [ CC.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 0, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
+        media_results = [ ClientMedia.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 0, 640, 480, None, None, None, None, None, None, None ) ) for hash in hashes ]
         
         HC.app.SetRead( 'local_booru_share_keys', [ share_key ] )
         HC.app.SetRead( 'local_booru_share', info )
@@ -335,7 +338,7 @@ class TestServer( unittest.TestCase ):
         update = 'update'
         begin = 100
         
-        path = SC.GetExpectedUpdatePath( service_key, begin )
+        path = ServerFiles.GetExpectedUpdatePath( service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( update )
         

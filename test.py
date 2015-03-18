@@ -4,8 +4,8 @@ try: locale.setlocale( locale.LC_ALL, '' )
 except: pass
 
 from include import HydrusConstants as HC
-
 from include import ClientConstants as CC
+from include import ClientDefaults
 from include import HydrusNetworking
 from include import HydrusSessions
 from include import HydrusTags
@@ -30,6 +30,8 @@ import time
 import unittest
 import wx
 from twisted.internet import reactor
+from include import ClientCaches
+from include import ClientData
 
 only_run = None
 
@@ -51,12 +53,12 @@ class App( wx.App ):
         self._reads[ 'local_booru_share_keys' ] = []
         self._reads[ 'messaging_sessions' ] = []
         self._reads[ 'tag_censorship' ] = []
-        self._reads[ 'options' ] = CC.CLIENT_DEFAULT_OPTIONS
+        self._reads[ 'options' ] = ClientDefaults.GetClientDefaultOptions()
         
         services = []
-        services.append( CC.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, HC.LOCAL_BOORU_SERVICE_KEY, { 'max_monthly_data' : None, 'used_monthly_data' : 0 } ) )
-        services.append( CC.Service( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, HC.LOCAL_FILE_SERVICE_KEY, {} ) )
-        services.append( CC.Service( HC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, HC.LOCAL_TAG_SERVICE_KEY, {} ) )
+        services.append( ClientData.Service( HC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, HC.LOCAL_BOORU_SERVICE_KEY, { 'max_monthly_data' : None, 'used_monthly_data' : 0 } ) )
+        services.append( ClientData.Service( HC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE, HC.LOCAL_FILE_SERVICE_KEY, {} ) )
+        services.append( ClientData.Service( HC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, HC.LOCAL_TAG_SERVICE_KEY, {} ) )
         self._reads[ 'services' ] = services
         
         self._reads[ 'sessions' ] = []
@@ -64,24 +66,24 @@ class App( wx.App ):
         self._reads[ 'tag_siblings' ] = {}
         self._reads[ 'web_sessions' ] = {}
         
-        HC.options = CC.CLIENT_DEFAULT_OPTIONS
+        HC.options = ClientDefaults.GetClientDefaultOptions()
         HC.pubsub = TestConstants.FakePubSub()
         
         self._writes = collections.defaultdict( list )
         
         self._managers = {}
         
-        self._managers[ 'services' ] = CC.ServicesManager()
+        self._managers[ 'services' ] = ClientData.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
-        self._managers[ 'undo' ] = CC.UndoManager()
+        self._managers[ 'undo' ] = ClientData.UndoManager()
         self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         self._managers[ 'restricted_services_sessions' ] = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'messaging_sessions' ] = HydrusSessions.HydrusMessagingSessionManagerServer()
-        self._managers[ 'local_booru' ] = CC.LocalBooruCache()
+        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
         
         self._cookies = {}
         

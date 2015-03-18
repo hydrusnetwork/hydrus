@@ -1,9 +1,12 @@
 import HydrusConstants as HC
 import ClientConstants as CC
+import ClientData
+import ClientCaches
+import ClientFiles
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
-import ClientGUIMixins
+import ClientMedia
 import collections
 import gc
 import HydrusImageHandling
@@ -39,25 +42,6 @@ ZOOMOUTS = [ 20.0, 10.0, 5.0, 3.0, 2.0, 1.5, 1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.5, 
 NON_ZOOMABLE_MIMES = list( HC.AUDIO ) + [ HC.APPLICATION_PDF ]
 
 NON_LARGABLY_ZOOMABLE_MIMES = [ mime for mime in HC.VIDEO if mime != HC.VIDEO_WEBM ] + [ HC.APPLICATION_FLASH ]
-
-# Sizer Flags
-
-FLAGS_NONE = wx.SizerFlags( 0 )
-
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 def CalculateCanvasZoom( media, ( canvas_width, canvas_height ) ):
     
@@ -599,7 +583,7 @@ class Canvas( object ):
             hash = self._current_display_media.GetHash()
             mime = self._current_display_media.GetMime()
             
-            path = CC.GetFilePath( hash, mime )
+            path = ClientFiles.GetFilePath( hash, mime )
             
             HC.LaunchFile( path )
             
@@ -1051,13 +1035,13 @@ class CanvasPanel( Canvas, wx.Window ):
             
         
     
-class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, CanvasWithDetails, ClientGUICommon.FrameThatResizes ):
+class CanvasFullscreenMediaList( ClientMedia.ListeningMediaList, CanvasWithDetails, ClientGUICommon.FrameThatResizes ):
     
     def __init__( self, my_parent, page_key, file_service_key, media_results ):
         
         ClientGUICommon.FrameThatResizes.__init__( self, my_parent, resize_option_prefix = 'fs_', title = 'hydrus client fullscreen media viewer' )
         CanvasWithDetails.__init__( self, file_service_key, HC.app.GetFullscreenImageCache() )
-        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_key, media_results )
+        ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self._page_key = page_key
         
@@ -1272,7 +1256,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, CanvasWithD
         
         singleton_media = { self._current_display_media }
         
-        ClientGUIMixins.ListeningMediaList._RemoveMedia( self, singleton_media, {} )
+        ClientMedia.ListeningMediaList._RemoveMedia( self, singleton_media, {} )
         
         if self.HasNoMedia(): self.EventClose( None )
         elif self.HasMedia( self._current_media ):
@@ -1298,7 +1282,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, CanvasWithD
         
         if page_key == self._page_key:
             
-            ClientGUIMixins.ListeningMediaList.AddMediaResults( self, media_results )
+            ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
             
             self._DrawBackgroundBitmap()
             
@@ -1312,7 +1296,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, CanvasWithD
         
         if next_media == self._current_media: next_media = None
         
-        ClientGUIMixins.ListeningMediaList.Archive( self, hashes )
+        ClientMedia.ListeningMediaList.Archive( self, hashes )
         
         if self.HasNoMedia(): self.EventClose( None )
         elif self.HasMedia( self._current_media ): self._DrawCurrentMedia()
@@ -1415,7 +1399,7 @@ class CanvasFullscreenMediaList( ClientGUIMixins.ListeningMediaList, CanvasWithD
         
         if next_media == self._current_media: next_media = None
         
-        ClientGUIMixins.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
+        ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
         if self.HasNoMedia(): self.EventClose( None )
         elif self.HasMedia( self._current_media ):
@@ -1570,7 +1554,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
                     
                     action = key_dict[ key ]
                     
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
                     
                 else: event.Skip()
                 
@@ -1598,7 +1582,7 @@ class CanvasFullscreenMediaListFilter( CanvasFullscreenMediaList ):
         if self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
             
-            action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
             
             if action is not None:
                 
@@ -1740,7 +1724,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
     
     def _CopyPathToClipboard( self ):
         
-        path = CC.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
+        path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HC.pubsub.pub( 'clipboard', 'text', path )
         
@@ -1805,7 +1789,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
                     
                     action = key_dict[ key ]
                     
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
                     
                 else: event.Skip()
                 
@@ -1818,7 +1802,7 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         if event.GetEventObject() is None and self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
             
-            action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
             
             if action is not None:
                 
@@ -1899,8 +1883,8 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         menu.Append( CC.ID_NULL, 'current zoom: ' + HC.ConvertZoomToPercentage( self._current_zoom ) )
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
         
         #
         
@@ -1912,9 +1896,9 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
             
             if self._current_zoom == 1.0:
                 
-                if media_width > my_width or media_height > my_height: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
                 
-            else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+            else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
             
         
         #
@@ -1923,31 +1907,31 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         manage_menu = wx.Menu()
         
-        manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+        manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
         
-        if i_can_post_ratings: manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+        if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
         
         menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
         
         menu.AppendSeparator()
         
-        if self._current_display_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-        if self._current_display_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
+        if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove', HC.LOCAL_FILE_SERVICE_KEY ), '&remove' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         menu.AppendSeparator()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
         
         share_menu = wx.Menu()
         
         copy_menu = wx.Menu()
         
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ) , 'file' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
@@ -1957,21 +1941,21 @@ class CanvasFullscreenMediaListBrowser( CanvasFullscreenMediaListNavigable ):
         
         slideshow = wx.Menu()
         
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 1000 ), '1 second' )
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 5000 ), '5 seconds' )
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 10000 ), '10 seconds' )
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 30000 ), '30 seconds' )
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 60000 ), '60 seconds' )
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 80 ), 'william gibson' )
-        slideshow.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow' ), 'custom interval' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 1000 ), '1 second' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 5000 ), '5 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 10000 ), '10 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 30000 ), '30 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 60000 ), '60 seconds' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow', 80 ), 'william gibson' )
+        slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow' ), 'custom interval' )
         
         menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
-        if self._timer_slideshow.IsRunning(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow_pause_play' ), 'stop slideshow' )
+        if self._timer_slideshow.IsRunning(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'slideshow_pause_play' ), 'stop slideshow' )
         
         menu.AppendSeparator()
         
-        if self.IsFullScreen(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
-        else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
+        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
+        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
         
         self._menu_open = True
         
@@ -2021,7 +2005,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
     
     def _CopyPathToClipboard( self ):
         
-        path = CC.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
+        path = ClientFiles.GetFilePath( self._current_display_media.GetHash(), self._current_display_media.GetMime() )
         
         HC.pubsub.pub( 'clipboard', 'text', path )
         
@@ -2193,7 +2177,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
                         
                         action = key_dict[ key ]
                         
-                        self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                        self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
                         
                     else: event.Skip()
                     
@@ -2207,7 +2191,7 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         if event.GetEventObject() is None and self._ShouldSkipInputDueToFlash(): event.Skip()
         else:
             
-            action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
             
             if action is not None:
                 
@@ -2281,8 +2265,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.Append( CC.ID_NULL, 'current zoom: ' + HC.ConvertZoomToPercentage( self._current_zoom ) )
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_in' ), 'zoom in' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_out' ), 'zoom out' )
         
         #
         
@@ -2294,9 +2278,9 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
             
             if self._current_zoom == 1.0:
                 
-                if media_width > my_width or media_height > my_height: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
+                if media_width > my_width or media_height > my_height: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom fit' )
                 
-            else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
+            else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'zoom_switch' ), 'zoom full' )
             
         
         #
@@ -2305,31 +2289,31 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         manage_menu = wx.Menu()
         
-        manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
+        manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), 'tags' )
         
-        if i_can_post_ratings: manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
+        if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), 'ratings' )
         
         menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
         
         menu.AppendSeparator()
         
-        if self._current_display_media.HasInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
-        if self._current_display_media.HasArchive(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+        if self._current_display_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), '&archive' )
+        if self._current_display_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to &inbox' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), '&remove' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
         
         menu.AppendSeparator()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
         
         share_menu = wx.Menu()
         
         copy_menu = wx.Menu()
         
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
-        copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), 'file' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ), 'hash' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ), 'path' )
+        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ), 'local url' )
         
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
@@ -2337,8 +2321,8 @@ class CanvasFullscreenMediaListCustomFilter( CanvasFullscreenMediaListNavigable 
         
         menu.AppendSeparator()
         
-        if self.IsFullScreen(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
-        else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
+        if self.IsFullScreen(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'exit fullscreen' )
+        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen_switch' ), 'go fullscreen' )
         
         self._menu_open = True
         
@@ -2372,8 +2356,8 @@ class FullscreenPopout( wx.Frame ):
         
         self._button_window = self._InitialiseButtonWindow( hbox )
         
-        hbox.AddF( self._popout_window, FLAGS_EXPAND_PERPENDICULAR )
-        hbox.AddF( self._button_window, FLAGS_EXPAND_PERPENDICULAR )
+        hbox.AddF( self._popout_window, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox.AddF( self._button_window, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( hbox )
         
@@ -2402,8 +2386,8 @@ class FullscreenPopout( wx.Frame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._move_button, FLAGS_MIXED )
-        vbox.AddF( self._arrow_button, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._move_button, CC.FLAGS_MIXED )
+        vbox.AddF( self._arrow_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         button_window.SetSizer( vbox )
         
@@ -2512,9 +2496,9 @@ class FullscreenPopoutFilterCustom( FullscreenPopout ):
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, parent.EventClose )
         
-        vbox.AddF( actions, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
         
@@ -2549,12 +2533,12 @@ class FullscreenPopoutFilterInbox( FullscreenPopout ):
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
         
-        vbox.AddF( keep, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( delete, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( keep, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( delete, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( skip, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
         
@@ -2589,12 +2573,12 @@ class FullscreenPopoutFilterLike( FullscreenPopout ):
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, parent.EventButtonDone )
         
-        vbox.AddF( like, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( dislike, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( like, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( dislike, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( skip, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
         
@@ -2634,9 +2618,9 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         self._accuracy_slider = wx.Slider( window, size = ( 50, -1 ), value = value, minValue = 0, maxValue = 4 )
         self._accuracy_slider.Bind( wx.EVT_SLIDER, self.EventAccuracySlider )
         
-        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'quick' ), FLAGS_MIXED )
-        accuracy_slider_hbox.AddF( self._accuracy_slider, FLAGS_EXPAND_BOTH_WAYS )
-        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'accurate' ), FLAGS_MIXED )
+        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'quick' ), CC.FLAGS_MIXED )
+        accuracy_slider_hbox.AddF( self._accuracy_slider, CC.FLAGS_EXPAND_BOTH_WAYS )
+        accuracy_slider_hbox.AddF( wx.StaticText( window, label = 'accurate' ), CC.FLAGS_MIXED )
         
         self.EventAccuracySlider( None )
         
@@ -2677,9 +2661,9 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         self._left_right_slider = wx.Slider( window, size = ( 30, -1 ), value = left_right_value, minValue = 0, maxValue = 2 )
         self._left_right_slider.Bind( wx.EVT_SLIDER, self.EventLeftRight )
         
-        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'left' ), FLAGS_MIXED )
-        self._left_right_slider_sizer.AddF( self._left_right_slider, FLAGS_EXPAND_BOTH_WAYS )
-        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'right' ), FLAGS_MIXED )
+        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'left' ), CC.FLAGS_MIXED )
+        self._left_right_slider_sizer.AddF( self._left_right_slider, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._left_right_slider_sizer.AddF( wx.StaticText( window, label = 'right' ), CC.FLAGS_MIXED )
         
         self.EventLeftRight( None )
         
@@ -2709,20 +2693,20 @@ class FullscreenPopoutFilterNumerical( FullscreenPopout ):
         done = wx.Button( window, label = 'done' )
         done.Bind( wx.EVT_BUTTON, self._callable_parent.EventButtonDone )
         
-        vbox.AddF( accuracy_slider_hbox, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._compare_same, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._left_right_slider_sizer, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( accuracy_slider_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._compare_same, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._left_right_slider_sizer, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( wx.StaticLine( window, style = wx.LI_HORIZONTAL ), FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( wx.StaticLine( window, style = wx.LI_HORIZONTAL ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( left, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( right, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( equal, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( skip, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( back, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( dont_filter, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fullscreen_switch, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( done, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( left, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( right, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( equal, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( skip, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( dont_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( fullscreen_switch, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( done, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         window.SetSizer( vbox )
         
@@ -2826,12 +2810,12 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         self._page_key = page_key
         self._service_key = service_key
-        self._media_still_to_rate = { ClientGUIMixins.MediaSingleton( media_result ) for media_result in media_results }
+        self._media_still_to_rate = { ClientMedia.MediaSingleton( media_result ) for media_result in media_results }
         self._current_media_to_rate = None
         
         self._service = HC.app.GetManager( 'services' ).GetService( service_key )
         
-        self._file_query_result = CC.FileQueryResult( media_results )
+        self._file_query_result = ClientData.FileQueryResult( media_results )
         
         if self._service.GetServiceType() == HC.LOCAL_RATING_LIKE: self._score_gap = 1.0
         else:
@@ -2860,7 +2844,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._splitter, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._splitter, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -3059,7 +3043,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             if hash in self._file_query_result.GetHashes(): media_result_to_rate_against = self._file_query_result.GetMediaResult( hash )
             else: self._file_query_result.AddMediaResults( ( media_result_to_rate_against, ) )
             
-            media_to_rate_against = ClientGUIMixins.MediaSingleton( media_result_to_rate_against )
+            media_to_rate_against = ClientMedia.MediaSingleton( media_result_to_rate_against )
             
         else: media_to_rate_against = None
         
@@ -3404,7 +3388,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                 
                 action = key_dict[ key ]
                 
-                self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
                 
             else: event.Skip()
             
@@ -3412,7 +3396,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -3613,7 +3597,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
                     
                     action = key_dict[ key ]
                     
-                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
+                    self.ProcessEvent( wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) )
                     
                 else:
                     
@@ -3631,7 +3615,7 @@ class RatingsFilterFrameNumerical( ClientGUICommon.FrameThatResizes ):
             if self._ShouldSkipInputDueToFlash(): event.Skip()
             else:
                 
-                action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+                action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
                 
                 if action is not None:
                     
@@ -3720,14 +3704,14 @@ class MediaContainer( wx.Window ):
             
             self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
             
-            self._media_window.movie = CC.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
+            self._media_window.movie = ClientFiles.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
             
         elif self._media.GetMime() == HC.VIDEO_FLV:
             
             self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
             
             flash_vars = []
-            flash_vars.append( ( 'flv', CC.GetFilePath( self._media.GetHash(), HC.VIDEO_FLV ) ) )
+            flash_vars.append( ( 'flv', ClientFiles.GetFilePath( self._media.GetHash(), HC.VIDEO_FLV ) ) )
             flash_vars.append( ( 'margin', '0' ) )
             flash_vars.append( ( 'autoload', '1' ) )
             flash_vars.append( ( 'autoplay', '1' ) )
@@ -3927,7 +3911,7 @@ class EmbedWindowAudio( wx.Window ):
         
         self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
         
-        path = CC.GetFilePath( self._hash, self._mime )
+        path = ClientFiles.GetFilePath( self._hash, self._mime )
         
         self._media_ctrl.Load( path )
         
@@ -3936,7 +3920,7 @@ class EmbedWindowAudio( wx.Window ):
     
     def EventLaunchButton( self, event ):
         
-        path = CC.GetFilePath( self._hash, self._mime )
+        path = ClientFiles.GetFilePath( self._hash, self._mime )
         
         HC.LaunchFile( path )
         
@@ -3974,7 +3958,7 @@ class EmbedWindowVideo( wx.Window ):
         
         self._media_ctrl.ShowPlayerControls( wx.media.MEDIACTRLPLAYERCONTROLS_DEFAULT )
         
-        path = CC.GetFilePath( self._hash, self._mime )
+        path = ClientFiles.GetFilePath( self._hash, self._mime )
         
         self._media_ctrl.Load( path )
         
@@ -3983,7 +3967,7 @@ class EmbedWindowVideo( wx.Window ):
     
     def EventLaunchButton( self, event ):
         
-        path = CC.GetFilePath( self._hash, self._mime )
+        path = ClientFiles.GetFilePath( self._hash, self._mime )
         
         HC.LaunchFile( path )
         
@@ -4003,7 +3987,7 @@ class PDFButton( wx.Button ):
     
     def EventButton( self, event ):
         
-        path = CC.GetFilePath( self._hash, HC.APPLICATION_PDF )
+        path = ClientFiles.GetFilePath( self._hash, HC.APPLICATION_PDF )
         
         HC.LaunchFile( path )
         
@@ -4047,6 +4031,8 @@ class StaticImage( wx.Window ):
         
         if self._image_container.IsRendered():
             
+            self._timer_render_wait.Stop()
+            
             hydrus_bitmap = self._image_container.GetHydrusBitmap()
             
             ( my_width, my_height ) = self._canvas_bmp.GetSize()
@@ -4068,8 +4054,6 @@ class StaticImage( wx.Window ):
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
             wx.CallAfter( wx_bitmap.Destroy )
-            
-            self._timer_render_wait.Stop()
             
         
     

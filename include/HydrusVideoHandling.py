@@ -1,5 +1,6 @@
 #import numpy.core.multiarray # important this comes before cv!
 import ClientConstants as CC
+import ClientFiles
 import cv2
 from flvlib import tags as flv_tags
 import HydrusConstants as HC
@@ -284,7 +285,7 @@ class VideoContainer( HydrusImageHandling.RasterContainer ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        path = CC.GetFilePath( hash, mime )
+        path = ClientFiles.GetFilePath( hash, mime )
         
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()

@@ -1,5 +1,6 @@
 import BaseHTTPServer
 import ClientConstants as CC
+import ClientFiles
 import Cookie
 import hashlib
 import httplib
@@ -13,7 +14,7 @@ import HydrusNATPunch
 import HydrusImageHandling
 import os
 import random
-import ServerConstants as SC
+import ServerFiles
 import SocketServer
 import threading
 import time
@@ -658,7 +659,7 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
-        path = CC.GetFilePath( hash )
+        path = ClientFiles.GetFilePath( hash )
         
         response_context = HC.ResponseContext( 200, path = path )
         
@@ -773,7 +774,7 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         
         mime = media_result.GetMime()
         
-        if mime in HC.MIMES_WITH_THUMBNAILS: path = CC.GetThumbnailPath( hash, full_size = False )
+        if mime in HC.MIMES_WITH_THUMBNAILS: path = ClientFiles.GetThumbnailPath( hash, full_size = False )
         elif mime in HC.AUDIO: path = HC.STATIC_DIR + os.path.sep + 'audio_resized.png'
         elif mime in HC.VIDEO: path = HC.STATIC_DIR + os.path.sep + 'video_resized.png'
         elif mime == HC.APPLICATION_FLASH: path = HC.STATIC_DIR + os.path.sep + 'flash_resized.png'
@@ -804,7 +805,7 @@ class HydrusResourceCommandLocalFile( HydrusResourceCommand ):
         
         hash = request.hydrus_args[ 'hash' ]
         
-        path = CC.GetFilePath( hash )
+        path = ClientFiles.GetFilePath( hash )
         
         response_context = HC.ResponseContext( 200, path = path )
         
@@ -817,7 +818,7 @@ class HydrusResourceCommandLocalThumbnail( HydrusResourceCommand ):
         
         hash = request.hydrus_args[ 'hash' ]
         
-        path = CC.GetThumbnailPath( hash )
+        path = ClientFiles.GetThumbnailPath( hash )
         
         response_context = HC.ResponseContext( 200, path = path )
         
@@ -1123,7 +1124,7 @@ class HydrusResourceCommandRestrictedRepositoryFile( HydrusResourceCommandRestri
         
         # don't I need to check that we aren't stealing the file from another service?
         
-        path = SC.GetPath( 'file', hash )
+        path = ServerFiles.GetPath( 'file', hash )
         
         response_context = HC.ResponseContext( 200, path = path )
         
@@ -1158,7 +1159,7 @@ class HydrusResourceCommandRestrictedRepositoryThumbnail( HydrusResourceCommandR
         
         # don't I need to check that we aren't stealing the file from another service?
         
-        path = SC.GetPath( 'thumbnail', hash )
+        path = ServerFiles.GetPath( 'thumbnail', hash )
         
         response_context = HC.ResponseContext( 200, path = path )
         
@@ -1229,7 +1230,7 @@ class HydrusResourceCommandRestrictedUpdate( HydrusResourceCommandRestricted ):
         
         begin = request.hydrus_args[ 'begin' ]
         
-        path = SC.GetUpdatePath( self._service_key, begin )
+        path = ServerFiles.GetUpdatePath( self._service_key, begin )
         
         response_context = HC.ResponseContext( 200, path = path, is_yaml = True )
         

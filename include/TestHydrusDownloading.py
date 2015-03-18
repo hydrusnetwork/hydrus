@@ -1,4 +1,6 @@
 import ClientConstants as CC
+import ClientData
+import ClientDefaults
 import collections
 import HydrusConstants as HC
 import HydrusDownloading
@@ -152,7 +154,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = HydrusDownloading.DownloaderBooru( CC.DEFAULT_BOORUS[ 'sankaku chan' ], [ 'animal_ears' ] )
+        downloader = HydrusDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'sankaku chan' ], [ 'animal_ears' ] )
         
         #
         
@@ -202,7 +204,7 @@ class TestDownloaders( unittest.TestCase ):
         
         #
         
-        downloader = HydrusDownloading.DownloaderBooru( CC.DEFAULT_BOORUS[ 'e621' ], [ 'flash' ] )
+        downloader = HydrusDownloading.DownloaderBooru( ClientDefaults.GetDefaultBoorus()[ 'e621' ], [ 'flash' ] )
         
         #
         

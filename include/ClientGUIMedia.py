@@ -1,11 +1,15 @@
 import HydrusConstants as HC
 import ClientConstants as CC
+import ClientCaches
+import ClientData
+import ClientFiles
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUICanvas
-import ClientGUIMixins
+import ClientMedia
 import collections
+import HydrusExceptions
 import HydrusTags
 import HydrusThreading
 import itertools
@@ -22,25 +26,6 @@ import yaml
 
 ID_TIMER_ANIMATION = wx.NewId()
 
-# Sizer Flags
-
-FLAGS_NONE = wx.SizerFlags( 0 )
-
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
 def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
     
     services_manager = HC.app.GetManager( 'services' )
@@ -50,7 +35,7 @@ def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
         ( file_service_key, ) = file_service_keys
         
         if action == CC.ID_NULL: id = CC.ID_NULL
-        else: id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action, file_service_key )
+        else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action, file_service_key )
         
         file_service = services_manager.GetService( file_service_key )
         
@@ -63,7 +48,7 @@ def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
         for file_service_key in file_service_keys: 
             
             if action == CC.ID_NULL: id = CC.ID_NULL
-            else: id = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action, file_service_key )
+            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action, file_service_key )
             
             file_service = services_manager.GetService( file_service_key )
             
@@ -73,12 +58,12 @@ def AddFileServiceKeysToMenu( menu, file_service_keys, phrase, action ):
         menu.AppendMenu( CC.ID_NULL, phrase + u'\u2026', submenu )
         
     
-class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
+class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
         wx.ScrolledWindow.__init__( self, parent, size = ( 0, 0 ), style = wx.BORDER_SUNKEN )
-        ClientGUIMixins.ListeningMediaList.__init__( self, file_service_key, media_results )
+        ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
         self.SetBackgroundColour( wx.WHITE )
         
@@ -157,7 +142,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
         display_media = self._focussed_media.GetDisplayMedia()
         
-        path = CC.GetFilePath( display_media.GetHash(), display_media.GetMime() )
+        path = ClientFiles.GetFilePath( display_media.GetHash(), display_media.GetMime() )
         
         HC.pubsub.pub( 'clipboard', 'text', path )
         
@@ -475,7 +460,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             hash = self._focussed_media.GetHash()
             mime = self._focussed_media.GetMime()
             
-            path = CC.GetFilePath( hash, mime )
+            path = ClientFiles.GetFilePath( hash, mime )
             
             HC.LaunchFile( path )
             
@@ -669,12 +654,10 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def AddMediaResults( self, page_key, media_results, append = True ):
         
-        if page_key == self._page_key: return ClientGUIMixins.ListeningMediaList.AddMediaResults( self, media_results, append = append )
+        if page_key == self._page_key: return ClientMedia.ListeningMediaList.AddMediaResults( self, media_results, append = append )
         
     
     def Archive( self, hashes ):
-        
-        ClientGUIMixins.ListeningMediaList.Archive( self, hashes )
         
         affected_media = self._GetMedia( hashes )
         
@@ -691,7 +674,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
             
             self._Select( 'none' )
             
-            ClientGUIMixins.ListeningMediaList.Collect( self, collect_by )
+            ClientMedia.ListeningMediaList.Collect( self, collect_by )
             
             self._RecalculateVirtualSize()
             
@@ -728,7 +711,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
-        ClientGUIMixins.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
+        ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
         force_reload = False
         
@@ -758,7 +741,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
         
-        ClientGUIMixins.ListeningMediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
+        ClientMedia.ListeningMediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
         
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
@@ -787,7 +770,7 @@ class MediaPanel( ClientGUIMixins.ListeningMediaList, wx.ScrolledWindow ):
     
     def Sort( self, page_key, sort_by = None ):
         
-        if page_key == self._page_key: ClientGUIMixins.ListeningMediaList.Sort( self, sort_by )
+        if page_key == self._page_key: ClientMedia.ListeningMediaList.Sort( self, sort_by )
         
         HC.pubsub.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
@@ -859,7 +842,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._timer_animation = wx.Timer( self, ID_TIMER_ANIMATION )
         self._thumbnails_being_faded_in = {}
         
-        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        self._thumbnail_span_dimensions = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -1430,7 +1413,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -1603,7 +1586,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if self._refreshable:
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
                 
             
             if len( self._sorted_media ) > 0:
@@ -1614,18 +1597,18 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( self._selected_media ) < len( self._sorted_media ):
                     
-                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
                     
                 
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
+                select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
                 
                 if media_has_archive and media_has_inbox:
                     
-                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
-                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
                     
                 
-                select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
+                select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
                 
                 menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
                 
@@ -1827,7 +1810,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     file_repo_menu = wx.Menu()
                     
-                    if len( selection_downloadable_file_service_keys ) > 0: file_repo_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'download' ), download_phrase )
+                    if len( selection_downloadable_file_service_keys ) > 0: file_repo_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'download' ), download_phrase )
                     
                     if len( selection_uploadable_file_service_keys ) > 0: AddFileServiceKeysToMenu( file_repo_menu, selection_uploadable_file_service_keys, upload_phrase, 'upload' )
                     
@@ -1848,9 +1831,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 manage_menu = wx.Menu()
                 
-                manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), manage_tags_phrase )
+                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_tags' ), manage_tags_phrase )
                 
-                if i_can_post_ratings: manage_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), manage_ratings_phrase )
+                if i_can_post_ratings: manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'manage_ratings' ), manage_ratings_phrase )
                 
                 menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
                 
@@ -1862,18 +1845,18 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         filter_menu = wx.Menu()
                         
-                        if multiple_selected: filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'archive/delete' )
+                        if multiple_selected: filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'filter' ), 'archive/delete' )
                         
                         if i_can_post_ratings:
                             
                             ratings_filter_menu = wx.Menu()
                             
-                            for service in local_ratings_services: ratings_filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceKey() ), service.GetName() )
+                            for service in local_ratings_services: ratings_filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter', service.GetServiceKey() ), service.GetName() )
                             
-                            filter_menu.AppendMenu( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
+                            filter_menu.AppendMenu( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ratings_filter' ), 'ratings filter', ratings_filter_menu )
                             
                         
-                        if multiple_selected: filter_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
+                        if multiple_selected: filter_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'custom_filter' ), 'custom filter' )
                         
                         menu.AppendMenu( CC.ID_NULL, 'filter', filter_menu )
                         
@@ -1883,18 +1866,18 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_local:
                     
-                    if selection_has_inbox: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), archive_phrase )
-                    if selection_has_archive: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
+                    if selection_has_inbox: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), archive_phrase )
+                    if selection_has_archive: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), inbox_phrase )
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), remove_phrase )
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), local_delete_phrase )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'remove' ), remove_phrase )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ), local_delete_phrase )
                     
                 
                 # share
                 
                 menu.AppendSeparator()
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'open_externally', HC.LOCAL_FILE_SERVICE_KEY ), '&open externally' )
                 
                 share_menu = wx.Menu()
                 
@@ -1902,31 +1885,31 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 copy_menu = wx.Menu()
                 
-                copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), copy_phrase )
-                copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
-                if multiple_selected: copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes' ) , 'hashes' )
-                if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None: copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ) , 'image' )
-                copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
-                copy_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' ), copy_phrase )
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hash' ) , 'hash' )
+                if multiple_selected: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_hashes' ) , 'hashes' )
+                if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_bmp' ) , 'image' )
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_path' ) , 'path' )
+                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_local_url' ) , 'local url' )
                 
                 share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
                 
                 #
                 
-                share_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
+                share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'new_thread_dumper' ), dump_phrase )
                 
                 #
                 
                 export_menu  = wx.Menu()
                 
-                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_files' ), export_phrase )
-                export_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_tags' ), 'tags' )
+                export_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_files' ), export_phrase )
+                export_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'export_tags' ), 'tags' )
                 
                 share_menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
                 
                 #
                 
-                share_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'share_on_local_booru' ), 'on local booru' )
+                share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'share_on_local_booru' ), 'on local booru' )
                 
                 #
                 
@@ -1938,7 +1921,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     menu.AppendSeparator()
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'refresh' ), 'refresh' )
                     
                 
                 if len( self._sorted_media ) > 0:
@@ -1947,30 +1930,30 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     select_menu = wx.Menu()
                     
-                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ), 'all' )
                     
-                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'invert' ), 'invert' )
                     
                     if media_has_archive and media_has_inbox:
                         
-                        select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
-                        select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
+                        select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'inbox' ), 'inbox' )
+                        select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'archive' ), 'archive' )
                         
                     
-                    select_menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
+                    select_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'none' ), 'none' )
                     
                     menu.AppendMenu( CC.ID_NULL, 'select', select_menu )
                     
                 
                 menu.AppendSeparator()
                 
-                menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
+                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
                 
                 if self._focussed_media.HasImages():
                     
                     menu.AppendSeparator()
                     
-                    menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'get_similar_to' ) , 'find very similar images' )
+                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'get_similar_to' ) , 'find very similar images' )
                     
                 
             
@@ -1997,40 +1980,40 @@ class MediaPanelThumbnails( MediaPanel ):
     def RefreshAcceleratorTable( self ):
         
         entries = [
-        ( wx.ACCEL_NORMAL, wx.WXK_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_home' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_home' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_RETURN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_ENTER, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_up' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_up' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_down' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_down' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_left' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_left' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_right' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_right' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_HOME, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_END, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_down' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_down' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_left' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_left' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
-        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
-        ( wx.ACCEL_CTRL, ord( 'A' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ) ),
-        ( wx.ACCEL_CTRL, ord( 'c' ), CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' )  ),
-        ( wx.ACCEL_CTRL, wx.WXK_SPACE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ctrl-space' )  )
+        ( wx.ACCEL_NORMAL, wx.WXK_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_home' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_home' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'scroll_end' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete', HC.LOCAL_FILE_SERVICE_KEY ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_RETURN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_ENTER, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'fullscreen' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_up' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_up' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_down' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_down' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_left' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_left' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_right' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_right' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_home' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'shift_scroll_end' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_up' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_down' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_down' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_left' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_left' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
+        ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'key_shift_right' ) ),
+        ( wx.ACCEL_CTRL, ord( 'A' ), ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'select', 'all' ) ),
+        ( wx.ACCEL_CTRL, ord( 'c' ), ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'copy_files' )  ),
+        ( wx.ACCEL_CTRL, wx.WXK_SPACE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'ctrl-space' )  )
         ]
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -2068,7 +2051,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def ThumbnailsResized( self ):
         
-        self._thumbnail_span_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
+        self._thumbnail_span_dimensions = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( CC.THUMBNAIL_BORDER + CC.THUMBNAIL_MARGIN ) * 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_span_dimensions
         
@@ -2174,7 +2157,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             thumbnail.SetBmp( thumbnail_bmp )
             
-            thumbnail_index = self._sorted_media.index( thumbnail )
+            try:
+                
+                thumbnail_index = self._sorted_media.index( thumbnail )
+                
+            except HydrusExceptions.NotFoundException:
+                
+                return # usually means the user did a 'collect' while they were fading in
+                
             
             self._FadeThumbnail( thumbnail_index )
             
@@ -2202,7 +2192,7 @@ class Thumbnail( Selectable ):
         self._hydrus_bmp = None
         self._file_service_key = file_service_key
         
-        self._my_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
     
     def _LoadFromDB( self ): self._hydrus_bmp = HC.app.GetThumbnailCache().GetThumbnail( self )
@@ -2445,31 +2435,31 @@ class Thumbnail( Selectable ):
     
     def ReloadFromDB( self ):
         
-        self._my_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
         if self._hydrus_bmp is not None: self._LoadFromDB()
         
     
     def ReloadFromDBLater( self ):
         
-        self._my_dimensions = CC.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
+        self._my_dimensions = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
         self._hydrus_bmp = None
         
     
     def SetBmp( self, bmp ): self._hydrus_bmp = bmp
     
-class ThumbnailMediaCollection( Thumbnail, ClientGUIMixins.MediaCollection ):
+class ThumbnailMediaCollection( Thumbnail, ClientMedia.MediaCollection ):
     
     def __init__( self, file_service_key, media_results ):
         
-        ClientGUIMixins.MediaCollection.__init__( self, file_service_key, media_results )
+        ClientMedia.MediaCollection.__init__( self, file_service_key, media_results )
         Thumbnail.__init__( self, file_service_key )
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
-        ClientGUIMixins.MediaCollection.ProcessContentUpdate( self, service_key, content_update )
+        ClientMedia.MediaCollection.ProcessContentUpdate( self, service_key, content_update )
         
         if service_key == HC.LOCAL_FILE_SERVICE_KEY:
             
@@ -2484,17 +2474,17 @@ class ThumbnailMediaCollection( Thumbnail, ClientGUIMixins.MediaCollection ):
             
         
     
-class ThumbnailMediaSingleton( Thumbnail, ClientGUIMixins.MediaSingleton ):
+class ThumbnailMediaSingleton( Thumbnail, ClientMedia.MediaSingleton ):
     
     def __init__( self, file_service_key, media_result ):
         
-        ClientGUIMixins.MediaSingleton.__init__( self, media_result )
+        ClientMedia.MediaSingleton.__init__( self, media_result )
         Thumbnail.__init__( self, file_service_key )
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
         
-        ClientGUIMixins.MediaSingleton.ProcessContentUpdate( self, service_key, content_update )
+        ClientMedia.MediaSingleton.ProcessContentUpdate( self, service_key, content_update )
         
         if service_key == HC.LOCAL_FILE_SERVICE_KEY:
             

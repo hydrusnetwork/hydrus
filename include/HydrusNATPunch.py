@@ -153,7 +153,8 @@ def GetUPnPMappings():
             
             '''ExternalIPAddress = ip'''
             
-            ( gumpf, external_ip_address ) = lines[ i - 1 ].split( ' = ' )
+            try: ( gumpf, external_ip_address ) = lines[ i - 1 ].split( ' = ' )
+            except ValueError: return
             
             data_lines = []
             

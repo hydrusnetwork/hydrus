@@ -1,6 +1,8 @@
 import ClientConstants as CC
+import ClientData
 import collections
 import HydrusConstants as HC
+import HydrusNetworking
 import os
 import TestConstants
 import unittest
@@ -21,7 +23,7 @@ class TestFunctions( unittest.TestCase ):
         fields.append( ( 'spoiler/on', CC.FIELD_CHECKBOX, True ) )
         fields.append( ( 'upfile', CC.FIELD_FILE, ( hash, HC.IMAGE_GIF, TestConstants.tinest_gif ) ) )
         
-        result = CC.GenerateDumpMultipartFormDataCTAndBody( fields )
+        result = HydrusNetworking.GenerateDumpMultipartFormDataCTAndBody( fields )
         
         expected_result = ('multipart/form-data; boundary=----------AaB03x', '------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="sub"\r\n\r\nsubject\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="com"\r\n\r\n\xe2\x9a\x9cOP is a fag\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="pass"\r\n\r\n123456\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="recaptcha"\r\n\r\nreticulating splines\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="resto"\r\n\r\n1000000\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="spoiler"\r\n\r\non\r\n------------AaB03x\r\nContent-Type: image/gif\r\nContent-Disposition: form-data; name="upfile"; filename="5a1ba880a043e6207dca5f5407089fb0a0b0a588c8a6cd6a2807d173f59223d9.gif"\r\n\r\nGIF89a\x01\x00\x01\x00\x00\xff\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00;\r\n------------AaB03x--\r\n')
         
@@ -37,7 +39,7 @@ class TestFunctions( unittest.TestCase ):
         fields[ 'long_login' ] = 'yes'
         fields[ 'random_unicode' ] = u'\u269C'
         
-        result = CC.GenerateMultipartFormDataCTAndBodyFromDict( fields )
+        result = HydrusNetworking.GenerateMultipartFormDataCTAndBodyFromDict( fields )
         
         expected_result = ('multipart/form-data; boundary=----------AaB03x', '------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="long_login"\r\n\r\nyes\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="random_unicode"\r\n\r\n\xe2\x9a\x9c\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="id"\r\n\r\ntoken\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="pin"\r\n\r\npin\r\n------------AaB03x\r\nContent-Type: application/octet-stream\r\nContent-Disposition: form-data; name="act"\r\n\r\ndo_login\r\n------------AaB03x--\r\n')
         
@@ -61,11 +63,11 @@ class TestManagers( unittest.TestCase ):
         repo_name = 'test tag repo'
         repo_info = { 'blah' : 5 }
         
-        repo = CC.Service( repo_key, repo_type, repo_name, repo_info )
+        repo = ClientData.Service( repo_key, repo_type, repo_name, repo_info )
         
         other_key = os.urandom( 32 )
         
-        other = CC.Service( other_key, HC.LOCAL_BOORU, 'booru', {} )
+        other = ClientData.Service( other_key, HC.LOCAL_BOORU, 'booru', {} )
         
         services = []
         
@@ -74,7 +76,7 @@ class TestManagers( unittest.TestCase ):
         
         HC.app.SetRead( 'services', services )
         
-        services_manager = CC.ServicesManager()
+        services_manager = ClientData.ServicesManager()
         
         #
         
@@ -118,7 +120,7 @@ class TestManagers( unittest.TestCase ):
         command_1_inverted = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
         command_2_inverted = { HC.LOCAL_FILE_SERVICE_KEY : [ HC.ContentUpdate( HC.CONTENT_DATA_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
         
-        undo_manager = CC.UndoManager()
+        undo_manager = ClientData.UndoManager()
         
         #
         

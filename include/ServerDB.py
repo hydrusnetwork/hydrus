@@ -11,7 +11,7 @@ import itertools
 import os
 import Queue
 import random
-import ServerConstants as SC
+import ServerFiles
 import shutil
 import sqlite3
 import sys
@@ -32,7 +32,7 @@ class MessageDB( object ):
         
         self._c.execute( 'INSERT OR IGNORE INTO messages ( message_key, service_id, account_id, timestamp ) VALUES ( ?, ?, ?, ? );', ( sqlite3.Binary( message_key ), service_id, account_id, HC.GetNow() ) )
         
-        dest_path = SC.GetExpectedPath( 'message', message_key )
+        dest_path = ServerFiles.GetExpectedPath( 'message', message_key )
         
         with open( dest_path, 'wb' ) as f: f.write( message )
         
@@ -70,7 +70,7 @@ class MessageDB( object ):
         
         if result is None: raise HydrusExceptions.ForbiddenException( 'Could not find that message key on message depot!' )
         
-        path = SC.GetPath( 'message', message_key )
+        path = ServerFiles.GetPath( 'message', message_key )
         
         with open( path, 'rb' ) as f: message = f.read()
         
@@ -143,13 +143,13 @@ class ServiceDB( MessageDB ):
             
             source_path = file_dict[ 'path' ]
             
-            dest_path = SC.GetExpectedPath( 'file', hash )
+            dest_path = ServerFiles.GetExpectedPath( 'file', hash )
             
             if not os.path.exists( dest_path ): shutil.move( source_path, dest_path )
             
             if 'thumbnail' in file_dict:
                 
-                thumbnail_dest_path = SC.GetExpectedPath( 'thumbnail', hash )
+                thumbnail_dest_path = ServerFiles.GetExpectedPath( 'thumbnail', hash )
                 
                 if not os.path.exists( thumbnail_dest_path ):
                     
@@ -508,7 +508,7 @@ class ServiceDB( MessageDB ):
         if service_type == HC.FILE_REPOSITORY: clean_update = self._GenerateFileUpdate( service_id, begin, end )
         elif service_type == HC.TAG_REPOSITORY: clean_update = self._GenerateTagUpdate( service_id, begin, end )
         
-        path = SC.GetExpectedUpdatePath( service_key, begin )
+        path = ServerFiles.GetExpectedUpdatePath( service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( yaml.safe_dump( clean_update ) )
         
@@ -531,7 +531,7 @@ class ServiceDB( MessageDB ):
         if service_type == HC.FILE_REPOSITORY: update = self._GenerateFileUpdate( service_id, begin, end )
         elif service_type == HC.TAG_REPOSITORY: update = self._GenerateTagUpdate( service_id, begin, end )
         
-        path = SC.GetExpectedUpdatePath( service_key, begin )
+        path = ServerFiles.GetExpectedUpdatePath( service_key, begin )
         
         with open( path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
         
@@ -578,11 +578,11 @@ class ServiceDB( MessageDB ):
             
             deletee_hashes = set( self._GetHashes( deletees ) )
             
-            local_files_hashes = SC.GetAllHashes( 'file' )
-            thumbnails_hashes = SC.GetAllHashes( 'thumbnail' )
+            local_files_hashes = ServerFiles.GetAllHashes( 'file' )
+            thumbnails_hashes = ServerFiles.GetAllHashes( 'thumbnail' )
             
-            for hash in local_files_hashes & deletee_hashes: os.remove( SC.GetPath( 'file', hash ) )
-            for hash in thumbnails_hashes & deletee_hashes: os.remove( SC.GetPath( 'thumbnail', hash ) )
+            for hash in local_files_hashes & deletee_hashes: os.remove( ServerFiles.GetPath( 'file', hash ) )
+            for hash in thumbnails_hashes & deletee_hashes: os.remove( ServerFiles.GetPath( 'thumbnail', hash ) )
             
             self._c.execute( 'DELETE FROM files_info WHERE hash_id IN ' + HC.SplayListForDB( deletees ) + ';' )
             
@@ -591,11 +591,11 @@ class ServiceDB( MessageDB ):
         
         required_message_keys = { message_key for ( message_key, ) in self._c.execute( 'SELECT DISTINCT message_key FROM messages;' ) }
         
-        existing_message_keys = SC.GetAllHashes( 'message' )
+        existing_message_keys = ServerFiles.GetAllHashes( 'message' )
         
         deletees = existing_message_keys - required_message_keys
         
-        for message_key in deletees: os.remove( SC.GetPath( 'message', message_key ) )
+        for message_key in deletees: os.remove( ServerFiles.GetPath( 'message', message_key ) )
         
     
     def _DenyFilePetition( self, service_id, hash_ids ):
@@ -1020,7 +1020,7 @@ class ServiceDB( MessageDB ):
     
     def _GetFile( self, hash ):
         
-        path = SC.GetPath( 'file', hash )
+        path = ServerFiles.GetPath( 'file', hash )
         
         with open( path, 'rb' ) as f: file = f.read()
         
@@ -1414,7 +1414,7 @@ class ServiceDB( MessageDB ):
     
     def _GetThumbnail( self, hash ):
         
-        path = SC.GetPath( 'thumbnail', hash )
+        path = ServerFiles.GetPath( 'thumbnail', hash )
         
         with open( path, 'rb' ) as f: thumbnail = f.read()
         

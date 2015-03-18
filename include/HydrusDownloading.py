@@ -9,6 +9,7 @@ import json
 import os
 import pafy
 import re
+import sys
 import threading
 import time
 import traceback
@@ -1477,6 +1478,9 @@ class ImportController( object ):
             
             while not self._controller_job_key.IsDone():
                 
+                create_import_item = False
+                create_import_queue_item = False
+                
                 while self._controller_job_key.IsPaused():
                     
                     time.sleep( 0.1 )
@@ -1494,7 +1498,7 @@ class ImportController( object ):
                     
                     queue_position = self._import_queue_job_key.GetVariable( 'queue_position' )
                     queue = self._import_queue_builder_job_key.GetVariable( 'queue' )
-            
+                    
                     if self._import_job_key.IsDone():
                         
                         result = self._import_job_key.GetVariable( 'result' )
@@ -1529,11 +1533,9 @@ class ImportController( object ):
                                 
                                 self._import_job_key.Begin()
                                 
-                                item = queue[ queue_position ]
+                                import_item = queue[ queue_position ]
                                 
-                                args_generator = self._import_args_generator_factory( self._import_job_key, item )
-                                
-                                HydrusThreading.CallToThread( args_generator )
+                                create_import_item = True
                                 
                             else:
                                 
@@ -1563,14 +1565,27 @@ class ImportController( object ):
                             
                             self._import_queue_builder_job_key.Begin()
                             
-                            item = self._pending_import_queue_jobs.pop( 0 )
+                            queue_item = self._pending_import_queue_jobs.pop( 0 )
                             
-                            queue_builder = self._import_queue_builder_factory( self._import_queue_builder_job_key, item )
-                            
-                            # make it a daemon, not a thread job, as it has a loop!
-                            threading.Thread( target = queue_builder ).start()
+                            create_import_queue_item = True
                             
                         
+                    
+                
+                # This is outside the lock, as it may call wx-blocking stuff, and other wx bits will sometimes wait on the lock
+                if create_import_item:
+                    
+                    args_generator = self._import_args_generator_factory( self._import_job_key, import_item )
+                    
+                    HydrusThreading.CallToThread( args_generator )
+                    
+                
+                if create_import_queue_item:
+                    
+                    queue_builder = self._import_queue_builder_factory( self._import_queue_builder_job_key, queue_item )
+                    
+                    # make it a daemon, not a thread job, as it has a loop!
+                    threading.Thread( target = queue_builder ).start()
                     
                 
                 time.sleep( 0.05 )
@@ -1628,26 +1643,35 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
             
             total_urls_found = 0
             
+            pages_found = 0
+            
+            first_run = True
+            
             while True:
                 
                 downloaders_to_remove = []
                 
                 for downloader in downloaders:
                     
+                    urls_in_pages = HC.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HC.ConvertIntToPrettyString( pages_found ) + ' pages'
+                    
                     while self._job_key.IsPaused():
                         
                         time.sleep( 0.1 )
                         
-                        self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
+                        self._job_key.SetVariable( 'status', 'paused after finding ' + urls_in_pages )
                         
                         if HC.shutdown or self._job_key.IsDone(): break
                         
                     
                     if HC.shutdown or self._job_key.IsDone(): break
                     
-                    self._job_key.SetVariable( 'status', 'found ' + HC.u( total_urls_found ) + ' urls' )
+                    self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '. waiting a few seconds' )
                     
-                    time.sleep( 5 )
+                    if first_run: first_run = False
+                    else: time.sleep( 5 )
+                    
+                    self._job_key.SetVariable( 'status', 'found ' + urls_in_pages + '. looking for next page' )
                     
                     page_of_url_args = downloader.GetAnotherPage()
                     
@@ -1664,7 +1688,11 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                         
                         self._job_key.SetVariable( 'queue', queue )
                         
+                        pages_found += 1
+                        
                     
+                
+                urls_in_pages = HC.ConvertIntToPrettyString( total_urls_found ) + ' urls in ' + HC.ConvertIntToPrettyString( pages_found ) + ' pages'
                 
                 for downloader in downloaders_to_remove: downloaders.remove( downloader )
                 
@@ -1674,7 +1702,7 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                     
                     time.sleep( 0.1 )
                     
-                    self._job_key.SetVariable( 'status', 'paused after ' + HC.u( total_urls_found ) + ' urls' )
+                    self._job_key.SetVariable( 'status', 'paused after finding ' + urls_in_pages )
                     
                     if HC.shutdown or self._job_key.IsDone(): break
                     
@@ -1682,7 +1710,7 @@ class ImportQueueBuilderGallery( ImportQueueBuilder ):
                 if HC.shutdown or self._job_key.IsDone(): break
                 
             
-            self._job_key.SetVariable( 'status', 'finished. found ' + HC.u( total_urls_found ) + ' urls' )
+            self._job_key.SetVariable( 'status', 'finished. found ' + urls_in_pages )
             
             time.sleep( 5 )
             

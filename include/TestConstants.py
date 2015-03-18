@@ -1,4 +1,3 @@
-import ClientConstants
 import collections
 import HydrusConstants as HC
 import HydrusTags

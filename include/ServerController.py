@@ -3,7 +3,7 @@ import HydrusConstants as HC
 import HydrusServer
 import HydrusSessions
 import HydrusThreading
-import ServerConstants as SC
+import ServerFiles
 import ServerDaemons
 import ServerDB
 import os

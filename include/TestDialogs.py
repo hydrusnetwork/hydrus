@@ -1,4 +1,6 @@
 import ClientConstants as CC
+import ClientData
+import ClientDefaults
 import ClientGUIDialogs
 import collections
 import HydrusConstants as HC
@@ -25,7 +27,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_select_booru( self ):
         
-        HC.app.SetRead( 'remote_boorus', CC.DEFAULT_BOORUS )
+        HC.app.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
         
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             

@@ -14,7 +14,7 @@ import HydrusImageHandling
 import HydrusServerResources
 import os
 import random
-import ServerConstants as SC
+import ServerFiles
 import SocketServer
 import traceback
 import urllib

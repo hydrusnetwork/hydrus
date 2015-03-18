@@ -9,7 +9,11 @@ import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
+import ClientData
+import ClientCaches
+import ClientFiles
 import ClientGUICommon
+import ClientGUICollapsible
 import collections
 import gc
 import itertools
@@ -39,26 +43,6 @@ ID_TIMER_UPDATE = wx.NewId()
 COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
 COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
 COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
-
-# Sizer Flags
-
-FLAGS_NONE = wx.SizerFlags( 0 )
-
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-FLAGS_BIG_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 8 )
-
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
@@ -210,25 +194,25 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._action_dropdown, FLAGS_MIXED )
-            hbox.AddF( self._tag_type_dropdown, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self._internal_actions, label = 'to' ), FLAGS_MIXED )
-            hbox.AddF( self._service_key_dropdown, FLAGS_MIXED )
-            hbox.AddF( self._go, FLAGS_MIXED )
+            hbox.AddF( self._action_dropdown, CC.FLAGS_MIXED )
+            hbox.AddF( self._tag_type_dropdown, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self._internal_actions, label = 'to' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._service_key_dropdown, CC.FLAGS_MIXED )
+            hbox.AddF( self._go, CC.FLAGS_MIXED )
             
-            self._internal_actions.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), FLAGS_MIXED )
-            hbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._specific_tag, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( wx.StaticText( self._internal_actions, label = 'set specific tag or namespace: ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._specific_tag, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._internal_actions.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._internal_actions.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
-            self._external_actions.AddF( self._export_to_hta, FLAGS_LONE_BUTTON )
+            self._external_actions.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
             
             #
             
@@ -240,10 +224,10 @@ class DialogAdvancedContentUpdate( Dialog ):
             
             st.Wrap( 360 )
             
-            vbox.AddF( st, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._internal_actions, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._external_actions, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._done, FLAGS_LONE_BUTTON )
+            vbox.AddF( st, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._internal_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._external_actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
             
@@ -400,9 +384,9 @@ class DialogButtonChoice( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            for button in self._buttons: vbox.AddF( button, FLAGS_EXPAND_PERPENDICULAR )
+            for button in self._buttons: vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -466,9 +450,9 @@ class DialogChooseNewServiceMethod( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._register, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._setup, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -523,17 +507,17 @@ class DialogFinishFiltering( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._commit, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._forget, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             label = keep + ' ' + HC.ConvertIntToPrettyString( num_kept ) + ' and ' + delete + ' ' + HC.ConvertIntToPrettyString( num_deleted ) + ' files?'
             
-            vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._back, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -577,8 +561,8 @@ class DialogFinishRatingFiltering( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._commit, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._forget, FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -589,10 +573,10 @@ class DialogFinishRatingFiltering( Dialog ):
             
             label = 'Apply ' + ' and '.join( info_strings ) + '?'
             
-            vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._back, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -639,17 +623,17 @@ class DialogFirstStart( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = message1 ), FLAGS_MIXED )
-            hbox.AddF( link, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = message2 ), FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = message1 ), CC.FLAGS_MIXED )
+            hbox.AddF( link, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = message2 ), CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            vbox.AddF( wx.StaticText( self, label = message3 ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = message4 ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ok, FLAGS_LONE_BUTTON )
+            vbox.AddF( wx.StaticText( self, label = message3 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = message4 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
             
@@ -710,20 +694,20 @@ class DialogGenerateNewAccounts( Dialog ):
             
             ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            ctrl_box.AddF( wx.StaticText( self, label = 'generate' ), FLAGS_MIXED )
-            ctrl_box.AddF( self._num, FLAGS_MIXED )
-            ctrl_box.AddF( self._account_types, FLAGS_MIXED )
-            ctrl_box.AddF( wx.StaticText( self, label = 'accounts, to expire in' ), FLAGS_MIXED )
-            ctrl_box.AddF( self._lifetime, FLAGS_MIXED )
+            ctrl_box.AddF( wx.StaticText( self, label = 'generate' ), CC.FLAGS_MIXED )
+            ctrl_box.AddF( self._num, CC.FLAGS_MIXED )
+            ctrl_box.AddF( self._account_types, CC.FLAGS_MIXED )
+            ctrl_box.AddF( wx.StaticText( self, label = 'accounts, to expire in' ), CC.FLAGS_MIXED )
+            ctrl_box.AddF( self._lifetime, CC.FLAGS_MIXED )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( ctrl_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -796,7 +780,7 @@ class DialogInputAdvancedTagOptions( Dialog ):
             
             self._name = name
             
-            self._advanced_tag_options = ClientGUICommon.AdvancedTagOptions( self, namespaces = namespaces )
+            self._advanced_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = namespaces )
             
             self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -827,17 +811,20 @@ class DialogInputAdvancedTagOptions( Dialog ):
         def ArrangeControls():
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._advanced_tag_options, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._advanced_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
             ( x, y ) = self.GetEffectiveMinSize()
+            
+            x = max( 200, x )
+            y = max( 300, y )
             
             self.SetInitialSize( ( x, y ) )
             
@@ -996,59 +983,59 @@ class DialogInputCustomFilterAction( Dialog ):
         
         def ArrangeControls():
             
-            self._shortcut_panel.AddF( self._shortcut, FLAGS_EXPAND_PERPENDICULAR )
+            self._shortcut_panel.AddF( self._shortcut, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             none_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            none_hbox.AddF( self._none_actions, FLAGS_EXPAND_DEPTH_ONLY )
-            none_hbox.AddF( self._ok_none, FLAGS_MIXED )
+            none_hbox.AddF( self._none_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
+            none_hbox.AddF( self._ok_none, CC.FLAGS_MIXED )
             
-            self._none_panel.AddF( none_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._none_panel.AddF( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
             
-            tag_sub_vbox.AddF( self._tag_value, FLAGS_EXPAND_BOTH_WAYS )
-            tag_sub_vbox.AddF( self._tag_input, FLAGS_EXPAND_BOTH_WAYS )
+            tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_BOTH_WAYS )
+            tag_sub_vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            tag_hbox.AddF( self._tag_service_keys, FLAGS_EXPAND_DEPTH_ONLY )
-            tag_hbox.AddF( tag_sub_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            tag_hbox.AddF( self._ok_tag, FLAGS_MIXED )
+            tag_hbox.AddF( self._tag_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+            tag_hbox.AddF( tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            tag_hbox.AddF( self._ok_tag, CC.FLAGS_MIXED )
             
-            self._tag_panel.AddF( tag_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._tag_panel.AddF( tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            ratings_like_hbox.AddF( self._ratings_like_service_keys, FLAGS_EXPAND_DEPTH_ONLY )
-            ratings_like_hbox.AddF( self._ratings_like_like, FLAGS_MIXED )
-            ratings_like_hbox.AddF( self._ratings_like_dislike, FLAGS_MIXED )
-            ratings_like_hbox.AddF( self._ratings_like_remove, FLAGS_MIXED )
-            ratings_like_hbox.AddF( self._ok_ratings_like, FLAGS_MIXED )
+            ratings_like_hbox.AddF( self._ratings_like_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+            ratings_like_hbox.AddF( self._ratings_like_like, CC.FLAGS_MIXED )
+            ratings_like_hbox.AddF( self._ratings_like_dislike, CC.FLAGS_MIXED )
+            ratings_like_hbox.AddF( self._ratings_like_remove, CC.FLAGS_MIXED )
+            ratings_like_hbox.AddF( self._ok_ratings_like, CC.FLAGS_MIXED )
             
-            self._ratings_like_panel.AddF( ratings_like_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._ratings_like_panel.AddF( ratings_like_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, FLAGS_EXPAND_DEPTH_ONLY )
-            ratings_numerical_hbox.AddF( self._ratings_numerical_slider, FLAGS_MIXED )
-            ratings_numerical_hbox.AddF( self._ratings_numerical_remove, FLAGS_MIXED )
-            ratings_numerical_hbox.AddF( self._ok_ratings_numerical, FLAGS_MIXED )
+            ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+            ratings_numerical_hbox.AddF( self._ratings_numerical_slider, CC.FLAGS_MIXED )
+            ratings_numerical_hbox.AddF( self._ratings_numerical_remove, CC.FLAGS_MIXED )
+            ratings_numerical_hbox.AddF( self._ok_ratings_numerical, CC.FLAGS_MIXED )
             
-            self._ratings_numerical_panel.AddF( ratings_numerical_hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._ratings_numerical_panel.AddF( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._none_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._tag_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ratings_like_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ratings_numerical_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._shortcut_panel, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = u'\u2192' ), FLAGS_MIXED )
-            hbox.AddF( vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.AddF( self._shortcut_panel, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = u'\u2192' ), CC.FLAGS_MIXED )
+            hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
@@ -1262,17 +1249,17 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:age' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._years, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'years' ), FLAGS_MIXED )
-                hbox.AddF( self._months, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'months' ), FLAGS_MIXED )
-                hbox.AddF( self._days, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'days' ), FLAGS_MIXED )
-                hbox.AddF( self._hours, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'hours' ), FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:age' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._years, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'years' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._months, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'months' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._days, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._hours, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1321,13 +1308,13 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:duration' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._duration_s, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 's' ), FLAGS_MIXED )
-                hbox.AddF( self._duration_ms, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'ms' ), FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:duration' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._duration_s, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 's' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._duration_ms, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'ms' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1382,11 +1369,11 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:file service:' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._current_pending, FLAGS_MIXED )
-                hbox.AddF( self._file_service_key, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:file service:' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._current_pending, CC.FLAGS_MIXED )
+                hbox.AddF( self._file_service_key, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1427,9 +1414,9 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:hash=' ), FLAGS_MIXED )
-                hbox.AddF( self._hash, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:hash=' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._hash, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1476,10 +1463,10 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:height' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._height, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:height' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._height, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1522,9 +1509,9 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:limit=' ), FLAGS_MIXED )
-                hbox.AddF( self._limit, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:limit=' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._limit, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1574,11 +1561,11 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:mime' ), FLAGS_MIXED )
-                hbox.AddF( self._mime_media, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = '/' ), FLAGS_MIXED )
-                hbox.AddF( self._mime_type, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:mime' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._mime_media, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = '/' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._mime_type, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1625,10 +1612,10 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:num_tags' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._num_tags, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:num_tags' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._num_tags, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1675,10 +1662,10 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:num_words' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._num_words, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:num_words' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._num_words, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1754,23 +1741,23 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), FLAGS_MIXED )
-                hbox.AddF( self._service_numerical, FLAGS_MIXED )
-                hbox.AddF( self._sign_numerical, FLAGS_MIXED )
-                hbox.AddF( self._value_numerical, FLAGS_MIXED )
-                hbox.AddF( self._first_ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._service_numerical, CC.FLAGS_MIXED )
+                hbox.AddF( self._sign_numerical, CC.FLAGS_MIXED )
+                hbox.AddF( self._value_numerical, CC.FLAGS_MIXED )
+                hbox.AddF( self._first_ok, CC.FLAGS_MIXED )
                 
-                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), FLAGS_MIXED )
-                hbox.AddF( self._service_like, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = '=' ), FLAGS_MIXED )
-                hbox.AddF( self._value_like, FLAGS_MIXED )
-                hbox.AddF( self._second_ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:rating:' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._service_like, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = '=' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._value_like, CC.FLAGS_MIXED )
+                hbox.AddF( self._second_ok, CC.FLAGS_MIXED )
                 
-                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 self.SetSizer( vbox )
                 
@@ -1821,12 +1808,12 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:ratio' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._width, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = ':' ), FLAGS_MIXED )
-                hbox.AddF( self._height, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:ratio' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._width, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._height, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1877,11 +1864,11 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:size' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._size, FLAGS_MIXED )
-                hbox.AddF( self._unit, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:size' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._size, CC.FLAGS_MIXED )
+                hbox.AddF( self._unit, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1928,10 +1915,10 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:width' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._width, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:width' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._width, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -1976,11 +1963,11 @@ class DialogInputFileSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:similar_to' ), FLAGS_MIXED )
-                hbox.AddF( self._hash, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label=u'\u2248' ), FLAGS_MIXED )
-                hbox.AddF( self._max_hamming, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:similar_to' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._hash, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label=u'\u2248' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._max_hamming, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -2245,23 +2232,23 @@ class DialogInputLocalBooruShare( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'share name' ), FLAGS_MIXED )
-            gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'share name' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'share text' ), FLAGS_MIXED )
-            gridbox.AddF( self._text, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'share text' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             timeout_box = wx.BoxSizer( wx.HORIZONTAL )
-            timeout_box.AddF( self._timeout_number, FLAGS_EXPAND_BOTH_WAYS )
-            timeout_box.AddF( self._timeout_multiplier, FLAGS_EXPAND_BOTH_WAYS )
+            timeout_box.AddF( self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
+            timeout_box.AddF( self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             link_box = wx.BoxSizer( wx.HORIZONTAL )
-            link_box.AddF( self._copy_internal_share_link, FLAGS_MIXED )
-            link_box.AddF( self._copy_external_share_link, FLAGS_MIXED )
+            link_box.AddF( self._copy_internal_share_link, CC.FLAGS_MIXED )
+            link_box.AddF( self._copy_external_share_link, CC.FLAGS_MIXED )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -2270,11 +2257,11 @@ class DialogInputLocalBooruShare( Dialog ):
             
             if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
             
-            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( timeout_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( link_box, FLAGS_BUTTON_SIZER )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( link_box, CC.FLAGS_BUTTON_SIZER )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2370,7 +2357,7 @@ class DialogInputLocalFiles( Dialog ):
             self._remove_files_button = wx.Button( self, label = 'Remove Files' )
             self._remove_files_button.Bind( wx.EVT_BUTTON, self.EventRemovePaths )
             
-            self._advanced_import_options = ClientGUICommon.AdvancedImportOptions( self )
+            self._advanced_import_options = ClientGUICollapsible.CollapsibleOptionsImport( self )
             
             self._delete_after_success = wx.CheckBox( self, label = 'delete files after successful import' )
             
@@ -2394,34 +2381,34 @@ class DialogInputLocalFiles( Dialog ):
         
         def ArrangeControls():
             
-            self._gauge_sizer.AddF( self._gauge, FLAGS_EXPAND_BOTH_WAYS )
-            self._gauge_sizer.AddF( self._gauge_text, FLAGS_EXPAND_BOTH_WAYS )
-            self._gauge_sizer.AddF( self._gauge_pause, FLAGS_MIXED )
-            self._gauge_sizer.AddF( self._gauge_cancel, FLAGS_MIXED )
+            self._gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_MIXED )
+            self._gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_MIXED )
             
             self._gauge_sizer.ShowItems( False )
             
             file_buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            file_buttons.AddF( self._gauge_sizer, FLAGS_EXPAND_SIZER_BOTH_WAYS.ReserveSpaceEvenIfHidden() )
-            file_buttons.AddF( self._add_files_button, FLAGS_MIXED )
-            file_buttons.AddF( self._add_folder_button, FLAGS_MIXED )
-            file_buttons.AddF( self._remove_files_button, FLAGS_MIXED )
+            file_buttons.AddF( self._gauge_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS.ReserveSpaceEvenIfHidden() )
+            file_buttons.AddF( self._add_files_button, CC.FLAGS_MIXED )
+            file_buttons.AddF( self._add_folder_button, CC.FLAGS_MIXED )
+            file_buttons.AddF( self._remove_files_button, CC.FLAGS_MIXED )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttons.AddF( self._add_button, FLAGS_MIXED )
-            buttons.AddF( self._tag_button, FLAGS_MIXED )
-            buttons.AddF( self._cancel, FLAGS_MIXED )
+            buttons.AddF( self._add_button, CC.FLAGS_MIXED )
+            buttons.AddF( self._tag_button, CC.FLAGS_MIXED )
+            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._paths_list, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( file_buttons, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._advanced_import_options, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._delete_after_success, FLAGS_LONE_BUTTON )
-            vbox.AddF( ( 0, 5 ), FLAGS_NONE )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( file_buttons, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._advanced_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._delete_after_success, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( ( 0, 5 ), CC.FLAGS_NONE )
+            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -2680,7 +2667,7 @@ class DialogInputLocalFiles( Dialog ):
         
         wx.CallAfter( self.SetGaugeInfo, None, None, u'Parsing files and folders.' )
         
-        file_paths = CC.GetAllPaths( raw_paths )
+        file_paths = ClientFiles.GetAllPaths( raw_paths )
         
         num_file_paths = len( file_paths )
         num_good_files = 0
@@ -2904,15 +2891,15 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:age' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._years, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'years' ), FLAGS_MIXED )
-                hbox.AddF( self._months, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'months' ), FLAGS_MIXED )
-                hbox.AddF( self._days, FLAGS_MIXED )
-                hbox.AddF( wx.StaticText( self, label = 'days' ), FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:age' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._years, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'years' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._months, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'months' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._days, CC.FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -2952,9 +2939,9 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:from' ), FLAGS_MIXED )
-                hbox.AddF( self._contact, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:from' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._contact, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -2994,9 +2981,9 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:started_by' ), FLAGS_MIXED )
-                hbox.AddF( self._contact, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:started_by' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._contact, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -3036,9 +3023,9 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:to' ), FLAGS_MIXED )
-                hbox.AddF( self._contact, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:to' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._contact, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -3080,10 +3067,10 @@ class DialogInputMessageSystemPredicate( Dialog ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self, label = 'system:numattachments' ), FLAGS_MIXED )
-                hbox.AddF( self._sign, FLAGS_MIXED )
-                hbox.AddF( self._num_attachments, FLAGS_MIXED )
-                hbox.AddF( self._ok, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self, label = 'system:numattachments' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._sign, CC.FLAGS_MIXED )
+                hbox.AddF( self._num_attachments, CC.FLAGS_MIXED )
+                hbox.AddF( self._ok, CC.FLAGS_MIXED )
                 
                 self.SetSizer( hbox )
                 
@@ -3156,23 +3143,23 @@ class DialogInputNamespaceRegex( Dialog ):
             
             control_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            control_box.AddF( self._namespace, FLAGS_EXPAND_BOTH_WAYS )
-            control_box.AddF( wx.StaticText( self, label = ':' ), FLAGS_MIXED )
-            control_box.AddF( self._regex, FLAGS_EXPAND_BOTH_WAYS )
+            control_box.AddF( self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            control_box.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_MIXED )
+            control_box.AddF( self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             intro = 'Put the namespace (e.g. page) on the left.' + os.linesep + 'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + 'All files will be tagged with "namespace:regex".'
             
-            vbox.AddF( wx.StaticText( self, label = intro ), FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( control_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._shortcuts, FLAGS_LONE_BUTTON )
-            vbox.AddF( self._regex_link, FLAGS_LONE_BUTTON )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._shortcuts, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3248,30 +3235,30 @@ class DialogInputNewAccountType( Dialog ):
             
             t_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            t_box.AddF( wx.StaticText( self, label = 'title: ' ), FLAGS_SMALL_INDENT )
-            t_box.AddF( self._title, FLAGS_EXPAND_BOTH_WAYS )
+            t_box.AddF( wx.StaticText( self, label = 'title: ' ), CC.FLAGS_SMALL_INDENT )
+            t_box.AddF( self._title, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             perm_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            perm_buttons_box.AddF( self._permission_choice, FLAGS_MIXED )
-            perm_buttons_box.AddF( self._add_permission, FLAGS_MIXED )
-            perm_buttons_box.AddF( self._remove_permission, FLAGS_MIXED )
+            perm_buttons_box.AddF( self._permission_choice, CC.FLAGS_MIXED )
+            perm_buttons_box.AddF( self._add_permission, CC.FLAGS_MIXED )
+            perm_buttons_box.AddF( self._remove_permission, CC.FLAGS_MIXED )
             
-            self._permissions_panel.AddF( self._permissions, FLAGS_EXPAND_BOTH_WAYS )
-            self._permissions_panel.AddF( perm_buttons_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._permissions_panel.AddF( self._permissions, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._permissions_panel.AddF( perm_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            b_box.AddF( self._apply, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._apply, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( t_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._permissions_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._max_num_mb, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._max_num_requests, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( t_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._max_num_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._max_num_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3379,27 +3366,27 @@ class DialogInputNewFormField( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'name' ), FLAGS_MIXED )
-            gridbox.AddF( self._name, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'name' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'type' ), FLAGS_MIXED )
-            gridbox.AddF( self._type, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'type' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._type, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'default' ), FLAGS_MIXED )
-            gridbox.AddF( self._default, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'default' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._default, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'editable' ), FLAGS_MIXED )
-            gridbox.AddF( self._editable, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'editable' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._editable, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3463,17 +3450,17 @@ class DialogInputShortcut( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._shortcut, FLAGS_MIXED )
-            hbox.AddF( self._actions, FLAGS_EXPAND_PERPENDICULAR )
+            hbox.AddF( self._shortcut, CC.FLAGS_MIXED )
+            hbox.AddF( self._actions, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3541,29 +3528,29 @@ class DialogInputUPnPMapping( Dialog ):
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'external port' ), FLAGS_MIXED )
-            gridbox.AddF( self._external_port, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'external port' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._external_port, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'protocol type' ), FLAGS_MIXED )
-            gridbox.AddF( self._protocol_type, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'protocol type' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._protocol_type, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'internal port' ), FLAGS_MIXED )
-            gridbox.AddF( self._internal_port, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'internal port' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._internal_port, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'description' ), FLAGS_MIXED )
-            gridbox.AddF( self._description, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'description' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'duration (0 = indefinite)' ), FLAGS_MIXED )
-            gridbox.AddF( self._duration, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'duration (0 = indefinite)' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._duration, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             b_box = wx.BoxSizer( wx.HORIZONTAL )
-            b_box.AddF( self._ok, FLAGS_MIXED )
-            b_box.AddF( self._cancel, FLAGS_MIXED )
+            b_box.AddF( self._ok, CC.FLAGS_MIXED )
+            b_box.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( b_box, FLAGS_BUTTON_SIZER )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3692,39 +3679,39 @@ class DialogModifyAccounts( Dialog ):
         
         def ArrangeControls():
             
-            self._account_info_panel.AddF( self._subject_text, FLAGS_EXPAND_PERPENDICULAR )
+            self._account_info_panel.AddF( self._subject_text, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             account_types_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            account_types_hbox.AddF( self._account_types, FLAGS_MIXED )
-            account_types_hbox.AddF( self._account_types_ok, FLAGS_MIXED )
+            account_types_hbox.AddF( self._account_types, CC.FLAGS_MIXED )
+            account_types_hbox.AddF( self._account_types_ok, CC.FLAGS_MIXED )
             
-            self._account_types_panel.AddF( account_types_hbox, FLAGS_EXPAND_PERPENDICULAR )
+            self._account_types_panel.AddF( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), FLAGS_MIXED )
-            add_to_expires_box.AddF( self._add_to_expires, FLAGS_EXPAND_BOTH_WAYS )
-            add_to_expires_box.AddF( self._add_to_expires_ok, FLAGS_MIXED )
+            add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), CC.FLAGS_MIXED )
+            add_to_expires_box.AddF( self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+            add_to_expires_box.AddF( self._add_to_expires_ok, CC.FLAGS_MIXED )
             
             set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), FLAGS_MIXED )
-            set_expires_box.AddF( self._set_expires, FLAGS_EXPAND_BOTH_WAYS )
-            set_expires_box.AddF( self._set_expires_ok, FLAGS_MIXED )
+            set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), CC.FLAGS_MIXED )
+            set_expires_box.AddF( self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+            set_expires_box.AddF( self._set_expires_ok, CC.FLAGS_MIXED )
             
-            self._expiration_panel.AddF( add_to_expires_box, FLAGS_EXPAND_PERPENDICULAR )
-            self._expiration_panel.AddF( set_expires_box, FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._expiration_panel.AddF( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self._ban_panel.AddF( self._ban, FLAGS_EXPAND_PERPENDICULAR )
-            self._ban_panel.AddF( self._superban, FLAGS_EXPAND_PERPENDICULAR )
+            self._ban_panel.AddF( self._ban, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._ban_panel.AddF( self._superban, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._account_info_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._account_types_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._expiration_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._ban_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._exit, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._exit, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3831,19 +3818,19 @@ class DialogNews( Dialog ):
             
             buttonbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttonbox.AddF( self._previous, FLAGS_MIXED )
-            buttonbox.AddF( self._news_position, FLAGS_MIXED )
-            buttonbox.AddF( self._next, FLAGS_MIXED )
+            buttonbox.AddF( self._previous, CC.FLAGS_MIXED )
+            buttonbox.AddF( self._news_position, CC.FLAGS_MIXED )
+            buttonbox.AddF( self._next, CC.FLAGS_MIXED )
             
             donebox = wx.BoxSizer( wx.HORIZONTAL )
             
-            donebox.AddF( self._done, FLAGS_MIXED )
+            donebox.AddF( self._done, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._news, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
-            vbox.AddF( donebox, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._news, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.AddF( donebox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -3928,15 +3915,15 @@ class DialogPageChooser( Dialog ):
             
             gridbox = wx.GridSizer( 0, 3 )
             
-            gridbox.AddF( self._button_7, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_8, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_9, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_4, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_5, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_6, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_1, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_2, FLAGS_EXPAND_BOTH_WAYS )
-            gridbox.AddF( self._button_3, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( gridbox )
             
@@ -3967,20 +3954,20 @@ class DialogPageChooser( Dialog ):
         
         entries = []
         
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_LEFT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_DOWN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
         
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 1 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 3 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 5 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 7 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
-        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 9 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 1 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD2, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 2 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD3, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 3 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD4, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 4 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD5, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 5 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD6, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 6 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD7, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 7 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD8, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 8 ) ) )
+        entries.append( ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD9, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'button', 9 ) ) )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -4127,7 +4114,7 @@ class DialogPageChooser( Dialog ):
         
         event_id = event.GetId()
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event_id )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event_id )
         
         if action is not None:
             
@@ -4195,13 +4182,13 @@ class DialogPathsToTags( Dialog ):
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttons.AddF( self._add_button, FLAGS_SMALL_INDENT )
-            buttons.AddF( self._cancel, FLAGS_SMALL_INDENT )
+            buttons.AddF( self._add_button, CC.FLAGS_SMALL_INDENT )
+            buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._tag_repositories, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4227,7 +4214,7 @@ class DialogPathsToTags( Dialog ):
         
         entries = []
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -4245,7 +4232,7 @@ class DialogPathsToTags( Dialog ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -4379,61 +4366,61 @@ class DialogPathsToTags( Dialog ):
                 
                 button_box = wx.BoxSizer( wx.HORIZONTAL )
                 
-                button_box.AddF( self._add_quick_namespace_button, FLAGS_EXPAND_BOTH_WAYS )
-                button_box.AddF( self._edit_quick_namespace_button, FLAGS_EXPAND_BOTH_WAYS )
-                button_box.AddF( self._delete_quick_namespace_button, FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                button_box.AddF( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, FLAGS_EXPAND_BOTH_WAYS )
-                self._quick_namespaces_panel.AddF( button_box, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._quick_namespaces_panel.AddF( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._quick_namespaces_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 #
                 
-                self._regexes_panel.AddF( self._regexes, FLAGS_EXPAND_BOTH_WAYS )
-                self._regexes_panel.AddF( self._regex_box, FLAGS_EXPAND_PERPENDICULAR )
-                self._regexes_panel.AddF( self._regex_shortcuts, FLAGS_LONE_BUTTON )
-                self._regexes_panel.AddF( self._regex_link, FLAGS_LONE_BUTTON )
+                self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
+                self._regexes_panel.AddF( self._regex_link, CC.FLAGS_LONE_BUTTON )
                 
                 #
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), FLAGS_MIXED )
-                hbox.AddF( self._num_base, FLAGS_MIXED )
-                hbox.AddF( self._num_step, FLAGS_MIXED )
+                hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._num_base, CC.FLAGS_MIXED )
+                hbox.AddF( self._num_step, CC.FLAGS_MIXED )
                 
-                self._num_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), FLAGS_MIXED )
-                hbox.AddF( self._num_namespace, FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_MIXED )
+                hbox.AddF( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                self._num_panel.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 second_vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                second_vbox.AddF( self._regexes_panel, FLAGS_EXPAND_BOTH_WAYS )
-                second_vbox.AddF( self._num_panel, FLAGS_EXPAND_PERPENDICULAR )
+                second_vbox.AddF( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                second_vbox.AddF( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 #
                 
-                self._tags_panel.AddF( self._tags, FLAGS_EXPAND_BOTH_WAYS )
-                self._tags_panel.AddF( self._tag_box, FLAGS_EXPAND_PERPENDICULAR )
+                self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
-                self._single_tags_panel.AddF( self._single_tags, FLAGS_EXPAND_BOTH_WAYS )
-                self._single_tags_panel.AddF( self._single_tag_box, FLAGS_EXPAND_PERPENDICULAR )
+                self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._quick_namespaces_panel, FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( second_vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                hbox.AddF( self._tags_panel, FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( self._single_tags_panel, FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                vbox.AddF( self._paths_list, FLAGS_EXPAND_BOTH_WAYS )
-                vbox.AddF( hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+                vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 self.SetSizer( vbox )
                 
@@ -4718,26 +4705,26 @@ class DialogRegisterService( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = 'Please fill out the forms with the appropriate information for your service.' ), FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( wx.StaticText( self, label = 'Please fill out the forms with the appropriate information for your service.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             gridbox = wx.FlexGridSizer( 0, 2 )
             
             gridbox.AddGrowableCol( 1, 1 )
             
-            gridbox.AddF( wx.StaticText( self, label = 'address' ), FLAGS_MIXED )
-            gridbox.AddF( self._address, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'address' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._address, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            gridbox.AddF( wx.StaticText( self, label = 'registration key' ), FLAGS_MIXED )
-            gridbox.AddF( self._registration_key, FLAGS_EXPAND_BOTH_WAYS )
+            gridbox.AddF( wx.StaticText( self, label = 'registration key' ), CC.FLAGS_MIXED )
+            gridbox.AddF( self._registration_key, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.AddF( gridbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             buttonbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttonbox.AddF( self._register_button, FLAGS_MIXED )
-            buttonbox.AddF( self._cancel, FLAGS_MIXED )
+            buttonbox.AddF( self._register_button, CC.FLAGS_MIXED )
+            buttonbox.AddF( self._cancel, CC.FLAGS_MIXED )
             
-            vbox.AddF( buttonbox, FLAGS_BUTTON_SIZER )
+            vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4795,13 +4782,13 @@ class DialogRegisterService( Dialog ):
         
         info = { 'host' : host, 'port' : port }
         
-        service = CC.Service( service_key, self._service_type, name, info )
+        service = ClientData.Service( service_key, self._service_type, name, info )
         
         response = service.Request( HC.GET, 'access_key', request_headers = { 'Hydrus-Key' : registration_key_encoded } )
         
         access_key = response[ 'access_key' ]
         
-        self._credentials = CC.Credentials( host, port, access_key )
+        self._credentials = ClientData.Credentials( host, port, access_key )
         
         self.EndModal( wx.ID_OK )
         
@@ -4835,7 +4822,7 @@ class DialogSelectBooru( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._boorus, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._boorus, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -4905,7 +4892,7 @@ class DialogSelectImageboard( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._tree, FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -4966,13 +4953,13 @@ class DialogCheckFromListOfStrings( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._ok, FLAGS_MIXED )
-            hbox.AddF( self._cancel, FLAGS_MIXED )
+            hbox.AddF( self._ok, CC.FLAGS_MIXED )
+            hbox.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._strings, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._strings, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5020,7 +5007,7 @@ class DialogSelectFromListOfStrings( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._strings, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._strings, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -5092,13 +5079,13 @@ class DialogSelectYoutubeURL( Dialog ):
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttons.AddF( self._ok, FLAGS_MIXED )
-            buttons.AddF( self._cancel, FLAGS_MIXED )
+            buttons.AddF( self._ok, CC.FLAGS_MIXED )
+            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._urls, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._urls, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5211,36 +5198,36 @@ class DialogSetupCustomFilterActions( Dialog ):
             
             action_buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            action_buttons.AddF( self._add, FLAGS_MIXED )
-            action_buttons.AddF( self._edit, FLAGS_MIXED )
-            action_buttons.AddF( self._remove, FLAGS_MIXED )
+            action_buttons.AddF( self._add, CC.FLAGS_MIXED )
+            action_buttons.AddF( self._edit, CC.FLAGS_MIXED )
+            action_buttons.AddF( self._remove, CC.FLAGS_MIXED )
             
             buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            buttons.AddF( self._ok, FLAGS_MIXED )
-            buttons.AddF( self._cancel, FLAGS_MIXED )
+            buttons.AddF( self._ok, CC.FLAGS_MIXED )
+            buttons.AddF( self._cancel, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._actions, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( action_buttons, FLAGS_BUTTON_SIZER )
-            vbox.AddF( buttons, FLAGS_BUTTON_SIZER )
+            vbox.AddF( self._actions, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
+            vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
             
             button_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            button_hbox.AddF( self._save_favourite, FLAGS_MIXED )
-            button_hbox.AddF( self._save_new_favourite, FLAGS_MIXED )
-            button_hbox.AddF( self._delete_favourite, FLAGS_MIXED )
+            button_hbox.AddF( self._save_favourite, CC.FLAGS_MIXED )
+            button_hbox.AddF( self._save_new_favourite, CC.FLAGS_MIXED )
+            button_hbox.AddF( self._delete_favourite, CC.FLAGS_MIXED )
             
             f_vbox = wx.BoxSizer( wx.VERTICAL )
             
-            f_vbox.AddF( self._favourites, FLAGS_EXPAND_BOTH_WAYS )
-            f_vbox.AddF( button_hbox, FLAGS_BUTTON_SIZER )
+            f_vbox.AddF( self._favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
+            f_vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( f_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            hbox.AddF( vbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.AddF( f_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
@@ -5551,40 +5538,40 @@ class DialogSetupExport( Dialog ):
             
             top_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            top_hbox.AddF( self._tags_box, FLAGS_EXPAND_PERPENDICULAR )
-            top_hbox.AddF( self._paths, FLAGS_EXPAND_BOTH_WAYS )
+            top_hbox.AddF( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            top_hbox.AddF( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._directory_picker, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._open_location, FLAGS_MIXED )
+            hbox.AddF( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._open_location, CC.FLAGS_MIXED )
             
-            self._export_path_box.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._pattern, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._update, FLAGS_MIXED )
-            hbox.AddF( self._examples, FLAGS_MIXED )
-            
-            self._filenames_box.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._export_path_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._export_to_zip, FLAGS_MIXED )
-            hbox.AddF( self._zip_name, FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._export_encrypted, FLAGS_MIXED )
+            hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._update, CC.FLAGS_MIXED )
+            hbox.AddF( self._examples, CC.FLAGS_MIXED )
             
-            self._zip_box.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._filenames_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( self._export_to_zip, CC.FLAGS_MIXED )
+            hbox.AddF( self._zip_name, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.AddF( self._export_encrypted, CC.FLAGS_MIXED )
+            
+            self._zip_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( top_hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            vbox.AddF( self._export_path_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._filenames_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._zip_box, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._export, FLAGS_LONE_BUTTON )
-            vbox.AddF( self._cancel, FLAGS_LONE_BUTTON )
+            vbox.AddF( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._zip_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._export, CC.FLAGS_LONE_BUTTON )
+            vbox.AddF( self._cancel, CC.FLAGS_LONE_BUTTON )
             
             self.SetSizer( vbox )
             
@@ -5614,7 +5601,7 @@ class DialogSetupExport( Dialog ):
         
         directory = self._directory_picker.GetPath()
         
-        filename = CC.GenerateExportFilename( media, terms )
+        filename = ClientData.GenerateExportFilename( media, terms )
         
         if self._export_to_zip.GetValue() == True: zip_path = self._zip_name.GetValue() + os.path.sep
         else: zip_path = ''
@@ -5630,7 +5617,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        terms = CC.ParseExportPhrase( pattern )
+        terms = ClientData.ParseExportPhrase( pattern )
         
         all_paths = set()
         
@@ -5683,7 +5670,7 @@ class DialogSetupExport( Dialog ):
                         
                         hash = media.GetHash()
                         
-                        source_path = CC.GetFilePath( hash, mime )
+                        source_path = ClientFiles.GetFilePath( hash, mime )
                         
                         ( gumpf, filename ) = os.path.split( path )
                         
@@ -5708,7 +5695,7 @@ class DialogSetupExport( Dialog ):
                     
                     hash = media.GetHash()
                     
-                    source_path = CC.GetFilePath( hash, mime )
+                    source_path = ClientFiles.GetFilePath( hash, mime )
                     
                     if os.path.exists( path ): os.chmod( path, stat.S_IWRITE )
                     
@@ -5797,8 +5784,8 @@ class DialogTextEntry( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._ok, FLAGS_SMALL_INDENT )
-            hbox.AddF( self._cancel, FLAGS_SMALL_INDENT )
+            hbox.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
+            hbox.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
             
             st_message = wx.StaticText( self, label = message )
             
@@ -5806,9 +5793,9 @@ class DialogTextEntry( Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( st_message, FLAGS_BIG_INDENT )
-            vbox.AddF( self._text, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
+            vbox.AddF( st_message, CC.FLAGS_BIG_INDENT )
+            vbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -5877,8 +5864,8 @@ class DialogYesNo( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._yes, FLAGS_SMALL_INDENT )
-            hbox.AddF( self._no, FLAGS_SMALL_INDENT )
+            hbox.AddF( self._yes, CC.FLAGS_SMALL_INDENT )
+            hbox.AddF( self._no, CC.FLAGS_SMALL_INDENT )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -5886,8 +5873,8 @@ class DialogYesNo( Dialog ):
             
             text.Wrap( 480 )
             
-            vbox.AddF( text, FLAGS_BIG_INDENT )
-            vbox.AddF( hbox, FLAGS_BUTTON_SIZER )
+            vbox.AddF( text, CC.FLAGS_BIG_INDENT )
+            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             

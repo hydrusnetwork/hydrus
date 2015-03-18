@@ -42,17 +42,12 @@ elif sys.platform == 'linux2': PLATFORM_LINUX = True
 
 import wx
 
-import bisect
 import bs4
 import collections
-import cStringIO
-import httplib
 import HydrusExceptions
-import HydrusNetworking
 import HydrusPubSub
 import itertools
 import locale
-import Queue
 import re
 import sqlite3
 import subprocess
@@ -66,7 +61,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 15
-SOFTWARE_VERSION = 149
+SOFTWARE_VERSION = 150
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -681,19 +676,17 @@ def CleanTag( tag ):
     
     tag = tag[:1024]
     
-    empty_tag = False
-    
     tag = tag.lower()
     
     tag = u( tag )
     
-    tag = re.sub( '[\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
+    tag = re.sub( '[\\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
     
-    tag = re.sub( '\s\Z', '', tag, flags = re.UNICODE ) # removes space at the end
+    tag = re.sub( '\\s\\Z', '', tag, flags = re.UNICODE ) # removes space at the end
     
-    while re.match( '\s|-|system:', tag, flags = re.UNICODE ) is not None:
+    while re.match( '\\s|-|system:', tag, flags = re.UNICODE ) is not None:
         
-        tag = re.sub( '\A(\s|-|system:)', '', tag, flags = re.UNICODE ) # removes space at the beginning
+        tag = re.sub( '\\A(\\s|-|system:)', '', tag, flags = re.UNICODE ) # removes space at the beginning
         
     
     return tag
@@ -1160,6 +1153,13 @@ def ConvertZoomToPercentage( zoom ):
     pretty_zoom = '%.0f' % zoom + '%'
     
     return pretty_zoom
+    
+def DebugPrint( debug_info ):
+    
+    print( debug_info )
+    
+    sys.stdout.flush()
+    sys.stderr.flush()
     
 def GetDefaultAdvancedTagOptions( lookup ):
     
@@ -2099,7 +2099,9 @@ class JobNetwork( object ):
     
     yaml_tag = u'!JobNetwork'
     
-    def __init__( self, request_type, request, headers = {}, body = None, response_to_path = False, redirects_permitted = 4, service_key = None ):
+    def __init__( self, request_type, request, headers = None, body = None, response_to_path = False, redirects_permitted = 4, service_key = None ):
+        
+        if headers is None: headers = {}
         
         self._request_type = request_type
         self._request = request
@@ -2151,7 +2153,9 @@ class Predicate( HydrusYAMLBase ):
     
     yaml_tag = u'!Predicate'
     
-    def __init__( self, predicate_type, value, inclusive = True, counts = {} ):
+    def __init__( self, predicate_type, value, inclusive = True, counts = None ):
+        
+        if counts is None: counts = {}
         
         self._predicate_type = predicate_type
         self._value = value
@@ -2213,8 +2217,6 @@ class Predicate( HydrusYAMLBase ):
         count_text = u''
         
         if with_count:
-            
-            count_text 
             
             if self._counts[ CURRENT ] > 0: count_text += u' (' + ConvertIntToPrettyString( self._counts[ CURRENT ] ) + u')'
             if self._counts[ PENDING ] > 0: count_text += u' (+' + ConvertIntToPrettyString( self._counts[ PENDING ] ) + u')'
@@ -2417,7 +2419,9 @@ SYSTEM_PREDICATE_NOT_LOCAL = Predicate( PREDICATE_TYPE_SYSTEM, ( SYSTEM_PREDICAT
 
 class ResponseContext( object ):
     
-    def __init__( self, status_code, mime = APPLICATION_YAML, body = None, path = None, is_yaml = False, cookies = [] ):
+    def __init__( self, status_code, mime = APPLICATION_YAML, body = None, path = None, is_yaml = False, cookies = None ):
+        
+        if cookies is None: cookies = []
         
         self._status_code = status_code
         self._mime = mime
@@ -2709,7 +2713,9 @@ class ServerToClientUpdate( HydrusYAMLBase ):
     
 class SortedList( object ):
     
-    def __init__( self, initial_items = [], sort_function = None ):
+    def __init__( self, initial_items = None, sort_function = None ):
+        
+        if initial_items is None: initial_items = []
         
         do_sort = sort_function is not None
         
@@ -2750,7 +2756,16 @@ class SortedList( object ):
         
         if self._items_to_indices is None: self._RecalcIndices()
         
-        return self._items_to_indices[ item ]
+        try:
+            
+            result = self._items_to_indices[ item ]
+            
+        except KeyError:
+            
+            raise HydrusExceptions.NotFoundException()
+            
+        
+        return result
         
     
     def insert_items( self, items ):

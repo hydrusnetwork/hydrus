@@ -1,3 +1,5 @@
+import ClientData
+import ClientFiles
 import collections
 import dircache
 import hashlib
@@ -50,7 +52,7 @@ def DAEMONCheckExportFolders():
                     
                     predicates = details[ 'predicates' ]
                     
-                    search_context = CC.FileSearchContext( HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = predicates )
+                    search_context = ClientData.FileSearchContext( HC.LOCAL_FILE_SERVICE_KEY, HC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = predicates )
                     
                     query_hash_ids = HC.app.Read( 'file_query_ids', search_context )
                     
@@ -86,14 +88,14 @@ def DAEMONCheckExportFolders():
                     
                     phrase = details[ 'phrase' ]
                     
-                    terms = CC.ParseExportPhrase( phrase )
+                    terms = ClientData.ParseExportPhrase( phrase )
                     
                     for media_result in media_results:
                         
                         hash = media_result.GetHash()
                         mime = media_result.GetMime()
                         
-                        filename = CC.GenerateExportFilename( media_result, terms )
+                        filename = ClientData.GenerateExportFilename( media_result, terms )
                         
                         ext = HC.mime_ext_lookup[ mime ]
                         
@@ -101,7 +103,7 @@ def DAEMONCheckExportFolders():
                         
                         if not os.path.exists( path ):
                             
-                            source_path = CC.GetFilePath( hash, mime )
+                            source_path = ClientFiles.GetFilePath( hash, mime )
                             
                             shutil.copy( source_path, path )
                             
@@ -133,7 +135,7 @@ def DAEMONCheckImportFolders():
                     
                     raw_paths = [ folder_path + os.path.sep + filename for filename in filenames ]
                     
-                    all_paths = CC.GetAllPaths( raw_paths )
+                    all_paths = ClientFiles.GetAllPaths( raw_paths )
                     
                     if details[ 'type' ] == HC.IMPORT_FOLDER_TYPE_SYNCHRONISE: 
                         
@@ -300,9 +302,9 @@ def DAEMONResizeThumbnails():
     
     if not HC.app.CurrentlyIdle(): return
     
-    full_size_thumbnail_paths = { path for path in CC.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
+    full_size_thumbnail_paths = { path for path in ClientFiles.IterateAllThumbnailPaths() if not path.endswith( '_resized' ) }
     
-    resized_thumbnail_paths = { path[:-8] for path in CC.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
+    resized_thumbnail_paths = { path[:-8] for path in ClientFiles.IterateAllThumbnailPaths() if path.endswith( '_resized' ) }
     
     thumbnail_paths_to_render = list( full_size_thumbnail_paths.difference( resized_thumbnail_paths ) )
     
@@ -655,7 +657,7 @@ def DAEMONSynchroniseRepositories():
                         
                         job_key.SetVariable( 'popup_message_text_1', update_index_string + 'saving to disk' )
                         
-                        update_path = CC.GetUpdatePath( service_key, begin )
+                        update_path = ClientFiles.GetUpdatePath( service_key, begin )
                         
                         with open( update_path, 'wb' ) as f: f.write( yaml.safe_dump( update ) )
                         
@@ -730,7 +732,7 @@ def DAEMONSynchroniseRepositories():
                         job_key.SetVariable( 'popup_message_text_1', update_index_string + 'loading from disk' )
                         job_key.SetVariable( 'popup_message_gauge_1', ( value, range ) )
                         
-                        update_path = CC.GetUpdatePath( service_key, next_processing_timestamp )
+                        update_path = ClientFiles.GetUpdatePath( service_key, next_processing_timestamp )
                         
                         with open( update_path, 'rb' ) as f: update_yaml = f.read()
                         
@@ -797,10 +799,17 @@ def DAEMONSynchroniseRepositories():
                                 
                                 after_precise = HC.GetNowPrecise()
                                 
-                                if after_precise - before_precise > 0.75: WEIGHT_THRESHOLD /= 1.5
-                                elif after_precise - before_precise < 0.5: WEIGHT_THRESHOLD *= 1.05
+                                if HC.app.CurrentlyIdle(): ideal_packet_time = 10.0
+                                else: ideal_packet_time = 0.5
                                 
-                                if after_precise - before_precise > 10.0 or WEIGHT_THRESHOLD < 1.0:
+                                too_long = ideal_packet_time * 1.5
+                                too_short = ideal_packet_time * 0.8
+                                really_too_long = ideal_packet_time * 20
+                                
+                                if after_precise - before_precise > too_long: WEIGHT_THRESHOLD /= 1.5
+                                elif after_precise - before_precise < too_short: WEIGHT_THRESHOLD *= 1.05
+                                
+                                if after_precise - before_precise > really_too_long or WEIGHT_THRESHOLD < 1.0:
                                     
                                     job_key.SetVariable( 'popup_message_text_2', 'taking a break' )
                                     
@@ -861,7 +870,7 @@ def DAEMONSynchroniseRepositories():
                     
                     job_key.SetVariable( 'popup_message_text_1', 'reviewing existing thumbnails' )
                     
-                    thumbnail_hashes_i_have = CC.GetAllThumbnailHashes()
+                    thumbnail_hashes_i_have = ClientFiles.GetAllThumbnailHashes()
                     
                     job_key.SetVariable( 'popup_message_text_1', 'reviewing service thumbnails' )
                     

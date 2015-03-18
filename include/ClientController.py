@@ -1,3 +1,5 @@
+import ClientCaches
+import ClientData
 import collections
 import gc
 import hashlib
@@ -263,20 +265,20 @@ class Controller( wx.App ):
         
         self._managers = {}
         
-        self._managers[ 'services' ] = CC.ServicesManager()
+        self._managers[ 'services' ] = ClientData.ServicesManager()
         
         self._managers[ 'hydrus_sessions' ] = HydrusSessions.HydrusSessionManagerClient()
-        self._managers[ 'local_booru' ] = CC.LocalBooruCache()
+        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache()
         self._managers[ 'tag_censorship' ] = HydrusTags.TagCensorshipManager()
         self._managers[ 'tag_siblings' ] = HydrusTags.TagSiblingsManager()
         self._managers[ 'tag_parents' ] = HydrusTags.TagParentsManager()
-        self._managers[ 'undo' ] = CC.UndoManager()
+        self._managers[ 'undo' ] = ClientData.UndoManager()
         self._managers[ 'web_sessions' ] = HydrusSessions.WebSessionManagerClient()
         
-        self._fullscreen_image_cache = CC.RenderedImageCache( 'fullscreen' )
-        self._preview_image_cache = CC.RenderedImageCache( 'preview' )
+        self._fullscreen_image_cache = ClientCaches.RenderedImageCache( 'fullscreen' )
+        self._preview_image_cache = ClientCaches.RenderedImageCache( 'preview' )
         
-        self._thumbnail_cache = CC.ThumbnailCache()
+        self._thumbnail_cache = ClientCaches.ThumbnailCache()
         
         CC.GlobalBMPs.STATICInitialise()
         

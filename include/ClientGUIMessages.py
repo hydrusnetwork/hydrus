@@ -1,5 +1,6 @@
 import HydrusConstants as HC
 import ClientConstants as CC
+import ClientCaches
 import ClientConstantsMessages
 import ClientGUICommon
 import ClientGUIDialogs
@@ -19,25 +20,6 @@ import wx.lib.scrolledpanel
 import yaml
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
-
-# Sizer Flags
-
-FLAGS_NONE = wx.SizerFlags( 0 )
-
-FLAGS_SMALL_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 2 )
-
-FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
-
-FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
-FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT )
-
-FLAGS_MIXED = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
@@ -88,11 +70,11 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
     def RefreshAcceleratorTable( self ):
         
         entries = [
-        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) )
+        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ) )
         ]
         
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
+        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( action ) ) for ( key, action ) in key_dict.items() ] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
@@ -224,7 +206,7 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -277,14 +259,14 @@ class ConversationsListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMi
         
         menu = wx.Menu()
         
-        if conversation.IsInbox(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), 'archive' )
-        else: menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to inbox' )
+        if conversation.IsInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'archive' ), 'archive' )
+        else: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'inbox' ), 'return to inbox' )
         
-        if conversation.HasUnread(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'read' ), 'set all as read' )
-        if conversation.HasRead(): menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'set all as unread' )
+        if conversation.HasUnread(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'read' ), 'set all as read' )
+        if conversation.HasRead(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'set all as unread' )
         
         menu.AppendSeparator()
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ), 'delete' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'delete' ), 'delete' )
         
         self.PopupMenu( menu )
         
@@ -346,8 +328,8 @@ class ConversationPanel( wx.Panel ):
         self._messages_vbox = wx.BoxSizer( wx.VERTICAL )
         self._drafts_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._window_vbox.AddF( self._messages_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._window_vbox.AddF( self._drafts_vbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._window_vbox.AddF( self._messages_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._window_vbox.AddF( self._drafts_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._DrawConversation()
         
@@ -376,8 +358,8 @@ class ConversationPanel( wx.Panel ):
         
         subject_static_text.SetFont( f )
         
-        convo_vbox.AddF( subject_static_text, FLAGS_EXPAND_PERPENDICULAR )
-        convo_vbox.AddF( wx.StaticText( self._convo_frame, label = ', '.join( contact.GetName() for contact in self._conversation.GetParticipants() ) ), FLAGS_EXPAND_PERPENDICULAR )
+        convo_vbox.AddF( subject_static_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        convo_vbox.AddF( wx.StaticText( self._convo_frame, label = ', '.join( contact.GetName() for contact in self._conversation.GetParticipants() ) ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._convo_frame.SetSizer( convo_vbox )
         
@@ -393,7 +375,7 @@ class ConversationPanel( wx.Panel ):
             
             self._message_keys_to_message_panels[ message.GetMessageKey() ] = message_panel
             
-            self._messages_vbox.AddF( message_panel, FLAGS_EXPAND_PERPENDICULAR )
+            self._messages_vbox.AddF( message_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         for draft in drafts:
@@ -402,7 +384,7 @@ class ConversationPanel( wx.Panel ):
             
             self._draft_keys_to_draft_panels[ draft.GetDraftKey() ] = draft_panel
             
-            self._drafts_vbox.AddF( draft_panel, FLAGS_EXPAND_PERPENDICULAR )
+            self._drafts_vbox.AddF( draft_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         self._reply_button = wx.Button( self._scrolling_messages_window, label = 'reply' )
@@ -413,12 +395,12 @@ class ConversationPanel( wx.Panel ):
         
         if self._conversation.GetStartedBy() == self._identity: self._reply_button.Enable()
         
-        self._window_vbox.AddF( self._reply_button, FLAGS_LONE_BUTTON )
+        self._window_vbox.AddF( self._reply_button, CC.FLAGS_LONE_BUTTON )
         
         self._scrolling_messages_window.SetSizer( self._window_vbox )
         
-        self._vbox.AddF( self._convo_frame, FLAGS_EXPAND_PERPENDICULAR )
-        self._vbox.AddF( self._scrolling_messages_window, FLAGS_EXPAND_BOTH_WAYS )
+        self._vbox.AddF( self._convo_frame, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._vbox.AddF( self._scrolling_messages_window, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( self._vbox )
         
@@ -459,7 +441,7 @@ class ConversationPanel( wx.Panel ):
         
         self._draft_keys_to_draft_panels[ draft_key ] = draft_panel
         
-        self._drafts_vbox.AddF( draft_panel, FLAGS_EXPAND_PERPENDICULAR )
+        self._drafts_vbox.AddF( draft_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._scrolling_messages_window.FitInside()
         
@@ -476,7 +458,7 @@ class ConversationPanel( wx.Panel ):
                 
                 self._message_keys_to_message_panels[ message_key ] = message_panel
                 
-                self._messages_vbox.AddF( message_panel, FLAGS_EXPAND_PERPENDICULAR )
+                self._messages_vbox.AddF( message_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 self._conversation.AddMessage( message )
                 
@@ -562,8 +544,8 @@ class DestinationPanel( wx.Panel ):
         
         self._hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._hbox.AddF( name_static_text, FLAGS_MIXED )
-        self._hbox.AddF( self._status_panel, FLAGS_MIXED )
+        self._hbox.AddF( name_static_text, CC.FLAGS_MIXED )
+        self._hbox.AddF( self._status_panel, CC.FLAGS_MIXED )
         
         self.SetSizer( self._hbox )
         
@@ -614,7 +596,7 @@ class DestinationPanel( wx.Panel ):
     
     def EventMenu( self, event ):
         
-        action = CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
         
         if action is not None:
             
@@ -655,7 +637,7 @@ class DestinationPanel( wx.Panel ):
         
         menu = wx.Menu()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'read' ), 'read' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'read' ), 'read' )
         
         self.PopupMenu( menu )
         
@@ -666,7 +648,7 @@ class DestinationPanel( wx.Panel ):
         
         menu = wx.Menu()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'retry' ), 'retry' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'retry' ), 'retry' )
         
         self.PopupMenu( menu )
         
@@ -677,7 +659,7 @@ class DestinationPanel( wx.Panel ):
         
         menu = wx.Menu()
         
-        menu.Append( CC.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'unread' )
+        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetId( 'unread' ), 'unread' )
         
         self.PopupMenu( menu )
         
@@ -716,7 +698,7 @@ class DestinationsPanel( wx.Panel ):
             
             destination_panel = DestinationPanel( self, message_key, contact, status, identity )
             
-            vbox.AddF( destination_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._my_panels[ contact.GetContactKey() ] = destination_panel
             
@@ -775,8 +757,8 @@ class DraftBodyPanel( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._toolbar, FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._rtc, FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._toolbar, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._rtc, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1130,35 +1112,35 @@ class DraftPanel( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._from, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._from, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if not self._draft_message.IsReply():
             
             recipients_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            recipients_hbox.AddF( wx.StaticText( self._to_panel, label = 'recipients can see each other' ), FLAGS_MIXED )
-            recipients_hbox.AddF( self._recipients_visible, FLAGS_MIXED )
+            recipients_hbox.AddF( wx.StaticText( self._to_panel, label = 'recipients can see each other' ), CC.FLAGS_MIXED )
+            recipients_hbox.AddF( self._recipients_visible, CC.FLAGS_MIXED )
             
-            self._to_panel.AddF( self._recipients_list, FLAGS_EXPAND_PERPENDICULAR )
-            self._to_panel.AddF( self._new_recipient, FLAGS_LONE_BUTTON )
-            self._to_panel.AddF( recipients_hbox, FLAGS_BUTTON_SIZER )
+            self._to_panel.AddF( self._recipients_list, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._to_panel.AddF( self._new_recipient, CC.FLAGS_LONE_BUTTON )
+            self._to_panel.AddF( recipients_hbox, CC.FLAGS_BUTTON_SIZER )
             
-            self._subject_panel.AddF( self._subject, FLAGS_EXPAND_BOTH_WAYS )
+            self._subject_panel.AddF( self._subject, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.AddF( self._to_panel, FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._subject_panel, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._to_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._subject_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.AddF( self._body, FLAGS_EXPAND_BOTH_WAYS )
-        #vbox.AddF( wx.StaticText( self, label = 'attachment hashes:' ), FLAGS_MIXED )
-        #vbox.AddF( self._attachments, FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._body, CC.FLAGS_EXPAND_BOTH_WAYS )
+        #vbox.AddF( wx.StaticText( self, label = 'attachment hashes:' ), CC.FLAGS_MIXED )
+        #vbox.AddF( self._attachments, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._attachments.Hide()
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        button_hbox.AddF( self._send, FLAGS_MIXED )
-        button_hbox.AddF( self._delete_draft, FLAGS_MIXED )
-        button_hbox.AddF( self._save_draft, FLAGS_MIXED )
+        button_hbox.AddF( self._send, CC.FLAGS_MIXED )
+        button_hbox.AddF( self._delete_draft, CC.FLAGS_MIXED )
+        button_hbox.AddF( self._save_draft, CC.FLAGS_MIXED )
         
-        vbox.AddF( button_hbox, FLAGS_BUTTON_SIZER )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1364,8 +1346,8 @@ class MessagePanel( wx.Panel ):
         if contact_from is None: name = 'Anonymous'
         else: name = self._message.GetContactFrom().GetName()
         
-        #vbox.AddF( wx.StaticText( self, label = name + ', ' + HC.ConvertTimestampToPrettyAgo( self._message.GetTimestamp() ) ), FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( ClientGUICommon.AnimatedStaticTextTimestamp( self, name + ', ', HC.ConvertTimestampToPrettyAgo, self._message.GetTimestamp(), '' ), FLAGS_EXPAND_PERPENDICULAR )
+        #vbox.AddF( wx.StaticText( self, label = name + ', ' + HC.ConvertTimestampToPrettyAgo( self._message.GetTimestamp() ) ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.AnimatedStaticTextTimestamp( self, name + ', ', HC.ConvertTimestampToPrettyAgo, self._message.GetTimestamp(), '' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         body = self._message.GetBody()
         
@@ -1386,10 +1368,10 @@ class MessagePanel( wx.Panel ):
         
         self._hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._hbox.AddF( self._body_panel, FLAGS_EXPAND_BOTH_WAYS )
-        self._hbox.AddF( self._destinations_panel, FLAGS_EXPAND_PERPENDICULAR )
+        self._hbox.AddF( self._body_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._hbox.AddF( self._destinations_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( self._hbox, FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( self._hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         # vbox.AddF( some kind of attachment window! )
         
@@ -1446,14 +1428,14 @@ class IMFrame( ClientGUICommon.Frame ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._me_label, FLAGS_MIXED )
-            hbox.AddF( wx.StaticText( self, label = ' talking to ' ), FLAGS_MIXED )
-            hbox.AddF( self._them_label, FLAGS_MIXED )
+            hbox.AddF( self._me_label, CC.FLAGS_MIXED )
+            hbox.AddF( wx.StaticText( self, label = ' talking to ' ), CC.FLAGS_MIXED )
+            hbox.AddF( self._them_label, CC.FLAGS_MIXED )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( hbox, FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._convo_box, FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._text_input, FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._convo_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._text_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             

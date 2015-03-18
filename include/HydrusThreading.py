@@ -189,3 +189,36 @@ def CallToThread( callable, *args, **kwargs ):
     
     call_to_thread.put( callable, *args, **kwargs )
     
+def CallBlockingToWx( callable, *args, **kwargs ):
+    
+    def wx_code( job_key ):
+        
+        try:
+            
+            result = callable( *args, **kwargs )
+            
+            job_key.SetVariable( 'result', result )
+            
+        except Exception as e:
+            
+            job_key.SetVariable( 'error', e )
+            
+        finally: job_key.Finish()
+        
+    
+    job_key = HC.JobKey()
+    
+    job_key.Begin()
+    
+    wx.CallAfter( wx_code, job_key )
+    
+    while not job_key.IsDone():
+        
+        if HC.shutdown: return
+        
+        time.sleep( 0.05 )
+        
+    
+    if job_key.HasVariable( 'result' ): return job_key.GetVariable( 'result' )
+    else: raise job_key.GetVariable( 'error' )
+    

@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientFiles
 import cStringIO
 import numpy.core.multiarray # important this comes before cv!
 import cv
@@ -90,7 +91,9 @@ def GenerateNumpyImage( path ):
     
     numpy_image = cv2.imread( path, flags = -1 ) # flags = -1 loads alpha channel, if present
     
-    ( y, x, depth ) = numpy_image.shape
+    ( width, height, depth ) = numpy_image.shape
+    
+    if width * height * depth != len( numpy_image.data ): raise Exception( 'CV could not understand this image; it was probably an unusual png!' )
     
     if depth == 4: raise Exception( 'CV is bad at alpha!' )
     else: numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
@@ -380,26 +383,6 @@ def GetGIFFrameDurations( path ):
     
     return frame_durations
     
-def GetHammingDistance( phash1, phash2 ):
-    
-    distance = 0
-    
-    phash1 = bytearray( phash1 )
-    phash2 = bytearray( phash2 )
-    
-    for i in range( len( phash1 ) ):
-        
-        xor = phash1[i] ^ phash2[i]
-        
-        while xor > 0:
-            
-            distance += 1
-            xor &= xor - 1
-            
-        
-    
-    return distance
-    
 def GetImageProperties( path ):
     
     ( ( width, height ), num_frames ) = GetResolutionAndNumFrames( path )
@@ -577,13 +560,17 @@ class RasterContainer( object ):
         
         if target_resolution is None: target_resolution = media.GetResolution()
         
+        ( width, height ) = target_resolution
+        
+        if width == 0 or height == 0: target_resolution = ( 100, 100 )
+        
         self._media = media
         self._target_resolution = target_resolution
         
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        self._path = CC.GetFilePath( hash, mime )
+        self._path = ClientFiles.GetFilePath( hash, mime )
         
         ( original_width, original_height ) = self._media.GetResolution()
         
@@ -605,10 +592,10 @@ class ImageContainer( RasterContainer ):
         
         self._hydrus_bitmap = None
         
-        HydrusThreading.CallToThread( self.THREADRender )
+        wx.CallAfter( self._InitialiseHydrusBitmap )
         
     
-    def _GetHydrusBitmap( self ):
+    def _InitialiseHydrusBitmap( self ):
         
         try:
             
@@ -616,7 +603,7 @@ class ImageContainer( RasterContainer ):
             
             resized_numpy_image = EfficientlyResizeNumpyImage( numpy_image, self._target_resolution )
             
-            return GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
+            hydrus_bitmap = GenerateHydrusBitmapFromNumPyImage( resized_numpy_image )
             
         except:
             
@@ -624,20 +611,24 @@ class ImageContainer( RasterContainer ):
             
             resized_pil_image = EfficientlyResizePILImage( pil_image, self._target_resolution )
             
-            return GenerateHydrusBitmapFromPILImage( resized_pil_image )
+            hydrus_bitmap = GenerateHydrusBitmapFromPILImage( resized_pil_image )
             
         
-    
-    def THREADRender( self ):
-        
-        time.sleep( 0.00001 ) # thread yield
-        
-        wx.CallAfter( self.SetHydrusBitmap, self._GetHydrusBitmap() )
+        self._hydrus_bitmap = hydrus_bitmap
         
         HC.pubsub.pub( 'finished_rendering', self.GetKey() )
         
     
-    def GetEstimatedMemoryFootprint( self ): return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
+    def GetEstimatedMemoryFootprint( self ):
+        
+        if self._hydrus_bitmap is None:
+            
+            ( width, height ) = self._target_resolution
+            
+            return width * height * 3
+            
+        else: return self._hydrus_bitmap.GetEstimatedMemoryFootprint()
+        
     
     def GetHash( self ): return self._media.GetHash()
     
@@ -656,6 +647,4 @@ class ImageContainer( RasterContainer ):
     def IsRendered( self ): return self._hydrus_bitmap is not None
     
     def IsScaled( self ): return self._zoom != 1.0
-    
-    def SetHydrusBitmap( self, hydrus_bitmap ): self._hydrus_bitmap = hydrus_bitmap
     
